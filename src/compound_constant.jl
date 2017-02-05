@@ -8,14 +8,14 @@ type CompoundConstantRateJump{T,F1,F2} <: AbstractJump
   save_positions::Tuple{Bool,Bool}
 end
 
-function (p::CompoundConstantRateJump)(t,u,integrator) # condition
+@inline function (p::CompoundConstantRateJump)(t,u,integrator) # condition
   p.next_jump==t
 end
 
-function (p::CompoundConstantRateJump)(integrator) # affect!
+@inline function (p::CompoundConstantRateJump)(integrator) # affect!
   rng_val = rand()
-  i = findfirst(x -> x<=rng_val,p.cur_rates) + 1
-  p.affects![i](integrator)
+  @inbounds i = findfirst(x -> x<=rng_val,p.cur_rates) + 1
+  @inbounds p.affects![i](integrator)
   p.sum_rate,ttnj = time_to_next_jump(integrator.t,integrator.u,p.rates,p.cur_rates)
   p.next_jump = integrator.t + ttnj
   if p.next_jump < p.end_time
@@ -23,28 +23,28 @@ function (p::CompoundConstantRateJump)(integrator) # affect!
   end
 end
 
-function time_to_next_jump(t,u,rates,cur_rates)
-  fill_cur_rates(t,u,cur_rates,1,rates...)
+@inline function time_to_next_jump(t,u,rates,cur_rates)
+  @inbounds fill_cur_rates(t,u,cur_rates,1,rates...)
   sum_rate = sum(cur_rates)
-  cur_rates[1] = cur_rates[1]/sum_rate
-  for i in 2:length(cur_rates) # normalize for choice, cumsum
+  @inbounds cur_rates[1] = cur_rates[1]/sum_rate
+  @inbounds for i in 2:length(cur_rates) # normalize for choice, cumsum
     cur_rates[i] = cur_rates[i]/sum_rate + cur_rates[i-1]
   end
   sum_rate,randexp()/sum_rate
 end
 
-function fill_cur_rates(t,u,cur_rates,idx,rate,rates...)
-  cur_rates[idx] = rate(t,u)
+@inline function fill_cur_rates(t,u,cur_rates,idx,rate,rates...)
+  @inbounds cur_rates[idx] = rate(t,u)
   idx += 1
   fill_cur_rates(t,u,cur_rates,idx,rates...)
 end
 
-function fill_cur_rates(t,u,cur_rates,idx,rate)
-  cur_rates[idx] = rate(t,u)
+@inline function fill_cur_rates(t,u,cur_rates,idx,rate)
+  @inbounds cur_rates[idx] = rate(t,u)
   nothing
 end
 
-function CompoundConstantRateJump(t,u,end_time,constant_jumps;save_positions=(true,true))
+@inline function CompoundConstantRateJump(t,u,end_time,constant_jumps,save_positions)
   rates = ((c.rate for c in constant_jumps)...)
   affects! = ((c.affect! for c in constant_jumps)...)
   cur_rates = Vector{Float64}(length(rates))

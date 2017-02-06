@@ -24,11 +24,9 @@ function init{P,algType,recompile_flag}(
 end
 
 function build_jump_problem{P<:AbstractODEProblem}(jump_prob::AbstractJumpProblem{P},save_positions)
-  t,end_time,u = jump_prob.prob.tspan[1],jump_prob.prob.tspan[2],jump_prob.prob.u0
-  jump_callback = DiscreteCallback(CompoundConstantRateJump(
-                                    t,u,end_time,jump_prob.jumps.constant_jumps,save_positions))
+  jump_callback = DiscreteCallback(jump_prob.discrete_jump_aggregation)
   initial_stop = jump_callback.condition.next_jump
-  if typeof(jump_prob.jumps.variable_jumps) <: Tuple{}
+  if typeof(jump_prob.variable_jumps) <: Tuple{}
     new_prob = jump_prob.prob
   end
   new_prob,initial_stop,jump_callback

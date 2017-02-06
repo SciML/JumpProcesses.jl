@@ -15,14 +15,14 @@ jump2 = ConstantRateJump(rate,affect!;save_positions=(false,true))
 
 
 prob = DiscreteProblem(1.0,(0.0,3.0))
-jump_prob = JumpProblem(prob,jump)
+jump_prob = JumpProblem(prob,Direct(),jump)
 
 sol = solve(jump_prob,Discrete(apply_map=false))
 
 # using Plots; plot(sol)
 
 prob = DiscreteProblem(10.0,(0.0,3.0))
-jump_prob = JumpProblem(prob,jump,jump2)
+jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 
 sol = solve(jump_prob,Discrete(apply_map=false))
 
@@ -30,6 +30,7 @@ sol = solve(jump_prob,Discrete(apply_map=false))
 
 nums = Int[]
 @time for i in 1:100000
+  jump_prob = JumpProblem(prob,Direct(),jump,jump2)
   sol = solve(jump_prob,Discrete(apply_map=false))
   push!(nums,sol[end])
 end

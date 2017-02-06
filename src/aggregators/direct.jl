@@ -1,4 +1,4 @@
-type CompoundConstantRateJump{T,F1,F2} <: AbstractJump
+type DirectJumpAggregation{T,F1,F2} <: AbstractJumpAggregator
   next_jump::T
   end_time::T
   cur_rates::Vector{T}
@@ -8,13 +8,13 @@ type CompoundConstantRateJump{T,F1,F2} <: AbstractJump
   save_positions::Tuple{Bool,Bool}
 end
 
-@inline function (p::CompoundConstantRateJump)(t,u,integrator) # condition
+@inline function (p::DirectJumpAggregation)(t,u,integrator) # condition
   p.next_jump==t
 end
 
-@inline function (p::CompoundConstantRateJump)(integrator) # affect!
+@inline function (p::DirectJumpAggregation)(integrator) # affect!
   rng_val = rand()
-  @inbounds i = findfirst(x -> x<=rng_val,p.cur_rates) + 1
+  @inbounds i = searchsortedfirst(p.cur_rates,rng_val,lt=<=)
   @inbounds p.affects![i](integrator)
   p.sum_rate,ttnj = time_to_next_jump(integrator.t,integrator.u,p.rates,p.cur_rates)
   p.next_jump = integrator.t + ttnj
@@ -44,13 +44,13 @@ end
   nothing
 end
 
-@inline function CompoundConstantRateJump(t,u,end_time,constant_jumps,save_positions)
+@inline function DirectJumpAggregation(t,u,end_time,constant_jumps,save_positions)
   rates = ((c.rate for c in constant_jumps)...)
   affects! = ((c.affect! for c in constant_jumps)...)
   cur_rates = Vector{Float64}(length(rates))
   sum_rate,next_jump = time_to_next_jump(t,u,rates,cur_rates)
-  CompoundConstantRateJump(next_jump,end_time,cur_rates,
+  DirectJumpAggregation(next_jump,end_time,cur_rates,
     sum_rate,rates,affects!,save_positions)
 end
 
-DiscreteCallback(c::CompoundConstantRateJump) = DiscreteCallback(c,c,c.save_positions)
+DiscreteCallback(c::DirectJumpAggregation) = DiscreteCallback(c,c,c.save_positions)

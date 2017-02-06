@@ -1,0 +1,1 @@
+immutable Direct <: AbstractAggregatorAlgorithm end

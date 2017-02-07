@@ -13,9 +13,9 @@ notifications:
 # uncomment the following lines to override the default test script
 #script:
 #  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("JumpDiffEq"); Pkg.test("JumpDiffEq"; coverage=true)'
+#  - julia -e 'Pkg.clone(pwd()); Pkg.build("DiffEqJump"); Pkg.test("DiffEqJump"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("JumpDiffEq")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia -e 'cd(Pkg.dir("DiffEqJump")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
-  - julia -e 'cd(Pkg.dir("JumpDiffEq")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'cd(Pkg.dir("DiffEqJump")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'

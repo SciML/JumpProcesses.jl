@@ -1,4 +1,4 @@
-using JumpDiffEq, DiffEqBase, OrdinaryDiffEq
+using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Base.Test
 
 rate = (t,u) -> u

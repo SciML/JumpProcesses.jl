@@ -1,4 +1,4 @@
-module JumpDiffEq
+module DiffEqJump
 
 using DiffEqBase
 

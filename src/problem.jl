@@ -17,7 +17,7 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
   t,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0
   if typeof(jumps.constant_jumps) <: Tuple{}
     disc = nothing
-    constant_jump_callback = nothing
+    constant_jump_callback = CallbackSet()
   else
     disc = aggregate(aggregator,t,u,end_time,jumps.constant_jumps,save_positions)
     constant_jump_callback = DiscreteCallback(disc)
@@ -26,29 +26,70 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
   ## Variable Rate Handling
   if typeof(jumps.variable_jumps) <: Tuple{}
     new_prob = prob
+    variable_jump_callback = CallbackSet()
   else
-    jump_f = function (t,u,du)
-      f(t,u,du)
-      update_jumps!(du,t,u,length(u.u),variable_jumps...)
-    end
-    new_prob = extend_problem(prob,jump_f,jumps.variable_jumps)
+    new_prob = extend_problem(prob,jumps)
+    variable_jump_callback = build_variable_callback(CallbackSet(),0,jumps.variable_jumps...)
   end
-
-  JumpProblem{typeof(new_prob),typeof(aggregator),typeof(constant_jump_callback),
+  callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
+  JumpProblem{typeof(new_prob),typeof(aggregator),typeof(callbacks),
               typeof(disc),typeof(jumps.variable_jumps)}(
                         new_prob,aggregator,disc,
-                        constant_jump_callback,
+                        callbacks,
                         jumps.variable_jumps)
 end
 
-function extend_problem(prob::ODEProblem,jump_f,variable_jumps)
-  ODEProblem(jump_f,prob.u0,prob.tspan)
+function extend_problem(prob::ODEProblem,jumps)
+  jump_f = function (t,u,du)
+    prob.f(t,u,du)
+    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  end
+  u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
+  ODEProblem(jump_f,u0,prob.tspan)
+end
+
+function build_variable_callback(cb,idx,jump,jumps...)
+  idx += 1
+  condition = function (t,u,integrator)
+    u.jump_u[idx]
+  end
+  affect! = function (integrator)
+    jump.affect!(integrator)
+    integrator.u.jump_u[idx] = -randexp()
+  end
+  new_cb = ContinuousCallback(condition,affect!;
+                      idxs = jump.idxs,
+                      rootfind = jump.rootfind,
+                      interp_points = jump.interp_points,
+                      save_positions = jump.save_positions,
+                      abstol = jump.abstol,
+                      reltol = jump.reltol)
+  build_variable_callback(CallbackSet(cb,new_cb),idx,jumps...)
+end
+
+function build_variable_callback(cb,idx,jump)
+  idx += 1
+  condition = function (t,u,integrator)
+    u.jump_u[idx]
+  end
+  affect! = function (integrator)
+    jump.affect!(integrator)
+    integrator.u.jump_u[idx] = -randexp()
+  end
+  new_cb = ContinuousCallback(condition,affect!;
+                      idxs = jump.idxs,
+                      rootfind = jump.rootfind,
+                      interp_points = jump.interp_points,
+                      save_positions = jump.save_positions,
+                      abstol = jump.abstol,
+                      reltol = jump.reltol)
+  CallbackSet(cb,new_cb)
 end
 
 aggregator{P,A,C,J,J2}(jp::JumpProblem{P,A,C,J,J2}) = A
 
 @inline function extend_tstops!{P,A,C,J,J2}(tstops,jp::JumpProblem{P,A,C,J,J2})
-  !(typeof(jp.jump_callback) <: Void) && push!(tstops,jp.jump_callback.condition.next_jump)
+  !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) && push!(tstops,jp.jump_callback.discrete_callbacks[1].condition.next_jump)
 end
 
 @inline function update_jumps!(du,t,u,idx,jump)

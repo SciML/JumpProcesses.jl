@@ -17,7 +17,11 @@ jump2 = ConstantRateJump(rate,affect!;save_positions=(false,true))
 
 
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))
-jump_prob = JumpProblem(prob,jump,jump2)
+jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+
+sol = solve(jump_prob,Discrete(apply_map=false))
+
+using Plots; plot(sol)
 
 nums = Int[]
 @time for i in 1:1000
@@ -25,7 +29,3 @@ nums = Int[]
   push!(nums,sol[end][3])
 end
 mean(nums)
-
-
-
-using Plots; plot(sol)

@@ -44,7 +44,7 @@ end
   nothing
 end
 
-@inline function DirectJumpAggregation(t,u,end_time,constant_jumps,save_positions)
+@inline function aggregate(aggregator::Direct,t,u,end_time,constant_jumps,save_positions)
   rates = ((c.rate for c in constant_jumps)...)
   affects! = ((c.affect! for c in constant_jumps)...)
   cur_rates = Vector{Float64}(length(rates))

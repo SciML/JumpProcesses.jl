@@ -29,9 +29,25 @@ sol = solve(jump_prob,Discrete(apply_map=false))
 # plot(sol)
 
 nums = Int[]
-@time for i in 1:100000
+@time for i in 1:10000
   jump_prob = JumpProblem(prob,Direct(),jump,jump2)
   sol = solve(jump_prob,Discrete(apply_map=false))
   push!(nums,sol[end])
 end
-mean(nums)
+
+@test mean(nums) - 45 < 1
+
+
+prob = DiscreteProblem(1.0,(0.0,3.0))
+jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+
+sol = solve(jump_prob,Discrete(apply_map=false))
+
+nums = Int[]
+@time for i in 1:10000
+  jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+  sol = solve(jump_prob,Discrete(apply_map=false))
+  push!(nums,sol[2])
+end
+
+@test sum(nums .== 0)/10000 - 0.33 < 0.01

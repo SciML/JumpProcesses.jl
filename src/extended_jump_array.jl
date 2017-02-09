@@ -6,12 +6,20 @@ end
 Base.length(A::ExtendedJumpArray) = length(A.u) + length(A.jump_u)
 Base.size(A::ExtendedJumpArray) = (length(A),)
 function Base.getindex(A::ExtendedJumpArray,i::Int)
-  i < length(A.u) ? A.u[i] : A.jump_u[i]
+  i <= length(A.u) ? A.u[i] : A.jump_u[i-length(A.u)]
 end
 Base.getindex(A::ExtendedJumpArray,i...) = A.u[i...]
 function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
-  i < length(A.u) ? (A.u[i] = v) : (A.jump_u[i] = v)
+  i <= length(A.u) ? (A.u[i] = v) : (A.jump_u[i-length(A.u)] = v)
 end
 Base.setindex!(A::ExtendedJumpArray,v,I...) = (A.u[I...] = v)
 linearindexing{T<:ExtendedJumpArray}(::Type{T}) = Base.LinearFast()
 similar(A::ExtendedJumpArray) = deepcopy(A)
+
+function recursivecopy!{T<:ExtendedJumpArray}(dest::T, src::T)
+  recursivecopy!(dest.u,src.u)
+  recursivecopy!(dest.jump_u,src.jump_u)
+end
+#indices(A::ExtendedJumpArray) = Base.OneTo(length(A.u) + length(A.jump_u))
+display(A::ExtendedJumpArray) = display(A.u)
+show(A::ExtendedJumpArray) = show(A.u)

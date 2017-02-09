@@ -26,14 +26,14 @@ VariableRateJump(rate,affect!;
                               rootfind,interp_points,
                               save_positions,abstol,reltol)
 
-VariableRateJump(condition,affect!;
+VariableRateJump(rate,affect!;
                    idxs = nothing,
                    rootfind=true,
                    save_positions=(true,true),
                    affect_neg! = affect!,
                    interp_points=10,
                    abstol=1e-12,reltol=0) =  VariableRateJump(
-                              condition,affect!,idxs,
+                              rate,affect!,idxs,
                               rootfind,interp_points,
                               save_positions,abstol,reltol)
 

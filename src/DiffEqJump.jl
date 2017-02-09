@@ -3,7 +3,10 @@ module DiffEqJump
 using DiffEqBase
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!
-import Base: size, getindex, setindex!
+import Base: size, getindex, setindex!, length, similar, linearindexing, indices,
+       display, show
+
+import RecursiveArrayTools: recursivecopy!
 
 abstract AbstractJump
 abstract AbstractAggregatorAlgorithm
@@ -16,6 +19,7 @@ include("jumps.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
+include("extended_jump_array.jl")
 
 export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem
 
@@ -26,5 +30,7 @@ export JumpProblem
 export Direct
 
 export init, solve, solve!
+
+export ExtendedJumpArray
 
 end # module

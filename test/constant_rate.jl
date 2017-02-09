@@ -50,4 +50,4 @@ nums = Int[]
   push!(nums,sol[2])
 end
 
-@test sum(nums .== 0)/10000 - 0.33 < 0.01
+@test sum(nums .== 0)/10000 - 0.33 < 0.02

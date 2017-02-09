@@ -8,11 +8,18 @@ Base.size(A::ExtendedJumpArray) = (length(A),)
 function Base.getindex(A::ExtendedJumpArray,i::Int)
   i <= length(A.u) ? A.u[i] : A.jump_u[i-length(A.u)]
 end
-Base.getindex(A::ExtendedJumpArray,i...) = A.u[i...]
+function Base.getindex(A::ExtendedJumpArray,I...)
+  A[sub2ind(A.u,I...)]
+end
+function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
+  A[I[1]]
+end
+Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
+Base.setindex!(A::ExtendedJumpArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
 function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
   i <= length(A.u) ? (A.u[i] = v) : (A.jump_u[i-length(A.u)] = v)
 end
-Base.setindex!(A::ExtendedJumpArray,v,I...) = (A.u[I...] = v)
+
 linearindexing{T<:ExtendedJumpArray}(::Type{T}) = Base.LinearFast()
 similar(A::ExtendedJumpArray) = deepcopy(A)
 

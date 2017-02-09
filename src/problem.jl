@@ -39,13 +39,41 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
                         jumps.variable_jumps)
 end
 
-function extend_problem(prob::ODEProblem,jumps)
+function extend_problem(prob::AbstractODEProblem,jumps)
   jump_f = function (t,u,du)
-    prob.f(t,u,du)
+    prob.f(t,u.u,@view du[1:length(u.u)])
     update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
   ODEProblem(jump_f,u0,prob.tspan)
+end
+
+function extend_problem(prob::AbstractSDEProblem,jumps)
+  jump_f = function (t,u,du)
+    prob.f(t,u.u,@view du[1:length(u.u)])
+    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  end
+  u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
+  SDEProblem(jump_f,prob.g,u0,prob.tspan)
+end
+
+function extend_problem(prob::AbstractDDEProblem,jumps)
+  jump_f = function (t,u,h,du)
+    prob.f(t,u.u,h,@view du[1:length(u.u)])
+    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  end
+  u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
+  DDEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan)
+end
+
+# Not sure if the DAE one is correct: Should be a residual of sorts
+function extend_problem(prob::AbstractDAEProblem,jumps)
+  jump_f = function (t,u,du,out)
+    prob.f(t,u.u,du,@view out[1:length(u.u)])
+    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  end
+  u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
+  DAEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan)
 end
 
 function build_variable_callback(cb,idx,jump,jumps...)

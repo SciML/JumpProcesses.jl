@@ -2,7 +2,7 @@ module DiffEqJump
 
 using DiffEqBase
 
-import DiffEqBase: DiscreteCallback, init, solve, solve!
+import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, linearindexing, indices,
        display, show
 

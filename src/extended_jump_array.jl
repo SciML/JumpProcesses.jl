@@ -30,3 +30,4 @@ end
 #indices(A::ExtendedJumpArray) = Base.OneTo(length(A.u) + length(A.jump_u))
 display(A::ExtendedJumpArray) = display(A.u)
 show(A::ExtendedJumpArray) = show(A.u)
+plot_indices(A::ExtendedJumpArray) = eachindex(A.u)

@@ -20,12 +20,15 @@ include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
 include("extended_jump_array.jl")
+include("coupling.jl")
 
 export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem
 
 export ConstantRateJump, VariableRateJump, JumpSet, CompoundConstantRateJump
 
 export JumpProblem
+
+export SplitCoupledJumpProblem
 
 export Direct
 

@@ -8,8 +8,8 @@ affect! = function (integrator)
 end
 jump1 = ConstantRateJump(rate,affect!)
 
-prob = DiscreteProblem([10],(0.0,500.0))
-prob_control = DiscreteProblem([10],(0.0,500.0))
+prob = DiscreteProblem([10],(0.0,50.0))
+prob_control = DiscreteProblem([10],(0.0,50.0))
 
 jump_prob = JumpProblem(prob,Direct(),jump1)
 jump_prob_control = JumpProblem(prob_control,Direct(),jump1)

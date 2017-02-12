@@ -15,12 +15,15 @@ function Base.getindex(A::CoupledArray,i::Int)
     i <= length(A.u) ? A.u_control[i] : A.u[i-length(A.u)]
   end
 end
+
 function Base.getindex(A::CoupledArray,I...)
   A[sub2ind(A.u,I...)]
 end
+
 function Base.getindex(A::CoupledArray,I::CartesianIndex{1})
   A[I[1]]
 end
+
 Base.setindex!(A::CoupledArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
 Base.setindex!(A::CoupledArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
 function Base.setindex!(A::CoupledArray,v,i::Int)
@@ -54,7 +57,6 @@ end
 
 function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpProblem,coupling_map::Vector{Tuple{Int64,Int64}})
   num_jumps = length(prob.discrete_jump_aggregation.rates)
-  d = length(prob.prob.u0)
   jumps = []
   # overallocates, will fix later
   uncoupled = deleteat!(Vector(1:num_jumps),[c[1] for c in coupling_map ])
@@ -66,7 +68,7 @@ function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpP
   end
   for c in uncoupled_control  # make uncoupled jumps in prob_control
     rate = prob_control.discrete_jump_aggregation.rates[c]
-    new_rate = (t,u)->rate(t,u[d+1:2*d])
+    new_rate = (t,u)->rate(t,u.u_control)
     affect! = prob_control.discrete_jump_aggregation.affects![c]
     new_affect! = function (integrator)
         flip_u!(integrator.u)

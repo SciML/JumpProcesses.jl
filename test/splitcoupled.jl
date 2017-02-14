@@ -2,7 +2,7 @@ using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Base.Test
 
 
-rate = (t,u) -> 1.0*u[1]
+rate = (t,u) -> 100.*u[1]
 affect! = function (integrator)
   integrator.u[1] += 1
 end

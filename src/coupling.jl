@@ -57,8 +57,24 @@ function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractODEProblem)
   SDEProblem(new_f,new_g,u0_coupled,prob.tspan)
 end
 
+function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
+  l = length(prob.u0)
+  new_f = function (t,u,du)
+    prob.f(t,u.u,@view du[1:l])
+    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+  end
+  new_g = function (t,u,du)
+    prob.g(t,u.u,@view du[1:l])
+    for i in l+1:2*l
+      du[i] = 0.
+    end
+  end
+  u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
+  SDEProblem(new_f,new_g,u0_coupled,prob.tspan)
+end
+
 cat_problems(prob_control::AbstractODEProblem,prob::DiscreteProblem) = cat_problems(prob,prob_control)
-cat_problems(prob_control::AbstractSDEProblem,prob::DiscreteProblem) = cat_problems(prob,prob_control)
+cat_problems(prob_control::DiscreteProblem,prob::AbstractSDEProblem) = cat_problems(prob,prob_control)
 cat_problems(prob_control::AbstractODEProblem,prob::AbstractSDEProblem) = cat_problems(prob,prob_control)
 
 

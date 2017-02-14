@@ -58,10 +58,22 @@ sol =  solve(coupled_prob,SRIW1())
 
 
 # Jump SDE to Jump ODE
-prob = ODEProblem(f,[1.,1.,0.],(0.0,1.0))
-prob_control = SDEProblem(f,g,[1.,1.,0.],(0.0,1.0))
+prob = ODEProblem(f,[1.],(0.0,1.0))
+prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
 jump_prob = JumpProblem(prob,Direct(),jump1)
 jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
 coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
 sol =  solve(coupled_prob,SRIW1())
 @test mean([abs(s[1]-s[2]) for s in sol.u])<=5.
+
+# Jump SDE to Discrete
+rate = (t,u) -> 1.
+affect! = function (integrator)
+  integrator.u[1] += 1.
+end
+prob = DiscreteProblem([1.],(0.0,1.0))
+prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
+jump_prob = JumpProblem(prob,Direct(),jump1)
+jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
+coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
+sol =  solve(coupled_prob,SRIW1())

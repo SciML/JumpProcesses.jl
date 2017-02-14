@@ -62,8 +62,6 @@ cat_problems(prob_control::AbstractSDEProblem,prob::DiscreteProblem) = cat_probl
 cat_problems(prob_control::AbstractODEProblem,prob::AbstractSDEProblem) = cat_problems(prob,prob_control)
 
 
-
-
 # this only depends on the jumps in prob, not prob.prob
 function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpProblem,coupling_map::Vector{Tuple{Int64,Int64}})
   num_jumps = length(prob.discrete_jump_aggregation.rates)

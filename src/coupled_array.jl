@@ -39,6 +39,7 @@ similar(A::CoupledArray) = deepcopy(A)
 function recursivecopy!{T<:CoupledArray}(dest::T, src::T)
   recursivecopy!(dest.u,src.u)
   recursivecopy!(dest.u_control,src.u_control)
+  dest.order = src.order
 end
 
 display(A::CoupledArray) = display(A.u)

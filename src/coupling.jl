@@ -19,7 +19,9 @@ end
 function cat_problems(prob::DiscreteProblem,prob_control::AbstractODEProblem)
   l = length(prob.u0) # add l_c = length(prob_control.u0)
   new_f = function (t,u,du)
-    prob.f(t,u.u,@view du[1:l])
+    for i in 1:l # inbounds here?
+      du[i] = 0.
+    end
     prob_control.f(t,u.u_control,@view du[l+1:2*l])
   end
   u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
@@ -61,7 +63,9 @@ function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
   l = length(prob.u0)
   new_f = function (t,u,du)
     prob.f(t,u.u,@view du[1:l])
-    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+    for i in l+1:2*l
+      du[i] = 0.
+    end
   end
   new_g = function (t,u,du)
     prob.g(t,u.u,@view du[1:l])

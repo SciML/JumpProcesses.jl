@@ -19,7 +19,7 @@ end
 function cat_problems(prob::DiscreteProblem,prob_control::AbstractODEProblem)
   l = length(prob.u0) # add l_c = length(prob_control.u0)
   if !(typeof(prob.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
-    warn("Coupling to DiscreteProblem with nontrivial f.")
+    warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
   end
   new_f = function (t,u,du)
     prob.f(t,u.u,@view du[1:l])
@@ -63,7 +63,7 @@ end
 function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
   l = length(prob.u0)
   if !(typeof(prob_control.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
-    warn("Coupling to DiscreteProblem with nontrivial f.")
+    warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
   end
   new_f = function (t,u,du)
     prob.f(t,u.u,@view du[1:l])

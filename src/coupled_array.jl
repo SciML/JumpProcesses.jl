@@ -33,7 +33,8 @@ function Base.setindex!(A::CoupledArray,v,i::Int)
 end
 
 linearindexing{T<:CoupledArray}(::Type{T}) = Base.LinearFast()
-similar(A::CoupledArray) = deepcopy(A)
+similar(A::CoupledArray) = CoupledArray(similar(A.u),similar(A.u_control),A.order)
+similar{S}(A::CoupledArray,::Type{S}) = CoupledArray(similar(A.u,S),similar(A.u_control,S),A.order)
 
 
 function recursivecopy!{T<:CoupledArray}(dest::T, src::T)

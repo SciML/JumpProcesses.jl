@@ -1,4 +1,4 @@
-type JumpProblem{P,A,C,J,J2} <: AbstractJumpProblem{P,J}
+type JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2} <: AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
   discrete_jump_aggregation::J

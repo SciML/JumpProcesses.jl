@@ -21,7 +21,8 @@ function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
 end
 
 linearindexing{T<:ExtendedJumpArray}(::Type{T}) = Base.LinearFast()
-similar(A::ExtendedJumpArray) = deepcopy(A)
+similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u),similar(A.jump_u))
+similar{S}(A::ExtendedJumpArray,::Type{S}) = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 
 function recursivecopy!{T<:ExtendedJumpArray}(dest::T, src::T)
   recursivecopy!(dest.u,src.u)

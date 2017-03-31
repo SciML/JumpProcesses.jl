@@ -23,6 +23,16 @@ end
   end
 end
 
+@inline function (p::DirectJumpAggregation)(dj,t,u,integrator) # initialize
+  sum_rate,next_jump = time_to_next_jump(t,u,p.rates,p.cur_rates)
+  p.sum_rate = sum_rate
+  p.next_jump = t + next_jump
+  if p.next_jump < p.end_time
+    add_tstop!(integrator,p.next_jump)
+  end
+  nothing
+end
+
 @inline function time_to_next_jump(t,u,rates,cur_rates)
   @inbounds fill_cur_rates(t,u,cur_rates,1,rates...)
   sum_rate = sum(cur_rates)
@@ -53,4 +63,4 @@ end
     sum_rate,rates,affects!,save_positions)
 end
 
-DiscreteCallback(c::DirectJumpAggregation) = DiscreteCallback(c,c,c.save_positions)
+DiscreteCallback(c::DirectJumpAggregation) = DiscreteCallback(c,c,initialize=c,save_positions=c.save_positions)

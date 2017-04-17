@@ -1,5 +1,10 @@
 using DiffEqBase, DiffEqJump, OrdinaryDiffEq, StochasticDiffEq, Base.Test
 
+a = ExtendedJumpArray(rand(3),rand(2))
+b = ExtendedJumpArray(rand(3),rand(2))
+
+a.=b
+
 rate = (t,u) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1]/2)
 
@@ -12,6 +17,8 @@ end
 
 prob = ODEProblem(f,[0.2],(0.0,10.0))
 jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+
+integrator = init(jump_prob,Tsit5(),dt=1/10)
 
 sol = solve(jump_prob,Tsit5())
 

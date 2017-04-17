@@ -32,3 +32,56 @@ end
 display(A::ExtendedJumpArray) = display(A.u)
 show(A::ExtendedJumpArray) = show(A.u)
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
+
+add_idxs1(x,expr) = expr
+add_idxs1{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).u)
+add_idxs1{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[1:L]))
+
+add_idxs2(x,expr) = expr
+add_idxs2{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).jump_u)
+add_idxs2{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[(L+1):end]))
+
+
+#=
+@generated function Base.broadcast!(f,A::ExtendedJumpArray,B...)
+  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
+  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
+  res = quote
+      L = length(A.u)
+      broadcast!(f,A.u,(exs1...));broadcast!(f,A.jump_u,$(exs2...))
+    end
+  @show res
+  res
+end
+
+
+Base.Broadcast._containertype(::Type{<:ExtendedJumpArray}) = ExtendedJumpArray
+Base.Broadcast.promote_containertype(::Type{ExtendedJumpArray}, _) = ExtendedJumpArray
+Base.Broadcast.promote_containertype(_, ::Type{ExtendedJumpArray}) = ExtendedJumpArray
+Base.Broadcast.promote_containertype(::Type{ExtendedJumpArray}, ::Type{Array}) = ExtendedJumpArray
+Base.Broadcast.promote_containertype(::Type{Array}, ::Type{ExtendedJumpArray}) = ExtendedJumpArray
+
+@generated function Base.broadcast_c(f,::Type{ExtendedJumpArray},B...)
+  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
+  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
+  res = quote
+          @show B
+          for b in B
+            @show b
+            @show typeof(b)
+            @show typeof(b) <: ExtendedJumpArray
+            if typeof(b) <: ExtendedJumpArray
+              @show "here"
+              L = length(b.u)
+              @show L
+              break
+            end
+          end
+          @show L
+          ExtendedJumpArray(broadcast(f,$(exs1...)),broadcast(f,$(exs2...)))
+        end
+  end
+  @show res
+  res
+end
+=#

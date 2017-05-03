@@ -32,9 +32,9 @@ function Base.setindex!(A::CoupledArray,v,i::Int)
   end
 end
 
-linearindexing{T<:CoupledArray}(::Type{T}) = Base.LinearFast()
-similar(A::CoupledArray) = CoupledArray(similar(A.u),similar(A.u_control),A.order)
-similar{S}(A::CoupledArray,::Type{S}) = CoupledArray(similar(A.u,S),similar(A.u_control,S),A.order)
+@compat Base.IndexStyle(::Type{<:CoupledArray}) = IndexLinear()
+Base.similar(A::CoupledArray) = CoupledArray(similar(A.u),similar(A.u_control),A.order)
+Base.similar{S}(A::CoupledArray,::Type{S}) = CoupledArray(similar(A.u,S),similar(A.u_control,S),A.order)
 
 
 function recursivecopy!{T<:CoupledArray}(dest::T, src::T)
@@ -43,7 +43,7 @@ function recursivecopy!{T<:CoupledArray}(dest::T, src::T)
   dest.order = src.order
 end
 
-display(A::CoupledArray) = display(A.u)
-show(A::CoupledArray) = show(A.u)
+Base.display(A::CoupledArray) = display(A.u)
+Base.show(A::CoupledArray) = show(A.u)
 plot_indices(A::CoupledArray) = eachindex(A)
 flip_u!(A::CoupledArray) = (A.order = !A.order)

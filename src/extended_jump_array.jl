@@ -20,17 +20,17 @@ function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
   i <= length(A.u) ? (A.u[i] = v) : (A.jump_u[i-length(A.u)] = v)
 end
 
-linearindexing{T<:ExtendedJumpArray}(::Type{T}) = Base.LinearFast()
-similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u),similar(A.jump_u))
-similar{S}(A::ExtendedJumpArray,::Type{S}) = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
+@compat Base.IndexStyle(::Type{<:ExtendedJumpArray}) = IndexLinear()
+Base.similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u),similar(A.jump_u))
+Base.similar{S}(A::ExtendedJumpArray,::Type{S}) = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 
 function recursivecopy!{T<:ExtendedJumpArray}(dest::T, src::T)
   recursivecopy!(dest.u,src.u)
   recursivecopy!(dest.jump_u,src.jump_u)
 end
 #indices(A::ExtendedJumpArray) = Base.OneTo(length(A.u) + length(A.jump_u))
-display(A::ExtendedJumpArray) = display(A.u)
-show(A::ExtendedJumpArray) = show(A.u)
+Base.display(A::ExtendedJumpArray) = display(A.u)
+Base.show(A::ExtendedJumpArray) = show(A.u)
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 add_idxs1(x,expr) = expr

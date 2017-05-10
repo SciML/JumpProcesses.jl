@@ -6,6 +6,9 @@
 [![Coverage Status](https://coveralls.io/repos/ChrisRackauckas/DiffEqJump.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiffEq/DiffEqJump.jl?branch=master)
 [![codecov.io](http://codecov.io/github/ChrisRackauckas/DiffEqJump.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaDiffEq/DiffEqJump.jl?branch=master)
 
+[![DiffEqJump](http://pkg.julialang.org/badges/DiffEqJump_0.5.svg)](http://pkg.julialang.org/?pkg=DiffEqJump)
+[![DiffEqJump](http://pkg.julialang.org/badges/DiffEqJump_0.6.svg)](http://pkg.julialang.org/?pkg=DiffEqJump)
+
 DiffEqJump.jl is a component package in the DifferentialEquations ecosystem. It
 holds the utilities for building jump equations, like Gillespie SSA and jump
 diffusions. Users interested in using this functionality should check out

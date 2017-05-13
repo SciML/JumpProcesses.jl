@@ -1,6 +1,6 @@
-function solve{P,algType,recompile_flag}(
+function solve{P,recompile_flag}(
   jump_prob::AbstractJumpProblem{P},
-  alg::algType,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
+  alg::DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   kwargs...)
 
   integrator = init(jump_prob,alg,timeseries,ts,ks,recompile;kwargs...)
@@ -8,9 +8,9 @@ function solve{P,algType,recompile_flag}(
   integrator.sol
 end
 
-function init{P,algType,recompile_flag}(
+function init{P,recompile_flag}(
   jump_prob::AbstractJumpProblem{P},
-  alg::algType,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
+  alg::DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   callback=CallbackSet(),
   save_positions = P <: AbstractDiscreteProblem ? (false,true) : (true,true),
   kwargs...)

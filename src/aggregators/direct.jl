@@ -14,13 +14,14 @@ end
 
 @inline function (p::DirectJumpAggregation)(integrator) # affect!
   rng_val = rand()
-  @inbounds i = searchsortedfirst(p.cur_rates,rng_val,lt=<=)
+  @inbounds i = searchsortedfirst(p.cur_rates,rng_val)
   @inbounds p.affects![i](integrator)
   p.sum_rate,ttnj = time_to_next_jump(integrator.t,integrator.u,p.rates,p.cur_rates)
   p.next_jump = integrator.t + ttnj
   if p.next_jump < p.end_time
     add_tstop!(integrator,p.next_jump)
   end
+  nothing
 end
 
 @inline function (p::DirectJumpAggregation)(dj,t,u,integrator) # initialize

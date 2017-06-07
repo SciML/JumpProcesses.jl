@@ -130,3 +130,26 @@ end
   du[idx] = jump.rate(t,u)
   update_jumps!(du,t,u,idx,jumps...)
 end
+
+
+### Displays
+
+Base.summary(prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
+function Base.show(io::IO, A::JumpProblem)
+  println(io,summary(A))
+  println(io,"Number of constant rate jumps: ",length(A.discrete_jump_aggregation.rates))
+  println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
+end
+function Base.display(io::IO, A::JumpProblem)
+  println(io,summary(A))
+  println(io,"Number of constant rate jumps: ",length(A.discrete_jump_aggregation.rates))
+  println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
+end
+function Base.print(io::IO,A::JumpProblem)
+  show(io,A)
+end
+function Base.println(io::IO,A::JumpProblem)
+  show(io,A)
+end
+Base.print(A::JumpProblem) = print(STDOUT,A)
+Base.println(A::JumpProblem) = println(STDOUT,A)

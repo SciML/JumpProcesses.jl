@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat
+using DiffEqBase, Compat, Juno
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices,

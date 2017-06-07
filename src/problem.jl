@@ -153,3 +153,8 @@ function Base.println(io::IO,A::JumpProblem)
 end
 Base.print(A::JumpProblem) = print(STDOUT,A)
 Base.println(A::JumpProblem) = println(STDOUT,A)
+
+Juno.@render Juno.Inline x::JumpProblem begin
+  fields = fieldnames(typeof(x))
+  Juno.LazyTree(typeof(x), () -> [Juno.SubTree(Juno.Text("$f → "), Juno.getfield′(x, f)) for f in fields])
+end

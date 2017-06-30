@@ -5,6 +5,8 @@ b = ExtendedJumpArray(rand(3),rand(2))
 
 a.=b
 
+@test a == b
+
 rate = (t,u) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1]/2)
 

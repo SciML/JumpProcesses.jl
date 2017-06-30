@@ -5,18 +5,18 @@ end
 
 Base.length(A::ExtendedJumpArray) = length(A.u) + length(A.jump_u)
 Base.size(A::ExtendedJumpArray) = (length(A),)
-function Base.getindex(A::ExtendedJumpArray,i::Int)
+@inline function Base.getindex(A::ExtendedJumpArray,i::Int)
   i <= length(A.u) ? A.u[i] : A.jump_u[i-length(A.u)]
 end
-function Base.getindex(A::ExtendedJumpArray,I...)
+@inline function Base.getindex(A::ExtendedJumpArray,I...)
   A[sub2ind(A.u,I...)]
 end
-function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
+@inline function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
   A[I[1]]
 end
-Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
-Base.setindex!(A::ExtendedJumpArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
-function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
+@inline Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
+@inline Base.setindex!(A::ExtendedJumpArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
+@inline function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
   i <= length(A.u) ? (A.u[i] = v) : (A.jump_u[i-length(A.u)] = v)
 end
 
@@ -41,20 +41,16 @@ add_idxs2(x,expr) = expr
 add_idxs2{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).jump_u)
 add_idxs2{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[(L+1):end]))
 
-
-#=
 @generated function Base.broadcast!(f,A::ExtendedJumpArray,B...)
   exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
   exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
   res = quote
-      L = length(A.u)
-      broadcast!(f,A.u,(exs1...));broadcast!(f,A.jump_u,$(exs2...))
+      broadcast!(f,A.u,$(exs1...));broadcast!(f,A.jump_u,$(exs2...))
     end
-  @show res
   res
 end
 
-
+#=
 Base.Broadcast._containertype(::Type{<:ExtendedJumpArray}) = ExtendedJumpArray
 Base.Broadcast.promote_containertype(::Type{ExtendedJumpArray}, _) = ExtendedJumpArray
 Base.Broadcast.promote_containertype(_, ::Type{ExtendedJumpArray}) = ExtendedJumpArray

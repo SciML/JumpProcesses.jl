@@ -45,7 +45,7 @@ end
 
 add_idxs1{T<:CoupledArray}(::Type{T},expr) = :($(expr).u)
 add_idxs2{T<:CoupledArray}(::Type{T},expr) = :($(expr).u_control)
-@generated function Base.broadcast!(f,A::CoupledArray,B...)
+@generated function Base.broadcast!(f,A::CoupledArray,B::Union{Number,CoupledArray}...)
   exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
   exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
   res = quote

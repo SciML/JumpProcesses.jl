@@ -35,13 +35,11 @@ plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 add_idxs1(x,expr) = expr
 add_idxs1{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).u)
-add_idxs1{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[1:L]))
 
 add_idxs2(x,expr) = expr
 add_idxs2{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).jump_u)
-add_idxs2{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[(L+1):end]))
 
-@generated function Base.broadcast!(f,A::ExtendedJumpArray,B...)
+@generated function Base.broadcast!(f,A::ExtendedJumpArray,B::Union{Number,ExtendedJumpArray}...)
   exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
   exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
   res = quote

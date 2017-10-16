@@ -140,11 +140,6 @@ function Base.show(io::IO, A::JumpProblem)
   println(io,"Number of constant rate jumps: ",length(A.discrete_jump_aggregation.rates))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
 end
-function Base.display(io::IO, A::JumpProblem)
-  println(io,summary(A))
-  println(io,"Number of constant rate jumps: ",length(A.discrete_jump_aggregation.rates))
-  println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
-end
 function Base.print(io::IO,A::JumpProblem)
   show(io,A)
 end

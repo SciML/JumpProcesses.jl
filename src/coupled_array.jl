@@ -54,8 +54,6 @@ add_idxs2{T<:CoupledArray}(::Type{T},expr) = :($(expr).u_control)
   res
 end
 
-
-Base.display(A::CoupledArray) = display(A.u)
 Base.show(A::CoupledArray) = show(A.u)
 plot_indices(A::CoupledArray) = eachindex(A)
 flip_u!(A::CoupledArray) = (A.order = !A.order)

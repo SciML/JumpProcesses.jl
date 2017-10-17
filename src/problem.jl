@@ -140,14 +140,6 @@ function Base.show(io::IO, A::JumpProblem)
   println(io,"Number of constant rate jumps: ",length(A.discrete_jump_aggregation.rates))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
 end
-function Base.print(io::IO,A::JumpProblem)
-  show(io,A)
-end
-function Base.println(io::IO,A::JumpProblem)
-  show(io,A)
-end
-Base.print(A::JumpProblem) = print(STDOUT,A)
-Base.println(A::JumpProblem) = println(STDOUT,A)
 
 Juno.@render Juno.Inline x::JumpProblem begin
   fields = fieldnames(typeof(x))

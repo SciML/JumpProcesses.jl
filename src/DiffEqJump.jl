@@ -5,8 +5,7 @@ module DiffEqJump
 using DiffEqBase, Compat, Juno
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
-import Base: size, getindex, setindex!, length, similar, indices,
-       display, show
+import Base: size, getindex, setindex!, length, similar, indices, show
 
 import RecursiveArrayTools: recursivecopy!
 

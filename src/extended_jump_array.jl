@@ -29,7 +29,7 @@ function recursivecopy!{T<:ExtendedJumpArray}(dest::T, src::T)
   recursivecopy!(dest.jump_u,src.jump_u)
 end
 #indices(A::ExtendedJumpArray) = Base.OneTo(length(A.u) + length(A.jump_u))
-Base.show(A::ExtendedJumpArray) = show(A.u)
+Base.show(io::IO,A::ExtendedJumpArray) = show(io,A.u)
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 add_idxs1(x,expr) = expr

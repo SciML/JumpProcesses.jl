@@ -40,8 +40,12 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
 end
 
 function extend_problem(prob::AbstractODEProblem,jumps)
-  jump_f = function (t,u,du)
+  function jump_f(t,u,du)
     prob.f(t,u.u,@view du[1:length(u.u)])
+    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  end
+  function jump_f(t,u,p,du)
+    prob.f(t,u.u,p,@view du[1:length(u.u)])
     update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
@@ -49,8 +53,12 @@ function extend_problem(prob::AbstractODEProblem,jumps)
 end
 
 function extend_problem(prob::AbstractSDEProblem,jumps)
-  jump_f = function (t,u,du)
+  function jump_f(t,u,du)
     prob.f(t,u.u,@view du[1:length(u.u)])
+    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  end
+  function jump_f(t,u,p,du)
+    prob.f(t,u.u,p,@view du[1:length(u.u)])
     update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])

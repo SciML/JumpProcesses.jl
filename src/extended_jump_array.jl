@@ -47,6 +47,35 @@ add_idxs2{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).jump_u)
   res
 end
 
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{S}) where {T<:ExtendedJumpArray, S<:AbstractArray} = T
+Base.Broadcast.promote_containertype(::Type{S}, ::Type{T}) where {T<:ExtendedJumpArray, S<:AbstractArray} = T
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{<:Any}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{<:Any}, ::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{Array}, ::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{Array}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast._containertype(::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.broadcast_indices(::Type{<:ExtendedJumpArray}, A) = indices(A)
+
+@inline function Base.Broadcast.broadcast_c(f, ::Type{S}, A, Bs...) where S<:ExtendedJumpArray
+    T = Base.Broadcast._broadcast_eltype(f, A, Bs...)
+    shape = Base.Broadcast.broadcast_indices(A, Bs...)
+    broadcast!(f, similar(A), A, Bs...)
+end
+
+@inline function Base.Broadcast.broadcast_c(f, ::Type{S}, A::ExtendedJumpArray, Bs::Union{ExtendedJumpArray,Number}...) where S<:ExtendedJumpArray
+    new_A = similar(A)
+    broadcast!(f,new_A,A,Bs...)
+    new_A
+end
+
+@inline function Base.Broadcast.broadcast_c(f, ::Type{S}, A::ExtendedJumpArray) where S<:ExtendedJumpArray
+    new_A = similar(A)
+    broadcast!(f,new_A,A)
+    new_A
+end
+
+@inline Base.broadcast!(::typeof(identity), u::DiffEqJump.ExtendedJumpArray, x::Number) = fill!(u,x)
 #=
 Base.Broadcast._containertype(::Type{<:ExtendedJumpArray}) = ExtendedJumpArray
 Base.Broadcast.promote_containertype(::Type{ExtendedJumpArray}, _) = ExtendedJumpArray

@@ -148,8 +148,3 @@ function Base.show(io::IO, A::JumpProblem)
   println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation == nothing ? 0 : length(A.discrete_jump_aggregation.rates))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
 end
-
-Juno.@render Juno.Inline x::JumpProblem begin
-  fields = fieldnames(typeof(x))
-  Juno.LazyTree(typeof(x), () -> [Juno.SubTree(Juno.Text("$f → "), Juno.getfield′(x, f)) for f in fields])
-end

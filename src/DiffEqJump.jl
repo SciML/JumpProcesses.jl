@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Juno
+using DiffEqBase, Compat, Requires
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
@@ -23,6 +23,7 @@ include("solve.jl")
 include("extended_jump_array.jl")
 include("coupled_array.jl")
 include("coupling.jl")
+include("juno_rendering.jl")
 
 export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem
 

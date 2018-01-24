@@ -3,17 +3,17 @@ SplitCoupledJumpProblem(prob::AbstractJumpProblem,prob_control::AbstractJumpProb
 # make new problem by joining initial_data
 function cat_problems(prob::DiscreteProblem,prob_control::DiscreteProblem)
   u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
-  DiscreteProblem(u0_coupled,prob.tspan)
+  DiscreteProblem(u0_coupled,prob.tspan,prob.p)
 end
 
 function cat_problems(prob::AbstractODEProblem,prob_control::AbstractODEProblem)
   l = length(prob.u0) # add l_c = length(prob_control.u0)
-  new_f = function (t,u,du)
-    prob.f(t,u.u,@view du[1:l])
-    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+  new_f = function (du,u,p,t)
+    prob.f(@view(du[1:l]),u.u,p,t)
+    prob_control.f(@view(du[l+1:2*l]),u.u_control,p,t)
   end
   u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
-  ODEProblem(new_f,u0_coupled,prob.tspan)
+  ODEProblem(new_f,u0_coupled,prob.tspan,prob.p)
 end
 
 function cat_problems(prob::DiscreteProblem,prob_control::AbstractODEProblem)
@@ -21,43 +21,42 @@ function cat_problems(prob::DiscreteProblem,prob_control::AbstractODEProblem)
   if !(typeof(prob.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
     warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
   end
-  new_f = function (t,u,du)
-    prob.f(t,u.u,@view du[1:l])
-    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+  new_f = function (du,u,p,t)
+    prob.f(@view(du[1:l]),u.u,p,t)
+    prob_control.f(@view(du[l+1:2*l]),u.u_control,p,t)
   end
   u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
-  ODEProblem(new_f,u0_coupled,prob.tspan)
+  ODEProblem(new_f,u0_coupled,prob.tspan,prob.p)
 end
-
 
 function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractSDEProblem)
   l = length(prob.u0)
-  new_f = function (t,u,du)
-    prob.f(t,u.u,@view du[1:l])
-    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+  new_f = function (du,u,p,t)
+    prob.f(@view(du[1:l]),u.u,p,t)
+    prob_control.f(@view(du[l+1:2*l]),u.u_control,p,t)
   end
-  new_g = function (t,u,du)
-    prob.g(t,u.u,@view du[1:l])
-    prob_control.g(t,u.u_control,@view du[l+1:2*l])
+  new_g = function (du,u,p,t)
+    prob.g(@view(du[1:l]),u.u,p,t)
+    prob_control.g(@view(du[l+1:2*l]),u.u_control,p,t)
   end
   u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
-  SDEProblem(new_f,new_g,u0_coupled,prob.tspan)
+  SDEProblem(new_f,new_g,u0_coupled,prob.tspan,prob.p)
 end
 
 function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractODEProblem)
   l = length(prob.u0)
-  new_f = function (t,u,du)
-    prob.f(t,u.u,@view du[1:l])
-    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+  new_f = function (du,u,p,t)
+    prob.f(@view(du[1:l]),u.u,p,t)
+    prob_control.f(@view(du[l+1:2*l]),u.u_control,p,t)
   end
-  new_g = function (t,u,du)
-    prob.g(t,u.u,@view du[1:l])
+  new_g = function (du,u,p,t)
+    prob.g(@view(du[1:l]),u.u,p,t)
     for i in l+1:2*l
       du[i] = 0.
     end
   end
   u0_coupled = CoupledArray(prob.u0,prob_control.u0,true)
-  SDEProblem(new_f,new_g,u0_coupled,prob.tspan)
+  SDEProblem(new_f,new_g,u0_coupled,prob.tspan,prob.p)
 end
 
 function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
@@ -65,12 +64,12 @@ function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
   if !(typeof(prob_control.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
     warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
   end
-  new_f = function (t,u,du)
-    prob.f(t,u.u,@view du[1:l])
-    prob_control.f(t,u.u_control,@view du[l+1:2*l])
+  new_f = function (du,u,p,t)
+    prob.f(@view(du[1:l]),u.u,p,t)
+    prob_control.f(@view(du[l+1:2*l]),u.u_control,p,t)
   end
-  new_g = function (t,u,du)
-    prob.g(t,u.u,@view du[1:l])
+  new_g = function (du,u,p,t)
+    prob.g(@view(du[1:l]),u.u,p,t)
     for i in l+1:2*l
       du[i] = 0.
     end
@@ -99,7 +98,7 @@ function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpP
   end
   for c in uncoupled_control  # make uncoupled jumps in prob_control
     rate = prob_control.discrete_jump_aggregation.rates[c]
-    new_rate = (t,u)->rate(t,u.u_control)
+    new_rate = (u,p,t)->rate(u.u_control,p,t)
     affect! = prob_control.discrete_jump_aggregation.affects![c]
     new_affect! = function (integrator)
         flip_u!(integrator.u)
@@ -121,11 +120,11 @@ function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpP
         affect_control!(integrator)
         flip_u!(integrator.u)
     end
-    new_rate = (t,u)->min(rate(t,u.u),rate_control(t,u.u_control))
+    new_rate = (u,p,t)->min(rate(u.u,p,t),rate_control(u.u_control,p,t))
     push!(jumps,ConstantRateJump(new_rate,new_affect!))
      # only prob
     new_affect! = affect!
-    new_rate = (t,u)->rate(t,u.u)-min(rate(t,u.u),rate_control(t,u.u_control))
+    new_rate = (u,p,t)->rate(u.u,p,t)-min(rate(u.u,p,t),rate_control(u.u_control,p,t))
     push!(jumps,ConstantRateJump(new_rate,new_affect!))
     # only prob_control
     new_affect! = function (integrator)
@@ -133,7 +132,7 @@ function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpP
         affect!(integrator)
         flip_u!(integrator.u)
     end
-    new_rate = (t,u)->rate_control(t,u.u_control)-min(rate(t,u.u),rate_control(t,u.u_control))
+    new_rate = (u,p,t)->rate_control(u.u_control,p,t)-min(rate(u.u,p,t),rate_control(u.u_control,p,t))
     push!(jumps,ConstantRateJump(new_rate,new_affect!))
   end
   jumps

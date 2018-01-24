@@ -7,13 +7,13 @@ a.=b
 
 @test a == b
 
-rate = (t,u) -> u[1]
+rate = (u,p,t) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1]/2)
 
 jump = VariableRateJump(rate,affect!)
 jump2 = deepcopy(jump)
 
-f = function (t,u,du)
+f = function (du,u,p,t)
   du[1] = u[1]
 end
 
@@ -27,7 +27,7 @@ sol = solve(jump_prob,Tsit5())
 @test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-14
 @test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-14
 
-g = function (t,u,du)
+g = function (du,u,p,t)
   du[1] = u[1]
 end
 

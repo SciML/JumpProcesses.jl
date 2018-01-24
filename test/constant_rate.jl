@@ -1,13 +1,13 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Base.Test
 
-rate = (t,u) -> u
+rate = (u,p,t) -> u
 affect! = function (integrator)
   integrator.u += 1
 end
 jump = ConstantRateJump(rate,affect!;save_positions=(false,true))
 
-rate = (t,u) -> 0.5u
+rate = (u,p,t) -> 0.5u
 affect! = function (integrator)
   integrator.u -= 1
 end

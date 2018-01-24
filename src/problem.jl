@@ -19,7 +19,7 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
     disc = nothing
     constant_jump_callback = CallbackSet()
   else
-    disc = aggregate(aggregator,t,u,end_time,jumps.constant_jumps,save_positions)
+    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,save_positions)
     constant_jump_callback = DiscreteCallback(disc)
   end
 
@@ -40,45 +40,37 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
 end
 
 function extend_problem(prob::AbstractODEProblem,jumps)
-  function jump_f(t,u,du)
-    prob.f(t,u.u,@view du[1:length(u.u)])
-    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
-  end
-  function jump_f(t,u,p,du)
-    prob.f(t,u.u,p,@view du[1:length(u.u)])
-    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  function jump_f(du,u,p,t)
+    prob.f(@view(du[1:length(u.u)]),u.u,p,t)
+    update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  ODEProblem(jump_f,u0,prob.tspan)
+  ODEProblem(jump_f,u0,prob.tspan,prob.p)
 end
 
 function extend_problem(prob::AbstractSDEProblem,jumps)
-  function jump_f(t,u,du)
-    prob.f(t,u.u,@view du[1:length(u.u)])
-    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
-  end
-  function jump_f(t,u,p,du)
-    prob.f(t,u.u,p,@view du[1:length(u.u)])
-    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  function jump_f(du,u,p,t)
+    prob.f(@view(du[1:length(u.u)]),u.u,p,t)
+    update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  SDEProblem(jump_f,prob.g,u0,prob.tspan)
+  SDEProblem(jump_f,prob.g,u0,prob.tspan,prob.p)
 end
 
 function extend_problem(prob::AbstractDDEProblem,jumps)
-  jump_f = function (t,u,h,du)
-    prob.f(t,u.u,h,@view du[1:length(u.u)])
-    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  jump_f = function (du,u,h,p,t)
+    prob.f(@view(du[1:length(u.u)]),u.u,h,p,t)
+    update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  DDEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan)
+  DDEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan,prob.p)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
 function extend_problem(prob::AbstractDAEProblem,jumps)
-  jump_f = function (t,u,du,out)
-    prob.f(t,u.u,du,@view out[1:length(u.u)])
-    update_jumps!(du,t,u,length(u.u),jumps.variable_jumps...)
+  jump_f = function (out,du,u,p,t)
+    prob.f(@view(out[1:length(u.u)]),du.u,u.u,t)
+    update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
   DAEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan)
@@ -86,7 +78,7 @@ end
 
 function build_variable_callback(cb,idx,jump,jumps...)
   idx += 1
-  condition = function (t,u,integrator)
+  condition = function (u,t,integrator)
     u.jump_u[idx]
   end
   affect! = function (integrator)
@@ -105,7 +97,7 @@ end
 
 function build_variable_callback(cb,idx,jump)
   idx += 1
-  condition = function (t,u,integrator)
+  condition = function (u,t,integrator)
     u.jump_u[idx]
   end
   affect! = function (integrator)
@@ -128,15 +120,15 @@ aggregator{P,A,C,J,J2}(jp::JumpProblem{P,A,C,J,J2}) = A
   !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) && push!(tstops,jp.jump_callback.discrete_callbacks[1].condition.next_jump)
 end
 
-@inline function update_jumps!(du,t,u,idx,jump)
+@inline function update_jumps!(du,u,p,t,idx,jump)
   idx += 1
-  du[idx] = jump.rate(t,u)
+  du[idx] = jump.rate(u,p,t)
 end
 
-@inline function update_jumps!(du,t,u,idx,jump,jumps...)
+@inline function update_jumps!(du,u,p,t,idx,jump,jumps...)
   idx += 1
-  du[idx] = jump.rate(t,u)
-  update_jumps!(du,t,u,idx,jumps...)
+  du[idx] = jump.rate(u,p,t)
+  update_jumps!(du,u,p,t,idx,jumps...)
 end
 
 

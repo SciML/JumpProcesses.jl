@@ -24,8 +24,8 @@ integrator = init(jump_prob,Tsit5(),dt=1/10)
 
 sol = solve(jump_prob,Tsit5())
 
-@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-14
-@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-14
+@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12
 
 g = function (du,u,p,t)
   du[1] = u[1]
@@ -36,5 +36,5 @@ jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 
 sol = solve(jump_prob,SRIW1())
 
-@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-14
-@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-14
+@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12

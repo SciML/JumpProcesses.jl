@@ -12,6 +12,7 @@ function init{P,recompile_flag}(
   jump_prob::AbstractJumpProblem{P},
   alg::DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   callback=nothing,
+  dt = 0,
   save_positions = P <: AbstractDiscreteProblem ? (false,true) : (true,true),
   kwargs...)
 

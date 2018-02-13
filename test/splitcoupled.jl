@@ -17,8 +17,8 @@ jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
 coupling_map = [(1, 1)]
 coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
 
-@time sol =  solve(coupled_prob,Discrete(apply_map=false))
-@time solve(jump_prob,Discrete(apply_map=false))
+@time sol =  solve(coupled_prob,FunctionMap())
+@time solve(jump_prob,FunctionMap())
 @test [s[1]-s[2] for s in sol.u] == zeros(length(sol.t)) # coupling two copies of the same process should give zero
 
 

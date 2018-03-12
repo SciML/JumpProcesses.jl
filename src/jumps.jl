@@ -1,9 +1,7 @@
 immutable ConstantRateJump{F1,F2} <: AbstractJump
   rate::F1
   affect!::F2
-  save_positions::Tuple{Bool,Bool}
 end
-ConstantRateJump(rate,affect!;save_positions=(true,true)) = ConstantRateJump(rate,affect!,save_positions)
 
 immutable VariableRateJump{R,F,I,T,T2} <: AbstractJump
   rate::R

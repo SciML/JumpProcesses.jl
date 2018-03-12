@@ -5,13 +5,13 @@ rate = (u,p,t) -> u
 affect! = function (integrator)
   integrator.u += 1
 end
-jump = ConstantRateJump(rate,affect!;save_positions=(false,true))
+jump = ConstantRateJump(rate,affect!)
 
 rate = (u,p,t) -> 0.5u
 affect! = function (integrator)
   integrator.u -= 1
 end
-jump2 = ConstantRateJump(rate,affect!;save_positions=(false,true))
+jump2 = ConstantRateJump(rate,affect!)
 
 
 prob = DiscreteProblem(1.0,(0.0,3.0))

@@ -13,7 +13,7 @@ function regular_c(dc,u,p,t,mark)
     dc[3,2] = 1
 end
 
-c_prototype = zeros(3,2)
+dc = zeros(3,2)
 
 rj = RegularJump(regular_rate,regular_c,c_prototype;constant_c=true)
 jumps = JumpSet(rj)

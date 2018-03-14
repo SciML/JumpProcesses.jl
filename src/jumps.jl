@@ -24,16 +24,16 @@ VariableRateJump(rate,affect!;
                               rootfind,interp_points,
                               save_positions,abstol,reltol)
 
-struct RegularJump{R,C,CP,MD}
+struct RegularJump{R,C,DC,MD}
     rate::R
     c::C
-    c_prototype::CP
+    dc::DC
     mark_dist::MD
     constant_c::Bool
 end
 
-RegularJump(rate,c,c_prototype;mark_dist = nothing,constant_c = false) =
-            RegularJump(rate,c,c_prototype,mark_dist,constant_c)
+RegularJump(rate,c,dc;mark_dist = nothing,constant_c = false) =
+            RegularJump(rate,c,dc,mark_dist,constant_c)
 
 struct JumpSet{T1,T2,T3} <: AbstractJump
   variable_jumps::T1

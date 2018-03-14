@@ -77,6 +77,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::RegularSSA)
       rate_sum ./= rate_sum[end]
       i = searchsortedfirst(rate_sum,r)
       !rj.constant_c && c(dc,u[end],p,curt,mark)
+      # Can instead be dc*[0,0,...,1,...,0,0] if sparse
+      # https://github.com/JuliaLang/julia/issues/13438
       unext = u[end] .+ @view dc[:,i]
       curt += ttnj
       push!(t,curt)

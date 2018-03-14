@@ -3,7 +3,7 @@
 
 struct SSAStepper end
 
-mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,SE} <: DEIntegrator
+mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DEIntegrator
     f::F
     u::uType
     t::tType
@@ -13,7 +13,8 @@ mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,SE} <: DEIntegrator
     tstop::tType
     cb::CB
     saveat::SA
-    save_everystep::SE
+    save_everystep::Bool
+    save_end::Bool
     cur_saveat::Int
 end
 
@@ -22,10 +23,14 @@ end
 
 function DiffEqBase.solve(jump_prob::JumpProblem,
                          alg::SSAStepper;
-                         save_end = true,
                          kwargs...)
     integrator = init(jump_prob,alg;kwargs...)
-    end_time = jump_prob.prob.tspan[2]
+    solve!(integrator)
+    integrator.sol
+end
+
+function DiffEqBase.solve!(integrator)
+    end_time = integrator.sol.prob.tspan[2]
     while integrator.t < integrator.tstop # It stops before adding a tstop over
         step!(integrator)
     end
@@ -44,16 +49,16 @@ function DiffEqBase.solve(jump_prob::JumpProblem,
         end
     end
 
-    if save_end && integrator.sol.t[end] != end_time
+    if integrator.save_end && integrator.sol.t[end] != end_time
         push!(integrator.sol.t,end_time)
         push!(integrator.sol.u,copy(integrator.u))
     end
-    integrator.sol
 end
 
 function DiffEqBase.init(jump_prob::JumpProblem,
                          alg::SSAStepper;
                          save_start = true,
+                         save_end = true,
                          saveat = nothing)
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert length(jump_prob.jump_callback.discrete_callbacks) == 1
@@ -96,7 +101,7 @@ function DiffEqBase.init(jump_prob::JumpProblem,
 
     integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.p,
                                sol,1,prob.tspan[1],
-                               cb,_saveat,save_everystep,cur_saveat)
+                               cb,_saveat,save_everystep,save_end,cur_saveat)
     cb.initialize(cb,u[1],prob.tspan[1],integrator)
 
     integrator

@@ -26,7 +26,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,
                          kwargs...)
     integrator = init(jump_prob,alg;kwargs...)
     end_time = jump_prob.prob.tspan[2]
-    while integrator.t+integrator.tstop < end_time
+    while integrator.t < integrator.tstop # It stops before adding a tstop over
         step!(integrator)
     end
 

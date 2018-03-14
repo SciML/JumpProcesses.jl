@@ -71,7 +71,13 @@ function DiffEqBase.init(jump_prob::JumpProblem,
                          interp = DiffEqBase.ConstantInterpolation(t,u))
     save_everystep = any(cb.save_positions)
 
-    if saveat != nothing && !isempty(saveat) && saveat[1] == prob.tspan[1]
+    if typeof(saveat) <: Number
+        _saveat = prob.tspan[1]:saveat:prob.tspan[2]
+    else
+        _saveat = saveat
+    end
+
+   if _saveat != nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
        cur_saveat = 2
    else
        cur_saveat = 1
@@ -79,7 +85,7 @@ function DiffEqBase.init(jump_prob::JumpProblem,
 
     integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.p,
                                sol,1,prob.tspan[1],
-                               cb,saveat,save_everystep,cur_saveat)
+                               cb,_saveat,save_everystep,cur_saveat)
     cb.initialize(cb,u[1],prob.tspan[1],integrator)
 
     integrator

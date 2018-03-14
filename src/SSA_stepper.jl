@@ -83,6 +83,17 @@ function DiffEqBase.init(jump_prob::JumpProblem,
        cur_saveat = 1
    end
 
+   if _saveat != nothing && !isempty(_saveat)
+     sizehint!(u,length(_saveat)+1)
+     sizehint!(t,length(_saveat)+1)
+   elseif save_everystep
+     sizehint!(u,10000)
+     sizehint!(t,10000)
+   else
+     sizehint!(u,2)
+     sizehint!(t,2)
+   end
+
     integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.p,
                                sol,1,prob.tspan[1],
                                cb,_saveat,save_everystep,cur_saveat)
@@ -100,7 +111,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         push!(integrator.sol.t,integrator.t)
         push!(integrator.sol.u,copy(integrator.u))
     end
-    if integrator.saveat != nothing && !isempty(integrator.saveat)
+    @inbounds if integrator.saveat != nothing && !isempty(integrator.saveat)
         # Split to help prediction
         while integrator.cur_saveat < length(integrator.saveat) &&
            integrator.saveat[integrator.cur_saveat] < integrator.t
@@ -111,6 +122,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
         end
     end
+    nothing
 end
 
 export SSAStepper

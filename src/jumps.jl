@@ -49,9 +49,9 @@ JumpSet(jb::Void) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable
 
-JumpSet(jumps::AbstractJump...) = JumpSet(split_jumps((), (), jumps...)...)
+JumpSet(jumps::AbstractJump...) = JumpSet(split_jumps((), (), nothing, jumps...)...)
 
-@inline split_jumps(vj, cj, rj) = vj, cj
+@inline split_jumps(vj, cj, rj) = vj, cj, rj
 @inline split_jumps(vj, cj, rj, v::VariableRateJump, args...) = split_jumps((vj..., v), cj, rj, args...)
 @inline split_jumps(vj, cj, rj, c::ConstantRateJump, args...) = split_jumps(vj, (cj..., c), rj, args...)
 @inline split_jumps(vj, cj, rj, c::RegularJump, args...) = split_jumps(vj, cj, regular_jump_combine(rj,c), args...)

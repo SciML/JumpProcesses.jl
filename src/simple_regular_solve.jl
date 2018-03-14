@@ -11,8 +11,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
   rj = jump_prob.regular_jump
   rate = rj.rate
   c = rj.c
-  dc = rj.c_prototype
-  rate_cache = zeros(size(rj.c_prototype,2))
+  dc = rj.dc
+  rate_cache = zeros(size(dc,2))
 
   u0 = copy(prob.u0)
   tspan = prob.tspan
@@ -24,7 +24,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
   u[1] = u0
   t = [tspan[1] + i*dt for i in 0:n-1]
 
-  counts = zeros(Int,size(rj.c_prototype,2))
+  counts = zeros(Int,size(dc,2))
   update = similar(u0)
 
   rj.constant_c && c(dc,u0,p,tspan[1],mark)
@@ -54,8 +54,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::RegularSSA)
   rj = jump_prob.regular_jump
   rate = rj.rate
   c = rj.c
-  dc = rj.c_prototype
-  rate_cache = zeros(size(rj.c_prototype,2))
+  dc = rj.dc
+  rate_cache = zeros(size(dc,2))
   rate_sum = similar(rate_cache)
 
   u0 = copy(prob.u0)

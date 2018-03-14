@@ -15,7 +15,7 @@ end
 
 dc = zeros(3,2)
 
-rj = RegularJump(regular_rate,regular_c,c_prototype;constant_c=true)
+rj = RegularJump(regular_rate,regular_c,dc;constant_c=true)
 jumps = JumpSet(rj)
 
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))

@@ -1,16 +1,24 @@
-type JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2} <: AbstractJumpProblem{P,J}
+type JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2,J3} <: AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
   discrete_jump_aggregation::J
   jump_callback::C
   variable_jumps::J2
+  regular_jump::J3
 end
+
+JumpProblem(prob,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
+JumpProblem(prob,jumps::VariableRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
+JumpProblem(prob,jumps::RegularJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
+JumpProblem(prob,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,JumpSet(jumps...);kwargs...)
 
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::VariableRateJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
-JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps...;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps...);kwargs...)
+JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::RegularJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
+JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps...);kwargs...)
+JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 
-function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
+function JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::JumpSet;
                      save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true))
 
   ## Constant Rate Handling
@@ -33,10 +41,12 @@ function JumpProblem(prob,aggregator::Direct,jumps::JumpSet;
   end
   callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
   JumpProblem{typeof(new_prob),typeof(aggregator),typeof(callbacks),
-              typeof(disc),typeof(jumps.variable_jumps)}(
+              typeof(disc),typeof(jumps.variable_jumps),
+              typeof(jumps.regular_jump)}(
                         new_prob,aggregator,disc,
                         callbacks,
-                        jumps.variable_jumps)
+                        jumps.variable_jumps,
+                        jumps.regular_jump)
 end
 
 function extend_problem(prob::AbstractODEProblem,jumps)

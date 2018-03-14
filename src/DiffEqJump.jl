@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires
+using DiffEqBase, Compat, Requires, Distributions
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
@@ -24,11 +24,13 @@ include("extended_jump_array.jl")
 include("coupled_array.jl")
 include("coupling.jl")
 include("SSA_stepper.jl")
+include("tau_leaping.jl")
 include("juno_rendering.jl")
 
 export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem
 
-export ConstantRateJump, VariableRateJump, JumpSet, CompoundConstantRateJump
+export ConstantRateJump, VariableRateJump, RegularJump,
+       JumpSet, CompoundConstantRateJump
 
 export JumpProblem
 

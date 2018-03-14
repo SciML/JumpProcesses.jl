@@ -1,7 +1,7 @@
-struct TauLeaping <: DEAlgorithm end
+struct SimpleTauLeaping <: DEAlgorithm end
 
-function DiffEqBase.solve(jump_prob::JumpProblem,alg::TauLeaping;
-                          dt = error("dt is required for TauLeaping"))
+function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
+                          dt = error("dt is required for SimpleTauLeaping"))
 
   @assert isempty(jump_prob.jump_callback.continuous_callbacks)
   @assert isempty(jump_prob.jump_callback.discrete_callbacks)
@@ -44,4 +44,4 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::TauLeaping;
                        interp = DiffEqBase.ConstantInterpolation(t,u))
 end
 
-export TauLeaping
+export SimpleTauLeaping

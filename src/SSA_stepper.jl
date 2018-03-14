@@ -1,5 +1,5 @@
 # Integrator specifically for SSA
-# More complicated than the others but built to have 0-overhead stepping
+# Built to have 0-overhead stepping
 
 struct SSAStepper end
 

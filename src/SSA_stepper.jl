@@ -88,7 +88,7 @@ end
 DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
-    integrator.t += integrator.tstop
+    integrator.t = integrator.tstop
     integrator.cb.affect!(integrator)
     if integrator.save_everystep
         push!(integrator.sol.t,integrator.t)

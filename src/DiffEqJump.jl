@@ -24,7 +24,7 @@ include("extended_jump_array.jl")
 include("coupled_array.jl")
 include("coupling.jl")
 include("SSA_stepper.jl")
-include("tau_leaping.jl")
+include("simple_regular_solve.jl")
 include("juno_rendering.jl")
 
 export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem

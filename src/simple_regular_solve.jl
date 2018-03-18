@@ -11,7 +11,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
   rj = jump_prob.regular_jump
   rate = rj.rate
   c = rj.c
-  dc = rj.dc
+  dc = zeros(rj.dc)
   fill!(dc,0)
   rate_cache = zeros(size(dc,2))
 
@@ -55,7 +55,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::RegularSSA)
   rj = jump_prob.regular_jump
   rate = rj.rate
   c = rj.c
-  dc = rj.dc
+  dc = zeros(rj.dc)
   fill!(dc,0)
   rate_cache = zeros(size(dc,2))
   rate_sum = similar(rate_cache)

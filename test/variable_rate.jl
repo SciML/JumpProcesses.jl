@@ -10,7 +10,7 @@ a.=b
 rate = (u,p,t) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1]/2)
 
-jump = VariableRateJump(rate,affect!)
+jump = VariableRateJump(rate,affect!,interp_points=1000)
 jump2 = deepcopy(jump)
 
 f = function (du,u,p,t)

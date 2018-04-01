@@ -2,7 +2,7 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Base.Test
 
-doPrint = true
+doPrint = false
 
 function testAtoBMean(N)
     Nsims    = 32000

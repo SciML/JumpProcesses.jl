@@ -21,7 +21,7 @@ abstract type SSAJumpAggregator <: AbstractJumpAggregator end
 
 ##### defaults #####
 
-retrieve_jump(p::SSAJumpAggregator) = p.next_jump_time,p.next_jump
+@inline retrieve_jump(p::SSAJumpAggregator) = p.next_jump_time,p.next_jump
 
 # forbidden; see: https://github.com/JuliaLang/julia/issues/14919
 # @inline function (p::SSAJumpAggregator)(u,t,integrator) # condition
@@ -74,10 +74,10 @@ end
 
 ##### helper functions for sampling jump times #####
 
-randexp_ziggurat(sum_rate) = randexp() / sum_rate
-randexp_inverse(sum_rate) = -log(rand()) / sum_rate
+@inline randexp_ziggurat(sum_rate) = randexp() / sum_rate
+@inline randexp_inverse(sum_rate) = -log(rand()) / sum_rate
 
 ##### helper functions for sampling jump indices #####
-randidx_bisection(cur_rates,rng_val) = searchsortedfirst(cur_rates,rng_val)
+@inline randidx_bisection(cur_rates,rng_val) = searchsortedfirst(cur_rates,rng_val)
 
 ##### helper functions for coupled sampling #####

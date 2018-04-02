@@ -127,7 +127,7 @@ end
 aggregator{P,A,C,J,J2}(jp::JumpProblem{P,A,C,J,J2}) = A
 
 @inline function extend_tstops!{P,A,C,J,J2}(tstops,jp::JumpProblem{P,A,C,J,J2})
-  !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) && push!(tstops,jp.jump_callback.discrete_callbacks[1].condition.next_jump)
+  !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) && push!(tstops,jp.jump_callback.discrete_callbacks[1].condition.next_jump_time)
 end
 
 @inline function update_jumps!(du,u,p,t,idx,jump)

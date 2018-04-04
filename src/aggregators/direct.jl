@@ -73,8 +73,7 @@ end
   cur_rates = p.cur_rates
   rates = p.rates
 
-  @inbounds fill_cur_rates(u, params, t, cur_rates, 1, rates...)
-  @inbounds cur_rates[1] = cur_rates[1]
+  fill_cur_rates(u, params, t, cur_rates, 1, rates...)
   @inbounds for i in 2:length(cur_rates) # normalize for choice, cumsum
     cur_rates[i] = cur_rates[i] + cur_rates[i-1]
   end

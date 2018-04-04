@@ -1,4 +1,4 @@
-type DirectJumpAggregation{T,F1,F2} <: SSAJumpAggregator
+type DirectJumpAggregation{T,F1,F2,RNG} <: SSAJumpAggregator
   next_jump::Int
   next_jump_time::T
   end_time::T
@@ -7,6 +7,7 @@ type DirectJumpAggregation{T,F1,F2} <: SSAJumpAggregator
   rates::F1
   affects!::F2
   save_positions::Tuple{Bool,Bool}
+  rng::RNG
 end
 
 @inline function (p::DirectJumpAggregation)(u,t,integrator) # condition
@@ -25,15 +26,11 @@ end
 
 function generate_jump!(p::DirectJumpAggregation,u,params,t)
   # update the jump rates
-  sum_rate = cur_rates_as_cumsum(u,params,t,p.rates,p.cur_rates)
-  # determine next jump index
-  i = randidx_bisection(p.cur_rates, rand())
-  # determine next jump time
-  ttnj = randexp_ziggurat(sum_rate)
-  # mutate fields
-  p.sum_rate = sum_rate
-  p.next_jump = i
+  p.sum_rate = cur_rates_as_cumsum(u,params,t,p.rates,p.cur_rates)
+  # sample next jump
+  ttnj, i = sample_next_jump(p)
   p.next_jump_time = t + ttnj
+  p.next_jump = i
   nothing
 end
 
@@ -45,7 +42,7 @@ function (p::DirectJumpAggregation)(dj,u,t,integrator) # initialize
   nothing
 end
 
-@inline function aggregate(aggregator::Direct,u,p,t,end_time,constant_jumps,save_positions)
+@inline function aggregate(aggregator::Direct,u,p,t,end_time,constant_jumps,save_positions,rng)
   rates = ((c.rate for c in constant_jumps)...)
   affects! = ((c.affect! for c in constant_jumps)...)
   cur_rates = Vector{Float64}(length(rates))
@@ -53,5 +50,5 @@ end
   next_jump = 0
   next_jump_time = typemax(Float64)
   DirectJumpAggregation(next_jump,next_jump_time,end_time,cur_rates,
-    sum_rate,rates,affects!,save_positions)
+    sum_rate,rates,affects!,save_positions,rng)
 end

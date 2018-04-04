@@ -19,7 +19,8 @@ JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;
 JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 
 function JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::JumpSet;
-                     save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true))
+                     save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true),
+                     rng = Xorshifts.Xoroshiro128Plus(rand(UInt64)))
 
   ## Constant Rate Handling
   t,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0
@@ -27,7 +28,7 @@ function JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::JumpSet
     disc = nothing
     constant_jump_callback = CallbackSet()
   else
-    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,save_positions)
+    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,save_positions,rng)
     constant_jump_callback = DiscreteCallback(disc)
   end
 

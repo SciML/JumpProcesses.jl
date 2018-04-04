@@ -12,7 +12,7 @@ An aggregator interface for SSA-like algorithms.
 - `save_positions`
 - `rng`
 """
-abstract type SSAJumpAggregator <: AbstractSSAJumpAggregator end
+abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 
 ########### The following routines should be templates for all SSAs ###########
 

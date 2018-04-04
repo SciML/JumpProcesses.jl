@@ -38,10 +38,10 @@ end
 function aggregate(aggregator::Direct, u, p, t, end_time, constant_jumps, save_positions, rng)
   rates = ((c.rate for c in constant_jumps)...)
   affects! = ((c.affect! for c in constant_jumps)...)
-  cur_rates = Vector{Float64}(length(rates))
-  sum_rate = zero(Float64)
+  cur_rates = Vector{typeof(t)}(length(rates))
+  sum_rate = zero(typeof(t))
   next_jump = 0
-  next_jump_time = typemax(Float64)
+  next_jump_time = typemax(typeof(t))
   DirectJumpAggregation(next_jump, next_jump_time, end_time, cur_rates,
     sum_rate, rates, affects!, save_positions, rng)
 end

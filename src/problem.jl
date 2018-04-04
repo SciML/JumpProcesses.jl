@@ -20,7 +20,7 @@ JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),j
 
 function JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::JumpSet;
                      save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true),
-                     rng = Xorshifts.Xoroshiro128Plus(rand(UInt64)))
+                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
 
   ## Constant Rate Handling
   t,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0

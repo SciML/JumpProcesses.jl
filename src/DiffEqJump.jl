@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, Distributions
+using DiffEqBase, Compat, Requires, Distributions, RandomNumbers
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
@@ -15,6 +15,7 @@ import RecursiveArrayTools: recursivecopy!
 @compat abstract type AbstractJumpProblem{P,J} <: DEProblem end
 
 include("aggregators/aggregators.jl")
+include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
 include("jumps.jl")
 include("problem.jl")

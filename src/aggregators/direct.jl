@@ -35,7 +35,7 @@ end
 ############################# Required Functions #############################
 
 # creating the JumpAggregation structure
-@inline function aggregate(aggregator::Direct, u, p, t, end_time, constant_jumps, save_positions, rng)
+function aggregate(aggregator::Direct, u, p, t, end_time, constant_jumps, save_positions, rng)
   rates = ((c.rate for c in constant_jumps)...)
   affects! = ((c.affect! for c in constant_jumps)...)
   cur_rates = Vector{Float64}(length(rates))

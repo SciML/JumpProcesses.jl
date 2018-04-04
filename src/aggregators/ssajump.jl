@@ -73,11 +73,10 @@ function cur_rates_as_cumsum(u,p,t,rates,cur_rates)
 end
 
 ##### helper functions for sampling jump times #####
-
-@inline randexp_ziggurat(sum_rate) = randexp() / sum_rate
-@inline randexp_inverse(sum_rate) = -log(rand()) / sum_rate
+@inline sample_next_jump_time(p::SSAJumpAggregator) = randexp(p.rng) / p.sum_rate
 
 ##### helper functions for sampling jump indices #####
-@inline randidx_bisection(cur_rates,rng_val) = searchsortedfirst(cur_rates,rng_val)
+@inline sample_next_jump_index(p::SSAJumpAggregator) = searchsortedfirst(p.cur_rates,rand(p.rng))
 
 ##### helper functions for coupled sampling #####
+@inline sample_next_jump(p) = sample_next_jump_time(p), sample_next_jump_index(p)

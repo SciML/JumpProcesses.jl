@@ -11,72 +11,38 @@ An aggregator interface for SSA-like algorithms.
 - `affects!`
 - `save_positions`
 - `rng`
-
-### Required Methods
-- `(p::SSAJumpAggregator)(dj,u,t,integrator)`: an initialization functor
-- `aggregate(aggregator::AbstractAggregatorAlgorithm,u,p,t,end_time,constant_jumps,save_positions)`
-- `generate_jump(p, integrator)`:
 """
 abstract type SSAJumpAggregator <: AbstractJumpAggregator end
 
-##### defaults #####
+########### The following routines should be templates for all SSAs ###########
 
-@inline retrieve_jump(p::SSAJumpAggregator) = p.next_jump_time,p.next_jump
-
-# forbidden; see: https://github.com/JuliaLang/julia/issues/14919
-# @inline function (p::SSAJumpAggregator)(u,t,integrator) # condition
-#   p.next_jump_time==t
+# # condition for jump to occur
+# @inline function (p::SSAJumpAggregator)(u, t, integrator) 
+#   p.next_jump_time == t
 # end
 
-# function (p::SSAJumpAggregator)(integrator) # affect!
-#   ttnj, i = retrieve_jump(p)
-#   @inbounds p.affects![i](integrator)
-#   generate_jump!(p,integrator.u,integrator.p,integrator.t)
-#   if p.next_jump_time < p.end_time
-#     add_tstop!(integrator,p.next_jump_time)
-#   end
+# # executing jump at the next jump time
+# function (p::SSAJumpAggregator)(integrator) 
+#   execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+#   generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+#   register_next_jump_time!(integrator, p, integrator.t)
 #   nothing
 # end
 
-DiscreteCallback(c::SSAJumpAggregator) = DiscreteCallback(c,c,initialize=c,save_positions=c.save_positions)
+# # setting up a new simulation
+# function (p::SSAJumpAggregator)(dj, u, t, integrator) # initialize
+#   initialize!(p, integrator, u, integrator.p, t)
+#   register_next_jump_time!(integrator, p, integrator.t)
+#   nothing
+# end
 
-##### required methods #####
+############################## Generic Routines ###############################
 
-generate_jump!(p::SSAJumpAggregator,u,params,t) = nothing
-
-# (p::SSAJumpAggregator)(dj,u,t,integrator) = nothing # initialize
-
-aggregate(aggregator::AbstractAggregatorAlgorithm,u,p,t,end_time,constant_jumps,save_positions) = nothing
-
-##### helper functions for updating rates #####
-
-@inline function fill_cur_rates(u,p,t,cur_rates,idx,rate,rates...)
-  @inbounds cur_rates[idx] = rate(u,p,t)
-  idx += 1
-  fill_cur_rates(u,p,t,cur_rates,idx,rates...)
-end
-
-@inline function fill_cur_rates(u,p,t,cur_rates,idx,rate)
-  @inbounds cur_rates[idx] = rate(u,p,t)
+@inline function register_next_jump_time!(integrator, p::SSAJumpAggregator, t)
+  if p.next_jump_time < p.end_time
+    add_tstop!(integrator, p.next_jump_time)
+  end
   nothing
 end
 
-function cur_rates_as_cumsum(u,p,t,rates,cur_rates)
-  @inbounds fill_cur_rates(u,p,t,cur_rates,1,rates...)
-  sum_rate = sum(cur_rates)
-  @fastmath normalizer = 1/sum_rate
-  @inbounds cur_rates[1] = normalizer*cur_rates[1]
-  @inbounds for i in 2:length(cur_rates) # normalize for choice, cumsum
-    cur_rates[i] = normalizer*cur_rates[i] + cur_rates[i-1]
-  end
-  sum_rate
-end
-
-##### helper functions for sampling jump times #####
-@inline sample_next_jump_time(p::SSAJumpAggregator) = randexp(p.rng) / p.sum_rate
-
-##### helper functions for sampling jump indices #####
-@inline sample_next_jump_index(p::SSAJumpAggregator) = searchsortedfirst(p.cur_rates,rand(p.rng))
-
-##### helper functions for coupled sampling #####
-@inline sample_next_jump(p) = sample_next_jump_time(p), sample_next_jump_index(p)
+DiscreteCallback(c::SSAJumpAggregator) = DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)

@@ -12,7 +12,7 @@ An aggregator interface for SSA-like algorithms.
 - `save_positions`
 - `rng`
 """
-abstract type SSAJumpAggregator <: AbstractJumpAggregator end
+abstract type SSAJumpAggregator <: AbstractSSAJumpAggregator end
 
 ########### The following routines should be templates for all SSAs ###########
 
@@ -38,11 +38,11 @@ abstract type SSAJumpAggregator <: AbstractJumpAggregator end
 
 ############################## Generic Routines ###############################
 
-@inline function register_next_jump_time!(integrator, p::SSAJumpAggregator, t)
+@inline function register_next_jump_time!(integrator, p::AbstractSSAJumpAggregator, t)
   if p.next_jump_time < p.end_time
     add_tstop!(integrator, p.next_jump_time)
   end
   nothing
 end
 
-DiscreteCallback(c::SSAJumpAggregator) = DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
+DiscreteCallback(c::AbstractSSAJumpAggregator) =DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)

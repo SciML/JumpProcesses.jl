@@ -1,4 +1,4 @@
-type DirectJumpAggregation{T,F1,F2,RNG} <: SSAJumpAggregator
+type DirectJumpAggregation{T,F1,F2,RNG} <: AbstractSSAJumpAggregator
   next_jump::Int
   next_jump_time::T
   end_time::T

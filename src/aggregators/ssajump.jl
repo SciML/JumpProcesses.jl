@@ -7,6 +7,7 @@ An aggregator interface for SSA-like algorithms.
 - `end_time`
 - `cur_rates`
 - `sum_rate`
+- `ma_jumps`
 - `rates`
 - `affects!`
 - `save_positions`

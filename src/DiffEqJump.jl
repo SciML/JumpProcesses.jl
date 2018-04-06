@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, Distributions, RandomNumbers
+using DiffEqBase, Compat, Requires, Distributions, RandomNumbers, FunctionWrappers
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
@@ -14,6 +14,7 @@ import RecursiveArrayTools: recursivecopy!
 @compat abstract type AbstractJumpAggregator end
 @compat abstract type AbstractJumpProblem{P,J} <: DEProblem end
 
+include("massaction_rates.jl")
 include("aggregators/aggregators.jl")
 include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
@@ -30,14 +31,14 @@ include("juno_rendering.jl")
 
 export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem
 
-export ConstantRateJump, VariableRateJump, RegularJump,
+export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, 
        JumpSet, CompoundConstantRateJump
 
 export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct
+export Direct, DirectManyJumps
 
 export init, solve, solve!
 

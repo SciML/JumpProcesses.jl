@@ -4,4 +4,5 @@ RecursiveArrayTools
 Distributions
 RandomNumbers
 Compat 0.19.0
+FunctionWrappers 0.1.0
 Requires

@@ -1,34 +1,37 @@
-type JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2,J3} <: AbstractJumpProblem{P,J}
+mutable struct JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2,J3,J4} <: AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
   discrete_jump_aggregation::J
   jump_callback::C
   variable_jumps::J2
   regular_jump::J3
+  massaction_jump::J4
 end
 
 JumpProblem(prob,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
 JumpProblem(prob,jumps::VariableRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
 JumpProblem(prob,jumps::RegularJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
+JumpProblem(prob,jumps::MassActionJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
 JumpProblem(prob,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,JumpSet(jumps...);kwargs...)
 
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::VariableRateJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::RegularJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
+JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::MassActionJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps...);kwargs...)
 JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 
-function JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::JumpSet;
+function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
                      save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true),
                      rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
 
   ## Constant Rate Handling
   t,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0
-  if typeof(jumps.constant_jumps) <: Tuple{}
+  if (typeof(jumps.constant_jumps) <: Tuple{}) && (jumps.massaction_jump == nothing)
     disc = nothing
     constant_jump_callback = CallbackSet()
-  else
-    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,save_positions,rng)
+  else    
+    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,jumps.massaction_jump,save_positions,rng)    
     constant_jump_callback = DiscreteCallback(disc)
   end
 
@@ -43,11 +46,11 @@ function JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::JumpSet
   callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
   JumpProblem{typeof(new_prob),typeof(aggregator),typeof(callbacks),
               typeof(disc),typeof(jumps.variable_jumps),
-              typeof(jumps.regular_jump)}(
+              typeof(jumps.regular_jump),typeof(jumps.massaction_jump)}(
                         new_prob,aggregator,disc,
                         callbacks,
                         jumps.variable_jumps,
-                        jumps.regular_jump)
+                        jumps.regular_jump, jumps.massaction_jump)
 end
 
 function extend_problem(prob::AbstractODEProblem,jumps)
@@ -125,9 +128,9 @@ function build_variable_callback(cb,idx,jump)
   CallbackSet(cb,new_cb)
 end
 
-aggregator{P,A,C,J,J2}(jp::JumpProblem{P,A,C,J,J2}) = A
+aggregator(jp::JumpProblem{P,A,C,J,J2}) where {P,A,C,J,J2} = A
 
-@inline function extend_tstops!{P,A,C,J,J2}(tstops,jp::JumpProblem{P,A,C,J,J2})
+@inline function extend_tstops!(tstops,jp::JumpProblem{P,A,C,J,J2}) where {P,A,C,J,J2}
   !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) && push!(tstops,jp.jump_callback.discrete_callbacks[1].condition.next_jump_time)
 end
 
@@ -150,4 +153,10 @@ function Base.show(io::IO, A::JumpProblem)
   println(io,summary(A))
   println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation == nothing ? 0 : length(A.discrete_jump_aggregation.rates))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
+  if A.regular_jump != nothing
+    println(io,"Have a regular jump")
+  end
+  if (A.massaction_jump != nothing) && !isempty(A.massaction_jump.scaled_rates) 
+    println(i0,"Have a mass action jump")
+  end
 end

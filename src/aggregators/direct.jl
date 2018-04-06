@@ -39,7 +39,7 @@ end
 function aggregate(aggregator::Direct, u, p, t, end_time, constant_jumps, 
                     ma_jumps, save_positions, rng)
 
-  # handle constant jumps using function wrappers
+  # handle constant jumps using tuples
   rates, affects! = get_jump_info_tuples(constant_jumps)
 
   build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
@@ -124,12 +124,14 @@ end
   end
   
   # constant jump rates  
-  idx  += 1
   rates = p.rates
-  fill_cur_rates(u, params, t, cur_rates, idx, rates...)
-  @inbounds for i in idx:length(cur_rates)
-    cur_rates[i] = cur_rates[i] + prev_rate
-    prev_rate    = cur_rates[i]
+  if !isempty(rates)
+    idx  += 1
+    fill_cur_rates(u, params, t, cur_rates, idx, rates...)
+    @inbounds for i in idx:length(cur_rates)
+      cur_rates[i] = cur_rates[i] + prev_rate
+      prev_rate    = cur_rates[i]
+    end
   end
 
   @inbounds sum_rate = cur_rates[end]

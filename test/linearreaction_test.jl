@@ -160,6 +160,10 @@ method = Direct()
 jump_prob_orig = A_to_B_mean_orig(Nrxs, method)
 push!(means, runSSAs(jump_prob_orig))
 
+# mass action through Direct()
+jump_prob_ma_notup = A_to_B_mean_ma(Nrxs, method)
+push!(means, runSSAs(jump_prob_ma_notup))
+
 # hybrid of tuples and mass action
 jump_prob_hybrid_orig = A_to_B_mean_hybrid(Nrxs, method)
 push!(means, runSSAs(jump_prob_hybrid_orig))
@@ -174,7 +178,7 @@ method = DirectManyJumps()
 jump_prob_fw = A_to_B_mean(Nrxs, method)
 push!(means, runSSAs(jump_prob_fw))
 
-# mass action
+# mass action through DirectManyJumps()
 jump_prob_ma = A_to_B_mean_ma(Nrxs, method)
 push!(means, runSSAs(jump_prob_ma))
 
@@ -199,6 +203,7 @@ end
 
 # if dobenchmark
 #     @btime runSSAs($jump_prob_orig)
+#     @btime runSSAs($jump_prob_ma_notup)
 #     @btime runSSAs($jump_prob_hybrid_orig)
 #     @btime runSSAs($jump_prob_fw)
 #     @btime runSSAs($jump_prob_ma)

@@ -18,7 +18,7 @@ rates = ones(Float64, Nrxs) * baserate;
 cumsum!(rates, rates)    
 
 function runSSAs(jump_prob)
-    Asamp = zeros(Int64,Nsims)
+    Asamp = zeros(Int,Nsims)
     for i in 1:Nsims
         sol = solve(jump_prob, SSAStepper())
         Asamp[i] = sol[1,end]
@@ -71,8 +71,8 @@ end
 
 # uses a mass action jump to represent all reactions
 function A_to_B_mean_ma(N, method)
-    reactstoch = Vector{Vector{Pair{Int64,Int64}}}();
-    netstoch   = Vector{Vector{Pair{Int64,Int64}}}();
+    reactstoch = Vector{Vector{Pair{Int,Int}}}();
+    netstoch   = Vector{Vector{Pair{Int,Int}}}();
     for i = 1:N
         push!(reactstoch,[1 => 1])
         push!(netstoch,[1 => -1, 2=>1])
@@ -93,8 +93,8 @@ function A_to_B_mean_hybrid(N, method)
     switchidx = (N//2).num
 
     # mass action reactions
-    reactstoch = Vector{Vector{Pair{Int64,Int64}}}();
-    netstoch   = Vector{Vector{Pair{Int64,Int64}}}();
+    reactstoch = Vector{Vector{Pair{Int,Int}}}();
+    netstoch   = Vector{Vector{Pair{Int,Int}}}();
     for i in 1:switchidx
         push!(reactstoch,[1 => 1])
         push!(netstoch,[1 => -1, 2=>1])
@@ -126,8 +126,8 @@ function A_to_B_mean_hybrid_nojset(N, method)
     switchidx = (N//2).num
 
     # mass action reactions
-    reactstoch = Vector{Vector{Pair{Int64,Int64}}}();
-    netstoch   = Vector{Vector{Pair{Int64,Int64}}}();
+    reactstoch = Vector{Vector{Pair{Int,Int}}}();
+    netstoch   = Vector{Vector{Pair{Int,Int}}}();
     for i in 1:switchidx
         push!(reactstoch,[1 => 1])
         push!(netstoch,[1 => -1, 2=>1])

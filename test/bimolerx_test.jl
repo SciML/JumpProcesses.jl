@@ -21,7 +21,6 @@ reltol       = .01
 
 # MODEL SETUP
 
-# DNA repression model DiffEqBiological
 # using DiffEqBiological
 # rs = @reaction_network dtype begin
 #     k1, 2A --> B

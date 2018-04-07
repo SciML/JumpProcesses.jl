@@ -10,6 +10,8 @@ mutable struct DirectJumpAggregation{T,S,F1,F2,RNG} <: AbstractSSAJumpAggregator
   save_positions::Tuple{Bool,Bool}
   rng::RNG
 end
+DirectJumpAggregation(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng; kwargs...) = DirectJumpAggregation(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng)
+
 
 ########### The following routines should be templates for all SSAs ###########
 
@@ -37,24 +39,24 @@ end
 
 # creating the JumpAggregation structure (tuple-based constant jumps)
 function aggregate(aggregator::Direct, u, p, t, end_time, constant_jumps, 
-                    ma_jumps, save_positions, rng)
+                    ma_jumps, save_positions, rng; kwargs...)
 
   # handle constant jumps using tuples
   rates, affects! = get_jump_info_tuples(constant_jumps)
 
-  build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
-                          save_positions, rng)
+  build_jump_aggregation(DirectJumpAggregation, u, p, t, end_time, ma_jumps, 
+                          rates, affects!, save_positions, rng; kwargs...)
 end
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::DirectManyJumps, u, p, t, end_time, constant_jumps, 
-                    ma_jumps, save_positions, rng)
+function aggregate(aggregator::DirectFW, u, p, t, end_time, constant_jumps, 
+                    ma_jumps, save_positions, rng; kwargs...)
 
   # handle constant jumps using function wrappers
   rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-  build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
-                          save_positions, rng)
+  build_jump_aggregation(DirectJumpAggregation, u, p, t, end_time, ma_jumps, 
+                          rates, affects!, save_positions, rng; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -85,28 +87,6 @@ end
 
 
 ######################## SSA specific helper routines ########################
-
-function build_jump_aggregation(u, p, t, end_time, ma_jumps, rates, affects!, 
-                                save_positions, rng)
-
-  # mass action jumps
-  majumps = ma_jumps
-  if majumps == nothing
-    majumps = MassActionJump(Vector{typeof(t)}(),
-                             Vector{Vector{Pair{Int,eltype(u)}}}(),
-                             Vector{Vector{Pair{Int,eltype(u)}}}() )
-  end
-
-  # current jump rates, allows mass action rates and constant jumps
-  cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
-
-  sum_rate = zero(typeof(t))
-  next_jump = 0
-  next_jump_time = typemax(typeof(t))
-  DirectJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
-                        majumps, rates, affects!, save_positions, rng)
-end
-
 
 # tuple-based constant jumps
 @fastmath function time_to_next_jump(p::DirectJumpAggregation{T,S,F1,F2,RNG}, u, params, t) where {T,S,F1 <: Tuple, F2 <: Tuple, RNG}

@@ -9,8 +9,11 @@ mutable struct FRMJumpAggregation{T,S,F1,F2,RNG} <: AbstractSSAJumpAggregator
   affects!::F2
   save_positions::Tuple{Bool,Bool}
   rng::RNG
+  FRMJumpAggregation{T,S,F1,F2,RNG}(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG) where {T,S,F1,F2,RNG} = 
+    new{T,S,F1,F2,RNG}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng)
 end
-FRMJumpAggregation(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng; kwargs...) = FRMJumpAggregation(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng)
+FRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; kwargs...) where {T,S,F1,F2,RNG} = 
+    FRMJumpAggregation{T,S,F1,F2,RNG}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng)
 
 
 ########### The following routines should be templates for all SSAs ###########

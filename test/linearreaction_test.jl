@@ -3,9 +3,9 @@ using DiffEqBase, DiffEqJump
 using Base.Test
 
 # using BenchmarkTools
-# dobenchmark = false
+# dobenchmark = true
 
-doprint     = false
+doprint     = true
 dotest      = true
 Nrxs        = 16
 Nsims       = 8000
@@ -13,9 +13,12 @@ tf          = .1
 baserate    = .1
 A0          = 100
 exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
+SSAalgs     = [FRM(), FRMFW(), Direct(), DirectFW()]
 
 rates = ones(Float64, Nrxs) * baserate;
 cumsum!(rates, rates)    
+exactmeanval = exactmean(tf, rates)
+
 
 function runSSAs(jump_prob)
     Asamp = zeros(Int,Nsims)
@@ -27,7 +30,7 @@ function runSSAs(jump_prob)
 end
 
 # uses constant jumps as a tuple within a JumpSet
-function A_to_B_mean_orig(N, method)
+function A_to_B_tuple(N, method)
     # jump reactions
     jumpvec = []
     for i in 1:N
@@ -49,7 +52,7 @@ function A_to_B_mean_orig(N, method)
 end
 
 # uses constant jumps as a vector within a JumpSet
-function A_to_B_mean(N, method)
+function A_to_B_vec(N, method)
     # jump reactions
     jumps = Vector{ConstantRateJump}()
     for i in 1:N
@@ -70,7 +73,7 @@ function A_to_B_mean(N, method)
 end
 
 # uses a mass action jump to represent all reactions
-function A_to_B_mean_ma(N, method)
+function A_to_B_ma(N, method)
     reactstoch = Vector{Vector{Pair{Int,Int}}}();
     netstoch   = Vector{Vector{Pair{Int,Int}}}();
     for i = 1:N
@@ -88,7 +91,7 @@ end
 
 # uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
 # stores them in a JumpSet
-function A_to_B_mean_hybrid(N, method)
+function A_to_B_hybrid(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
 
@@ -121,7 +124,7 @@ end
 
 # uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
 # passes them to JumpProblem as a splatted tuple
-function A_to_B_mean_hybrid_nojset(N, method)
+function A_to_B_hybrid_nojset(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
 
@@ -152,61 +155,22 @@ function A_to_B_mean_hybrid_nojset(N, method)
     jump_prob
 end
 
-means = []
+#jump_prob_gens = [A_to_B_tuple, A_to_B_vec, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_nojset]
+jump_prob_gens = [A_to_B_tuple, A_to_B_ma, A_to_B_hybrid]
 
-method = Direct()
-
-# tuples
-jump_prob_orig = A_to_B_mean_orig(Nrxs, method)
-push!(means, runSSAs(jump_prob_orig))
-
-# mass action through Direct()
-jump_prob_ma_notup = A_to_B_mean_ma(Nrxs, method)
-push!(means, runSSAs(jump_prob_ma_notup))
-
-# hybrid of tuples and mass action
-jump_prob_hybrid_orig = A_to_B_mean_hybrid(Nrxs, method)
-push!(means, runSSAs(jump_prob_hybrid_orig))
-
-# hybrid of tuples and mass action (no JumpSet)
-jump_prob_hybrid_orig_nojset = A_to_B_mean_hybrid(Nrxs, method)
-push!(means, runSSAs(jump_prob_hybrid_orig_nojset))
-
-method = DirectManyJumps()
-
-# function wrappers
-jump_prob_fw = A_to_B_mean(Nrxs, method)
-push!(means, runSSAs(jump_prob_fw))
-
-# mass action through DirectManyJumps()
-jump_prob_ma = A_to_B_mean_ma(Nrxs, method)
-push!(means, runSSAs(jump_prob_ma))
-
-# hybrid
-jump_prob_hybrid = A_to_B_mean_hybrid(Nrxs, method)
-push!(means, runSSAs(jump_prob_hybrid))
-
-# hybrid with jumps passed individually to JumpProblem (no JumpSet)
-jump_prob_hybrid_nojset = A_to_B_mean_hybrid_nojset(Nrxs, method)
-push!(means, runSSAs(jump_prob_hybrid_nojset))
-
-exactmeanval = exactmean(tf, rates)
-for meanval in means
-    if doprint
-        println("samp mean: ", meanval, ", act mean = ", exactmeanval)
-    end
-
-    if dotest
+for method in SSAalgs
+    for jump_prob_gen in jump_prob_gens
+        jump_prob = jump_prob_gen(Nrxs, method)
+        meanval   = runSSAs(jump_prob)
+        if doprint
+            println("Method: ", method, ", Jump input types: ", jump_prob_gen, 
+                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+        end
         @test abs(meanval - exactmeanval) < 1.
+
+        # if dobenchmark
+        #     @btime (runSSAs($jump_prob);)
+        # end
     end
 end
-
-# if dobenchmark
-#     @btime runSSAs($jump_prob_orig)
-#     @btime runSSAs($jump_prob_ma_notup)
-#     @btime runSSAs($jump_prob_hybrid_orig)
-#     @btime runSSAs($jump_prob_fw)
-#     @btime runSSAs($jump_prob_ma)
-#     @btime runSSAs($jump_prob_hybrid)
-# end
 

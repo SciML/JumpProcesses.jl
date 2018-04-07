@@ -46,4 +46,28 @@ abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
   nothing
 end
 
+# helper routine for setting up standard fields of SSA jump aggregations
+function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates, 
+                                affects!, save_positions, rng; kwargs...)
+
+  # mass action jumps
+  majumps = ma_jumps
+  if majumps == nothing
+    majumps = MassActionJump(Vector{typeof(t)}(),
+                             Vector{Vector{Pair{Int,eltype(u)}}}(),
+                             Vector{Vector{Pair{Int,eltype(u)}}}() )
+  end
+
+  # current jump rates, allows mass action rates and constant jumps
+  cur_rates = Vector{typeof(t)}(length(majumps.scaled_rates) + length(rates))
+
+  sum_rate = zero(typeof(t))
+  next_jump = 0
+  next_jump_time = typemax(typeof(t))
+  jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
+                majumps, rates, affects!, save_positions, rng; kwargs...)
+end
+
 DiscreteCallback(c::AbstractSSAJumpAggregator) =DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
+
+

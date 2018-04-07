@@ -18,6 +18,7 @@ include("massaction_rates.jl")
 include("aggregators/aggregators.jl")
 include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
+include("aggregators/frm.jl")
 include("jumps.jl")
 include("problem.jl")
 include("callbacks.jl")
@@ -29,7 +30,8 @@ include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 include("juno_rendering.jl")
 
-export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, AbstractJumpProblem
+export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, 
+       AbstractSSAJumpAggregator, AbstractJumpProblem
 
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, 
        JumpSet, CompoundConstantRateJump
@@ -38,7 +40,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectManyJumps
+export Direct, DirectFW, FRM, FRMFW
 
 export init, solve, solve!
 

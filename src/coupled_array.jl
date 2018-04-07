@@ -6,7 +6,7 @@ end
 
 Base.length(A::CoupledArray) = length(A.u) + length(A.u_control)
 Base.size(A::CoupledArray) = (length(A),)
-function Base.getindex(A::CoupledArray,i::Int)
+@inline function Base.getindex(A::CoupledArray,i::Int)
   if A.order == true
     i <= length(A.u) ? A.u[i] : A.u_control[i-length(A.u)]
   else
@@ -14,17 +14,17 @@ function Base.getindex(A::CoupledArray,i::Int)
   end
 end
 
-function Base.getindex(A::CoupledArray,I...)
+@inline function Base.getindex(A::CoupledArray,I...)
   A[sub2ind(A.u,I...)]
 end
 
-function Base.getindex(A::CoupledArray,I::CartesianIndex{1})
+@inline function Base.getindex(A::CoupledArray,I::CartesianIndex{1})
   A[I[1]]
 end
 
-Base.setindex!(A::CoupledArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
-Base.setindex!(A::CoupledArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
-function Base.setindex!(A::CoupledArray,v,i::Int)
+@inline Base.setindex!(A::CoupledArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
+@inline Base.setindex!(A::CoupledArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
+@inline function Base.setindex!(A::CoupledArray,v,i::Int)
   if A.order == true
     i <= length(A.u) ? (A.u[i] = v) : (A.u_control[i-length(A.u)] = v)
   else
@@ -43,7 +43,17 @@ function recursivecopy!{T<:CoupledArray}(dest::T, src::T)
   dest.order = src.order
 end
 
-Base.display(A::CoupledArray) = display(A.u)
-Base.show(A::CoupledArray) = show(A.u)
+add_idxs1{T<:CoupledArray}(::Type{T},expr) = :($(expr).u)
+add_idxs2{T<:CoupledArray}(::Type{T},expr) = :($(expr).u_control)
+@generated function Base.broadcast!(f,A::CoupledArray,B::Union{Number,CoupledArray}...)
+  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
+  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
+  res = quote
+      broadcast!(f,A.u,$(exs1...));broadcast!(f,A.u_control,$(exs2...))
+    end
+  res
+end
+
+Base.show(io::IO,A::CoupledArray) = show(io,A.u)
 plot_indices(A::CoupledArray) = eachindex(A)
 flip_u!(A::CoupledArray) = (A.order = !A.order)

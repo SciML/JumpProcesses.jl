@@ -5,13 +5,15 @@ b = ExtendedJumpArray(rand(3),rand(2))
 
 a.=b
 
-rate = (t,u) -> u[1]
+@test a == b
+
+rate = (u,p,t) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1]/2)
 
-jump = VariableRateJump(rate,affect!)
+jump = VariableRateJump(rate,affect!,interp_points=1000)
 jump2 = deepcopy(jump)
 
-f = function (t,u,du)
+f = function (du,u,p,t)
   du[1] = u[1]
 end
 
@@ -22,10 +24,10 @@ integrator = init(jump_prob,Tsit5(),dt=1/10)
 
 sol = solve(jump_prob,Tsit5())
 
-@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-14
-@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-14
+@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12
 
-g = function (t,u,du)
+g = function (du,u,p,t)
   du[1] = u[1]
 end
 
@@ -34,5 +36,5 @@ jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 
 sol = solve(jump_prob,SRIW1())
 
-@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-14
-@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-14
+@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12

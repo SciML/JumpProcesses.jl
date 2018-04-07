@@ -5,18 +5,18 @@ end
 
 Base.length(A::ExtendedJumpArray) = length(A.u) + length(A.jump_u)
 Base.size(A::ExtendedJumpArray) = (length(A),)
-function Base.getindex(A::ExtendedJumpArray,i::Int)
+@inline function Base.getindex(A::ExtendedJumpArray,i::Int)
   i <= length(A.u) ? A.u[i] : A.jump_u[i-length(A.u)]
 end
-function Base.getindex(A::ExtendedJumpArray,I...)
+@inline function Base.getindex(A::ExtendedJumpArray,I...)
   A[sub2ind(A.u,I...)]
 end
-function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
+@inline function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
   A[I[1]]
 end
-Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
-Base.setindex!(A::ExtendedJumpArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
-function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
+@inline Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
+@inline Base.setindex!(A::ExtendedJumpArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
+@inline function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
   i <= length(A.u) ? (A.u[i] = v) : (A.jump_u[i-length(A.u)] = v)
 end
 
@@ -29,32 +29,54 @@ function recursivecopy!{T<:ExtendedJumpArray}(dest::T, src::T)
   recursivecopy!(dest.jump_u,src.jump_u)
 end
 #indices(A::ExtendedJumpArray) = Base.OneTo(length(A.u) + length(A.jump_u))
-Base.display(A::ExtendedJumpArray) = display(A.u)
-Base.show(A::ExtendedJumpArray) = show(A.u)
+Base.show(io::IO,A::ExtendedJumpArray) = show(io,A.u)
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 add_idxs1(x,expr) = expr
 add_idxs1{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).u)
-add_idxs1{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[1:L]))
 
 add_idxs2(x,expr) = expr
 add_idxs2{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).jump_u)
-add_idxs2{T<:AbstractArray}(::Type{T},expr) = :(@view($(expr)[(L+1):end]))
 
-
-#=
-@generated function Base.broadcast!(f,A::ExtendedJumpArray,B...)
+@generated function Base.broadcast!(f,A::ExtendedJumpArray,B::Union{Number,ExtendedJumpArray}...)
   exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
   exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
   res = quote
-      L = length(A.u)
-      broadcast!(f,A.u,(exs1...));broadcast!(f,A.jump_u,$(exs2...))
+      broadcast!(f,A.u,$(exs1...));broadcast!(f,A.jump_u,$(exs2...))
     end
-  @show res
   res
 end
 
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{S}) where {T<:ExtendedJumpArray, S<:AbstractArray} = T
+Base.Broadcast.promote_containertype(::Type{S}, ::Type{T}) where {T<:ExtendedJumpArray, S<:AbstractArray} = T
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{<:Any}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{<:Any}, ::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{Array}, ::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.promote_containertype(::Type{T}, ::Type{Array}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast._containertype(::Type{T}) where {T<:ExtendedJumpArray} = T
+Base.Broadcast.broadcast_indices(::Type{<:ExtendedJumpArray}, A) = indices(A)
 
+@inline function Base.Broadcast.broadcast_c(f, ::Type{S}, A, Bs...) where S<:ExtendedJumpArray
+    T = Base.Broadcast._broadcast_eltype(f, A, Bs...)
+    shape = Base.Broadcast.broadcast_indices(A, Bs...)
+    broadcast!(f, similar(A), A, Bs...)
+end
+
+@inline function Base.Broadcast.broadcast_c(f, ::Type{S}, A::ExtendedJumpArray, Bs::Union{ExtendedJumpArray,Number}...) where S<:ExtendedJumpArray
+    new_A = similar(A)
+    broadcast!(f,new_A,A,Bs...)
+    new_A
+end
+
+@inline function Base.Broadcast.broadcast_c(f, ::Type{S}, A::ExtendedJumpArray) where S<:ExtendedJumpArray
+    new_A = similar(A)
+    broadcast!(f,new_A,A)
+    new_A
+end
+
+@inline Base.broadcast!(::typeof(identity), u::DiffEqJump.ExtendedJumpArray, x::Number) = fill!(u,x)
+#=
 Base.Broadcast._containertype(::Type{<:ExtendedJumpArray}) = ExtendedJumpArray
 Base.Broadcast.promote_containertype(::Type{ExtendedJumpArray}, _) = ExtendedJumpArray
 Base.Broadcast.promote_containertype(_, ::Type{ExtendedJumpArray}) = ExtendedJumpArray

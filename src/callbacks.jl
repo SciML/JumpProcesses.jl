@@ -6,7 +6,7 @@ type ConstantRateJumpCallback{R,T,A} <: DECallback
     save_positions::Tuple{Bool,Bool}
 end
 
-@inline function (p::ConstantRateJumpCallback)(t,u,integrator)
+@inline function (p::ConstantRateJumpCallback)(u,t,integrator)
   p.next_jump==t #condition
 end
 
@@ -18,16 +18,16 @@ end
   end
 end
 
-@inline function time_to_next_jump(t,u,rate)
-  randexp()/rate(t,u)
-  #rand(Exponential(1/rate(t,u)))
+@inline function time_to_next_jump(u,p,t,rate)
+  randexp()/rate(u,p,t)
+  #rand(Exponential(1/rate(u,p,t)))
 end
 
 ConstantRateJumpCallback(next_jump,c::ConstantRateJump,end_time) = ConstantRateJumpCallback(next_jump,end_time,c.rate,c.affect!,c.save_positions)
 
 DiscreteCallback(c::ConstantRateJumpCallback) = DiscreteCallback(c,c,c.save_positions)
 
-function DiscreteCallback(t,u,c::ConstantRateJump,end_time)
-  next_jump = time_to_next_jump(t,u,c.rate)
+function DiscreteCallback(u,p,t,c::ConstantRateJump,end_time)
+  next_jump = time_to_next_jump(u,p,t,c.rate)
   DiscreteCallback(ConstantRateJumpCallback(next_jump,c,end_time))
 end

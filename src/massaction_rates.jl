@@ -4,7 +4,7 @@
 ###############################################################################
 
 @inbounds @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rateconst,
-                                        stochmat::AbstractVector{Pair{Int,S}})::typeof(rateconst) where {T,S}
+                                        stochmat::AbstractVector{Pair{S,V}})::typeof(rateconst) where {T,S,V}
     val = one(T)
 
     for specstoch in stochmat
@@ -20,7 +20,7 @@
 end
 
 @inline @inbounds @fastmath function executerx!(speciesvec::AbstractVector{T},
-                                                net_stoch::AbstractVector{Pair{Int,S}}) where {T,S}
+                                                net_stoch::AbstractVector{Pair{S,V}}) where {T,S,V}
     for specstoch in net_stoch
         speciesvec[specstoch[1]] += specstoch[2]
     end
@@ -28,7 +28,7 @@ end
 end
 
 
-@inbounds function scalerates!(unscaled_rates, stochmat::Vector{Vector{Pair{Int,T}}}) where T
+@inbounds function scalerates!(unscaled_rates, stochmat::Vector{Vector{Pair{S,T}}}) where {S,T}
     for i in eachindex(unscaled_rates)
         coef = one(T)
         for specstoch in stochmat[i]            

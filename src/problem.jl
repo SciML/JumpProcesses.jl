@@ -157,6 +157,6 @@ function Base.show(io::IO, A::JumpProblem)
     println(io,"Have a regular jump")
   end
   if (A.massaction_jump != nothing) && !isempty(A.massaction_jump.scaled_rates) 
-    println(i0,"Have a mass action jump")
+    println(io,"Have a mass action jump")
   end
 end

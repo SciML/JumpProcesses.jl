@@ -75,3 +75,28 @@ jump_prob = JumpProblem(prob,Direct(),jump1)
 jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
 coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
 sol =  solve(coupled_prob,SRIW1())
+
+
+# test mass action jumps coupled to ODE
+# 0 -> A (stochasic) and A -> 0 (ODE)
+rate        = [100.]
+react_stoch = [Vector{Pair{Int,Int}}()]
+net_stoch   = [[1 => 1]]
+majumps     = MassActionJump(rate, react_stoch, net_stoch)
+f = function (du,u,p,t)
+  du[1] = -1.*u[1]
+end
+odeprob     = ODEProblem(f,[10.0],(0.0,10.0))
+jump_prob   = JumpProblem(odeprob, Direct(), majumps, save_positions=(false,false))
+Nsims = 8000
+Amean = 0.
+for i in 1:Nsims
+  sol    = solve(jump_prob,Tsit5(),saveat=10.)
+  Amean += sol[1,end]
+end
+Amean /= Nsims
+actmean = 100. + (10.-100.)*exp(-1.*10.)
+#println(abs(Amean-actmean)/actmean)
+@test abs(actmean - Amean) < .02 * actmean
+
+

@@ -6,7 +6,7 @@ using Base.Test
 # using BenchmarkTools
 # dobenchmark = true
 
-doprint     = false
+doprint     = true
 dotest      = true
 Nrxs        = 16
 Nsims       = 8000
@@ -186,7 +186,6 @@ function A_to_B_hybrid_vecs(N, method)
     jump_prob
 end
 
-
 # uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
 # passes them to JumpProblem as a splatted tuple
 function A_to_B_hybrid_vecs_scalars(N, method)
@@ -216,6 +215,38 @@ function A_to_B_hybrid_vecs_scalars(N, method)
     jump_prob
 end
 
+
+# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
+# passes them to JumpProblem as a splatted tuple
+function A_to_B_hybrid_tups_scalars(N, method)
+    # half reactions are treated as mass action and half as constant jumps
+    switchidx = (N//2).num
+
+    # mass action reactions
+    majumpsv = Vector{MassActionJump}()
+    for i in 1:switchidx
+        push!(majumpsv, MassActionJump(rates[i], [1 => 1], [1 => -1, 2=>1] ))
+    end
+
+    # jump reactions
+    jumpvec = Vector{ConstantRateJump}()
+    for i in (switchidx+1):N
+        ratefunc = (u,p,t) -> rates[i] * u[1]
+        affect!  = function (integrator)
+            integrator.u[1] -= 1
+            integrator.u[2] += 1
+        end
+        push!(jumpvec, ConstantRateJump(ratefunc, affect!))
+    end
+     
+    jumps     = ((maj for maj in majumpsv)..., (jump for jump in jumpvec)...)
+    prob      = DiscreteProblem([A0,0], (0.0,tf))
+    jump_prob = JumpProblem(prob, method, jumps...; save_positions=(false,false))
+
+    jump_prob
+end
+
+
 # uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
 # passes them to JumpProblem as a splatted tuple
 function A_to_B_hybrid_tups(N, method)
@@ -231,14 +262,14 @@ function A_to_B_hybrid_tups(N, method)
      # jump reactions
      jumpvec = Vector{ConstantRateJump}()
      for i in (switchidx+1):N
-         ratefunc = (u,p,t) -> rates[i] * u[1]
-         affect!  = function (integrator)
-             integrator.u[1] -= 1
-             integrator.u[2] += 1
-         end
-         push!(jumpvec, ConstantRateJump(ratefunc, affect!))
+        ratefunc = (u,p,t) -> rates[i] * u[1]
+        affect!  = function (integrator)
+            integrator.u[1] -= 1
+            integrator.u[2] += 1
+        end
+        push!(jumpvec, ConstantRateJump(ratefunc, affect!))
      end
-     jumps    = ((jump for jump in jumpvec)...)
+    jumps    = ((jump for jump in jumpvec)...)
     jset      = JumpSet((), jumps, nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
@@ -247,9 +278,9 @@ function A_to_B_hybrid_tups(N, method)
 end
 
 
-# jump_prob_gens = [A_to_B_tuple, A_to_B_vec, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_nojset,
-#                   A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars, A_to_B_hybrid_tups]
-jump_prob_gens = [A_to_B_tuple, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars]
+ jump_prob_gens = [A_to_B_tuple, A_to_B_vec, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_nojset,
+                   A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars, A_to_B_hybrid_tups,A_to_B_hybrid_tups_scalars]
+#jump_prob_gens = [A_to_B_tuple, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars,A_to_B_hybrid_tups_scalars]
 
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens

@@ -41,13 +41,18 @@ struct MassActionJump{T,S} <: AbstractJump
   reactant_stoch::S
   net_stoch::S
 
-  function MassActionJump{T,S}(rates::T, rs::S, ns::S, scale_rates::Bool) where {T,S}
+  function MassActionJump{T,S}(rates::T, rs::S, ns::S, scale_rates::Bool) where {T <: AbstractVector,S}
     sr = copy(rates)
     if scale_rates && !isempty(sr) 
       scalerates!(sr, rs)
     end
     new(sr, rs, ns)
   end
+  function MassActionJump{T,S}(rate::T, rs::S, ns::S, scale_rates::Bool) where {T <: Number,S}
+    sr = scale_rates ? scalerate(rate, rs) : rate
+    new(sr, rs, ns)
+  end
+
 end
 MassActionJump(usr::T, rs::S, ns::S; scale_rates = true ) where {T,S} = MassActionJump{T,S}(usr, rs, ns, scale_rates)
 
@@ -67,8 +72,21 @@ JumpSet() = JumpSet((),(),nothing,nothing)
 JumpSet(jb::Void) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable
-
 JumpSet(jumps::AbstractJump...) = JumpSet(split_jumps((), (), nothing, nothing, jumps...)...)
+
+# handle vector of mass action jumps 
+function JumpSet(vjs, cjs, rj, majv::Vector{MassActionJump}) 
+  if isempty(majv)
+    error("JumpSets do not accept empty mass action jump collections; use "nothing" instead.")
+  end
+
+  maj = setup_majump_to_merge(majv[1].scaled_rates, majv[1].reactant_stoch, majv[1].net_stoch)
+  for i = 2:length(majv)
+    massaction_jump_combine(maj, majv[i])
+  end
+
+  JumpSet(vjs, cjs, rj, maj)
+end
 
 @inline split_jumps(vj, cj, rj, maj) = vj, cj, rj, maj
 @inline split_jumps(vj, cj, rj, maj, v::VariableRateJump, args...) = split_jumps((vj..., v), cj, rj, maj, args...)
@@ -85,10 +103,39 @@ regular_jump_combine(rj1::Void,rj2::RegularJump) = rj2
 regular_jump_combine(rj1::Void,rj2::Void) = rj1
 regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regular jump is allowed in a JumpSet")
 
+
+# functionality to merge two mass action jumps together
+
+# if the jump stores vectors of rates and stoich it can be merged into
+function setup_majump_to_merge(sr::AbstractVector, rs::AbstractVector{S}, ns::AbstractVector{S}) where {S <: AbstractVector}
+  return MassActionJump(sr, rs, ns)
+end
+
+# if the jump just stores the data for one jump (and not in a container) wrap in a vector
+function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{S}) where {T <: Number, S}
+  MassActionJump([sr], [rs], [ns])
+end
+
+# assumes the mass action jump data are collections that can be appended
+function majump_merge!(maj1, sr::AbstractVector, rs::AbstractVector{S}, ns::AbstractVector{S}) where {S}
+  append!(maj1.scaled_rates, sr)
+  append!(maj1.reactant_stoch, rs)
+  append!(maj1.net_stoch, ns)
+  maj1
+end
+
+# assumes the mass action jump data are scalars from one reaction that must be pushed
+function majump_merge!(maj1, sr::T, rs::AbstractVector{S}, ns::AbstractVector{S}) where {T <: Number, S}
+  push!(maj1.scaled_rates, sr)
+  push!(maj1.reactant_stoch, rs)
+  push!(maj1.net_stoch, ns)
+  maj1
+end
+
 massaction_jump_combine(maj1::MassActionJump, maj2::Void) = maj1
 massaction_jump_combine(maj1::Void, maj2::MassActionJump) = maj2
 massaction_jump_combine(maj1::Void, maj2::Void) = maj1
-massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = error("Only one mass action jump type is allowed in a JumpSet")
+massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = majump_merge!(maj1, maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch)
 
 
 ##### helper methods for unpacking rates and affects! from constant jumps #####

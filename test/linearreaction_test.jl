@@ -73,7 +73,7 @@ function A_to_B_vec(N, method)
     jump_prob
 end
 
-# uses a mass action jump to represent all reactions
+# uses a single mass action jump to represent all reactions
 function A_to_B_ma(N, method)
     reactstoch = Vector{Vector{Pair{Int,Int}}}();
     netstoch   = Vector{Vector{Pair{Int,Int}}}();
@@ -90,8 +90,8 @@ function A_to_B_ma(N, method)
     jump_prob
 end
 
-# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
-# stores them in a JumpSet
+# uses one mass action jump to represent half the reactions and a vector 
+# of constant jumps for the other half. Stores them in a JumpSet
 function A_to_B_hybrid(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
@@ -123,8 +123,8 @@ function A_to_B_hybrid(N, method)
     jump_prob
 end
 
-# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
-# passes them to JumpProblem as a splatted tuple
+# uses a mass action jump to represent half the reactions and a vector
+# of constant jumps for the other half. Passes them to JumpProblem as a splatted tuple
 function A_to_B_hybrid_nojset(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
@@ -157,8 +157,8 @@ function A_to_B_hybrid_nojset(N, method)
 end
 
 
-# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
-# passes them to JumpProblem as a splatted tuple
+# uses a vector of mass action jumps of vectors to represent half the reactions and a vector 
+# of constant jumps for the other half. Passes them to JumpProblem as a JumpSet
 function A_to_B_hybrid_vecs(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
@@ -186,8 +186,8 @@ function A_to_B_hybrid_vecs(N, method)
     jump_prob
 end
 
-# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
-# passes them to JumpProblem as a splatted tuple
+# uses a vector of scalar mass action jumps to represent half the reactions and a vector 
+# of constant jumps for the other half. Passes them to JumpProblem as a JumpSet
 function A_to_B_hybrid_vecs_scalars(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
@@ -216,8 +216,8 @@ function A_to_B_hybrid_vecs_scalars(N, method)
 end
 
 
-# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
-# passes them to JumpProblem as a splatted tuple
+# uses a vector of scalar mass action jumps to represent half the reactions and a vector 
+# of constant jumps for the other half. Passes them to JumpProblem as a single splatted tuple.
 function A_to_B_hybrid_tups_scalars(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num
@@ -247,8 +247,8 @@ function A_to_B_hybrid_tups_scalars(N, method)
 end
 
 
-# uses a mass action jump to represent half the reactions and a vector of constant jumps for the other half
-# passes them to JumpProblem as a splatted tuple
+# uses a mass action jump to represent half the reactions and a tuple
+# of constant jumps for the other half. Passes them to JumpProblem as a JumpSet.
 function A_to_B_hybrid_tups(N, method)
     # half reactions are treated as mass action and half as constant jumps
     switchidx = (N//2).num

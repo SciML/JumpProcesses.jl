@@ -106,17 +106,17 @@ regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regula
 
 # functionality to merge two mass action jumps together
 
-# if the jump stores vectors of rates and stoich it can be merged into
+# if given containers of rates and stoichiometry directly create a jump
 function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{S}) where {T <: AbstractVector, S <: AbstractArray}
   MassActionJump(sr, rs, ns)
 end
 
-# if the jump just stores the data for one jump (and not in a container) wrap in a vector
+# if just given the data for one jump (and not in a container) wrap in a vector
 function setup_majump_to_merge(sr::T, rs::S, ns::S) where {T <: Number, S <: AbstractArray}
   MassActionJump([sr], [rs], [ns])
 end
 
-# assumes the mass action jump data are collections that can be appended
+# when given a collection of reactions to add to maj
 function majump_merge!(maj::MassActionJump{U,V}, sr::U, rs::V, ns::V) where {U <: AbstractVector, V <: AbstractVector}
   append!(maj.scaled_rates, sr)
   append!(maj.reactant_stoch, rs)
@@ -124,7 +124,7 @@ function majump_merge!(maj::MassActionJump{U,V}, sr::U, rs::V, ns::V) where {U <
   maj
 end
 
-# assumes the mass action jump data are scalars from one reaction that must be pushed
+# when given a single jump's worth of data to add to maj
 function majump_merge!(maj::MassActionJump{U,V}, sr::T, rs::S, ns::S) where {U <: AbstractVector, V <: AbstractVector, T <: Number, S <: AbstractArray}
   push!(maj.scaled_rates, sr)
   push!(maj.reactant_stoch, rs)
@@ -132,8 +132,8 @@ function majump_merge!(maj::MassActionJump{U,V}, sr::T, rs::S, ns::S) where {U <
   maj
 end
 
-# assumes the mass action jump data are scalars from one reaction and the mass action
-# jump to push into can only represent a single jump
+# when maj only stores a single jump's worth of data (and not in a collection)
+# create a new jump with the merged data stored in vectors
 function majump_merge!(maj::MassActionJump{T,S}, sr::T, rs::S, ns::S) where {T <: Number, S <: AbstractArray}
   MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns])
 end

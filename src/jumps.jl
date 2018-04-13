@@ -138,8 +138,6 @@ function majump_merge!(maj::MassActionJump{T,S}, sr::T, rs::S, ns::S) where {T <
   MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns])
 end
 
-
-
 massaction_jump_combine(maj1::MassActionJump, maj2::Void) = maj1
 massaction_jump_combine(maj1::Void, maj2::MassActionJump) = maj2
 massaction_jump_combine(maj1::Void, maj2::Void) = maj1

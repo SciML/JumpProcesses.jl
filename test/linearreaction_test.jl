@@ -6,7 +6,7 @@ using Base.Test
 # using BenchmarkTools
 # dobenchmark = true
 
-doprint     = true
+doprint     = false
 dotest      = true
 Nrxs        = 16
 Nsims       = 8000
@@ -14,7 +14,7 @@ tf          = .1
 baserate    = .1
 A0          = 100
 exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
-SSAalgs     = [Direct(), DirectFW(), FRM(), FRMFW()]
+SSAalgs     = [Direct()]#, DirectFW(), FRM(), FRMFW()]
 
 rates = ones(Float64, Nrxs) * baserate;
 cumsum!(rates, rates)    

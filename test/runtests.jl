@@ -9,4 +9,5 @@ tic()
 @time @testset "Linear Reaction SSA Test" begin include("linearreaction_test.jl") end
 @time @testset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
 @time @testset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
+@time @testset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
 toc()

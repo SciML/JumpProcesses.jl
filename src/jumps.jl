@@ -41,14 +41,25 @@ struct MassActionJump{T,S} <: AbstractJump
   reactant_stoch::S
   net_stoch::S
 
-  function MassActionJump{T,S}(rates::T, rs::S, ns::S, scale_rates::Bool) where {T <: AbstractVector,S}
-    sr = copy(rates)
+  function MassActionJump{T,S}(rates::T, rs_in::S, ns::S, scale_rates::Bool) where {T <: AbstractVector,S}
+    sr  = copy(rates)
+    rs = copy(rs_in)
+    for i in eachindex(rs)
+      if (length(rs[i]) == 1) && (rs[i][1][1] == 0)
+        rs[i] = typeof(rs[i])()
+      end
+    end
+
     if scale_rates && !isempty(sr) 
       scalerates!(sr, rs)
     end
     new(sr, rs, ns)
   end
-  function MassActionJump{T,S}(rate::T, rs::S, ns::S, scale_rates::Bool) where {T <: Number,S}
+  function MassActionJump{T,S}(rate::T, rs_in::S, ns::S, scale_rates::Bool) where {T <: Number,S}    
+    rs = rs_in
+    if (length(rs) == 1) && (rs[1][1] == 0)
+      rs = typeof(rs)()
+    end
     sr = scale_rates ? scalerate(rate, rs) : rate
     new(sr, rs, ns)
   end
@@ -56,13 +67,13 @@ struct MassActionJump{T,S} <: AbstractJump
 end
 MassActionJump(usr::T, rs::S, ns::S; scale_rates = true ) where {T,S} = MassActionJump{T,S}(usr, rs, ns, scale_rates)
 
-
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump
   variable_jumps::T1
   constant_jumps::T2
   regular_jump::T3
   massaction_jump::T4
 end
+JumpSet(vj, cj, rj, maj::MassActionJump{S,T}) where {S <: Number, T} = JumpSet(vj, cj, rj, check_majump_type(maj))
 
 JumpSet(jump::ConstantRateJump) = JumpSet((),(jump,),nothing,nothing)
 JumpSet(jump::VariableRateJump) = JumpSet((jump,),(),nothing,nothing)
@@ -105,6 +116,8 @@ regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regula
 
 
 # functionality to merge two mass action jumps together
+check_majump_type(maj::MassActionJump) = maj
+check_majump_type(maj::MassActionJump{S,T}) where {S <: Number, T} = setup_majump_to_merge(maj.scaled_rates, maj.reactant_stoch, maj.net_stoch)
 
 # if given containers of rates and stoichiometry directly create a jump
 function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{S}) where {T <: AbstractVector, S <: AbstractArray}

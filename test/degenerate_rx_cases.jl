@@ -90,7 +90,7 @@ if doplot
 end
 
 for method in methods
-    jump_prob = JumpProblem(prob, Direct(), jump, jump2)
+    jump_prob = JumpProblem(prob, method, jump, jump2)
     sol = solve(jump_prob, SSAStepper())
     
     if doplot        

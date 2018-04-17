@@ -106,3 +106,20 @@ end
 #     println()
 # end
 
+
+
+# add a test for passing MassActionJumps individually (tests combining)
+if dotestmean
+    majump_vec = Vector{MassActionJump{Float64,Vector{Pair{Int,Int}}}}()
+    for i = 1:length(rates)
+        push!(majump_vec, MassActionJump(rates[i], reactstoch[i], netstoch[i]))
+    end
+    jset = JumpSet((),(),nothing,majump_vec)
+    jump_prob = JumpProblem(prob, Direct(), jset, save_positions=(false,false))
+    meanval = runSSAs(jump_prob)
+    relerr = abs(meanval - expected_avg) / expected_avg
+    if doprintmeans
+        println("Using individual MassActionJumps; Mean from method: ", typeof(Direct()), " is = ", meanval, ", rel err = ", relerr)
+    end
+    @test abs(meanval - expected_avg) < reltol*expected_avg
+end

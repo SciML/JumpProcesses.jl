@@ -5,11 +5,8 @@
 
 @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,  
                               majump::MassActionJump{U,V,W})::R where {T,S,R,U <: AbstractVector{R},V,W} 
-    val = one(T) 
- 
-    rateconst = majump.scaled_rates[rxidx] 
-    stochmat  = majump.reactant_stoch[rxidx] 
- 
+    val = one(T)      
+    @inbounds stochmat = majump.reactant_stoch[rxidx] 
     @inbounds for specstoch in stochmat
         specpop = speciesvec[specstoch[1]]
         val    *= specpop
@@ -19,12 +16,13 @@
         end
     end
 
-     rateconst * val
+    @inbounds rateconst = val * majump.scaled_rates[rxidx] 
+    rateconst
 end
 
 @inline @fastmath function executerx!(speciesvec::AbstractVector{T}, rxidx::S,  
                                       majump::MassActionJump{U,V,W}) where {T,S,U,V,W}
-    net_stoch = majump.net_stoch[rxidx]
+    @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
         speciesvec[specstoch[1]] += specstoch[2]
     end

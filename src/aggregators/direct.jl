@@ -72,7 +72,7 @@ end
 @inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
   num_ma_rates = length(p.ma_jumps.scaled_rates)
   if p.next_jump <= num_ma_rates
-      @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
+      @inbounds executerx!(u, p.next_jump, p.ma_jumps) 
   else
       idx = p.next_jump - num_ma_rates
       @inbounds p.affects![idx](integrator)
@@ -101,7 +101,7 @@ end
   majumps   = p.ma_jumps
   idx       = length(majumps.scaled_rates)
   @inbounds for i in 1:idx
-    new_rate     = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+    new_rate     = evalrxrate(u, i, majumps) 
     cur_rates[i] = new_rate + prev_rate
     prev_rate    = cur_rates[i]
   end
@@ -143,7 +143,7 @@ end
   majumps   = p.ma_jumps
   idx       = length(majumps.scaled_rates)
   @inbounds for i in 1:idx
-    new_rate     = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+    new_rate     = evalrxrate(u, i, majumps) 
     cur_rates[i] = new_rate + prev_rate
     prev_rate    = cur_rates[i]
   end

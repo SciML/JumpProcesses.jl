@@ -36,12 +36,12 @@ RegularJump(rate,c,dc;mark_dist = nothing,constant_c = false) =
             RegularJump(rate,c,dc,mark_dist,constant_c)
 
 
-struct MassActionJump{T,S} <: AbstractJump
+struct MassActionJump{T,S,U} <: AbstractJump
   scaled_rates::T
   reactant_stoch::S
-  net_stoch::S
+  net_stoch::U
 
-  function MassActionJump{T,S}(rates::T, rs_in::S, ns::S, scale_rates::Bool) where {T <: AbstractVector,S}
+  function MassActionJump{T,S,U}(rates::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: AbstractVector, S, U}
     sr  = copy(rates)
     rs = copy(rs_in)
     for i in eachindex(rs)
@@ -55,7 +55,7 @@ struct MassActionJump{T,S} <: AbstractJump
     end
     new(sr, rs, ns)
   end
-  function MassActionJump{T,S}(rate::T, rs_in::S, ns::S, scale_rates::Bool) where {T <: Number,S}    
+  function MassActionJump{T,S,U}(rate::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: Number, S, U}    
     rs = rs_in
     if (length(rs) == 1) && (rs[1][1] == 0)
       rs = typeof(rs)()
@@ -65,7 +65,7 @@ struct MassActionJump{T,S} <: AbstractJump
   end
 
 end
-MassActionJump(usr::T, rs::S, ns::S; scale_rates = true) where {T,S} = MassActionJump{T,S}(usr, rs, ns, scale_rates)
+MassActionJump(usr::T, rs::S, ns::U; scale_rates = true) where {T,S,U} = MassActionJump{T,S,U}(usr, rs, ns, scale_rates)
 
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump
   variable_jumps::T1

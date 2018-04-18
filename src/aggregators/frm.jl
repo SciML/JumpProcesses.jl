@@ -72,7 +72,7 @@ end
 @inline function execute_jumps!(p::FRMJumpAggregation, integrator, u, params, t)
   num_ma_rates = length(p.ma_jumps.scaled_rates)
   if p.next_jump <= num_ma_rates
-      @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
+      @inbounds executerx!(u, p.next_jump, p.ma_jumps) 
   else
       idx = p.next_jump - num_ma_rates
       @inbounds p.affects![idx](integrator)
@@ -105,7 +105,7 @@ end
     nextrx    = zero(Int)
     majumps   = p.ma_jumps
     @inbounds for i in eachindex(majumps.scaled_rates)
-        p.cur_rates[i] = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+        p.cur_rates[i] = evalrxrate(u, i, majumps) 
         dt = randexp(p.rng) / p.cur_rates[i]
         if dt < ttnj
             ttnj   = dt

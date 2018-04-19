@@ -3,9 +3,9 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,  
+@fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
                               majump::MassActionJump{U,V,W})::R where {T,S,R,U <: AbstractVector{R},V,W} 
-    val = one(T)      
+    val = one(T)
     @inbounds stochmat = majump.reactant_stoch[rxidx] 
     @inbounds for specstoch in stochmat
         specpop = speciesvec[specstoch[1]]
@@ -16,11 +16,10 @@
         end
     end
 
-    @inbounds rateconst = val * majump.scaled_rates[rxidx] 
-    rateconst
+    @inbounds return val * majump.scaled_rates[rxidx] 
 end
 
-@inline @fastmath function executerx!(speciesvec::AbstractVector{T}, rxidx::S,  
+@inline @fastmath function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
                                       majump::MassActionJump{U,V,W}) where {T,S,U,V,W}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch

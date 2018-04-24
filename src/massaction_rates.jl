@@ -6,8 +6,7 @@
 @inline @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
                               majump::MassActionJump{U,V,W})::R where {T,S,R,U <: AbstractVector{R},V,W} 
     val = one(T)
-    @inbounds stochmat = majump.reactant_stoch[rxidx] 
-    @inbounds for specstoch in stochmat
+    @inbounds for specstoch in majump.reactant_stoch[rxidx] 
         specpop = speciesvec[specstoch[1]]
         val    *= specpop
         @inbounds for k = 2:specstoch[2]

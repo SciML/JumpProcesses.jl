@@ -3,7 +3,7 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
+@inline @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
                               majump::MassActionJump{U,V,W})::R where {T,S,R,U <: AbstractVector{R},V,W} 
     val = one(T)
     @inbounds stochmat = majump.reactant_stoch[rxidx] 

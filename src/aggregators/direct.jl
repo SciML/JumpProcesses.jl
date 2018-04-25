@@ -70,9 +70,9 @@ end
 
 # execute one jump, changing the system state
 @inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
-  num_ma_rates = length(p.ma_jumps.scaled_rates)
+  num_ma_rates = get_num_majumps(p.ma_jumps)
   if p.next_jump <= num_ma_rates
-      @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
+      @inbounds executerx!(u, p.next_jump, p.ma_jumps) 
   else
       idx = p.next_jump - num_ma_rates
       @inbounds p.affects![idx](integrator)
@@ -99,9 +99,9 @@ end
 
   # mass action rates
   majumps   = p.ma_jumps
-  idx       = length(majumps.scaled_rates)
+  idx       = get_num_majumps(majumps)
   @inbounds for i in 1:idx
-    new_rate     = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+    new_rate     = evalrxrate(u, i, majumps) 
     cur_rates[i] = new_rate + prev_rate
     prev_rate    = cur_rates[i]
   end
@@ -141,9 +141,9 @@ end
 
   # mass action rates
   majumps   = p.ma_jumps
-  idx       = length(majumps.scaled_rates)
+  idx       = get_num_majumps(majumps)
   @inbounds for i in 1:idx
-    new_rate     = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+    new_rate     = evalrxrate(u, i, majumps) 
     cur_rates[i] = new_rate + prev_rate
     prev_rate    = cur_rates[i]
   end

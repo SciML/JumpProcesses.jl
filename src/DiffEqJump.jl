@@ -14,12 +14,12 @@ import RecursiveArrayTools: recursivecopy!
 @compat abstract type AbstractJumpAggregator end
 @compat abstract type AbstractJumpProblem{P,J} <: DEProblem end
 
+include("jumps.jl")
 include("massaction_rates.jl")
 include("aggregators/aggregators.jl")
 include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
 include("aggregators/frm.jl")
-include("jumps.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")

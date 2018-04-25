@@ -70,9 +70,9 @@ end
 
 # execute one jump, changing the system state
 @inline function execute_jumps!(p::FRMJumpAggregation, integrator, u, params, t)
-  num_ma_rates = length(p.ma_jumps.scaled_rates)
+  num_ma_rates = get_num_majumps(p.ma_jumps)
   if p.next_jump <= num_ma_rates
-      @inbounds executerx!(u, p.ma_jumps.net_stoch[p.next_jump])
+      @inbounds executerx!(u, p.next_jump, p.ma_jumps) 
   else
       idx = p.next_jump - num_ma_rates
       @inbounds p.affects![idx](integrator)
@@ -104,8 +104,8 @@ end
     ttnj      = typemax(typeof(t))    
     nextrx    = zero(Int)
     majumps   = p.ma_jumps
-    @inbounds for i in eachindex(majumps.scaled_rates)
-        p.cur_rates[i] = evalrxrate(u, majumps.scaled_rates[i], majumps.reactant_stoch[i])
+    @inbounds for i in 1:get_num_majumps(majumps)
+        p.cur_rates[i] = evalrxrate(u, i, majumps) 
         dt = randexp(p.rng) / p.cur_rates[i]
         if dt < ttnj
             ttnj   = dt
@@ -120,7 +120,7 @@ end
     ttnj   = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)
-        idx = length(p.ma_jumps.scaled_rates) + 1
+        idx = get_num_majumps(p.ma_jumps) + 1
         fill_cur_rates(u, params, t, p.cur_rates, idx, p.rates...)
         @inbounds for i in idx:length(p.cur_rates)
             dt = randexp(p.rng) / p.cur_rates[i]
@@ -138,7 +138,7 @@ end
     ttnj   = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)
-        idx = length(p.ma_jumps.scaled_rates) + 1  
+        idx = get_num_majumps(p.ma_jumps) + 1  
         @inbounds for i in 1:length(p.rates)
             p.cur_rates[idx] = p.rates[i](u, params, t)
             dt = randexp(p.rng) / p.cur_rates[idx]

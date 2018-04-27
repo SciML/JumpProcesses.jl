@@ -34,7 +34,7 @@ export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator,
        AbstractSSAJumpAggregator, AbstractJumpProblem
 
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, 
-       JumpSet, CompoundConstantRateJump
+       JumpSet
 
 export JumpProblem
 

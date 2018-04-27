@@ -94,6 +94,7 @@ function fill_rates_and_sum!(p, u, params, t)
 end
 
 # recalculate jump rates for jumps that depend on the just executed jump
+# requires dependency graph
 function update_dependent_rates!(p, u, params, t)
   @inbounds dep_rxs = p.dep_gr[p.next_jump]
   num_majumps = get_num_majumps(p.ma_jumps)

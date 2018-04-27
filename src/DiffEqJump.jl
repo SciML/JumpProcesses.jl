@@ -2,7 +2,8 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, Distributions, RandomNumbers, FunctionWrappers
+using DiffEqBase, Compat, Requires, Distributions, RandomNumbers, 
+      FunctionWrappers, DataStructures
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
@@ -20,6 +21,7 @@ include("aggregators/aggregators.jl")
 include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
 include("aggregators/frm.jl")
+include("aggregators/sortingdirect.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")

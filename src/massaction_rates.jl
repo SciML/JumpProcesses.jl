@@ -47,8 +47,6 @@ function scalerate(unscaled_rate::U, stochmat::AbstractVector{Pair{S,T}}) where 
 end
 
 
-using DataStructures
-
 ###############################################################################
 # dependency graph when MassActionJump uses pairs to represent (species,stoich)
 ###############################################################################

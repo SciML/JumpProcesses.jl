@@ -105,7 +105,7 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
 end
 
 # calculate the next jump / jump time
-inline function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
+@inline function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
     nothing
 end

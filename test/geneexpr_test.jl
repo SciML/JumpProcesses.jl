@@ -3,14 +3,14 @@ using Base.Test
 
 # using Plots; plotlyjs()
 doplot = false
-# using BenchmarkTools
-# dobenchmark = false
+using BenchmarkTools
+dobenchmark = true
 
 dotestmean   = true
-doprintmeans = false
+doprintmeans = true
 
 # SSAs to test
-SSAalgs = (Direct(),) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (Direct(),SortingDirect()) #, DirectFW(), FRM(), FRMFW())
 
 Nsims        = 8000
 tf           = 1000.0
@@ -90,9 +90,9 @@ if dotestmean
             println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ", relerr)
         end
 
-        # if dobenchmark
-        #     @btime (runSSAs($jump_prob);)
-        # end
+        if dobenchmark
+            @btime (runSSAs($jump_prob);)
+        end
 
 
         @test abs(means[i] - expected_avg) < reltol*expected_avg
@@ -101,13 +101,13 @@ end
 
 
 # benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
+if dobenchmark
+    # exact methods
+    for alg in SSAalgs
+        println("Solving with method: ", typeof(alg), ", using SSAStepper")
+        jump_prob = JumpProblem(prob, alg, majumps)
+        @btime solve($jump_prob, SSAStepper())
+    end
+    println()
+end
 

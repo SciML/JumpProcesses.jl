@@ -105,7 +105,7 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
+inline function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
     nothing
 end
@@ -145,11 +145,11 @@ function fill_rates_and_sum!(p, u, params, t)
         sum_rate    += cur_rates[i]
     end
 
-    # constant rates (IGNORED)
+    # constant rates
     rates = p.rates
     idx   = get_num_majumps(majumps) + 1
-    @inbounds for i in eachindex(rates)
-        cur_rates[idx] = rates[i](u, params, t)
+    @inbounds for rate in rates
+        cur_rates[idx] = rate(u, params, t)
         sum_rate += cur_rates[idx]
         idx += 1
     end

@@ -1,3 +1,7 @@
+# Sorting Direct Method, implementation following McCollum et al, 
+# "The sorting direct method for stochastic simulation of biochemical systems with varying reaction execution behavior"
+# Comp. Bio. and Chem., 30, pg. 39-49 (2006). 
+
 mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
     next_jump::Int
     next_jump_time::T
@@ -39,7 +43,7 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
 end
 
 
-  ########### The following routines should be templates for all SSAs ###########
+########### The following routines should be templates for all SSAs ###########
 
 # condition for jump to occur
 @inline function (p::SortingDirectJumpAggregation)(u, t, integrator)
@@ -61,7 +65,9 @@ function (p::SortingDirectJumpAggregation)(dj, u, t, integrator) # initialize
     nothing
 end
 
-  # creating the JumpAggregation structure (function wrapper-based constant jumps)
+############################# Required Functions ##############################
+
+# creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; kwargs...)
 
@@ -111,29 +117,30 @@ function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params,
 end
 
 
-######################## SSA specific helper routines ########################
+######################## SSA specific helper routines #########################
 
-# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
-function update_dependent_rates!(p, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    num_majumps = get_num_majumps(p.ma_jumps)
-    cur_rates   = p.cur_rates
-    sum_rate    = p.sum_rate
-    majumps     = p.ma_jumps
-    @inbounds for rx in dep_rxs
-        sum_rate -= cur_rates[rx]
-        if rx <= num_majumps
-            @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
-        else
-            @inbounds cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
+# searches down the rate list for the next reaction
+@fastmath function calc_next_jump!(p, u, params, t)
+    
+    # next jump type
+    cur_rates = p.cur_rates
+    numjumps  = length(cur_rates)
+    jso       = p.jump_search_order
+    rn        = p.sum_rate * rand(p.rng)
+    @inbounds for idx = 1:numjumps
+        rn -= cur_rates[jso[idx]]
+        if rn < zero(rn)
+            p.jump_search_idx = idx
+            break
         end
-        sum_rate += cur_rates[rx]
     end
+    @inbounds p.next_jump = jso[p.jump_search_idx]
 
-    p.sum_rate = sum_rate
+    # return time to next jump
+    randexp(p.rng) / p.sum_rate
 end
 
-
+# reevaluate all rates and total rate
 function fill_rates_and_sum!(p, u, params, t)
     sum_rate = zero(typeof(p.sum_rate))
 
@@ -155,26 +162,26 @@ function fill_rates_and_sum!(p, u, params, t)
     end
 
     p.sum_rate = sum_rate
+    nothing 
 end
 
-# searches down the rate list for the next reaction
-@fastmath function calc_next_jump!(p, u, params, t)
-    
-    # next jump type
-    cur_rates = p.cur_rates
-    numjumps  = length(cur_rates)
-    jso       = p.jump_search_order
-    rn        = p.sum_rate * rand(p.rng)
-    @inbounds for idx = 1:numjumps
-        rn -= cur_rates[jso[idx]]
-        if rn < zero(rn)
-            p.jump_search_idx = idx
-            break
+# recalculate jump rates for jumps that depend on the just executed jump
+function update_dependent_rates!(p, u, params, t)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    num_majumps = get_num_majumps(p.ma_jumps)
+    cur_rates   = p.cur_rates
+    sum_rate    = p.sum_rate
+    majumps     = p.ma_jumps
+    @inbounds for rx in dep_rxs
+        sum_rate -= cur_rates[rx]
+        if rx <= num_majumps
+            @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
+        else
+            @inbounds cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
         end
+        sum_rate += cur_rates[rx]
     end
-    @inbounds p.next_jump = jso[p.jump_search_idx]
 
-    # return time to next jump
-    randexp(p.rng) / p.sum_rate
-
+    p.sum_rate = sum_rate
+    nothing
 end

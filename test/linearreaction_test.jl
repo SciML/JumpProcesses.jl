@@ -298,7 +298,7 @@ for method in SSAalgs
     end
 end
 
-# for depedency graph methods just test with mass action jumps
+# for dependency graph methods just test with mass action jumps
 SSAalgs        = [SortingDirect()]
 jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs

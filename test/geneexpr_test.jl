@@ -6,8 +6,8 @@ doplot = false
 # using BenchmarkTools
 # dobenchmark = true
 
-dotestmean   = false
-doprintmeans = true
+dotestmean   = true
+doprintmeans = false
 
 # SSAs to test
 SSAalgs = (Direct(),SortingDirect()) #, DirectFW(), FRM(), FRMFW())

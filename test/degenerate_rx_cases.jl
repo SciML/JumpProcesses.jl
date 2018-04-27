@@ -7,7 +7,7 @@ using DiffEqBase, DiffEqJump
 using Base.Test
 
 doprint = false
-using Plots; plotlyjs()
+#using Plots; plotlyjs()
 doplot = false
 
 methods = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect())

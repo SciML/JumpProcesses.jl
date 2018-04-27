@@ -40,7 +40,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW
+export Direct, DirectFW, FRM, FRMFW, SortingDirect
 
 export init, solve, solve!
 

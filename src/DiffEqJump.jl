@@ -42,7 +42,9 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW, SortingDirect, needs_depgraph
+export Direct, DirectFW, FRM, FRMFW, SortingDirect
+
+export get_num_majumps, needs_depgraph
 
 export init, solve, solve!
 

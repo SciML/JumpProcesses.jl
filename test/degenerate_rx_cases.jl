@@ -10,7 +10,7 @@ doprint = false
 #using Plots; plotlyjs()
 doplot = false
 
-methods = (Direct(), DirectFW(), FRM(), FRMFW())
+methods = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect())
 
 # one reaction case, mass action jump, vector of data
 rate = [2.0]
@@ -76,6 +76,7 @@ end
 
 
 # mix two rx types
+# 0 -> A and A -> 0
 rate = 600.0
 rs = [0 => 3]                   # stoich power should be ignored
 ns = [1 => 1]
@@ -89,14 +90,22 @@ if doplot
     plothand2 = plot(reuse=false) 
 end
 
+dep_graph = [
+    [1, 2],
+    [1, 2]
+]
+
 for method in methods
-    jump_prob = JumpProblem(prob, method, jump, jump2)
+    jump_prob = JumpProblem(prob, method, jump, jump2; dep_graph=dep_graph)
     sol = solve(jump_prob, SSAStepper())
     
     if doplot        
         plot!(plothand2, sol, label=("A <-> 0, " * string(method)))
     end
 
+    if doprint
+        println("Mix of constant and mass action jumps, method = ", typeof(method), ", sol[end] = ", sol[end,end])
+    end
     @test sol[end,end] > 200
 end
 

@@ -4,13 +4,13 @@ using Base.Test
 # using Plots; plotlyjs()
 doplot = false
 # using BenchmarkTools
-# dobenchmark = false
+# dobenchmark = true
 
 dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(),) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (Direct(),SortingDirect()) #, DirectFW(), FRM(), FRMFW())
 
 Nsims        = 8000
 tf           = 1000.0

@@ -1,3 +1,7 @@
 DiffEqProblemLibrary
 OrdinaryDiffEq 3.1.1
 StochasticDiffEq 1.0.2
+Distributions 0.15.0
+RandomNumbers 0.1.1
+FunctionWrappers 0.1.0
+DataStructures 0.8.1

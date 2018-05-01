@@ -298,3 +298,21 @@ for method in SSAalgs
     end
 end
 
+# for dependency graph methods just test with mass action jumps
+SSAalgs        = [SortingDirect()]
+jump_prob_gens = [A_to_B_ma]
+for method in SSAalgs
+    for jump_prob_gen in jump_prob_gens
+        jump_prob = jump_prob_gen(Nrxs, method)
+        meanval   = runSSAs(jump_prob)
+        if doprint
+            println("Method: ", method, ", Jump input types: ", jump_prob_gen, 
+                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+        end
+        @test abs(meanval - exactmeanval) < 1.
+
+        # if dobenchmark
+        #     @btime (runSSAs($jump_prob);)
+        # end
+    end
+end

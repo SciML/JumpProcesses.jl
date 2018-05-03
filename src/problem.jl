@@ -30,8 +30,8 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
   if (typeof(jumps.constant_jumps) <: Tuple{}) && (jumps.massaction_jump == nothing)
     disc = nothing
     constant_jump_callback = CallbackSet()
-  else    
-    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,jumps.massaction_jump,save_positions,rng;kwargs...)    
+  else
+    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,jumps.massaction_jump,save_positions,rng;kwargs...)
     constant_jump_callback = DiscreteCallback(disc)
   end
 
@@ -67,8 +67,13 @@ function extend_problem(prob::AbstractSDEProblem,jumps)
     prob.f(@view(du[1:length(u.u)]),u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
+
+  function jump_g(du,u,p,t)
+    prob.g(@view(du[1:length(u.u)]),u.u,p,t)
+  end
+
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  SDEProblem(jump_f,prob.g,u0,prob.tspan,prob.p)
+  SDEProblem(jump_f,jump_g,u0,prob.tspan,prob.p)
 end
 
 function extend_problem(prob::AbstractDDEProblem,jumps)

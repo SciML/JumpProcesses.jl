@@ -27,7 +27,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph == nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use ConstantRateJumps with the SortingDirect algorithm a dependency graph must be supplied.")
+            error("To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a dependency graph must be supplied.")
         else
             dg = make_dependency_graph(get_num_majumps(maj), maj)
         end

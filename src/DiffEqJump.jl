@@ -6,7 +6,8 @@ using DiffEqBase, Compat, Requires, Distributions, RandomNumbers,
       FunctionWrappers, DataStructures
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
-import Base: size, getindex, setindex!, length, similar, indices, show
+import Base: size, getindex, setindex!, length, similar, indices, show, isempty, start, done, next
+import Base.Order: Forward, Ordering, lt
 
 import RecursiveArrayTools: recursivecopy!
 
@@ -22,6 +23,8 @@ include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
 include("aggregators/frm.jl")
 include("aggregators/sortingdirect.jl")
+include("aggregators/priorityqueue.jl")
+include("aggregators/nrm.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
@@ -42,7 +45,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW, SortingDirect
+export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM
 
 export get_num_majumps, needs_depgraph
 

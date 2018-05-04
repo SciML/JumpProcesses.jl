@@ -9,12 +9,6 @@ heapleft(i::Int)   = i << 1         #2i
 heapright(i::Int)  = (i << 1) + 1   #2i + 1
 heapparent(i::Int) = i >> 1         #div(i, 2)
 
-function not_iterator_of_pairs(kv)
-    return any(x->isempty(methodswith(typeof(kv), x, true)),
-               [start, next, done]) ||
-           any(x->!isa(x, Union{Tuple,Pair}), kv)
-end
-
 mutable struct ArrayPQ{K,V,O<:Ordering} <: AbstractDict{K,V}
     # Binary heap of (element, priority) pairs.
     xs::Vector{Pair{K,V}}

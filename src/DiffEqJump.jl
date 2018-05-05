@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, Distributions, RandomNumbers, 
+using DiffEqBase, Compat, Requires, Distributions, RandomNumbers,
       FunctionWrappers, DataStructures
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
@@ -23,7 +23,6 @@ include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
 include("aggregators/frm.jl")
 include("aggregators/sortingdirect.jl")
-include("aggregators/priorityqueue.jl")
 include("aggregators/nrm.jl")
 include("problem.jl")
 include("callbacks.jl")
@@ -35,10 +34,10 @@ include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 include("juno_rendering.jl")
 
-export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, 
+export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator,
        AbstractSSAJumpAggregator, AbstractJumpProblem
 
-export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, 
+export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
        JumpSet
 
 export JumpProblem

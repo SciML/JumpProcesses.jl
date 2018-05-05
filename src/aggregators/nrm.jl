@@ -14,11 +14,7 @@ mutable struct NRMJumpAggregation{T,S,F1,F2,RNG,DEPGR,PQ} <: AbstractSSAJumpAggr
     rng::RNG
     dep_gr::DEPGR
     pq::PQ
-    NRMJumpAggregation{T,S,F1,F2,RNG}(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
-                                      rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG, 
-                                      dep_gr::DEPGR, pq::PQ) where {T,S,F1,F2,RNG,DEPGR,PQ} =
-      new{T,S,F1,F2,RNG,DEPGR,PQ}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dep_gr, pq)
-  end
+end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
                                       maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
@@ -43,9 +39,9 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         end
     end
 
-    pq = ArrayPQ(Vector{Pair{Int,T}}())
+    pq = mutable_binary_minheap(T)
 
-    NRMJumpAggregation{T,S,F1,F2,RNG}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
+    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
 end
 
 ########### The following routines should be templates for all SSAs ###########
@@ -109,9 +105,7 @@ end
 # calculate the next jump / jump time
 # just the top of the priority queue
 function generate_jumps!(p::NRMJumpAggregation, integrator, u, params, t)
-    @inbounds next_jump_pair = peek(p.pq)
-    @inbounds p.next_jump = next_jump_pair[1]    
-    @fastmath p.next_jump_time = next_jump_pair[2]
+    p.next_jump_time, p.next_jump = top_with_handle(p.pq)
     nothing
 end
 
@@ -130,16 +124,24 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
         if rx <= num_majumps
             cur_rates[rx] = evalrxrate(u, rx, p.ma_jumps)
         else
-            cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)            
+            cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
         end
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)
-            p.pq[rx] = cur_rates[rx] > 0. ? t + oldrate / cur_rates[rx] * (p.pq[rx] - t) : typemax(t)
-        else 
-            p.pq[rx] = cur_rates[rx] > 0. ? t + randexp(p.rng) / cur_rates[rx] : typemax(t)
+            if cur_rates[rx] > zero(eltype(cur_rates))
+                update!(p.pq, rx, t + oldrate / cur_rates[rx] * (p.pq[rx] - t))
+            else
+                update!(p.pq, rx, typemax(t))
+            end
+        else
+            if cur_rates[rx] > zero(eltype(cur_rates))
+                update!(p.pq, rx, t + randexp(p.rng) / cur_rates[rx])
+            else
+                update!(p.pq, rx, typemax(t))
+            end
         end
-        
+
     end
     nothing
 end
@@ -147,14 +149,14 @@ end
 
 # reevaulate all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
-    
+
     # mass action jumps
     majumps   = p.ma_jumps
     cur_rates = p.cur_rates
-    pqdata    = Vector{Pair{Int,typeof(t)}}(length(cur_rates))
+    pqdata = Vector{typeof(t)}(length(cur_rates))
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps)
-        pqdata[i]    = i => t + randexp(p.rng) / cur_rates[i]
+        pqdata[i] = t + randexp(p.rng) / cur_rates[i]
     end
 
     # constant rates
@@ -162,12 +164,11 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     idx   = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
         cur_rates[idx] = rate(u, params, t)
-        pqdata[idx]    = idx => t + randexp(p.rng) / cur_rates[idx]
+        pqdata[idx] = t + randexp(p.rng) / cur_rates[idx]
         idx += 1
     end
 
     # setup a new indexed priority queue to storing rx times
-    p.pq = ArrayPQ(pqdata)
-
-    nothing 
+    p.pq = mutable_binary_minheap(pqdata)
+    nothing
 end

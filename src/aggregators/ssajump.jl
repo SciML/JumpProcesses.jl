@@ -1,6 +1,6 @@
 """
 An aggregator interface for SSA-like algorithms.
-  
+
 ### Required Fields
 - `next_jump`
 - `next_jump_time`
@@ -15,15 +15,17 @@ An aggregator interface for SSA-like algorithms.
 """
 abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 
+DiscreteCallback(c::AbstractSSAJumpAggregator) = DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
+
 ########### The following routines should be templates for all SSAs ###########
 
 # # condition for jump to occur
-# @inline function (p::SSAJumpAggregator)(u, t, integrator) 
+# @inline function (p::SSAJumpAggregator)(u, t, integrator)
 #   p.next_jump_time == t
 # end
 
 # # executing jump at the next jump time
-# function (p::SSAJumpAggregator)(integrator) 
+# function (p::SSAJumpAggregator)(integrator)
 #   execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
 #   generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
 #   register_next_jump_time!(integrator, p, integrator.t)
@@ -47,7 +49,7 @@ abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 end
 
 # helper routine for setting up standard fields of SSA jump aggregations
-function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates, 
+function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
                                 affects!, save_positions, rng; kwargs...)
 
   # mass action jumps
@@ -64,12 +66,12 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
   sum_rate = zero(typeof(t))
   next_jump = 0
   next_jump_time = typemax(typeof(t))
-  jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate, 
+  jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                 majumps, rates, affects!, save_positions, rng; kwargs...)
 end
 
 # reevaluate all rates and total rate
-function fill_rates_and_sum!(p, u, params, t)
+function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
   sum_rate = zero(typeof(p.sum_rate))
 
   # mass action jumps
@@ -90,12 +92,12 @@ function fill_rates_and_sum!(p, u, params, t)
   end
 
   p.sum_rate = sum_rate
-  nothing 
+  nothing
 end
 
 # recalculate jump rates for jumps that depend on the just executed jump
 # requires dependency graph
-function update_dependent_rates!(p, u, params, t)
+function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
   @inbounds dep_rxs = p.dep_gr[p.next_jump]
   num_majumps = get_num_majumps(p.ma_jumps)
   cur_rates   = p.cur_rates
@@ -114,8 +116,3 @@ function update_dependent_rates!(p, u, params, t)
   p.sum_rate = sum_rate
   nothing
 end
-
-
-DiscreteCallback(c::AbstractSSAJumpAggregator) = DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
-
-

@@ -128,16 +128,16 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
 
         # update the jump rate
         if rx <= num_majumps
-            @inbounds cur_rates[rx] = evalrxrate(u, rx, p.ma_jumps)
+            cur_rates[rx] = evalrxrate(u, rx, p.ma_jumps)
         else
-            @inbounds cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)            
+            cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)            
         end
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)
             p.pq[rx] = cur_rates[rx] > 0. ? t + oldrate / cur_rates[rx] * (p.pq[rx] - t) : typemax(t)
         else 
-            p.pq[rx] = t + randexp(p.rng) / cur_rates[rx]
+            p.pq[rx] = cur_rates[rx] > 0. ? t + randexp(p.rng) / cur_rates[rx] : typemax(t)
         end
         
     end

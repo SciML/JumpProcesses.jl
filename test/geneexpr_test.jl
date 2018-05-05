@@ -3,8 +3,8 @@ using Base.Test
 
 # using Plots; plotlyjs()
 doplot = false
-# using BenchmarkTools
-# dobenchmark = true
+using BenchmarkTools
+dobenchmark = true
 
 dotestmean   = true
 doprintmeans = false
@@ -101,13 +101,13 @@ end
 
 
 # benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
+if dobenchmark
+    # exact methods
+    for alg in SSAalgs
+        println("Solving with method: ", typeof(alg), ", using SSAStepper")
+        jump_prob = JumpProblem(prob, alg, majumps)
+        @btime solve($jump_prob, SSAStepper())
+    end
+    println()
+end
 

@@ -9,6 +9,7 @@ heapleft(i::Int)   = i << 1         #2i
 heapright(i::Int)  = (i << 1) + 1   #2i + 1
 heapparent(i::Int) = i >> 1         #div(i, 2)
 
+using StaticArrays
 mutable struct ArrayPQ{K,V,O<:Ordering} <: AbstractDict{K,V}
     # Binary heap of (element, priority) pairs.
     xs::Vector{Pair{K,V}}

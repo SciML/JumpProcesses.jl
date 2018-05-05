@@ -6,8 +6,7 @@ using DiffEqBase, Compat, Requires, Distributions, RandomNumbers,
       FunctionWrappers, DataStructures
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
-import Base: size, getindex, setindex!, length, similar, indices, show, isempty, start, done, next
-import Base.Order: Forward, Ordering, lt
+import Base: size, getindex, setindex!, length, similar, indices, show
 
 import RecursiveArrayTools: recursivecopy!
 

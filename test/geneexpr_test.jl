@@ -4,13 +4,13 @@ using Base.Test
 # using Plots; plotlyjs()
 doplot = false
 # using BenchmarkTools
-# dobenchmark = true
+# dobenchmark = false
 
 dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(),SortingDirect()) #, DirectFW(), FRM(), FRMFW())
+SSAalgs = (Direct(),SortingDirect(), NRM()) #, DirectFW(), FRM(), FRMFW())
 
 Nsims        = 8000
 tf           = 1000.0
@@ -43,23 +43,23 @@ end
 
 # model using mass action jumps
 # ids: DNA=1, mRNA = 2, P = 3, DNAR = 4
-reactstoch = 
-[ 
+reactstoch =
+[
     [1 => 1],
     [2 => 1],
     [2 => 1],
     [3 => 1],
     [1 => 1, 3 => 1],
-    [4 => 1] 
+    [4 => 1]
 ]
-netstoch = 
-[ 
+netstoch =
+[
     [2 => 1],
     [3 => 1],
     [2 => -1],
     [3 => -1],
     [1 => -1, 3 => -1, 4 => 1],
-    [1 => 1, 3 => 1, 4 => -1] 
+    [1 => 1, 3 => 1, 4 => -1]
 ]
 rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
@@ -100,7 +100,7 @@ if dotestmean
 end
 
 
-# benchmark performance
+# # benchmark performance
 # if dobenchmark
 #     # exact methods
 #     for alg in SSAalgs
@@ -110,4 +110,3 @@ end
 #     end
 #     println()
 # end
-

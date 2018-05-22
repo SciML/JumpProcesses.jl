@@ -2,8 +2,8 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, Distributions, RandomNumbers, 
-      FunctionWrappers, DataStructures
+using DiffEqBase, Compat, Requires, RandomNumbers,
+      FunctionWrappers, DataStructures, PoissonRandom
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show
@@ -32,10 +32,10 @@ include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 include("juno_rendering.jl")
 
-export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator, 
+export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator,
        AbstractSSAJumpAggregator, AbstractJumpProblem
 
-export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, 
+export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
        JumpSet
 
 export JumpProblem

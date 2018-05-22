@@ -2,11 +2,14 @@ struct SimpleTauLeaping <: DEAlgorithm end
 struct RegularSSA <: DEAlgorithm end
 
 function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
+                          seed = nothing,
                           dt = error("dt is required for SimpleTauLeaping"))
 
   @assert isempty(jump_prob.jump_callback.continuous_callbacks)
   @assert isempty(jump_prob.jump_callback.discrete_callbacks)
   prob = jump_prob.prob
+  seed == nothing ? rng = Xorshifts.Xoroshiro128Plus() :
+                    rng = Xorshifts.Xoroshiro128Plus(seed)
 
   rj = jump_prob.regular_jump
   rate = rj.rate
@@ -35,7 +38,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
       tprev = t[i-1]
       rate(rate_cache,uprev,p,tprev)
       rate_cache .*= dt
-      counts .= rand.(Poisson.(rate_cache))
+      counts .= pois_rand.(rate_cache,rng)
       !rj.constant_c && c(dc,uprev,p,tprev,mark)
       A_mul_B!(update,dc,counts)
       u[i] = uprev .+ update

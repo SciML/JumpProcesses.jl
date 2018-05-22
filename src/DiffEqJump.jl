@@ -22,6 +22,7 @@ include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
 include("aggregators/frm.jl")
 include("aggregators/sortingdirect.jl")
+include("aggregators/nrm.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
@@ -42,7 +43,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW, SortingDirect
+export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM
 
 export get_num_majumps, needs_depgraph
 

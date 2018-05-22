@@ -1,6 +1,6 @@
-# Sorting Direct Method, implementation following McCollum et al, 
+# Sorting Direct Method, implementation following McCollum et al,
 # "The sorting direct method for stochastic simulation of biochemical systems with varying reaction execution behavior"
-# Comp. Bio. and Chem., 30, pg. 39-49 (2006). 
+# Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
 mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
     next_jump::Int
@@ -16,10 +16,6 @@ mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJ
     dep_gr::DEPGR
     jump_search_order::Vector{Int}
     jump_search_idx::Int
-    SortingDirectJumpAggregation{T,S,F1,F2,RNG}(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
-                                                rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG,
-                                                dep_gr::DEPGR, jtoidx::Vector{Int}) where {T,S,F1,F2,RNG,DEPGR} =
-      new{T,S,F1,F2,RNG,DEPGR}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dep_gr, jtoidx, zero(Int))
   end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -39,7 +35,8 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
-    SortingDirectJumpAggregation{T,S,F1,F2,RNG}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, jtoidx)
+    SortingDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr,
+                                maj, rs, affs!, sps, rng, dg, jtoidx, zero(Int))
 end
 
 
@@ -121,7 +118,7 @@ end
 
 # searches down the rate list for the next reaction
 @fastmath function calc_next_jump!(p, u, params, t)
-    
+
     # next jump type
     cur_rates = p.cur_rates
     numjumps  = length(cur_rates)
@@ -139,4 +136,3 @@ end
     # return time to next jump
     randexp(p.rng) / p.sum_rate
 end
-

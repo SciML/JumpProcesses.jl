@@ -13,7 +13,7 @@ import RecursiveArrayTools: recursivecopy!
 @compat abstract type AbstractJump end
 @compat abstract type AbstractAggregatorAlgorithm end
 @compat abstract type AbstractJumpAggregator end
-@compat abstract type AbstractJumpProblem{P,J} <: DEProblem end
+@compat abstract type AbstractJumpProblem{P,J} <: DiffEqBase.DEProblem end
 
 include("jumps.jl")
 include("massaction_rates.jl")
@@ -32,9 +32,6 @@ include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 include("juno_rendering.jl")
-
-export AbstractJump, AbstractAggregatorAlgorithm, AbstractJumpAggregator,
-       AbstractSSAJumpAggregator, AbstractJumpProblem
 
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
        JumpSet

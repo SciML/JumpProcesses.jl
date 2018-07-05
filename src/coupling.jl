@@ -6,7 +6,7 @@ function cat_problems(prob::DiscreteProblem,prob_control::DiscreteProblem)
   DiscreteProblem(u0_coupled,prob.tspan,prob.p)
 end
 
-function cat_problems(prob::AbstractODEProblem,prob_control::AbstractODEProblem)
+function cat_problems(prob::DiffEqBase.AbstractODEProblem,prob_control::DiffEqBase.AbstractODEProblem)
   l = length(prob.u0) # add l_c = length(prob_control.u0)
   new_f = function (du,u,p,t)
     prob.f(@view(du[1:l]),u.u,p,t)
@@ -16,7 +16,7 @@ function cat_problems(prob::AbstractODEProblem,prob_control::AbstractODEProblem)
   ODEProblem(new_f,u0_coupled,prob.tspan,prob.p)
 end
 
-function cat_problems(prob::DiscreteProblem,prob_control::AbstractODEProblem)
+function cat_problems(prob::DiscreteProblem,prob_control::DiffEqBase.AbstractODEProblem)
   l = length(prob.u0) # add l_c = length(prob_control.u0)
   if !(typeof(prob.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
     warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
@@ -29,7 +29,7 @@ function cat_problems(prob::DiscreteProblem,prob_control::AbstractODEProblem)
   ODEProblem(new_f,u0_coupled,prob.tspan,prob.p)
 end
 
-function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractSDEProblem)
+function cat_problems(prob::DiffEqBase.AbstractSDEProblem,prob_control::DiffEqBase.AbstractSDEProblem)
   l = length(prob.u0)
   new_f = function (du,u,p,t)
     prob.f(@view(du[1:l]),u.u,p,t)
@@ -43,7 +43,7 @@ function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractSDEProblem)
   SDEProblem(new_f,new_g,u0_coupled,prob.tspan,prob.p)
 end
 
-function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractODEProblem)
+function cat_problems(prob::DiffEqBase.AbstractSDEProblem,prob_control::DiffEqBase.AbstractODEProblem)
   l = length(prob.u0)
   new_f = function (du,u,p,t)
     prob.f(@view(du[1:l]),u.u,p,t)
@@ -59,7 +59,7 @@ function cat_problems(prob::AbstractSDEProblem,prob_control::AbstractODEProblem)
   SDEProblem(new_f,new_g,u0_coupled,prob.tspan,prob.p)
 end
 
-function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
+function cat_problems(prob::DiffEqBase.AbstractSDEProblem,prob_control::DiscreteProblem)
   l = length(prob.u0)
   if !(typeof(prob_control.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
     warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
@@ -78,9 +78,9 @@ function cat_problems(prob::AbstractSDEProblem,prob_control::DiscreteProblem)
   SDEProblem(new_f,new_g,u0_coupled,prob.tspan)
 end
 
-cat_problems(prob_control::AbstractODEProblem,prob::DiscreteProblem) = cat_problems(prob,prob_control)
-cat_problems(prob_control::DiscreteProblem,prob::AbstractSDEProblem) = cat_problems(prob,prob_control)
-cat_problems(prob_control::AbstractODEProblem,prob::AbstractSDEProblem) = cat_problems(prob,prob_control)
+cat_problems(prob_control::DiffEqBase.AbstractODEProblem,prob::DiscreteProblem) = cat_problems(prob,prob_control)
+cat_problems(prob_control::DiscreteProblem,prob::DiffEqBase.AbstractSDEProblem) = cat_problems(prob,prob_control)
+cat_problems(prob_control::DiffEqBase.AbstractODEProblem,prob::DiffEqBase.AbstractSDEProblem) = cat_problems(prob,prob_control)
 
 
 # this only depends on the jumps in prob, not prob.prob

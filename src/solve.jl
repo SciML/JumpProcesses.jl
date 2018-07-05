@@ -1,6 +1,6 @@
 function solve{P,recompile_flag}(
   jump_prob::AbstractJumpProblem{P},
-  alg::DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
+  alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   kwargs...)
 
   integrator = init(jump_prob,alg,timeseries,ts,ks,recompile;kwargs...)
@@ -10,7 +10,7 @@ end
 
 function init{P,recompile_flag}(
   jump_prob::AbstractJumpProblem{P},
-  alg::DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
+  alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   callback=nothing,
   kwargs...)
 

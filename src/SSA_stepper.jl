@@ -3,7 +3,7 @@
 
 struct SSAStepper end
 
-mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DEIntegrator
+mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DiffEqBase.DEIntegrator
     f::F
     u::uType
     t::tType
@@ -71,7 +71,7 @@ function DiffEqBase.init(jump_prob::JumpProblem,
         t = typeof(prob.tspan[1])[]
         u = typeof(prob.u0)[]
     end
-    sol = build_solution(prob,alg,t,u,dense=false,
+    sol = DiffEqBase.build_solution(prob,alg,t,u,dense=false,
                          calculate_error = false,
                          interp = DiffEqBase.ConstantInterpolation(t,u))
     save_everystep = any(cb.save_positions)

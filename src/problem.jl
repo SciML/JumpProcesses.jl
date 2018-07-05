@@ -53,7 +53,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                         jumps.regular_jump, jumps.massaction_jump)
 end
 
-function extend_problem(prob::AbstractODEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
   function jump_f(du,u,p,t)
     prob.f(@view(du[1:length(u.u)]),u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
@@ -62,7 +62,7 @@ function extend_problem(prob::AbstractODEProblem,jumps)
   ODEProblem(jump_f,u0,prob.tspan,prob.p)
 end
 
-function extend_problem(prob::AbstractSDEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
   function jump_f(du,u,p,t)
     prob.f(@view(du[1:length(u.u)]),u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
@@ -76,7 +76,7 @@ function extend_problem(prob::AbstractSDEProblem,jumps)
   SDEProblem(jump_f,jump_g,u0,prob.tspan,prob.p)
 end
 
-function extend_problem(prob::AbstractDDEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
   jump_f = function (du,u,h,p,t)
     prob.f(@view(du[1:length(u.u)]),u.u,h,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
@@ -86,7 +86,7 @@ function extend_problem(prob::AbstractDDEProblem,jumps)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
-function extend_problem(prob::AbstractDAEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
   jump_f = function (out,du,u,p,t)
     prob.f(@view(out[1:length(u.u)]),du.u,u.u,t)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)

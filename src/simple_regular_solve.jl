@@ -1,5 +1,5 @@
-struct SimpleTauLeaping <: DEAlgorithm end
-struct RegularSSA <: DEAlgorithm end
+struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
+struct RegularSSA <: DiffEqBase.DEAlgorithm end
 
 function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
                           seed = nothing,
@@ -44,7 +44,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
       u[i] = uprev .+ update
   end
 
-  sol = build_solution(prob,alg,t,u,
+  sol = DiffEqBase.build_solution(prob,alg,t,u,
                        calculate_error = false,
                        interp = DiffEqBase.ConstantInterpolation(t,u))
 end
@@ -92,7 +92,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::RegularSSA)
 
   t[end] = tspan[2]
 
-  sol = build_solution(prob,alg,t,u,
+  sol = DiffEqBase.build_solution(prob,alg,t,u,
                        calculate_error = false,
                        interp = DiffEqBase.ConstantInterpolation(t,u))
 end

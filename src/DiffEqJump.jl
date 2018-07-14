@@ -2,8 +2,8 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, RandomNumbers,
-      FunctionWrappers, DataStructures, PoissonRandom
+using DiffEqBase, Compat, Requires, RandomNumbers
+using FunctionWrappers, DataStructures, PoissonRandom, Random
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, indices, show

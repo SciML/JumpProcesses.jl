@@ -1,4 +1,4 @@
-mutable struct JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2,J3,J4} <: AbstractJumpProblem{P,J}
+mutable struct JumpProblem{P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
   discrete_jump_aggregation::J

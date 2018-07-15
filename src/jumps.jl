@@ -84,7 +84,7 @@ JumpSet(jump::VariableRateJump) = JumpSet((jump,),(),nothing,nothing)
 JumpSet(jump::RegularJump)      = JumpSet((),(),jump,nothing)
 JumpSet(jump::MassActionJump)   = JumpSet((),(),nothing,jump)
 JumpSet() = JumpSet((),(),nothing,nothing)
-JumpSet(jb::Void) = JumpSet()
+JumpSet(jb::Nothing) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable
 JumpSet(jumps::AbstractJump...) = JumpSet(split_jumps((), (), nothing, nothing, jumps...)...)
@@ -113,9 +113,9 @@ end
                                                                         regular_jump_combine(rj,j.regular_jump),
                                                                         massaction_jump_combine(maj,j.massaction_jump), args...)
 
-regular_jump_combine(rj1::RegularJump,rj2::Void) = rj1
-regular_jump_combine(rj1::Void,rj2::RegularJump) = rj2
-regular_jump_combine(rj1::Void,rj2::Void) = rj1
+regular_jump_combine(rj1::RegularJump,rj2::Nothing) = rj1
+regular_jump_combine(rj1::Nothing,rj2::RegularJump) = rj2
+regular_jump_combine(rj1::Nothing,rj2::Nothing) = rj1
 regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regular jump is allowed in a JumpSet")
 
 
@@ -155,9 +155,9 @@ function majump_merge!(maj::MassActionJump{T,S,U}, sr::T, rs::S, ns::U) where {T
   MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns]; scale_rates=false)
 end
 
-massaction_jump_combine(maj1::MassActionJump, maj2::Void) = maj1
-massaction_jump_combine(maj1::Void, maj2::MassActionJump) = maj2
-massaction_jump_combine(maj1::Void, maj2::Void) = maj1
+massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1
+massaction_jump_combine(maj1::Nothing, maj2::MassActionJump) = maj2
+massaction_jump_combine(maj1::Nothing, maj2::Nothing) = maj1
 massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = majump_merge!(maj1, maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch)
 
 
@@ -176,7 +176,7 @@ end
 
 function get_jump_info_fwrappers(u, p, t, constant_jumps)
   RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
-  AffectWrapper = FunctionWrappers.FunctionWrapper{Void,Tuple{Any}}
+  AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,Tuple{Any}}
 
   if (constant_jumps != nothing) && !isempty(constant_jumps)
     rates    = [RateWrapper(c.rate) for c in constant_jumps]

@@ -1,4 +1,4 @@
-julia 0.7-beta
+julia 0.7-beta2
 DiffEqBase 3.7.0
 RecursiveArrayTools
 RandomNumbers

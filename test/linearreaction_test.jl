@@ -1,7 +1,7 @@
 # calculates the mean from N stochastic A->B reactions at different rates
 # this really tests different ways of constructing the jump problems
 using DiffEqBase, DiffEqJump
-using Base.Test
+using Test
 
 # using BenchmarkTools
 # dobenchmark = true
@@ -44,7 +44,7 @@ function A_to_B_tuple(N, method)
     end
 
     # convert jumpvec to tuple to send to JumpProblem...
-    jumps     = ((jump for jump in jumpvec)...)
+    jumps     = ((jump for jump in jumpvec)...,)
     jset      = JumpSet((), jumps, nothing, nothing)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
@@ -269,7 +269,7 @@ function A_to_B_hybrid_tups(N, method)
         end
         push!(jumpvec, ConstantRateJump(ratefunc, affect!))
      end
-    jumps    = ((jump for jump in jumpvec)...)
+    jumps    = ((jump for jump in jumpvec)...,)
     jset      = JumpSet((), jumps, nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))

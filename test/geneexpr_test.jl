@@ -1,5 +1,5 @@
 using DiffEqBase, DiffEqJump
-using Base.Test
+using Test
 
 # using Plots; plotlyjs()
 doplot = false

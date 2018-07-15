@@ -4,7 +4,7 @@
 # tests FW and tuple based mix of mass action jump / constant jump
 
 using DiffEqBase, DiffEqJump
-using Base.Test
+using Test
 
 doprint = false
 #using Plots; plotlyjs()

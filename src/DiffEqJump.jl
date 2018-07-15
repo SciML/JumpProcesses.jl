@@ -10,10 +10,10 @@ import Base: size, getindex, setindex!, length, similar, indices, show
 
 import RecursiveArrayTools: recursivecopy!
 
-@compat abstract type AbstractJump end
-@compat abstract type AbstractAggregatorAlgorithm end
-@compat abstract type AbstractJumpAggregator end
-@compat abstract type AbstractJumpProblem{P,J} <: DiffEqBase.DEProblem end
+abstract type AbstractJump end
+abstract type AbstractAggregatorAlgorithm end
+abstract type AbstractJumpAggregator end
+abstract type AbstractJumpProblem{P,J} <: DiffEqBase.DEProblem end
 
 include("jumps.jl")
 include("massaction_rates.jl")

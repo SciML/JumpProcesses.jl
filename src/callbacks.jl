@@ -1,4 +1,4 @@
-type ConstantRateJumpCallback{R,T,A} <: DiffEqBase.DECallback
+mutable struct ConstantRateJumpCallback{R,T,A} <: DiffEqBase.DECallback
     next_jump::T
     end_time::T
     rate::R

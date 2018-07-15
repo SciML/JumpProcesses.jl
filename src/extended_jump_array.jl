@@ -1,4 +1,4 @@
-type ExtendedJumpArray{T,T2} <: AbstractArray{Float64,1}
+mutable struct ExtendedJumpArray{T,T2} <: AbstractArray{Float64,1}
   u::T
   jump_u::T2
 end
@@ -9,22 +9,22 @@ Base.size(A::ExtendedJumpArray) = (length(A),)
   i <= length(A.u) ? A.u[i] : A.jump_u[i-length(A.u)]
 end
 @inline function Base.getindex(A::ExtendedJumpArray,I...)
-  A[sub2ind(A.u,I...)]
+  A[CartesianIndices(A.u,I...)]
 end
 @inline function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
   A[I[1]]
 end
-@inline Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
+@inline Base.setindex!(A::ExtendedJumpArray,v,I...) = (A[CartesianIndices(A.u,I...)] = v)
 @inline Base.setindex!(A::ExtendedJumpArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
 @inline function Base.setindex!(A::ExtendedJumpArray,v,i::Int)
   i <= length(A.u) ? (A.u[i] = v) : (A.jump_u[i-length(A.u)] = v)
 end
 
-@compat Base.IndexStyle(::Type{<:ExtendedJumpArray}) = IndexLinear()
+Base.IndexStyle(::Type{<:ExtendedJumpArray}) = IndexLinear()
 Base.similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u),similar(A.jump_u))
-Base.similar{S}(A::ExtendedJumpArray,::Type{S}) = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
+Base.similar(A::ExtendedJumpArray,::Type{S}) where {S} = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 
-function recursivecopy!{T<:ExtendedJumpArray}(dest::T, src::T)
+function recursivecopy!(dest::T, src::T) where T<:ExtendedJumpArray
   recursivecopy!(dest.u,src.u)
   recursivecopy!(dest.jump_u,src.jump_u)
 end
@@ -33,10 +33,10 @@ Base.show(io::IO,A::ExtendedJumpArray) = show(io,A.u)
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 add_idxs1(x,expr) = expr
-add_idxs1{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).u)
+add_idxs1(::Type{T},expr) where {T<:ExtendedJumpArray} = :($(expr).u)
 
 add_idxs2(x,expr) = expr
-add_idxs2{T<:ExtendedJumpArray}(::Type{T},expr) = :($(expr).jump_u)
+add_idxs2(::Type{T},expr) where {T<:ExtendedJumpArray} = :($(expr).jump_u)
 
 @generated function Base.broadcast!(f,A::ExtendedJumpArray,B::Union{Number,ExtendedJumpArray}...)
   exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)

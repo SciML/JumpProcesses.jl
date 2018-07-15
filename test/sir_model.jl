@@ -1,5 +1,5 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq
-using Base.Test
+using Test
 
 rate = (u,p,t) -> (0.1/1000.0)*u[1]*u[2]
 affect! = function (integrator)

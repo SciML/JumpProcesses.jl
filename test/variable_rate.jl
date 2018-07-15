@@ -1,4 +1,4 @@
-using DiffEqBase, DiffEqJump, OrdinaryDiffEq, StochasticDiffEq, Base.Test
+using DiffEqBase, DiffEqJump, OrdinaryDiffEq, StochasticDiffEq, Test
 
 a = ExtendedJumpArray(rand(3),rand(2))
 b = ExtendedJumpArray(rand(3),rand(2))

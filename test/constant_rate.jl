@@ -1,5 +1,5 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq
-using Base.Test
+using Test
 
 rate = (u,p,t) -> u
 affect! = function (integrator)

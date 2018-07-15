@@ -1,5 +1,5 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq
-using Base.Test
+using Test
 
 
 rate = (u,p,t) -> 1.*u[1]

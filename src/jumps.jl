@@ -50,12 +50,12 @@ struct MassActionJump{T,S,U} <: AbstractJump
       end
     end
 
-    if scale_rates && !isempty(sr) 
+    if scale_rates && !isempty(sr)
       scalerates!(sr, rs)
     end
     new(sr, rs, ns)
   end
-  function MassActionJump{T,S,U}(rate::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: Number, S, U}    
+  function MassActionJump{T,S,U}(rate::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: Number, S, U}
     rs = rs_in
     if (length(rs) == 1) && (rs[1][1] == 0)
       rs = typeof(rs)()
@@ -84,12 +84,12 @@ JumpSet(jump::VariableRateJump) = JumpSet((jump,),(),nothing,nothing)
 JumpSet(jump::RegularJump)      = JumpSet((),(),jump,nothing)
 JumpSet(jump::MassActionJump)   = JumpSet((),(),nothing,jump)
 JumpSet() = JumpSet((),(),nothing,nothing)
-JumpSet(jb::Void) = JumpSet()
+JumpSet(jb::Nothing) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable
 JumpSet(jumps::AbstractJump...) = JumpSet(split_jumps((), (), nothing, nothing, jumps...)...)
 
-# handle vector of mass action jumps 
+# handle vector of mass action jumps
 function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
   if isempty(majv)
     error("JumpSets do not accept empty mass action jump collections; use \"nothing\" instead.")
@@ -108,14 +108,14 @@ end
 @inline split_jumps(vj, cj, rj, maj, c::ConstantRateJump, args...) = split_jumps(vj, (cj..., c), rj, maj, args...)
 @inline split_jumps(vj, cj, rj, maj, c::RegularJump, args...) = split_jumps(vj, cj, regular_jump_combine(rj,c), maj, args...)
 @inline split_jumps(vj, cj, rj, maj, c::MassActionJump, args...) = split_jumps(vj, cj, rj, massaction_jump_combine(maj,c), args...)
-@inline split_jumps(vj, cj, rj, maj, j::JumpSet, args...) = split_jumps((vj...,j.variable_jumps...), 
-                                                                        (cj..., j.constant_jumps...), 
-                                                                        regular_jump_combine(rj,j.regular_jump), 
+@inline split_jumps(vj, cj, rj, maj, j::JumpSet, args...) = split_jumps((vj...,j.variable_jumps...),
+                                                                        (cj..., j.constant_jumps...),
+                                                                        regular_jump_combine(rj,j.regular_jump),
                                                                         massaction_jump_combine(maj,j.massaction_jump), args...)
 
-regular_jump_combine(rj1::RegularJump,rj2::Void) = rj1
-regular_jump_combine(rj1::Void,rj2::RegularJump) = rj2
-regular_jump_combine(rj1::Void,rj2::Void) = rj1
+regular_jump_combine(rj1::RegularJump,rj2::Nothing) = rj1
+regular_jump_combine(rj1::Nothing,rj2::RegularJump) = rj2
+regular_jump_combine(rj1::Nothing,rj2::Nothing) = rj1
 regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regular jump is allowed in a JumpSet")
 
 
@@ -155,36 +155,36 @@ function majump_merge!(maj::MassActionJump{T,S,U}, sr::T, rs::S, ns::U) where {T
   MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns]; scale_rates=false)
 end
 
-massaction_jump_combine(maj1::MassActionJump, maj2::Void) = maj1
-massaction_jump_combine(maj1::Void, maj2::MassActionJump) = maj2
-massaction_jump_combine(maj1::Void, maj2::Void) = maj1
+massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1
+massaction_jump_combine(maj1::Nothing, maj2::MassActionJump) = maj2
+massaction_jump_combine(maj1::Nothing, maj2::Nothing) = maj1
 massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = majump_merge!(maj1, maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch)
 
 
 ##### helper methods for unpacking rates and affects! from constant jumps #####
 function get_jump_info_tuples(constant_jumps)
   if (constant_jumps != nothing) && !isempty(constant_jumps)
-    rates    = ((c.rate for c in constant_jumps)...)
-    affects! = ((c.affect! for c in constant_jumps)...)
+    rates    = ((c.rate for c in constant_jumps)...,)
+    affects! = ((c.affect! for c in constant_jumps)...,)
   else
     rates    = ()
     affects! = ()
   end
-  
+
   rates, affects!
 end
-  
+
 function get_jump_info_fwrappers(u, p, t, constant_jumps)
   RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
-  AffectWrapper = FunctionWrappers.FunctionWrapper{Void,Tuple{Any}}
+  AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,Tuple{Any}}
 
-  if (constant_jumps != nothing) && !isempty(constant_jumps)  
+  if (constant_jumps != nothing) && !isempty(constant_jumps)
     rates    = [RateWrapper(c.rate) for c in constant_jumps]
     affects! = [AffectWrapper(x->(c.affect!(x);nothing)) for c in constant_jumps]
   else
     rates    = Vector{RateWrapper}()
     affects! = Vector{AffectWrapper}()
-  end  
+  end
 
   rates, affects!
 end

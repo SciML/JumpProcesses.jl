@@ -1,5 +1,5 @@
 using DiffEqJump, DiffEqBase
-using Base.Test
+using Test
 
 function regular_rate(out,u,p,t)
     out[1] = (0.1/1000.0)*u[1]*u[2]

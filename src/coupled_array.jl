@@ -1,4 +1,4 @@
-type CoupledArray{T,T2} <: AbstractArray{Float64,1}
+mutable struct CoupledArray{T,T2} <: AbstractArray{Float64,1}
   u::T
   u_control::T2
   order::Bool
@@ -15,14 +15,14 @@ Base.size(A::CoupledArray) = (length(A),)
 end
 
 @inline function Base.getindex(A::CoupledArray,I...)
-  A[sub2ind(A.u,I...)]
+  A[CartesianIndices(A.u,I...)]
 end
 
 @inline function Base.getindex(A::CoupledArray,I::CartesianIndex{1})
   A[I[1]]
 end
 
-@inline Base.setindex!(A::CoupledArray,v,I...) = (A[sub2ind(A.u,I...)] = v)
+@inline Base.setindex!(A::CoupledArray,v,I...) = (A[CartesianIndices(A.u,I...)] = v)
 @inline Base.setindex!(A::CoupledArray,v,I::CartesianIndex{1}) = (A[I[1]] = v)
 @inline function Base.setindex!(A::CoupledArray,v,i::Int)
   if A.order == true
@@ -32,19 +32,19 @@ end
   end
 end
 
-@compat Base.IndexStyle(::Type{<:CoupledArray}) = IndexLinear()
+Base.IndexStyle(::Type{<:CoupledArray}) = IndexLinear()
 Base.similar(A::CoupledArray) = CoupledArray(similar(A.u),similar(A.u_control),A.order)
-Base.similar{S}(A::CoupledArray,::Type{S}) = CoupledArray(similar(A.u,S),similar(A.u_control,S),A.order)
+Base.similar(A::CoupledArray,::Type{S}) where {S} = CoupledArray(similar(A.u,S),similar(A.u_control,S),A.order)
 
 
-function recursivecopy!{T<:CoupledArray}(dest::T, src::T)
+function recursivecopy!(dest::T, src::T) where T<:CoupledArray
   recursivecopy!(dest.u,src.u)
   recursivecopy!(dest.u_control,src.u_control)
   dest.order = src.order
 end
 
-add_idxs1{T<:CoupledArray}(::Type{T},expr) = :($(expr).u)
-add_idxs2{T<:CoupledArray}(::Type{T},expr) = :($(expr).u_control)
+add_idxs1(::Type{T},expr) where {T<:CoupledArray} = :($(expr).u)
+add_idxs2(::Type{T},expr) where {T<:CoupledArray} = :($(expr).u_control)
 @generated function Base.broadcast!(f,A::CoupledArray,B::Union{Number,CoupledArray}...)
   exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
   exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)

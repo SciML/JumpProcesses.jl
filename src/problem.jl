@@ -1,4 +1,4 @@
-mutable struct JumpProblem{P,A,C,J<:Union{Void,AbstractJumpAggregator},J2,J3,J4} <: AbstractJumpProblem{P,J}
+mutable struct JumpProblem{P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
   discrete_jump_aggregation::J
@@ -22,7 +22,7 @@ JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;
 JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
-                     save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true),
+                     save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
                      rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
 
   ## Constant Rate Handling

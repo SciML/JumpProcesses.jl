@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, OrdinaryDiffEq
+using DiffEqJump, DiffEqBase, OrdinaryDiffEq, Statistics
 using Test
 
 rate = (u,p,t) -> u

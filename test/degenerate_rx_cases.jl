@@ -20,7 +20,7 @@ jump = MassActionJump(rate, rs, ns)
 prob = DiscreteProblem([100],(0.,100.))
 jump_prob = JumpProblem(prob, Direct(), jump)
 sol = solve(jump_prob, SSAStepper())
-if doprint 
+if doprint
     println("mass act jump using vectors of data: last val = ", sol[end, end])
 end
 if doplot
@@ -35,7 +35,7 @@ ns = [1 => 1]
 jump = MassActionJump(rate, rs, ns)
 jump_prob = JumpProblem(prob, Direct(), jump)
 sol = solve(jump_prob, SSAStepper())
-if doprint 
+if doprint
     println("mass act jump using scalar data: last val = ", sol[end, end])
 end
 if doplot
@@ -51,7 +51,7 @@ jump = MassActionJump(rate, rs, ns)
 prob = DiscreteProblem([100],(0.,100.))
 jump_prob = JumpProblem(prob, Direct(), jump)
 sol = solve(jump_prob, SSAStepper())
-if doprint 
+if doprint
     println("mass act jump using vector of Pair{Int,Int}: last val = ", sol[end, end])
 end
 if doplot
@@ -66,7 +66,7 @@ ns = [1 => 1]
 jump = MassActionJump(rate, rs, ns)
 jump_prob = JumpProblem(prob, Direct(), jump)
 sol = solve(jump_prob, SSAStepper())
-if doprint 
+if doprint
     println("mass act jump using scalar Pair{Int,Int}: last val = ", sol[end, end])
 end
 if doplot
@@ -81,13 +81,13 @@ rate = 600.0
 rs = [0 => 3]                   # stoich power should be ignored
 ns = [1 => 1]
 jump = MassActionJump(rate, rs, ns)
-ratefun = (u,p,t) -> 2.*u[1]
+ratefun = (u,p,t) -> 2.0*u[1]
 affect! = function(integrator)
     integrator.u[1] -= 1
 end
 jump2 = ConstantRateJump(ratefun, affect!)
 if doplot
-    plothand2 = plot(reuse=false) 
+    plothand2 = plot(reuse=false)
 end
 
 dep_graph = [
@@ -98,8 +98,8 @@ dep_graph = [
 for method in methods
     jump_prob = JumpProblem(prob, method, jump, jump2; dep_graph=dep_graph)
     sol = solve(jump_prob, SSAStepper())
-    
-    if doplot        
+
+    if doplot
         plot!(plothand2, sol, label=("A <-> 0, " * string(method)))
     end
 

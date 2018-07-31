@@ -95,6 +95,6 @@ for i in 1:Nsims
   Amean += sol[1,end]
 end
 Amean /= Nsims
-actmean = 100. + (10.-100.)*exp(-1.0*10.)
+actmean = 100. + (10.0-100.0)*exp(-1.0*10.0)
 #println(abs(Amean-actmean)/actmean)
 @test abs(actmean - Amean) < .02 * actmean

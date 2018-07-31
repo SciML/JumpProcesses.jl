@@ -33,7 +33,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     # make sure each jump depends on itself
     for (i,jump_deps) in enumerate(dg)
-        if !contains(isequal, jump_deps, i)
+        if !any(y->isequal(y,i), jump_deps)
             push!(jump_deps, i)
             sort!(jump_deps)
         end
@@ -153,7 +153,7 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     # mass action jumps
     majumps   = p.ma_jumps
     cur_rates = p.cur_rates
-    pqdata = Vector{typeof(t)}(length(cur_rates))
+    pqdata = Vector{typeof(t)}(undef,length(cur_rates))
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps)
         pqdata[i] = t + randexp(p.rng) / cur_rates[i]

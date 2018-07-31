@@ -29,9 +29,9 @@ end
 prob = ODEProblem(f,[0.2],(0.0,10.0))
 jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 
-integrator = init(jump_prob,Tsit5(),dt=1/10)
+integrator = init(jump_prob,Tsit5())
 
-sol = solve(jump_prob,Tsit5(),dt=1/10)
+sol = solve(jump_prob,Tsit5())
 
 @test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12

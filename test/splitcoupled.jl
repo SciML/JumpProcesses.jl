@@ -2,9 +2,9 @@ using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq
 using Test
 
 
-rate = (u,p,t) -> 1.*u[1]
+rate = (u,p,t) -> 1.0*u[1]
 affect! = function (integrator)
-  integrator.u[1] = 1.
+  integrator.u[1] = 1.0
 end
 jump1 = ConstantRateJump(rate,affect!)
 
@@ -22,12 +22,12 @@ coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coup
 @test [s[1]-s[2] for s in sol.u] == zeros(length(sol.t)) # coupling two copies of the same process should give zero
 
 
-rate = (u,p,t) -> 1.
+rate = (u,p,t) -> 1.0
 affect! = function (integrator)
-  integrator.u[1] = 1.
+  integrator.u[1] = 1.0
 end
 jump1 = ConstantRateJump(rate,affect!)
-rate = (u,p,t) -> 2.
+rate = (u,p,t) -> 2.0
 jump2 = ConstantRateJump(rate,affect!)
 
 f = function (du,u,p,t)
@@ -84,7 +84,7 @@ react_stoch = [Vector{Pair{Int,Int}}()]
 net_stoch   = [[1 => 1]]
 majumps     = MassActionJump(rate, react_stoch, net_stoch)
 f = function (du,u,p,t)
-  du[1] = -1.*u[1]
+  du[1] = -1.0*u[1]
 end
 odeprob     = ODEProblem(f,[10.0],(0.0,10.0))
 jump_prob   = JumpProblem(odeprob, Direct(), majumps, save_positions=(false,false))
@@ -95,8 +95,6 @@ for i in 1:Nsims
   Amean += sol[1,end]
 end
 Amean /= Nsims
-actmean = 100. + (10.-100.)*exp(-1.*10.)
+actmean = 100. + (10.-100.)*exp(-1.0*10.)
 #println(abs(Amean-actmean)/actmean)
 @test abs(actmean - Amean) < .02 * actmean
-
-

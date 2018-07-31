@@ -11,7 +11,7 @@ dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM())
+SSAalgs = (Direct(), FRM()) #DirectFW(), FRMFW(), SortingDirect(), NRM()
 
 Nsims        = 32000
 tf           = .01
@@ -24,24 +24,24 @@ reltol       = .01
 # using DiffEqBiological
 # rs = @reaction_network dtype begin
 #     k1, 2A --> B
-#     k2, B --> 2A 
+#     k2, B --> 2A
 #     k3, A + B --> C
 #     k4, C --> A + B
 #     k5, 3C --> 3A
-# end k1 k2 k3 k4 
+# end k1 k2 k3 k4
 
 # model using mass action jumps
 # ids: A = 1, B = 2, C = 3
-reactstoch = 
-[ 
+reactstoch =
+[
     [1 => 2],
     [2 => 1],
     [1 => 1, 2 => 1],
     [3 => 1],
     [3 => 3]
 ]
-netstoch = 
-[ 
+netstoch =
+[
     [1 => -2, 2 => 1],
     [1 => 2, 2 => -1],
     [1 => -1, 2 => -1, 3 => 1],

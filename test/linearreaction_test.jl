@@ -17,7 +17,7 @@ exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
 SSAalgs     = [Direct()]#, DirectFW(), FRM(), FRMFW()]
 
 rates = ones(Float64, Nrxs) * baserate;
-cumsum!(rates, rates)    
+cumsum!(rates, rates)
 exactmeanval = exactmean(tf, rates)
 
 
@@ -90,7 +90,7 @@ function A_to_B_ma(N, method)
     jump_prob
 end
 
-# uses one mass action jump to represent half the reactions and a vector 
+# uses one mass action jump to represent half the reactions and a vector
 # of constant jumps for the other half. Stores them in a JumpSet
 function A_to_B_hybrid(N, method)
     # half reactions are treated as mass action and half as constant jumps
@@ -157,7 +157,7 @@ function A_to_B_hybrid_nojset(N, method)
 end
 
 
-# uses a vector of mass action jumps of vectors to represent half the reactions and a vector 
+# uses a vector of mass action jumps of vectors to represent half the reactions and a vector
 # of constant jumps for the other half. Passes them to JumpProblem as a JumpSet
 function A_to_B_hybrid_vecs(N, method)
     # half reactions are treated as mass action and half as constant jumps
@@ -186,7 +186,7 @@ function A_to_B_hybrid_vecs(N, method)
     jump_prob
 end
 
-# uses a vector of scalar mass action jumps to represent half the reactions and a vector 
+# uses a vector of scalar mass action jumps to represent half the reactions and a vector
 # of constant jumps for the other half. Passes them to JumpProblem as a JumpSet
 function A_to_B_hybrid_vecs_scalars(N, method)
     # half reactions are treated as mass action and half as constant jumps
@@ -216,7 +216,7 @@ function A_to_B_hybrid_vecs_scalars(N, method)
 end
 
 
-# uses a vector of scalar mass action jumps to represent half the reactions and a vector 
+# uses a vector of scalar mass action jumps to represent half the reactions and a vector
 # of constant jumps for the other half. Passes them to JumpProblem as a single splatted tuple.
 function A_to_B_hybrid_tups_scalars(N, method)
     # half reactions are treated as mass action and half as constant jumps
@@ -238,7 +238,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
         end
         push!(jumpvec, ConstantRateJump(ratefunc, affect!))
     end
-     
+
     jumps     = ((maj for maj in majumpsv)..., (jump for jump in jumpvec)...)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions=(false,false))
@@ -287,7 +287,7 @@ for method in SSAalgs
         jump_prob = jump_prob_gen(Nrxs, method)
         meanval   = runSSAs(jump_prob)
         if doprint
-            println("Method: ", method, ", Jump input types: ", jump_prob_gen, 
+            println("Method: ", method, ", Jump input types: ", jump_prob_gen,
                     ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.
@@ -299,14 +299,14 @@ for method in SSAalgs
 end
 
 # for dependency graph methods just test with mass action jumps
-SSAalgs        = [SortingDirect(), NRM()]
+SSAalgs        = [] # NRM(), SortingDirect()
 jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens
         jump_prob = jump_prob_gen(Nrxs, method)
         meanval   = runSSAs(jump_prob)
         if doprint
-            println("Method: ", method, ", Jump input types: ", jump_prob_gen, 
+            println("Method: ", method, ", Jump input types: ", jump_prob_gen,
                     ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.

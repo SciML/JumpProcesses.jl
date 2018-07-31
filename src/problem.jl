@@ -165,3 +165,5 @@ function Base.show(io::IO, A::JumpProblem)
     println(io,"Have a mass action jump")
   end
 end
+
+TreeViews.hastreeview(x::JumpProblem) = true

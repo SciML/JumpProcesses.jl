@@ -46,8 +46,8 @@ end
 add_idxs1(::Type{T},expr) where {T<:CoupledArray} = :($(expr).u)
 add_idxs2(::Type{T},expr) where {T<:CoupledArray} = :($(expr).u_control)
 @generated function Base.broadcast!(f,A::CoupledArray,B::Union{Number,CoupledArray}...)
-  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
-  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
+  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...,)
+  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...,)
   res = quote
       broadcast!(f,A.u,$(exs1...));broadcast!(f,A.u_control,$(exs2...))
     end
@@ -55,5 +55,6 @@ add_idxs2(::Type{T},expr) where {T<:CoupledArray} = :($(expr).u_control)
 end
 
 Base.show(io::IO,A::CoupledArray) = show(io,A.u)
+TreeViews.hastreeview(x::CoupledArray) = true
 plot_indices(A::CoupledArray) = eachindex(A)
 flip_u!(A::CoupledArray) = (A.order = !A.order)

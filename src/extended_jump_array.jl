@@ -30,6 +30,7 @@ function recursivecopy!(dest::T, src::T) where T<:ExtendedJumpArray
 end
 #indices(A::ExtendedJumpArray) = Base.OneTo(length(A.u) + length(A.jump_u))
 Base.show(io::IO,A::ExtendedJumpArray) = show(io,A.u)
+TreeViews.hastreeview(x::ExtendedJumpArray) = true
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 add_idxs1(x,expr) = expr
@@ -39,8 +40,8 @@ add_idxs2(x,expr) = expr
 add_idxs2(::Type{T},expr) where {T<:ExtendedJumpArray} = :($(expr).jump_u)
 
 @generated function Base.broadcast!(f,A::ExtendedJumpArray,B::Union{Number,ExtendedJumpArray}...)
-  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...)
-  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...)
+  exs1 = ((add_idxs1(B[i],:(B[$i])) for i in eachindex(B))...,)
+  exs2 = ((add_idxs2(B[i],:(B[$i])) for i in eachindex(B))...,)
   res = quote
       broadcast!(f,A.u,$(exs1...));broadcast!(f,A.jump_u,$(exs2...))
     end

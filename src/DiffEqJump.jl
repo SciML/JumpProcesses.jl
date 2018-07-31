@@ -2,7 +2,7 @@ __precompile__()
 
 module DiffEqJump
 
-using DiffEqBase, Compat, Requires, RandomNumbers
+using DiffEqBase, Compat, RandomNumbers, TreeViews
 using FunctionWrappers, DataStructures, PoissonRandom, Random
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
@@ -31,7 +31,6 @@ include("coupled_array.jl")
 include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
-include("juno_rendering.jl")
 
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
        JumpSet

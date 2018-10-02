@@ -14,7 +14,6 @@ import RecursiveArrayTools: recursivecopy!
 abstract type AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
-abstract type AbstractJumpProblem{P,J} <: DiffEqBase.DEProblem end
 
 include("jumps.jl")
 include("massaction_rates.jl")

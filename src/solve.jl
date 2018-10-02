@@ -1,5 +1,5 @@
 function solve(
-  jump_prob::AbstractJumpProblem{P},
+  jump_prob::DiffEqBase.AbstractJumpProblem{P},
   alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   kwargs...) where {P,recompile_flag}
 
@@ -9,7 +9,7 @@ function solve(
 end
 
 function init(
-  jump_prob::AbstractJumpProblem{P},
+  jump_prob::DiffEqBase.AbstractJumpProblem{P},
   alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   callback=nothing,
   kwargs...) where {P,recompile_flag}

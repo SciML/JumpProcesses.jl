@@ -87,7 +87,7 @@ function make_dependency_graph(numspec, ma_jumps::MassActionJump)
     end
 
     # convert to Vectors of Vectors
-    dep_graph = Vector{Vector{Int}}(numrxs)
+    dep_graph = Vector{Vector{Int}}(undef, numrxs)
     for rx = 1:numrxs
         dep_graph[rx] = [dep for dep in dep_sets[rx]]
     end

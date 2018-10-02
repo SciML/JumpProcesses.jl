@@ -11,7 +11,7 @@ dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(), FRM()) #DirectFW(), FRMFW(), SortingDirect(), NRM()
+SSAalgs = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM())
 
 Nsims        = 32000
 tf           = .01

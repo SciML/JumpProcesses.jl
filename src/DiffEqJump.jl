@@ -7,7 +7,7 @@ using DataStructures, PoissonRandom, Random
 #using FunctionWrappers
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
-import Base: size, getindex, setindex!, length, similar, indices, show
+import Base: size, getindex, setindex!, length, similar, show
 
 import RecursiveArrayTools: recursivecopy!
 

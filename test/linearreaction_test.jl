@@ -1,6 +1,6 @@
 # calculates the mean from N stochastic A->B reactions at different rates
 # this really tests different ways of constructing the jump problems
-using DiffEqBase, DiffEqJump
+using DiffEqBase, DiffEqJump, Statistics
 using Test
 
 # using BenchmarkTools
@@ -299,7 +299,7 @@ for method in SSAalgs
 end
 
 # for dependency graph methods just test with mass action jumps
-SSAalgs        = [] # NRM(), SortingDirect()
+SSAalgs        = [NRM(), SortingDirect()]
 jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens

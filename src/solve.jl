@@ -1,4 +1,4 @@
-function solve(
+function DiffEqBase.__solve(
   jump_prob::DiffEqBase.AbstractJumpProblem{P},
   alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   kwargs...) where {P,recompile_flag}
@@ -8,7 +8,7 @@ function solve(
   integrator.sol
 end
 
-function init(
+function DiffEqBase.__init(
   jump_prob::DiffEqBase.AbstractJumpProblem{P},
   alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
   callback=nothing,

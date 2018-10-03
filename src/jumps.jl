@@ -174,11 +174,13 @@ function get_jump_info_tuples(constant_jumps)
   rates, affects!
 end
 
+#=
 function get_jump_info_fwrappers(u, p, t, constant_jumps)
   error("Use of FunctionWrappers is disabled until they update for v0.7")
 end
+=#
 
-#=
+
 function get_jump_info_fwrappers(u, p, t, constant_jumps)
   RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
   AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,Tuple{Any}}
@@ -193,4 +195,4 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
 
   rates, affects!
 end
-=#
+

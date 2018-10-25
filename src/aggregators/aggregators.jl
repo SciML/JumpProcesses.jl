@@ -11,3 +11,4 @@ struct NullAggregator <: AbstractAggregatorAlgorithm end
 # true if aggregator requires a dependency graph
 needs_depgraph(aggregator::AbstractAggregatorAlgorithm) = false
 needs_depgraph(aggregator::SortingDirect) = true
+needs_depgraph(aggregator::NRM) = true

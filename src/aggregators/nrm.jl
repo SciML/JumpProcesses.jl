@@ -18,14 +18,14 @@ end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
                                       maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
-                                      rng::RNG; dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG}
+                                      rng::RNG; num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph == nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a dependency graph must be supplied.")
         else
-            dg = make_dependency_graph(get_num_majumps(maj), maj)
+            dg = make_dependency_graph(num_specs, maj)
         end
     else
         dg = dep_graph
@@ -76,7 +76,7 @@ function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(NRMJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; kwargs...)
+                           rates, affects!, save_positions, rng; num_specs=length(u), kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time

@@ -7,6 +7,7 @@ mutable struct JumpProblem{P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,
   regular_jump::J3
   massaction_jump::J4
 end
+JumpProblem(prob::JumpProblem) = prob
 
 JumpProblem(prob,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
 JumpProblem(prob,jumps::VariableRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)

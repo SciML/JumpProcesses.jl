@@ -39,7 +39,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM
+export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM, RSSA
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

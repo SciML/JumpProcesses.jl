@@ -116,3 +116,19 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
   p.sum_rate = sum_rate
   nothing
 end
+
+
+########## bracket interval routines for rejection methods ############
+inline get_spec_brackets(uval, δ) = (one(eltype(δ)) - δ) * uval, (one(eltype(δ)) + δ) * uval
+inline get_majump_brackets(ulow, uhigh, k, majumps) = evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
+
+# for constant rate jumps we must check the ordering of the bracket values`
+inline function get_cjump_brackets(ulow, uhigh, rate, params, t)
+    rlow  = rate(ulow, params, t)
+    rhigh = rate(uhigh, params, t)
+    if rlow > rhigh
+        return rhigh,rlow
+    else
+        return rlow,rhigh
+    end
+end

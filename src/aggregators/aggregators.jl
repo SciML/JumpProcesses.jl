@@ -4,6 +4,7 @@ struct FRM <: AbstractAggregatorAlgorithm end
 struct FRMFW <: AbstractAggregatorAlgorithm end
 struct SortingDirect <: AbstractAggregatorAlgorithm end
 struct NRM <: AbstractAggregatorAlgorithm end
+struct RSSA <: AbstractAggregatorAlgorithm end
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end

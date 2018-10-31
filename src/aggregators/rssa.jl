@@ -39,9 +39,9 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         jtov_map = jumptovars_map
     end
 
-    # matrix to store bracketing intervals for jump rates
-    crl_bnds = Vector{T}(undef, length(crs))
-    crh_bnds = Vector{T}(undef, length(crs))
+    # vectors to store bracketing intervals for jump rates
+    crl_bnds = similar(crs)
+    crh_bnds = similar(crs)
 
     # matrix to store bracketing interval for species and the relative interval width
     # first row is fluct rate, δᵢ, then Xlow then Xhigh
@@ -54,9 +54,9 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         cs_bnds[1,:] .= fluct_rates
     end
 
-    RSSAJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crl_bnds, crl_bnds,
-                                                  sr, cs_bnds, maj, rs, affs!,
-                                                  sps, rng, vtoj_map, jtov_map)
+    RSSAJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map)}(
+                        nj, njt, et, crl_bnds, crl_bnds, sr, cs_bnds, maj, rs,
+                        affs!, sps, rng, vtoj_map, jtov_map)
 end
 
 
@@ -159,7 +159,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
             ubnds[2,uidx],ubnds[3,uidx] = get_spec_brackets(u[uidx], ubnds[1,uidx])
 
             # for each dependent jump, update jump rate brackets
-            @inbounds for jidx in p.varstojumps_map[uidx]
+            for jidx in p.varstojumps_map[uidx]
                 sum_rate -= crhigh[jidx]
                 if jidx <= num_majumps
                     crlow[jidx],crhigh[jidx] = get_majump_brackets(ulow, uhigh, jidx, majumps)
@@ -189,7 +189,8 @@ end
 @fastmath function calc_next_jump!(p, u, params, t)
 
     # next jump type
-    rprod       = one(typeof(sum_rate))
+    #rprod       = one(typeof(sum_rate))
+    rprod       = zero(typeof(sum_rate))
     crlow       = p.cur_rate_low
     crhigh      = p.cur_rate_high
     majumps     = p.majumps
@@ -216,10 +217,13 @@ end
                 notdone = false
             end
         end
-        rprod *= rand(p.rng)
+
+        #rprod *= rand(p.rng)
+        rprob += randexp(p.rng)
     end
      p.next_jump = jidx
 
     # return time to next jump
-    return (-one(typeof(p.sum_rate)) / p.sum_rate) * log(rprod)
+    #return (-one(typeof(p.sum_rate)) / p.sum_rate) * log(rprod)
+    return rprob / p.sum_rate
 end

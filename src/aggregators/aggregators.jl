@@ -1,3 +1,5 @@
+# define new aggregator algorithms here and specify their properties
+
 struct Direct <: AbstractAggregatorAlgorithm end
 struct DirectFW <: AbstractAggregatorAlgorithm end
 struct FRM <: AbstractAggregatorAlgorithm end
@@ -14,5 +16,8 @@ needs_depgraph(aggregator::AbstractAggregatorAlgorithm) = false
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
 
-# true if aggregator requires a map from solution variable to dependent jumps
+# true if aggregator requires a map from solution variable to dependent jumps.
+# It is implicitly assumed these aggregators also require the reverse map, from
+# jumps to species they update.
 needs_vartojumps_map(aggregator::AbstractAggregatorAlgorithm) = false
+needs_vartojumps_map(aggregator::RSSA) = true

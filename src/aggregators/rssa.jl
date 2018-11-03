@@ -53,7 +53,7 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
 
     RSSAJumpAggregation{T,eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd)}(
-                        nj, njt, et, crl_bnds, crl_bnds, sr, cs_bnds, maj, rs,
+                        nj, njt, et, crl_bnds, crh_bnds, sr, cs_bnds, maj, rs,
                         affs!, sps, rng, vtoj_map, jtov_map, bd)
 end
 
@@ -99,7 +99,7 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
 
     # species bracketing interval
     ubnds = p.cur_u_bnds
-    @inbounds for i,uval in enumerate(u)
+    @inbounds for (i,uval) in enumerate(u)
         ubnds[1,i], ubnds[2,i] = get_spec_brackets(p.bracket_data, i, uval)
     end
 
@@ -123,7 +123,7 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
         sum_rate += crhigh[k]
         k += 1
     end
-    p.sum_rate = sum_rate
+    p.sum_rate       = sum_rate
 
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -132,6 +132,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     # execute jump
+    # println("jump is: ", p.next_jump)
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
     if p.next_jump <= num_majumps
@@ -149,7 +150,10 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     bd          = p.bracket_data
     @inbounds ulow  = @view ubnds[1,:]
     @inbounds uhigh = @view ubnds[2,:]
-    @inbounds for (uidx,uval) in enumerate(p.jumptovars_map[p.next_jump])
+    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+        uval = u[uidx]
+
+        # println("uidx =", uidx, " uval = ", uval, " ulow = ", ubnds[1,uidx], " uhigh = ", ubnds[2,uidx])
 
         # if new u value is outside the bracketing interval
         if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
@@ -183,8 +187,8 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     crhigh      = p.cur_rate_high
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
-    rerl        = one(sum_rate)
-    #rerl        = zero(sum_rate)
+    #rerl        = one(sum_rate)
+    rerl        = zero(sum_rate)
     notdone     = true
     jidx        = 0
     @inbounds while notdone
@@ -199,24 +203,41 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 
         # rejection test
         r2 = rand(p.rng) * crhigh[jidx]
-        if crlow[jidx] > zero(eltype(crlow)) && r2 <= crlow[jidx]
+        if r2 <= zero(r2)
+            println("Got a zero for r2!")
+        end
+        #if crlow[jidx] > zero(eltype(crlow)) && r2 <= crlow[jidx]
+        if  r2 <= crlow[jidx]
             notdone = false
         else
             # calculate actual propensity
-            crate = (jidx <= num_majumps) ? evalrxrate(u, jidx, majumps) : rate[jidx - num_majumps](u, params, t)
-            if crate > zero(crate) && r2 <= crate
-                notdone = false
+            if jidx <= num_majumps
+                crate = evalrxrate(u, jidx, majumps)
+                if r2 <= crate
+                    notdone = false
+                end
+            else
+                crate = rate[jidx - num_majumps](u, params, t)
+                if r2 <= crate
+                    notdone = false
+                end
             end
+
+            # crate = (jidx <= num_majumps) ? evalrxrate(u, jidx, majumps) : rate[jidx - num_majumps](u, params, t)
+            # #if crate > zero(crate) && r2 <= crate
+            # if r2 <= crate
+            #     notdone = false
+            # end
         end
 
-        rerl *= rand(p.rng)
-        #rerl += randexp(p.rng)
+        #rerl *= rand(p.rng)
+        rerl += randexp(p.rng)
     end
     p.next_jump = jidx
 
     # update time to next jump
-    p.next_jump_time += (-one(sum_rate) / sum_rate) * log(rerl)
-    #p.next_jump_time += rerl / sum_rate
+    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
+    p.next_jump_time = t + rerl / sum_rate
 
     nothing
 end

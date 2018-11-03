@@ -3,11 +3,11 @@ using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
-# using BenchmarkTools
-# dobenchmark = false
+using BenchmarkTools
+dobenchmark = false
 
 dotestmean   = true
-doprintmeans = true
+doprintmeans = false
 
 # SSAs to test
 SSAalgs = (Direct(), SortingDirect(), NRM(), RSSA()) #, DirectFW(), FRM(), FRMFW()),
@@ -104,12 +104,12 @@ end
 
 
 # # benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
+if dobenchmark
+    # exact methods
+    for alg in SSAalgs
+        println("Solving with method: ", typeof(alg), ", using SSAStepper")
+        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+        @btime solve($jump_prob, SSAStepper())
+    end
+    println()
+end

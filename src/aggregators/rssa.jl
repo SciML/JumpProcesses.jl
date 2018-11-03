@@ -4,7 +4,7 @@
 # functions of the current population sizes (i.e. u)
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
-mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD} <: AbstractSSAJumpAggregator
+mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: AbstractSSAJumpAggregator
     next_jump::Int
     next_jump_time::T
     end_time::T
@@ -20,6 +20,8 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD} <: AbstractS
     vartojumps_map::VJMAP
     jumptovars_map::JVMAP
     bracket_data::BD
+    ulow::T2V
+    uhigh::T2V
   end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -50,11 +52,12 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     # matrix to store bracketing interval for species and the relative interval width
     # first row is fluct rate, δᵢ, then Xlow then Xhigh
     cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
+    ulow    = @view cs_bnds[1,:]
+    uhigh   = @view cs_bnds[2,:]
 
-
-    RSSAJumpAggregation{T,eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd)}(
+    RSSAJumpAggregation{T,eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow)}(
                         nj, njt, et, crl_bnds, crh_bnds, sr, cs_bnds, maj, rs,
-                        affs!, sps, rng, vtoj_map, jtov_map, bd)
+                        affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh)
 end
 
 
@@ -109,17 +112,15 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
     majumps  = p.ma_jumps
     crlow    = p.cur_rate_low
     crhigh   = p.cur_rate_high
-    ulow     = @view ubnds[1,:]
-    uhigh    = @view ubnds[2,:]
     @inbounds for k = 1:get_num_majumps(majumps)
-        crlow[k], crhigh[k] = get_majump_brackets(ulow, uhigh, k, majumps)
+        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps)
         sum_rate += crhigh[k]
     end
 
     # constant rate jumps
     k = get_num_majumps(majumps) + 1
     @inbounds for rate in p.rates
-        crlow[k], crhigh[k] = get_cjump_brackets(ulow, uhigh, rate, params, t)
+        crlow[k], crhigh[k] = get_cjump_brackets(p.ulow, p.uhigh, rate, params, t)
         sum_rate += crhigh[k]
         k += 1
     end
@@ -132,7 +133,6 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     # execute jump
-    # println("jump is: ", p.next_jump)
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
     if p.next_jump <= num_majumps
@@ -148,12 +148,10 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     crlow       = p.cur_rate_low
     crhigh      = p.cur_rate_high
     bd          = p.bracket_data
-    @inbounds ulow  = @view ubnds[1,:]
-    @inbounds uhigh = @view ubnds[2,:]
+    ulow        = p.ulow
+    uhigh       = p.uhigh
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
-
-        # println("uidx =", uidx, " uval = ", uval, " ulow = ", ubnds[1,uidx], " uhigh = ", ubnds[2,uidx])
 
         # if new u value is outside the bracketing interval
         if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
@@ -179,7 +177,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+@fastmath function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 
     # next jump type
     sum_rate    = p.sum_rate
@@ -187,8 +185,8 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     crhigh      = p.cur_rate_high
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
-    #rerl        = one(sum_rate)
-    rerl        = zero(sum_rate)
+    rerl        = one(sum_rate)
+    #rerl        = zero(sum_rate)
     notdone     = true
     jidx        = 0
     @inbounds while notdone
@@ -202,42 +200,32 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         end
 
         # rejection test
-        r2 = rand(p.rng) * crhigh[jidx]
-        if r2 <= zero(r2)
-            println("Got a zero for r2!")
-        end
-        #if crlow[jidx] > zero(eltype(crlow)) && r2 <= crlow[jidx]
-        if  r2 <= crlow[jidx]
+        @inbounds r2 = rand(p.rng) * crhigh[jidx]
+        @inbounds if crlow[jidx] > zero(crlow[jidx]) && r2 <= crlow[jidx]
             notdone = false
         else
-            # calculate actual propensity
+            # calculate actual propensity, split up for type stability
             if jidx <= num_majumps
-                crate = evalrxrate(u, jidx, majumps)
-                if r2 <= crate
+                @inbounds crate = evalrxrate(u, jidx, majumps)
+                if crate > zero(crate) && r2 <= crate
                     notdone = false
                 end
             else
-                crate = rate[jidx - num_majumps](u, params, t)
-                if r2 <= crate
+                @inbounds crate = rate[jidx - num_majumps](u, params, t)
+                if crate > zero(crate) && r2 <= crate
                     notdone = false
                 end
             end
-
-            # crate = (jidx <= num_majumps) ? evalrxrate(u, jidx, majumps) : rate[jidx - num_majumps](u, params, t)
-            # #if crate > zero(crate) && r2 <= crate
-            # if r2 <= crate
-            #     notdone = false
-            # end
         end
 
-        #rerl *= rand(p.rng)
-        rerl += randexp(p.rng)
+        rerl *= rand(p.rng)
+        #rerl += randexp(p.rng)
     end
     p.next_jump = jidx
 
     # update time to next jump
-    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
-    p.next_jump_time = t + rerl / sum_rate
+    p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
+    #p.next_jump_time = t + rerl / sum_rate
 
     nothing
 end

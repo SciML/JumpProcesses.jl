@@ -126,7 +126,7 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
         sum_rate += crhigh[k]
         k += 1
     end
-    p.sum_rate       = sum_rate
+    p.sum_rate = sum_rate
 
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -213,7 +213,7 @@ end
                     notdone = false
                 end
             else
-                @inbounds crate = rate[jidx - num_majumps](u, params, t)
+                @inbounds crate = p.rates[jidx - num_majumps](u, params, t)
                 if crate > zero(crate) && r2 <= crate
                     notdone = false
                 end

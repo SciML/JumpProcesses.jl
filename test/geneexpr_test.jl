@@ -3,8 +3,8 @@ using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
-using BenchmarkTools
-dobenchmark = false
+# using BenchmarkTools
+# dobenchmark = false
 
 dotestmean   = true
 doprintmeans = false
@@ -97,19 +97,18 @@ if dotestmean
         #     @btime (runSSAs($jump_prob);)
         # end
 
-
         @test abs(means[i] - expected_avg) < reltol*expected_avg
     end
 end
 
 
 # # benchmark performance
-if dobenchmark
-    # exact methods
-    for alg in SSAalgs
-        println("Solving with method: ", typeof(alg), ", using SSAStepper")
-        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
-        @btime solve($jump_prob, SSAStepper())
-    end
-    println()
-end
+# if dobenchmark
+#     # exact methods
+#     for alg in SSAalgs
+#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
+#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+#         @btime solve($jump_prob, SSAStepper())
+#     end
+#     println()
+# end

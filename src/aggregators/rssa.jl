@@ -22,6 +22,7 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: Abstr
     bracket_data::BD
     ulow::T2V
     uhigh::T2V
+    eventcnt::Int
   end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -57,7 +58,7 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     RSSAJumpAggregation{T,eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow)}(
                         nj, njt, et, crl_bnds, crh_bnds, sr, cs_bnds, maj, rs,
-                        affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh)
+                        affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh, 0)
 end
 
 
@@ -73,6 +74,7 @@ function (p::RSSAJumpAggregation)(integrator)
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
+    p.eventcnt += 1
     nothing
 end
 
@@ -185,8 +187,8 @@ end
     crhigh      = p.cur_rate_high
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
-    rerl        = one(sum_rate)
-    #rerl        = zero(sum_rate)
+    #rerl        = one(sum_rate)
+    rerl        = zero(sum_rate)
     notdone     = true
     jidx        = 0
     @inbounds while notdone
@@ -218,14 +220,14 @@ end
             end
         end
 
-        rerl *= rand(p.rng)
-        #rerl += randexp(p.rng)
+        #rerl *= rand(p.rng)
+        rerl += randexp(p.rng)
     end
     p.next_jump = jidx
 
     # update time to next jump
-    p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
-    #p.next_jump_time = t + rerl / sum_rate
+    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
+    p.next_jump_time = t + rerl / sum_rate
 
     nothing
 end

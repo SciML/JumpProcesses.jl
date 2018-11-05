@@ -22,7 +22,6 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: Abstr
     bracket_data::BD
     ulow::T2V
     uhigh::T2V
-    eventcnt::Int
   end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -51,14 +50,14 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     bd = (bracket_data == nothing) ? BracketData{T,eltype(U)}() : bracket_data
 
     # matrix to store bracketing interval for species and the relative interval width
-    # first row is fluct rate, δᵢ, then Xlow then Xhigh
+    # first row is Xlow, second is Xhigh
     cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
     ulow    = @view cs_bnds[1,:]
     uhigh   = @view cs_bnds[2,:]
 
     RSSAJumpAggregation{T,eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow)}(
                         nj, njt, et, crl_bnds, crh_bnds, sr, cs_bnds, maj, rs,
-                        affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh, 0)
+                        affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh)
 end
 
 
@@ -74,7 +73,6 @@ function (p::RSSAJumpAggregation)(integrator)
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
-    p.eventcnt += 1
     nothing
 end
 

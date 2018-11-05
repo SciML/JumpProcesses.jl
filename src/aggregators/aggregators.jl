@@ -18,6 +18,6 @@ needs_depgraph(aggregator::NRM) = true
 
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from
-# jumps to species they update.
+# jumps to variables they update.
 needs_vartojumps_map(aggregator::AbstractAggregatorAlgorithm) = false
 needs_vartojumps_map(aggregator::RSSA) = true

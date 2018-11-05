@@ -38,12 +38,12 @@ end
 
 @inline get_majump_brackets(ulow, uhigh, k, majumps) = evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
 
-# for constant rate jumps we must check the ordering of the bracket values`
+# for constant rate jumps we must check the ordering of the bracket values
 @inline function get_cjump_brackets(ulow, uhigh, rate, params, t)
     rlow  = rate(ulow, params, t)
     rhigh = rate(uhigh, params, t)
     if rlow <= rhigh
-        return rlow,rhigh        
+        return rlow,rhigh
     else
         return rhigh,rlow
     end

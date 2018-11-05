@@ -102,7 +102,7 @@ function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
   JumpSet(vjs, cjs, rj, maj)
 end
 
-get_num_majumps(jset::JumpSet) = get_num_majumps(jset.massaction_jump)
+@inline get_num_majumps(jset::JumpSet) = get_num_majumps(jset.massaction_jump)
 
 
 @inline split_jumps(vj, cj, rj, maj) = vj, cj, rj, maj

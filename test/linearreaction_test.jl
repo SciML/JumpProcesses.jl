@@ -14,8 +14,11 @@ tf          = .1
 baserate    = .1
 A0          = 100
 exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
-SSAalgs     = [Direct()]#, DirectFW(), FRM(), FRMFW()]
+SSAalgs     = [Direct(),RSSA()] #[Direct(),RSSA()]#, DirectFW(), FRM(), FRMFW()]
 
+spec_to_dep_jumps = [collect(1:Nrxs),[]]
+jump_to_dep_specs = [[1,2] for i=1:Nrxs]
+namedpars = (vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 rates = ones(Float64, Nrxs) * baserate;
 cumsum!(rates, rates)
 exactmeanval = exactmean(tf, rates)
@@ -47,7 +50,7 @@ function A_to_B_tuple(N, method)
     jumps     = ((jump for jump in jumpvec)...,)
     jset      = JumpSet((), jumps, nothing, nothing)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -68,7 +71,7 @@ function A_to_B_vec(N, method)
     # convert jumpvec to tuple to send to JumpProblem...
     jset      = JumpSet((), jumps, nothing, nothing)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -85,7 +88,7 @@ function A_to_B_ma(N, method)
     majumps   = MassActionJump(rates, reactstoch, netstoch)
     jset      = JumpSet((), (), nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -118,7 +121,7 @@ function A_to_B_hybrid(N, method)
     majumps   = MassActionJump(rates[1:switchidx] , reactstoch, netstoch)
     jset      = JumpSet((), jumps, nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -151,7 +154,7 @@ function A_to_B_hybrid_nojset(N, method)
     majumps   = MassActionJump(rates[1:switchidx] , reactstoch, netstoch)
     jumps     = (constjumps...,majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jumps...; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jumps...; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -181,7 +184,7 @@ function A_to_B_hybrid_vecs(N, method)
      end
     jset      = JumpSet((), jumpvec, nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -210,7 +213,7 @@ function A_to_B_hybrid_vecs_scalars(N, method)
      end
     jset      = JumpSet((), jumpvec, nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -241,7 +244,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
 
     jumps     = ((maj for maj in majumpsv)..., (jump for jump in jumpvec)...)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jumps...; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jumps...; save_positions=(false,false), namedpars...)
 
     jump_prob
 end
@@ -272,7 +275,7 @@ function A_to_B_hybrid_tups(N, method)
     jumps    = ((jump for jump in jumpvec)...,)
     jset      = JumpSet((), jumps, nothing, majumps)
     prob      = DiscreteProblem([A0,0], (0.0,tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false))
+    jump_prob = JumpProblem(prob, method, jset; save_positions=(false,false), namedpars...)
 
     jump_prob
 end

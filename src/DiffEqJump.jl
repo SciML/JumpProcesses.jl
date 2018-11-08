@@ -23,6 +23,8 @@ include("aggregators/direct.jl")
 include("aggregators/frm.jl")
 include("aggregators/sortingdirect.jl")
 include("aggregators/nrm.jl")
+include("aggregators/bracketing.jl")
+include("aggregators/rssa.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
@@ -39,9 +41,9 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM
+export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM, BracketData, RSSA
 
-export get_num_majumps, needs_depgraph
+export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
 export init, solve, solve!
 

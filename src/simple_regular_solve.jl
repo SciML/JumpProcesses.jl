@@ -38,7 +38,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
       tprev = t[i-1]
       rate(rate_cache,uprev,p,tprev)
       rate_cache .*= dt
-      counts .= pois_rand.(rate_cache,(rng,))
+      counts .= pois_rand.((rng,), rate_cache)
       !rj.constant_c && c(dc,uprev,p,tprev,mark)
       mul!(update,dc,counts)
       u[i] = uprev .+ update

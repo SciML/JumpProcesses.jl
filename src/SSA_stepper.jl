@@ -37,7 +37,7 @@ function DiffEqBase.solve!(integrator)
 
     integrator.t = end_time
 
-    if integrator.saveat != nothing && !isempty(integrator.saveat)
+    if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
         while integrator.cur_saveat < length(integrator.saveat) &&
            integrator.saveat[integrator.cur_saveat] < integrator.t
@@ -82,13 +82,13 @@ function DiffEqBase.init(jump_prob::JumpProblem,
         _saveat = saveat
     end
 
-   if _saveat != nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
+   if _saveat !== nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
        cur_saveat = 2
    else
        cur_saveat = 1
    end
 
-   if _saveat != nothing && !isempty(_saveat)
+   if _saveat !== nothing && !isempty(_saveat)
      sizehint!(u,length(_saveat)+1)
      sizehint!(t,length(_saveat)+1)
    elseif save_everystep
@@ -116,7 +116,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         push!(integrator.sol.t,integrator.t)
         push!(integrator.sol.u,copy(integrator.u))
     end
-    @inbounds if integrator.saveat != nothing && !isempty(integrator.saveat)
+    @inbounds if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
         while integrator.cur_saveat < length(integrator.saveat) &&
            integrator.saveat[integrator.cur_saveat] < integrator.t

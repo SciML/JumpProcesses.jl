@@ -39,7 +39,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         end
     end
 
-    pq = mutable_binary_minheap(T)
+    pq = MutableBinaryMinHeap{T}()
 
     NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
 end
@@ -169,6 +169,6 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     end
 
     # setup a new indexed priority queue to storing rx times
-    p.pq = mutable_binary_minheap(pqdata)
+    p.pq = MutableBinaryMinHeap(pqdata)
     nothing
 end

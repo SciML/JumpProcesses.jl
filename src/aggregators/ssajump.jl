@@ -54,7 +54,7 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
 
   # mass action jumps
   majumps = ma_jumps
-  if majumps == nothing
+  if majumps === nothing
     majumps = MassActionJump(Vector{typeof(t)}(),
                              Vector{Vector{Pair{Int,eltype(u)}}}(),
                              Vector{Vector{Pair{Int,eltype(u)}}}())

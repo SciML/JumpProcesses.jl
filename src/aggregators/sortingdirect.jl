@@ -23,7 +23,7 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
                                       rng::RNG; num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
-    if dep_graph == nothing
+    if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use ConstantRateJumps with the SortingDirect algorithm a dependency graph must be supplied.")
         else

@@ -30,13 +30,13 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
                                       bracket_data=nothing, kwargs...) where {T,S,F1,F2,RNG,U}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
-    if vartojumps_map == nothing
+    if vartojumps_map === nothing
         error("To use the RSSA algorithm a map from variables to depedent jumps must be supplied.")
     else
         vtoj_map = vartojumps_map
     end
 
-    if jumptovars_map == nothing
+    if jumptovars_map === nothing
         error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
     else
         jtov_map = jumptovars_map
@@ -47,7 +47,7 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     crh_bnds = similar(crs)
 
     # a bracket data structure is needed for updating species populations
-    bd = (bracket_data == nothing) ? BracketData{T,eltype(U)}() : bracket_data
+    bd = (bracket_data === nothing) ? BracketData{T,eltype(U)}() : bracket_data
 
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh

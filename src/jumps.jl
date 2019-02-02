@@ -67,9 +67,8 @@ struct MassActionJump{T,S,U} <: AbstractJump
 end
 MassActionJump(usr::T, rs::S, ns::U; scale_rates = true) where {T,S,U} = MassActionJump{T,S,U}(usr, rs, ns, scale_rates)
 
-function get_num_majumps(maj)
-  length(maj.scaled_rates)
-end
+@inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
+
 
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump
   variable_jumps::T1
@@ -102,6 +101,9 @@ function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
 
   JumpSet(vjs, cjs, rj, maj)
 end
+
+@inline get_num_majumps(jset::JumpSet) = get_num_majumps(jset.massaction_jump)
+
 
 @inline split_jumps(vj, cj, rj, maj) = vj, cj, rj, maj
 @inline split_jumps(vj, cj, rj, maj, v::VariableRateJump, args...) = split_jumps((vj..., v), cj, rj, maj, args...)
@@ -163,7 +165,7 @@ massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump) = majump_mer
 
 ##### helper methods for unpacking rates and affects! from constant jumps #####
 function get_jump_info_tuples(constant_jumps)
-  if (constant_jumps != nothing) && !isempty(constant_jumps)
+  if (constant_jumps !== nothing) && !isempty(constant_jumps)
     rates    = ((c.rate for c in constant_jumps)...,)
     affects! = ((c.affect! for c in constant_jumps)...,)
   else
@@ -175,15 +177,10 @@ function get_jump_info_tuples(constant_jumps)
 end
 
 function get_jump_info_fwrappers(u, p, t, constant_jumps)
-  error("Use of FunctionWrappers is disabled until they update for v0.7")
-end
-
-#=
-function get_jump_info_fwrappers(u, p, t, constant_jumps)
   RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
   AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,Tuple{Any}}
 
-  if (constant_jumps != nothing) && !isempty(constant_jumps)
+  if (constant_jumps !== nothing) && !isempty(constant_jumps)
     rates    = [RateWrapper(c.rate) for c in constant_jumps]
     affects! = [AffectWrapper(x->(c.affect!(x);nothing)) for c in constant_jumps]
   else
@@ -193,4 +190,3 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
 
   rates, affects!
 end
-=#

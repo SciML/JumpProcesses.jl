@@ -1,4 +1,4 @@
-SplitCoupledJumpProblem(prob::AbstractJumpProblem,prob_control::AbstractJumpProblem,aggregator::AbstractAggregatorAlgorithm,coupling_map::Vector{Tuple{Int,Int}})= JumpProblem(cat_problems(prob.prob,prob_control.prob),aggregator,build_split_jumps(prob,prob_control,coupling_map)...)
+SplitCoupledJumpProblem(prob::DiffEqBase.AbstractJumpProblem,prob_control::DiffEqBase.AbstractJumpProblem,aggregator::AbstractAggregatorAlgorithm,coupling_map::Vector{Tuple{Int,Int}})= JumpProblem(cat_problems(prob.prob,prob_control.prob),aggregator,build_split_jumps(prob,prob_control,coupling_map)...)
 
 # make new problem by joining initial_data
 function cat_problems(prob::DiscreteProblem,prob_control::DiscreteProblem)
@@ -84,7 +84,7 @@ cat_problems(prob_control::DiffEqBase.AbstractODEProblem,prob::DiffEqBase.Abstra
 
 
 # this only depends on the jumps in prob, not prob.prob
-function build_split_jumps(prob::AbstractJumpProblem,prob_control::AbstractJumpProblem,coupling_map::Vector{Tuple{Int,Int}})
+function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,prob_control::DiffEqBase.AbstractJumpProblem,coupling_map::Vector{Tuple{Int,Int}})
   num_jumps = length(prob.discrete_jump_aggregation.rates)
   num_jumps_control = length(prob_control.discrete_jump_aggregation.rates)
   jumps = []

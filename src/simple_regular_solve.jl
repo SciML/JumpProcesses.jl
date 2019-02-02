@@ -8,7 +8,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
   @assert isempty(jump_prob.jump_callback.continuous_callbacks)
   @assert isempty(jump_prob.jump_callback.discrete_callbacks)
   prob = jump_prob.prob
-  seed == nothing ? rng = Xorshifts.Xoroshiro128Plus() :
+  seed === nothing ? rng = Xorshifts.Xoroshiro128Plus() :
                     rng = Xorshifts.Xoroshiro128Plus(seed)
 
   rj = jump_prob.regular_jump
@@ -38,7 +38,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
       tprev = t[i-1]
       rate(rate_cache,uprev,p,tprev)
       rate_cache .*= dt
-      counts .= pois_rand.(rate_cache,(rng,))
+      counts .= pois_rand.((rng,), rate_cache)
       !rj.constant_c && c(dc,uprev,p,tprev,mark)
       mul!(update,dc,counts)
       u[i] = uprev .+ update

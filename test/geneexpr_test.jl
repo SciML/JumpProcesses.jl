@@ -1,5 +1,5 @@
 using DiffEqBase, DiffEqJump
-using Test
+using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
@@ -10,8 +10,9 @@ dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(),) #, DirectFW(), FRM(), FRMFW()), SortingDirect(), NRM()
+SSAalgs = (Direct(), SortingDirect(), NRM(), RSSA()) #, DirectFW(), FRM(), FRMFW()),
 
+# numerical parameters
 Nsims        = 8000
 tf           = 1000.0
 u0           = [1,0,0,0]
@@ -61,6 +62,8 @@ netstoch =
     [1 => -1, 3 => -1, 4 => 1],
     [1 => 1, 3 => 1, 4 => -1]
 ]
+spec_to_dep_jumps = [[1,5],[2,3],[4,5],[6]]
+jump_to_dep_specs = [[2],[3],[2],[3],[1,3,4],[1,3,4]]
 rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
@@ -72,7 +75,7 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 if doplot
     plothand = plot(reuse=false)
     for alg in SSAalgs
-        jump_prob = JumpProblem(prob, alg, majumps)
+        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
         sol = solve(jump_prob, SSAStepper())
         plot!(plothand, sol.t, sol[3,:], seriestype=:steppost)
     end
@@ -83,7 +86,7 @@ end
 if dotestmean
     means = zeros(Float64,length(SSAalgs))
     for (i,alg) in enumerate(SSAalgs)
-        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false))
+        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
         means[i]  = runSSAs(jump_prob)
         relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans
@@ -93,7 +96,6 @@ if dotestmean
         # if dobenchmark
         #     @btime (runSSAs($jump_prob);)
         # end
-
 
         @test abs(means[i] - expected_avg) < reltol*expected_avg
     end
@@ -105,7 +107,7 @@ end
 #     # exact methods
 #     for alg in SSAalgs
 #         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps)
+#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 #         @btime solve($jump_prob, SSAStepper())
 #     end
 #     println()

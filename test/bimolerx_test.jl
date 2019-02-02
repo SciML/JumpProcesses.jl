@@ -1,5 +1,5 @@
 using DiffEqBase, DiffEqJump
-using Test
+using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
@@ -11,7 +11,7 @@ dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(), FRM()) #DirectFW(), FRMFW(), SortingDirect(), NRM()
+SSAalgs = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM(), RSSA())
 
 Nsims        = 32000
 tf           = .01
@@ -49,6 +49,8 @@ netstoch =
     [1 => 3, 3 => -3]
 ]
 rates = [1., 2., .5, .75, .25]
+spec_to_dep_jumps = [[1,3],[2,3],[4,5]]
+jump_to_dep_specs = [[1,2],[1,2],[1,2,3],[1,2,3],[1,3]]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 # average number of proteins in a simulation
@@ -67,7 +69,7 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 # plotting one full trajectory
 if doplot
     for alg in SSAalgs
-        jump_prob = JumpProblem(prob, alg, majumps)
+        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
         sol = solve(jump_prob, SSAStepper())
         plothand = plot(sol, seriestype=:steppost, reuse=false)
         display(plothand)
@@ -78,7 +80,7 @@ end
 if dotestmean
     means = zeros(Float64,length(SSAalgs))
     for (i,alg) in enumerate(SSAalgs)
-        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false))
+        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
         means[i]  = runSSAs(jump_prob)
         relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans
@@ -100,7 +102,7 @@ end
 #     # exact methods
 #     for alg in SSAalgs
 #         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps)
+#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 #         @btime solve($jump_prob, SSAStepper())
 #     end
 #     println()
@@ -115,7 +117,7 @@ if dotestmean
         push!(majump_vec, MassActionJump(rates[i], reactstoch[i], netstoch[i]))
     end
     jset = JumpSet((),(),nothing,majump_vec)
-    jump_prob = JumpProblem(prob, Direct(), jset, save_positions=(false,false))
+    jump_prob = JumpProblem(prob, Direct(), jset, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
     meanval = runSSAs(jump_prob)
     relerr = abs(meanval - expected_avg) / expected_avg
     if doprintmeans

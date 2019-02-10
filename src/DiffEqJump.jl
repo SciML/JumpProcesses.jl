@@ -4,7 +4,7 @@ module DiffEqJump
 
 using DiffEqBase, Compat, RandomNumbers, TreeViews, LinearAlgebra
 using DataStructures, PoissonRandom, Random
-using FunctionWrappers
+using FunctionWrappers, Parameters
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, show

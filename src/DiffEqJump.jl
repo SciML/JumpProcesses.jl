@@ -25,8 +25,8 @@ include("aggregators/sortingdirect.jl")
 include("aggregators/nrm.jl")
 include("aggregators/bracketing.jl")
 include("aggregators/rssa.jl")
-#include("aggregators/ratetable.jl")
-#include("aggregators/directcr.jl")
+include("aggregators/prioritytable.jl")
+include("aggregators/directcr.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
@@ -43,7 +43,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, SortingDirect#, DirectCR 
+export Direct, DirectFW, SortingDirect, DirectCR 
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 

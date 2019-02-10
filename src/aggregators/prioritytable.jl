@@ -88,7 +88,7 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
     numgroups  = priortogid(maxpriority)
     pidtype    = typeof(numgroups)
     ptype      = eltype(priorities)
-    groups     = Vector{PriorityGroup{pidtype}}()
+    groups     = Vector{PriorityGroup{ptype,Vector{pidtype}}}()
     pidtogroup = Vector{Tuple{Int,Int}}(undef, length(priorities))
     gsum       = zero(ptype)
     gsums      = zeros(ptype, numgroups)
@@ -124,6 +124,7 @@ function padtable!(pt::PriorityTable, pid, priority)
         push!(gsums, zero(eltype(gsums)))
     end
     pt.maxpriority = maxpriority
+    nothing
 end
 
 function insert!(pt::PriorityTable, pid, priority)  

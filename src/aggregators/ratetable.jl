@@ -63,6 +63,7 @@ mutable struct PriorityTable{F,S,T,U<:Function}
     "values above this cause new groups to be added"
     maxpriority::F   
 
+    "bins storing priority ids within a given range"
     groups::Vector{PriorityGroup{F,Vector{S}}}
 
     "stores the sums of the priorities within each group"
@@ -78,49 +79,51 @@ mutable struct PriorityTable{F,S,T,U<:Function}
     priortoid::U
 end
 
-# Setup table from a vector of priorities. The id
-# of a priority is its position within this vector.
+"""
+Setup table from a vector of priorities. The id
+of a priority is its position within this vector.
+"""
 function PriorityTable(priortoid::Function, priorities::AbstractVector, minpriority, maxpriority)
 
     numgroups = priortoid(maxpriority)
     pidtype   = typeof(numgroups)
     ptype     = eltype(priorities)
-    idtogroup = Vector{pidtype}()
+    groups    = Vector{PriorityGroup{pidtype}}()
+    idtogroup = Vector{Tuple{Int,Int}}(undef, length(priorities))
     gsum      = zero(ptype)
     gsums     = zeros(ptype, numgroups)
 
     # create the groups, {0}, (0,minpriority], (minpriority,2*minpriority]...
-    push!(idtogroup, PriorityGroup{pidtype}(zero(ptype)))
+    push!(groups, PriorityGroup{pidtype}(zero(ptype)))
     gmaxprior = minpriority
     for i = 2:numgroups
-        push!(idtogroup, PriorityGroup{pidtype}(gmaxprior))
-        gmaxprior = 2*gmaxprior
+        push!(groups, PriorityGroup{pidtype}(gmaxprior))
+        gmaxprior *= 2
     end
+
+    pt = PriorityTable(minpriority, maxpriority, groups, gsums, gsum, idtogroup, priortoid)
 
     # insert priority ids into the groups
     for (pid,priority) in enumerate(priorities)
-        gid         = priortoid(priority)
-        gsum       += priority
-        gsums[gid] += priority
-        insert!(idtogroup[gid], pid)
+        insert!(pt, pid, priority)
     end
 
-
-
+    pt
 end
 
-function rebuild!(pt::PriorityTable, newminPriority, newmaxPriority)
-    nothing
-end
+function insert!(pt::PriorityTable, pid, priority)  
 
-function insert!(pt::PriorityTable, jumpid, Priority)
-    
-    # add a new bucket if Priority is too big
-    if Priority > pt.maxPriority
+    gid = pt.priortoid(priority)
 
-    else
-        id = pt.idfun(Priority)
-    end 
+
+    # add new (empty) groups if priority is too big
+    if priority > pt.maxPriority
+
+    end
+
+    gsum       += priority
+    gsums[gid] += priority
+    insert!(idtogroup[gid], pid)
 
     nothing
 end
@@ -162,7 +165,7 @@ function sample(p::DirectCRJumpAggregation, pt::PriorityTable, rng=Random.GLOBAL
     @unpack groups, gsums = pt
     maxpriority = p.sum_rate
 
-    # sample a group, search from end (lapgest priorities)
+    # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
     r     = rand(rng) * maxpriority
     gid   = length(gsum)

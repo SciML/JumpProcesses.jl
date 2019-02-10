@@ -100,8 +100,9 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
         push!(groups, PriorityGroup{pidtype}(gmaxprior))
         gmaxprior *= 2
     end
-
-    pt = PriorityTable(minpriority, maxpriority, groups, gsums, gsum, pidtogroup, priortogid)
+    @assert gmaxprior >= maxpriority
+    
+    pt = PriorityTable(minpriority, gmaxprior, groups, gsums, gsum, pidtogroup, priortogid)
 
     # insert priority ids into the groups
     for (pid,priority) in enumerate(priorities)

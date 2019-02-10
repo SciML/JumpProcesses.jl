@@ -2,17 +2,20 @@
 
 struct Direct <: AbstractAggregatorAlgorithm end
 struct DirectFW <: AbstractAggregatorAlgorithm end
+struct DirectCR <: AbstractAggregatorAlgorithm end
+struct SortingDirect <: AbstractAggregatorAlgorithm end
+struct RSSA <: AbstractAggregatorAlgorithm end
 struct FRM <: AbstractAggregatorAlgorithm end
 struct FRMFW <: AbstractAggregatorAlgorithm end
-struct SortingDirect <: AbstractAggregatorAlgorithm end
 struct NRM <: AbstractAggregatorAlgorithm end
-struct RSSA <: AbstractAggregatorAlgorithm end
+
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
 
-# true if aggregator requires a dependency graph
+# true if aggregator requires a jump dependency graph
 needs_depgraph(aggregator::AbstractAggregatorAlgorithm) = false
+needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
 

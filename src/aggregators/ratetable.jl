@@ -189,9 +189,8 @@ end
 # sampling routines for DirectCR
 #######################################################
 
-@inline function sample(p::DirectCRJumpAggregation, pg::PriorityGroup, rng=Random.GLOBAL_RNG) 
-    @unpack maxpriority, numids, pids = pg
-    priorities = p.cur_rates
+@inline function sample(pg::PriorityGroup, priorities, rng=Random.GLOBAL_RNG) 
+    @unpack maxpriority, numids, pids = pg    
 
     pididx = 0
     pid    = zero(eltype(pids))
@@ -212,9 +211,8 @@ end
     pid
 end
 
-function sample(p::DirectCRJumpAggregation, pt::PriorityTable, rng=Random.GLOBAL_RNG)
+function sample(pt::PriorityTable, priorities, maxpriority, rng=Random.GLOBAL_RNG)
     @unpack groups, gsums = pt
-    maxpriority = p.sum_rate
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
@@ -227,6 +225,6 @@ function sample(p::DirectCRJumpAggregation, pt::PriorityTable, rng=Random.GLOBAL
     end
 
     # sample element within the group
-    sample(p, groups[gid], rng)    
+    sample(groups[gid], priorities, rng)    
 end
 

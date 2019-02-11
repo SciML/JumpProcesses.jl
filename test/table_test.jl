@@ -7,18 +7,8 @@ minpriority = 2.0^exponent(1e-12)
 maxpriority = 2.0^exponent(1e12)
 priorities = [1e-13, .99*minpriority, minpriority,1.01e-4, 1e-4, 5., 0., 1e10]
 
-
 mingid = exponent(minpriority)   # = -40
-
-# add two as 0. -> 1 and mingid -> minpriority
-@inline function priortogid(priority, mingid)
-    (priority <= eps(typeof(priority))) && return 1
-    gid = exponent(priority) + 1
-    (gid <= mingid) && return 2
-    return gid - mingid + 2
-end
-ptog = priority -> priortogid(priority, mingid)
-
+ptog = priority -> DJ.priortogid(priority, mingid)
 pt = DJ.PriorityTable(ptog, priorities, minpriority, maxpriority)
 
 #display(priorities)
@@ -63,5 +53,11 @@ DJ.update!(pt, 10, priorities[10], 0.)
 priorities[10] = 0.
 @test pt.groups[1].numpids == 2
 
-
-
+# test sampling
+cnt = 0
+Nsamps = Int(1e7)
+for i = 1:Nsamps
+    global cnt; pid = DJ.sample(pt, priorities)
+    (pid == 8) && (cnt += 1)
+end
+@test abs(cnt // Nsamps -  0.008968535978248484) / 0.008968535978248484 < .05

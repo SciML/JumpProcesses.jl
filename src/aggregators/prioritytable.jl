@@ -29,8 +29,7 @@ mutable struct PriorityGroup{T,W <: AbstractVector}
     "priority ids associated with group"
     pids::W
 end
-PriorityGroup{U}(maxpriority::T) where {T,U} = 
-                PriorityGroup(maxpriority, 0, Vector{U}())
+PriorityGroup{U}(maxpriority::T) where {T,U} = PriorityGroup(maxpriority, 0, Vector{U}())
 
 @inline function insert!(pg::PriorityGroup, pid)
     @unpack numpids, pids = pg
@@ -122,12 +121,17 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
     pt
 end
 
-function numgroups(pt::PriorityTable)
+########################## ACCESSORS ##########################
+@inline function numgroups(pt::PriorityTable)
     length(pt.groups)
 end
 
-function numpriorities(pt::PriorityTable)
+@inline function numpriorities(pt::PriorityTable)
     length(pt.pidtogroup)
+end
+
+@inline function groupsum(pt::PriorityTable)
+    pt.gsum
 end
 
 """
@@ -228,8 +232,17 @@ function Base.show(io::IO, pt::PriorityTable)
 end
 
 #######################################################
-# sampling routines for DirectCR
+# routines for DirectCR
 #######################################################
+
+# map priority (i.e. jump rate) to integer
+# add two as 0. -> 1 and mingid -> minpriority
+@inline function priortogid(priority, mingid)
+    (priority <= eps(typeof(priority))) && return 1
+    gid = exponent(priority) + 1
+    (gid <= mingid) && return 2
+    return gid - mingid + 2
+end
 
 @inline function sample(pg::PriorityGroup, priorities, rng=Random.GLOBAL_RNG) 
     @unpack maxpriority, numpids, pids = pg    

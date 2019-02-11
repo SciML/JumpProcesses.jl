@@ -14,7 +14,7 @@ tf          = .1
 baserate    = .1
 A0          = 100
 exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
-SSAalgs     = [Direct(),RSSA()] #[Direct(),RSSA()]#, DirectFW(), FRM(), FRMFW()]
+SSAalgs     = [Direct(),RSSA(),DirectCR(),SortingDirect(),NRM()] #[Direct(),RSSA()]#, DirectFW(), FRM(), FRMFW()]
 
 spec_to_dep_jumps = [collect(1:Nrxs),[]]
 jump_to_dep_specs = [[1,2] for i=1:Nrxs]

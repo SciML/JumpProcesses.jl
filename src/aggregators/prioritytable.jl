@@ -232,28 +232,31 @@ end
 #######################################################
 
 @inline function sample(pg::PriorityGroup, priorities, rng=Random.GLOBAL_RNG) 
-    @unpack maxpriority, numids, pids = pg    
+    @unpack maxpriority, numpids, pids = pg    
 
     pididx = 0
     pid    = zero(eltype(pids))
     notdone = true
-    @inbounds while notdone
+    #@inbounds
+    while notdone
 
         # pick a random element 
-        r      = rand(rng) * numids
+        r      = rand(rng) * numpids
         pididx = trunc(Int, r) 
-        pid    = pids[pididx]
+        pid    = pids[pididx+1]
+
+        #println("pid = $pid, pididx = $pididx, r = $r, (r-pididx)*maxpriority = ", (r-pididx)*maxpriority, ", priorities[pid] = ", priorities[pid], "maxpriority = $maxpriority")
 
         # acceptance test
         if (r - pididx)*maxpriority < priorities[pid]
-            notedone = false
+            notdone = false
         end
     end
 
     pid
 end
 
-function sample(pt::PriorityTable, priorities, maxpriority, rng=Random.GLOBAL_RNG)
+function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
     @unpack groups, gsum, gsums = pt
 
     # sample a group, search from end (largest priorities)
@@ -265,6 +268,8 @@ function sample(pt::PriorityTable, priorities, maxpriority, rng=Random.GLOBAL_RN
         gid   -= one(gid)
         rtsum -= gsums[gid] 
     end
+
+
 
     # sample element within the group
     sample(groups[gid], priorities, rng)    

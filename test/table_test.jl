@@ -26,33 +26,42 @@ pt = DJ.PriorityTable(ptog, priorities, minpriority, maxpriority)
 
 # test insert
 grpcnt = DJ.numgroups(pt)
-DJ.insert!(pt, length(priorities)+1, maxpriority*.99)
+push!(priorities, maxpriority*.99)
+DJ.insert!(pt, length(priorities), priorities[end])
 @test grpcnt == DJ.numgroups(pt)
-@test pt.groups[end].pids[1] == length(priorities)+1
-DJ.insert!(pt, length(priorities)+2, maxpriority*.99999)
+@test pt.groups[end].pids[1] == length(priorities)
+
+push!(priorities, maxpriority*.99999)
+DJ.insert!(pt, length(priorities), priorities[end])
 @test grpcnt == DJ.numgroups(pt)
-@test pt.groups[end].pids[2] == length(priorities)+2
+@test pt.groups[end].pids[2] == length(priorities)
 
 numsmall = length(pt.groups[2].pids)
-DJ.insert!(pt, length(priorities)+3, minpriority*.6)
+push!(priorities, minpriority*.6)
+DJ.insert!(pt, length(priorities), priorities[end])
 @test grpcnt == DJ.numgroups(pt)
-@test pt.groups[2].pids[end] == length(priorities)+3
+@test pt.groups[2].pids[end] == length(priorities)
 
-DJ.insert!(pt, length(priorities)+4, maxpriority)
+push!(priorities, maxpriority)
+DJ.insert!(pt, length(priorities), priorities[end])
 @test grpcnt == DJ.numgroups(pt)-1
-@test pt.groups[end].pids[1] == length(priorities)+4
+@test pt.groups[end].pids[1] == length(priorities)
 
 
 # test updating
 DJ.update!(pt, 5, priorities[5], 2*priorities[5])   # group 29
+priorities[5] *= 2
 @test pt.groups[29].numpids == 1
 @test pt.groups[30].numpids == 1
 
-DJ.update!(pt, 9, maxpriority*.99, maxpriority*1.01)
+DJ.update!(pt, 9, priorities[9], maxpriority*1.01)
+priorities[9] = maxpriority*1.01
 @test pt.groups[end].numpids == 2
 @test pt.groups[end-1].numpids == 1
 
-DJ.update!(pt, 10, maxpriority*.99999, 0.)
+DJ.update!(pt, 10, priorities[10], 0.)
+priorities[10] = 0.
 @test pt.groups[1].numpids == 2
+
 
 

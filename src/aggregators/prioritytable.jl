@@ -1,24 +1,26 @@
 """
- Dynamic table data structure to store and update priorities
+Dynamic table data structure to store and update priorities
 
- Implementation
- Stores ids that identify the priorities. Each group stores a range of priority ids. 
- The basic design assumes a lower-most group of "zero" priorities, and a second
- group storing all non-zero priorities that are <= a `minpriority`. All other groups
- store priorities within consecutive ranges. The `minpriority` is taken fixed at creation,
- but the `maxpriority` will increase dynamically based on inserted / updated priorities.
- The ranges are assumed to be powers of two:
-    bin 1 = {0}, 
-    bin 2 = (0,`minpriority`], 
-    bin 3 = (`minpriority`,`2*minpriority`]...
-    bin N = (``.5*maxpriority`,`maxpriority`]
+Implementation
+Stores ids that identify the priorities. Each group stores a range of priority ids. 
+The basic design assumes a lower-most group of "zero" priorities, and a second
+group storing all non-zero priorities that are < a `minpriority`. All other groups
+store priorities within consecutive ranges. The `minpriority` is taken fixed at creation,
+but the `maxpriority` will increase dynamically based on inserted / updated priorities.
+The ranges are assumed to be powers of two:
+   bin 1 = {0}, 
+   bin 2 = (0,`minpriority`), 
+   bin 3 = [`minpriority`,`2*minpriority`)...
+   bin N = [`.5*maxpriority`,`maxpriority`)
+*Assumes* the `priortogid` function that maps priorities to groups mas the upper end of 
+the interval to the next group. i.e. maxpriority -> N+1
 """
 
 """
 One group (i.e. bin) of priority ids within the table
 """
 mutable struct PriorityGroup{T,W <: AbstractVector}
-    "upper bound for priorities in this group"
+    "(strict) upper bound for priorities in this group"
     maxpriority::T
 
     "number of priority ids"
@@ -50,6 +52,13 @@ end
     @inbounds pids[pididx] = pids[numpids]
     pg.numpids -= 1
     nothing
+end
+
+function Base.show(io::IO, pg::PriorityGroup)
+    println("  ", summary(pg))
+    println("  maxpriority = ", pg.maxpriority)
+    println("  numpids = ", pg.numpids)
+    println("  pids = ", pg.pids[1:pg.numpids])
 end
 
 
@@ -86,6 +95,7 @@ of a priority is its position within this vector.
 function PriorityTable(priortogid::Function, priorities::AbstractVector, minpriority, maxpriority)
 
     numgroups  = priortogid(maxpriority)
+    numgroups -= one(typeof(numgroups))
     pidtype    = typeof(numgroups)
     ptype      = eltype(priorities)
     groups     = Vector{PriorityGroup{ptype,Vector{pidtype}}}()
@@ -100,9 +110,9 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
         push!(groups, PriorityGroup{pidtype}(gmaxprior))
         gmaxprior *= 2
     end
-    @assert gmaxprior >= maxpriority
-    
-    pt = PriorityTable(minpriority, gmaxprior, groups, gsums, gsum, pidtogroup, priortogid)
+    @assert abs(gmaxprior - 2*maxpriority) <= eps(typeof(maxpriority)) "gmaxprior = $gmaxprior, maxpriority=$maxpriority"
+
+    pt = PriorityTable(minpriority, maxpriority, groups, gsums, gsum, pidtogroup, priortogid)
 
     # insert priority ids into the groups
     for (pid,priority) in enumerate(priorities)
@@ -112,6 +122,14 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
     pt
 end
 
+function numgroups(pt::PriorityTable)
+    length(pt.groups)
+end
+
+function numpriorities(pt::PriorityTable)
+    length(pidtogroup)
+end
+
 """
 Adds extra groups to the table to accomodate a new maxpriority.
 """
@@ -119,7 +137,8 @@ function padtable!(pt::PriorityTable, pid, priority)
     @unpack maxpriority, groups, gsums = pt
     pidtype = typeof(pid)
 
-    while priority > maxpriority
+    # real max of all bins is 2*maxpriority
+    while priority >= maxpriority
         maxpriority *= 2
         push!(groups, PriorityGroup{pidtype}(maxpriority))
         push!(gsums, zero(eltype(gsums)))
@@ -136,11 +155,11 @@ function insert!(pt::PriorityTable, pid, priority)
     gid = priortogid(priority)
 
     # add new (empty) groups if priority is too big
-    if priority > maxpriority
+    if priority >= maxpriority
         padtable!(pt, pid, priority)
         @assert (gid == length(groups))
     end
-    
+
     # update table and priority's group
     pt.gsum += priority
     #@inbounds 
@@ -148,7 +167,12 @@ function insert!(pt::PriorityTable, pid, priority)
     #@inbounds 
     pididx = insert!(groups[gid], pid)
     #@inbounds 
-    pidtogroup[pid] = (gid,pididx)
+    if pid <= length(pidtogroup)
+        pidtogroup[pid] = (gid,pididx)
+    else
+        @assert pid == length(pidtogroup) + 1
+        push!(pidtogroup, (gid,pididx))
+    end
 
     nothing
 end
@@ -160,7 +184,7 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     newgid = priortogid(newpriority)    
 
     # expand the table if necessary
-    if newpriority > maxpriority
+    if newpriority >= maxpriority
         padtable!(pt, pid, newpriority)
     end
 
@@ -175,17 +199,33 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     else
         #@inbounds
         begin
-            gsums[oldgid] -= oldpriority
-            gsums[newgid] += oldpriority
             pididx = pidtogroup[pid][2]
             remove!(groups[oldgid], pididx)
             pididx = insert!(groups[newgid], pid)
             pidtogroup[pid] = (newgid,pididx)
+
+            # update sums, special case if group empty to avoid FP error in running sums
+            grpsz = groups[oldgid].numpids
+            gsums[oldgid]  = (grpsz == zero(grpsz)) ? zero(oldpriority) : gsums[oldgid] - oldpriority
+            gsums[newgid] += newpriority
         end
     end
     nothing
 end
 
+function Base.show(io::IO, pt::PriorityTable)
+    println(summary(pt))
+    println("(minpriority,maxpriority) = ", (pt.minpriority, pt.maxpriority))    
+    println("sum of priorities = ", pt.gsum)
+    println("num of groups = ", length(pt.groups))
+    println("pidtogroup = ", pt.pidtogroup)
+    for (i,group) in enumerate(pt.groups)
+        if length(group.pids) > 0
+            println("group = ",i,", group sum = ", pt.gsums[i])
+            Base.show(io,group)
+        end
+    end
+end
 
 #######################################################
 # sampling routines for DirectCR
@@ -214,13 +254,13 @@ end
 end
 
 function sample(pt::PriorityTable, priorities, maxpriority, rng=Random.GLOBAL_RNG)
-    @unpack groups, gsums = pt
+    @unpack groups, gsum, gsums = pt
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
-    r     = rand(rng) * maxpriority
+    r     = rand(rng) * gsum
     gid   = length(gsums)
-    rtsum = maxpriority - gsums[gid]
+    rtsum = gsum - gsums[gid]
     while rtsum > r
         gid   -= one(gid)
         rtsum -= gsums[gid] 

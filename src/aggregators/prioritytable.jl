@@ -127,7 +127,7 @@ function numgroups(pt::PriorityTable)
 end
 
 function numpriorities(pt::PriorityTable)
-    length(pidtogroup)
+    length(pt.pidtogroup)
 end
 
 """

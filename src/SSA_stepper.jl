@@ -3,7 +3,7 @@
 
 struct SSAStepper end
 
-mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DiffEqBase.DEIntegrator
+mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DiffEqBase.DEIntegrator{SSAStepper,Nothing,uType,tType}
     f::F
     u::uType
     t::tType

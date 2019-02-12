@@ -1,4 +1,4 @@
-using DiffEqBase, DiffEqJump
+using DiffEqBase, DiffEqJump, DataStructures
 using Test, Statistics
 
 # using Plots; plotlyjs()

@@ -47,10 +47,15 @@ end
 @inline function remove!(pg::PriorityGroup, pididx)
     @unpack numpids, pids = pg
 
+    lastpid = pids[numpids]
+
     # simply swap the last id with the one to remove
-    @inbounds pids[pididx] = pids[numpids]
+    @inbounds pids[pididx] = lastpid
+    
     pg.numpids -= 1
-    nothing
+
+    # return the pid that was swapped to pididx
+    lastpid
 end
 
 function Base.show(io::IO, pg::PriorityGroup)
@@ -203,8 +208,16 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     else
         #@inbounds
         begin
+            # location in oldgid of pid to move
             pididx = pidtogroup[pid][2]
-            remove!(groups[oldgid], pididx)
+
+            # remove pid from old group
+            movedpid = remove!(groups[oldgid], pididx)
+
+            # update position in group of the pid that swapped places with the removed one
+            pidtogroup[movedpid] = (oldgid,pididx)
+
+            # insert the updated pid back and store it's new position in the group
             pididx = insert!(groups[newgid], pid)
             pidtogroup[pid] = (newgid,pididx)
 
@@ -224,7 +237,7 @@ function Base.show(io::IO, pt::PriorityTable)
     println("num of groups = ", length(pt.groups))
     println("pidtogroup = ", pt.pidtogroup)
     for (i,group) in enumerate(pt.groups)
-        if length(group.pids) > 0
+        if group.numpids > 0
             println("group = ",i,", group sum = ", pt.gsums[i])
             Base.show(io,group)
         end
@@ -260,6 +273,8 @@ end
 
         #println("pid = $pid, pididx = $pididx, r = $r, (r-pididx)*maxpriority = ", (r-pididx)*maxpriority, ", priorities[pid] = ", priorities[pid], "maxpriority = $maxpriority")
 
+        @assert (.5 <= priorities[pid]/maxpriority < 1) string("pid = ", pid, ", priority = ",priorities[pid], ", maxpriority = $maxpriority")
+
         # acceptance test
         if (r - pididx)*maxpriority < priorities[pid]
             notdone = false
@@ -274,15 +289,12 @@ function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
-    r     = rand(rng) * gsum
-    gid   = length(gsums)
-    rtsum = gsum - gsums[gid]
-    while rtsum > r
-        gid   -= one(gid)
-        rtsum -= gsums[gid] 
+    gid = length(gsums)
+    r   = rand(rng) * gsum - gsums[gid]
+    while r > zero(r)
+        gid -= one(gid)
+        r   -= gsums[gid] 
     end
-
-
 
     # sample element within the group
     sample(groups[gid], priorities, rng)    

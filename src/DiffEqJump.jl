@@ -8,6 +8,7 @@ using FunctionWrappers, Parameters
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, show
+import DataStructures: length, update!
 
 import RecursiveArrayTools: recursivecopy!
 

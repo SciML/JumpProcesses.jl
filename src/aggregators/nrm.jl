@@ -32,7 +32,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     end
 
     # make sure each jump depends on itself
-    add_self_dependencies(dg)
+    add_self_dependencies!(dg)
 
     pq = MutableBinaryMinHeap{T}()
 

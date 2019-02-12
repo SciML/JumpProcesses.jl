@@ -12,7 +12,7 @@ The ranges are assumed to be powers of two:
    bin 2 = (0,`minpriority`), 
    bin 3 = [`minpriority`,`2*minpriority`)...
    bin N = [`.5*maxpriority`,`maxpriority`)
-*Assumes* the `priortogid` function that maps priorities to groups mas the upper end of 
+*Assumes* the `priortogid` function that maps priorities to groups maps the upper end of 
 the interval to the next group. i.e. maxpriority -> N+1
 """
 
@@ -47,11 +47,10 @@ end
 @inline function remove!(pg::PriorityGroup, pididx)
     @unpack numpids, pids = pg
 
-    lastpid = pids[numpids]
+    @inbounds lastpid = pids[numpids]
 
     # simply swap the last id with the one to remove
-    @inbounds pids[pididx] = lastpid
-    
+    @inbounds pids[pididx] = lastpid    
     pg.numpids -= 1
 
     # return the pid that was swapped to pididx
@@ -107,14 +106,14 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
     gsum       = zero(ptype)
     gsums      = zeros(ptype, numgroups)
 
-    # create the groups, {0}, (0,minpriority], (minpriority,2*minpriority]...
+    # create the groups, {0}, (0,minpriority), [minpriority,2*minpriority)...
     push!(groups, PriorityGroup{pidtype}(zero(ptype)))
     gmaxprior = minpriority
     for i = 2:numgroups
         push!(groups, PriorityGroup{pidtype}(gmaxprior))
         gmaxprior *= 2
     end
-    @assert abs(gmaxprior - 2*maxpriority) <= eps(typeof(maxpriority)) "gmaxprior = $gmaxprior, maxpriority=$maxpriority"
+    #@assert abs(gmaxprior - 2*maxpriority) <= eps(typeof(maxpriority)) "gmaxprior = $gmaxprior, maxpriority=$maxpriority"
 
     pt = PriorityTable(minpriority, maxpriority, groups, gsums, gsum, pidtogroup, priortogid)
 
@@ -146,7 +145,6 @@ function padtable!(pt::PriorityTable, pid, priority)
     @unpack maxpriority, groups, gsums = pt
     pidtype = typeof(pid)
 
-    # real max of all bins is 2*maxpriority
     while priority >= maxpriority
         maxpriority *= 2
         push!(groups, PriorityGroup{pidtype}(maxpriority))
@@ -156,6 +154,8 @@ function padtable!(pt::PriorityTable, pid, priority)
     nothing
 end
 
+# assumes pid is at most 1 greater than last priority (id) currently in table
+# i.e. pid = length(pidtogroup) + 1
 function insert!(pt::PriorityTable, pid, priority)  
     @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
     pidtype = typeof(pid)
@@ -166,20 +166,18 @@ function insert!(pt::PriorityTable, pid, priority)
     # add new (empty) groups if priority is too big
     if priority >= maxpriority
         padtable!(pt, pid, priority)
-        @assert (gid == length(groups))
+        #@assert (gid == length(groups))
     end
 
     # update table and priority's group
     pt.gsum += priority
-    #@inbounds 
-    gsums[gid] += priority
-    #@inbounds 
-    pididx = insert!(groups[gid], pid)
-    #@inbounds 
+    @inbounds gsums[gid] += priority
+    @inbounds pididx = insert!(groups[gid], pid)
+
     if pid <= length(pidtogroup)
-        pidtogroup[pid] = (gid,pididx)
+        @inbounds pidtogroup[pid] = (gid,pididx)
     else
-        @assert pid == length(pidtogroup) + 1
+        #@assert pid == length(pidtogroup) + 1
         push!(pidtogroup, (gid,pididx))
     end
 
@@ -203,11 +201,9 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
 
     if oldgid == newgid
         # update the group priority too
-        #@inbounds 
-        gsums[newgid] += pdiff
-    else
-        #@inbounds
-        begin
+        @inbounds gsums[newgid] += pdiff
+    else        
+        @inbounds begin
             # location in oldgid of pid to move
             pididx = pidtogroup[pid][2]
 
@@ -249,7 +245,7 @@ end
 #######################################################
 
 # map priority (i.e. jump rate) to integer
-# add two as 0. -> 1 and mingid -> minpriority
+# add two as 0. -> 1 and  priority < minpriority ==> pid -> 2
 @inline function priortogid(priority, mingid)
     (priority <= eps(typeof(priority))) && return 1
     gid = exponent(priority) + 1
@@ -263,22 +259,16 @@ end
     pididx = 0
     pid    = zero(eltype(pids))
     notdone = true
-    #@inbounds
-    while notdone
+
+    @inbounds while true
 
         # pick a random element 
         r      = rand(rng) * numpids
         pididx = trunc(Int, r) 
         pid    = pids[pididx+1]
 
-        #println("pid = $pid, pididx = $pididx, r = $r, (r-pididx)*maxpriority = ", (r-pididx)*maxpriority, ", priorities[pid] = ", priorities[pid], "maxpriority = $maxpriority")
-
-        @assert (.5 <= priorities[pid]/maxpriority < 1) string("pid = ", pid, ", priority = ",priorities[pid], ", maxpriority = $maxpriority")
-
         # acceptance test
-        if (r - pididx)*maxpriority < priorities[pid]
-            notdone = false
-        end
+        ( (r - pididx)*maxpriority < priorities[pid] ) && break
     end
 
     pid
@@ -290,13 +280,13 @@ function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
     gid = length(gsums)
-    r   = rand(rng) * gsum - gsums[gid]
+    @inbounds r = rand(rng) * gsum - gsums[gid]
     while r > zero(r)
         gid -= one(gid)
-        r   -= gsums[gid] 
+        @inbounds r -= gsums[gid] 
     end
 
     # sample element within the group
-    sample(groups[gid], priorities, rng)    
+    @inbounds sample(groups[gid], priorities, rng)    
 end
 

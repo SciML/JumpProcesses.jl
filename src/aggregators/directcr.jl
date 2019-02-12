@@ -108,8 +108,7 @@ function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
     fill_rates_and_sum!(p, u, params, t)
 
     # setup PriorityTable
-    rt   = PriorityTable(p.ratetogroup, p.cur_rates, p.minrate, p.maxrate)
-    p.rt = rt
+    p.rt   = PriorityTable(p.ratetogroup, p.cur_rates, p.minrate, p.maxrate)
 
     generate_jumps!(p, integrator, u, params, t)
     nothing

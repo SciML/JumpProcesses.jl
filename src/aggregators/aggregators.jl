@@ -10,6 +10,8 @@ struct FRMFW <: AbstractAggregatorAlgorithm end
 struct NRM <: AbstractAggregatorAlgorithm end
 
 
+const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM())
+
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
 

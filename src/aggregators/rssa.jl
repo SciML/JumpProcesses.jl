@@ -181,6 +181,14 @@ end
 
     # next jump type
     sum_rate    = p.sum_rate
+
+    # if no more events possible there is nothing to do
+    if sum_rate < eps(sum_rate)
+        p.next_jump = 0
+        p.next_jump_time = convert(typeof(sum_rate), Inf)
+        return 
+    end
+
     crlow       = p.cur_rate_low
     crhigh      = p.cur_rate_high
     majumps     = p.ma_jumps

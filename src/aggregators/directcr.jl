@@ -9,7 +9,6 @@ by S. Mauch and M. Stalzer, ACM Trans. Comp. Biol. and Bioinf., 8, No. 1, 27-35 
 """
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
-const MAXJUMPRATE = 2.0^exponent(1e12)
 
 mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
     next_jump::Int
@@ -23,7 +22,7 @@ mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:F
     save_positions::Tuple{Bool,Bool}
     rng::RNG
     dep_gr::DEPGR
-    minrate::T   
+    minrate::T
     maxrate::T   # initial maxrate only, table can increase beyond it!
     rt::U
     ratetogroup::W
@@ -31,8 +30,8 @@ mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:F
 
 function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
                                       maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
-                                      rng::RNG; num_specs, dep_graph=nothing, 
-                                      minrate=convert(T,MINJUMPRATE), maxrate=convert(T,MAXJUMPRATE),
+                                      rng::RNG; num_specs, dep_graph=nothing,
+                                      minrate=convert(T,MINJUMPRATE), maxrate=convert(T,Inf),
                                       kwargs...) where {T,S,F1,F2,RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
@@ -52,15 +51,15 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
     ratetogroup = rate -> priortogid(rate, minexponent)
-
+    
     # construct an empty initial priority table -- we'll overwrite this in init anyways...
-    rt = PriorityTable{T,Int,Int,typeof(ratetogroup)}(minrate, maxrate, 
+    rt = PriorityTable{T,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate,
                                                         Vector{PriorityGroup{T,Vector{Int}}}(),
-                                                        Vector{T}(), zero(T), 
+                                                        Vector{T}(), zero(T),
                                                         Vector{Tuple{Int,Int}}(), ratetogroup)
 
     DirectCRJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(rt),typeof(ratetogroup)}(
-                                            nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, 
+                                            nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
                                             dg, minrate, maxrate, rt, ratetogroup)
 end
 
@@ -103,9 +102,12 @@ end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
-    
-    # initialize rates 
+
+    # initialize rates
     fill_rates_and_sum!(p, u, params, t)
+
+    # if no maxrate was set, use largest initial rate (pad by 2 for an extra group)
+    isinf(p.maxrate) && (p.maxrate = 2*maximum(p.cur_rates))
 
     # setup PriorityTable
     p.rt   = PriorityTable(p.ratetogroup, p.cur_rates, p.minrate, p.maxrate)
@@ -161,7 +163,7 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
         oldrate = cur_rates[rx]
 
         # update rate
-        if rx <= num_majumps            
+        if rx <= num_majumps
             newrate = evalrxrate(u, rx, ma_jumps)
         else
             newrate = rates[rx-num_majumps](u, params, t)
@@ -171,8 +173,7 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
         # update table
         update!(rt, rx, oldrate, newrate)
     end
-  
+
     p.sum_rate = groupsum(rt)
     nothing
   end
-  

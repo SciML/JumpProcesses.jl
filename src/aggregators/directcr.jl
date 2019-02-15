@@ -50,6 +50,9 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
+
+    # use the largest power of two that is <= the passed in minrate
+    minrate = 2.0^minexponent       
     ratetogroup = rate -> priortogid(rate, minexponent)
     
     # construct an empty initial priority table -- we'll overwrite this in init anyways...

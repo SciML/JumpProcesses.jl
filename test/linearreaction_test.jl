@@ -14,7 +14,7 @@ tf          = .1
 baserate    = .1
 A0          = 100
 exactmean   = (t,ratevec) -> A0 * exp(-sum(ratevec) * t)
-SSAalgs     = [Direct(),RSSA()] #[Direct(),RSSA()]#, DirectFW(), FRM(), FRMFW()]
+SSAalgs     = [Direct(),RSSA()]
 
 spec_to_dep_jumps = [collect(1:Nrxs),[]]
 jump_to_dep_specs = [[1,2] for i=1:Nrxs]
@@ -302,7 +302,7 @@ for method in SSAalgs
 end
 
 # for dependency graph methods just test with mass action jumps
-SSAalgs        = [NRM(), SortingDirect()]
+SSAalgs        = [NRM(), SortingDirect(), DirectCR()]
 jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens

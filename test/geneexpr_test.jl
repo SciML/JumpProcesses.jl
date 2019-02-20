@@ -10,7 +10,7 @@ dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (Direct(), SortingDirect(), NRM(), RSSA()) #, DirectFW(), FRM(), FRMFW()),
+SSAalgs = (Direct(), SortingDirect(), NRM(), RSSA(), DirectCR()) #, DirectFW(), FRM(), FRMFW()),
 
 # numerical parameters
 Nsims        = 8000

@@ -4,10 +4,11 @@ module DiffEqJump
 
 using DiffEqBase, Compat, RandomNumbers, TreeViews, LinearAlgebra
 using DataStructures, PoissonRandom, Random
-using FunctionWrappers
+using FunctionWrappers, Parameters
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, show
+import DataStructures: length, update!
 
 import RecursiveArrayTools: recursivecopy!
 
@@ -25,6 +26,8 @@ include("aggregators/sortingdirect.jl")
 include("aggregators/nrm.jl")
 include("aggregators/bracketing.jl")
 include("aggregators/rssa.jl")
+include("aggregators/prioritytable.jl")
+include("aggregators/directcr.jl")
 include("problem.jl")
 include("callbacks.jl")
 include("solve.jl")
@@ -41,7 +44,9 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, FRM, FRMFW, SortingDirect, NRM, BracketData, RSSA
+export Direct, DirectFW, SortingDirect, DirectCR 
+export BracketData, RSSA
+export FRM, FRMFW, NRM
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

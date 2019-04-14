@@ -17,6 +17,13 @@ function DiffEqBase.__init(
   if !isempty(jump_prob.jump_callback.discrete_callbacks)
     Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,seed)
   end
+
+  if !isempty(jump_prob.variable_jumps)
+    @assert jump_prob.prob.u0 isa ExtendedJumpArray
+    randexp!(jump_prob.prob.u0.jump_u)
+    jump_prob.prob.u0.jump_u .*= -1
+  end
+
   integrator = init(jump_prob.prob,alg,timeseries,ts,ks,recompile;
                     callback=CallbackSet(callback,jump_prob.jump_callback),
                     kwargs...)

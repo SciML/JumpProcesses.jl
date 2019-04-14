@@ -10,7 +10,7 @@ doprint = false
 #using Plots; plotlyjs()
 doplot = false
 
-methods = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM(), RSSA())
+methods = (Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM(), RSSA(), DirectCR())
 
 # one reaction case, mass action jump, vector of data
 rate = [2.0]

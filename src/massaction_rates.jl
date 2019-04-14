@@ -94,3 +94,14 @@ function make_dependency_graph(numspec, ma_jumps::MassActionJump)
 
     dep_graph
 end
+
+
+# update dependency graph to make sure jumps depend on themselves
+function add_self_dependencies!(dg)
+    for (i,jump_deps) in enumerate(dg)
+        if !any(y->isequal(y,i), jump_deps)
+            push!(jump_deps, i)
+            sort!(jump_deps)
+        end
+    end
+end

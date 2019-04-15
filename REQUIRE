@@ -8,3 +8,4 @@ PoissonRandom 0.4.0
 DataStructures 0.15.0
 TreeViews
 Parameters 0.10.3
+DiffEqMonteCarlo 0.14.0

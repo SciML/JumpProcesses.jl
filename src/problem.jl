@@ -97,7 +97,9 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  DAEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan)
+  DAEProblem(jump_f,du0,u0,tspan,prob.p,
+    callback=prob.callback,
+    differential_vars=prob.differential_vars)
 end
 
 function build_variable_callback(cb,idx,jump,jumps...)

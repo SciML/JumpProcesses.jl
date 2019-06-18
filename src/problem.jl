@@ -83,7 +83,11 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  DDEProblem(jump_f,prob.h,u0,prob.lags,prob.tspan,prob.p)
+  DDEProblem(jump_f,u0,prob.h,prob.tspan,prob.p,
+    constant_lags=prob.constant_lags,
+    dependent_lags=prob.dependent_lags,
+    callback=prob.callback,
+    neutral=prob.neutral)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts

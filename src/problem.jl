@@ -60,7 +60,7 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  ODEProblem(jump_f,u0,prob.tspan,prob.p)
+  remake(prob,f=ODEFunction{true}(jump_f),u0=u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
@@ -74,7 +74,7 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
   end
 
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  SDEProblem(jump_f,jump_g,u0,prob.tspan,prob.p)
+  remake(prob,f=SDEFunction{true}(jump_f,jump_g),g=jump_g,u0=u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
@@ -83,11 +83,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  DDEProblem(jump_f,u0,prob.h,prob.tspan,prob.p,
-    constant_lags=prob.constant_lags,
-    dependent_lags=prob.dependent_lags,
-    callback=prob.callback,
-    neutral=prob.neutral)
+  ramake(prob,f=DDEFunction{true}(jump_f),u0=u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
@@ -97,9 +93,7 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
-  DAEProblem(jump_f,du0,u0,tspan,prob.p,
-    callback=prob.callback,
-    differential_vars=prob.differential_vars)
+  remake(prob,f=DAEFunction{true}(jump_f),u0=u0)
 end
 
 function build_variable_callback(cb,idx,jump,jumps...)

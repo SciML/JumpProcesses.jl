@@ -1,0 +1,29 @@
+name = "DiffEqJump"
+uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
+authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
+version = "6.2.0"
+
+[deps]
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
+FunctionWrappers = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+PoissonRandom = "e409e4f3-bfea-5376-8464-e040bb5c01ab"
+RandomNumbers = "e6cf234a-135c-5ec9-84dd-332b85af5143"
+RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
+TreeViews = "a2a6695c-b41b-5b7d-aed9-dbfdeacea5d7"
+
+[compat]
+julia = "1"
+RecursiveArrayTools = ">=0.20.0"
+
+[extras]
+DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["DiffEqProblemLibrary","Distributions","OrdinaryDiffEq","StochasticDiffEq","Test"]

@@ -7,8 +7,8 @@ rate = (u,p,t) -> 200.
 affect! = integrator -> (integrator.u[1] = integrator.u[1]/2)
 jump = VariableRateJump(rate, affect!, save_positions=(false,true))
 jump_prob = JumpProblem(prob,Direct(),jump)
-monte_prob = MonteCarloProblem(jump_prob)
-sol = solve(monte_prob,SRIW1(),num_monte=3,parallel_type=:none,
+monte_prob = EnsembleProblem(jump_prob)
+sol = solve(monte_prob,SRIW1(),trajectories=3,parallel_type=:none,
             save_everystep=false,dt=0.001,adaptive=false)
 @test sol[1].t[2] != sol[2].t[2] != sol[3].t[2]
 

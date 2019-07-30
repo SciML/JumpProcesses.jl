@@ -1,4 +1,4 @@
-using DiffEqJump, StochasticDiffEq, DiffEqMonteCarlo, Test
+using DiffEqJump, StochasticDiffEq, Test
 
 f = (du,u,p,t) -> (du[1]=u[1])
 g = (du,u,p,t) -> (du[1]=u[1])
@@ -14,7 +14,7 @@ sol = solve(monte_prob,SRIW1(),num_monte=3,parallel_type=:none,
 
 jump = ConstantRateJump(rate, affect!)
 jump_prob = JumpProblem(prob,Direct(),jump,save_positions=(true,false))
-monte_prob = MonteCarloProblem(jump_prob)
-sol = solve(monte_prob,SRIW1(),num_monte=3,parallel_type=:none,
+monte_prob = EnsembleProblem(jump_prob)
+sol = solve(monte_prob,SRIW1(),trajectories=3,parallel_type=:none,
             save_everystep=false,dt=0.001,adaptive=false)
 @test sol[1].t[2] != sol[2].t[2] != sol[3].t[2]

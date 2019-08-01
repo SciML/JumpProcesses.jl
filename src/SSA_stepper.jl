@@ -60,6 +60,9 @@ function DiffEqBase.init(jump_prob::JumpProblem,
                          save_start = true,
                          save_end = true,
                          saveat = nothing)
+    if !(jump_prob.prob isa DiscreteProblem)
+        error("SSAStepper only supports DiscreteProblems.")
+    end
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert length(jump_prob.jump_callback.discrete_callbacks) == 1
     cb = jump_prob.jump_callback.discrete_callbacks[1]

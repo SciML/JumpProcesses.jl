@@ -16,6 +16,13 @@ abstract type AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 
+import Base.Threads
+@static if VERSION < v"1.3"
+  seed_multiplier() = Threads.threadid()
+else
+  seed_multiplier() = 1
+end
+
 include("jumps.jl")
 include("massaction_rates.jl")
 include("aggregators/aggregators.jl")
@@ -44,7 +51,7 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, SortingDirect, DirectCR 
+export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 

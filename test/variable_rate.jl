@@ -47,3 +47,31 @@ sol = solve(jump_prob,SRIW1())
 
 @test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12
+
+function ff(du,u,p,t)
+    if p == 0
+        du .= 1.01u
+    else
+        du .= 2.01u
+    end
+end
+
+function gg(du,u,p,t)
+  @show size(du)
+  du[1,1] = 0.3u[1]
+  du[1,2] = 0.6u[1]
+  du[2,1] = 1.2u[1]
+  du[2,2] = 0.2u[2]
+end
+
+rate_switch(u,p,t) = u[1]*1.0
+
+function affect_switch!(integrator)
+    integrator.p = 1
+end
+
+jump_switch = VariableRateJump(rate_switch,affect_switch!)
+
+prob = SDEProblem(ff,gg,ones(2),(0.0,1.0),noise_rate_prototype=zeros(2,2))
+jump_prob = JumpProblem(prob, Direct(), jump_switch)
+solve(jump_prob, SRA1(), dt = 1.0)

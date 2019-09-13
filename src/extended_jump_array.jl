@@ -25,6 +25,9 @@ Base.similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u),similar(A.ju
 Base.similar(A::ExtendedJumpArray,::Type{S}) where {S} = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 Base.zero(A::ExtendedJumpArray) = fill!(similar(A),0)
 
+# Required for non-diagonal noise
+LinearAlgebra.mul!(c::ExtendedJumpArray,A::AbstractVecOrMat,u::AbstractVector) = mul!(c.u,A,u)
+
 # Ignore axes
 Base.similar(A::ExtendedJumpArray,::Type{S},axes::Tuple{Base.OneTo{Int}}) where {S} = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 

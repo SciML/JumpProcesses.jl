@@ -1,7 +1,7 @@
 # Integrator specifically for SSA
 # Built to have 0-overhead stepping
 
-struct SSAStepper end
+struct SSAStepper <: DiffEqBase.DEAlgorithm end
 
 mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DiffEqBase.DEIntegrator{SSAStepper,Nothing,uType,tType}
     f::F

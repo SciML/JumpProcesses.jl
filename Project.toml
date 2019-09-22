@@ -1,7 +1,7 @@
 name = "DiffEqJump"
 uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "6.2.1"
+version = "6.2.2"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"

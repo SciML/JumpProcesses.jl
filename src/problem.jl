@@ -69,8 +69,14 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
 
-  function jump_g(du,u,p,t)
-    prob.g(@view(du[1:length(u.u)]),u.u,p,t)
+  if prob.noise_rate_prototype === nothing
+    jump_g = function (du,u,p,t)
+      prob.g(@view(du[1:length(u.u)]),u.u,p,t)
+    end
+  else
+    jump_g = function (du,u,p,t)
+      prob.g(du,u.u,p,t)
+    end
   end
 
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])

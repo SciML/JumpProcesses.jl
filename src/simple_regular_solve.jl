@@ -16,7 +16,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
   c = rj.c
   dc = zero(rj.dc)
   fill!(dc,0)
-  rate_cache = zeros(size(dc,2))
+  rate_cache = zeros(eltype(prob.u0), size(dc,2))
 
   u0 = copy(prob.u0)
   tspan = prob.tspan

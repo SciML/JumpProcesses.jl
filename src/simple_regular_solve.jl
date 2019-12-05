@@ -14,14 +14,14 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping,
 
     rj = jump_prob.regular_jump 
     rate = rj.rate # rate function rate(out,u,p,t)
-    c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p)
+    c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p, mark)
     u0 = copy(prob.u0) 
     du = similar(u0)
     rate_cache = zeros(eltype(u0), length(u0))
 
     tspan = prob.tspan 
     p = prob.p 
-    # mark = nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
+    mark = nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
     n = Int((tspan[2] - tspan[1])/dt) + 1 
     u = Vector{typeof(prob.u0)}(undef,n) 
     u[1] = u0 
@@ -36,7 +36,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping,
         rate(rate_cache,uprev,p,tprev) 
         rate_cache .*= dt # multiply by the width of the time interval
         counts .= pois_rand.((rng,), rate_cache) # set counts to the poisson arrivals with our given rates
-        c(u[i], uprev, tprev, counts, p)
+        c(u[i], uprev, tprev, counts, p, mark)
     end 
 
     sol = DiffEqBase.build_solution(prob,alg,t,u, 

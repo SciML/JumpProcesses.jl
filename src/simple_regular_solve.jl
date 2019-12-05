@@ -14,7 +14,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping;
 
     rj = jump_prob.regular_jump 
     rate = rj.rate # rate function rate(out,u,p,t)
-    dc = rj.dc # used for size information
+    dc = rj.dc # used for size information (# of jump processes)
     c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p, mark)
     u0 = copy(prob.u0) 
     du = similar(u0)

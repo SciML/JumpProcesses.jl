@@ -25,15 +25,16 @@ sol = solve(jump_prob,RegularSSA())
 
 ## MatrixFree
 function regular_c(u_buffer,uprev,tprev,counts,p,mark)
-    # define dc 
+    u_buffer .= uprev
     dc = zeros(3, 2)
     dc[1,1] = -1
     dc[2,1] = 1
     dc[2,2] = -1
     dc[3,2] = 1
 
-    mul!(u_buffer, dc, counts, 1.0, 0.0) # 5-argument mul
+    mul!(u_buffer, dc, counts, 1.0, 1.0)
 end
+
 rj = RegularJump(regular_rate,regular_c,dc;constant_c=true) 
 jumps = JumpSet(rj)
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))

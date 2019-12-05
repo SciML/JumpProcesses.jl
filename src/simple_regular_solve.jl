@@ -2,7 +2,7 @@ struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 struct MatrixFreeTauLeaping <: DiffEqBase.DEAlgorithm end 
 struct RegularSSA <: DiffEqBase.DEAlgorithm end
 
-function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping,
+function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping;
                             seed = nothing, 
                             dt = error("dt is required for MatrixFreeTauLeaping."))
 
@@ -14,21 +14,22 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping,
 
     rj = jump_prob.regular_jump 
     rate = rj.rate # rate function rate(out,u,p,t)
+    dc = rj.dc # used for size information
     c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p, mark)
     u0 = copy(prob.u0) 
     du = similar(u0)
-    rate_cache = zeros(eltype(u0), length(u0))
-
+    rate_cache = zeros(eltype(u0), size(dc, 2))
+    
     tspan = prob.tspan 
     p = prob.p 
     mark = nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
     n = Int((tspan[2] - tspan[1])/dt) + 1 
     u = Vector{typeof(prob.u0)}(undef,n) 
-    u[1] = u0 
+    u[1] = u0
     t = [tspan[1] + i*dt for i in 0:n-1] 
 
     # iteration variables 
-    counts = zeros(Int,length(u0)) # counts for each variable
+    counts = similar(rate_cache) # counts for each variable
       
     for i in 2:n # iterate over dt-slices 
         uprev = u[i-1]
@@ -36,6 +37,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::MatrixFreeTauLeaping,
         rate(rate_cache,uprev,p,tprev) 
         rate_cache .*= dt # multiply by the width of the time interval
         counts .= pois_rand.((rng,), rate_cache) # set counts to the poisson arrivals with our given rates
+        u[i] = zero(u0)
         c(u[i], uprev, tprev, counts, p, mark)
     end 
 
@@ -60,7 +62,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
   dc = zero(rj.dc)
   fill!(dc,0)
   rate_cache = zeros(eltype(prob.u0), size(dc,2)) 
-
+  
   u0 = copy(prob.u0) 
   tspan = prob.tspan 
   p = prob.p 

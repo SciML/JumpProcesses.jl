@@ -32,12 +32,11 @@ function regular_c(u_buffer,uprev,tprev,counts,p,mark)
     dc[2,2] = -1
     dc[3,2] = 1
 
-    mul!(u_buffer, dc, counts, 1.0, 1.0)
+    u_buffer += dc * counts
 end
 
-rj = RegularJump(regular_rate,regular_c,dc;constant_c=true) 
+rj = RegularJump(regular_rate,regular_c,dc;constant_c=true)
 jumps = JumpSet(rj)
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))
 jump_prob = JumpProblem(prob,Direct(),rj)
 sol = solve(jump_prob,MatrixFreeTauLeaping();dt=1.0)
-

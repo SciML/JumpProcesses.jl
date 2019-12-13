@@ -27,14 +27,21 @@ VariableRateJump(rate,affect!;
 struct RegularJump{R,C,MD}
     rate::R
     c::C
+    numjumps::Int
     mark_dist::MD
-    constant_c::Bool
-    m::Integer # number of dependent variables
-    n::Integer # number of jumps
 end
 
+RegularJump(rate,c,numjumps::Int; mark_dist = nothing) = RegularJump(rate,c,numjumps,mark_dist)
+
 # deprecate old call
-@deprecate RegularJump(rate,c,dc::AbstractMatrix; mark_dist = nothing,constant_c = false) RegularJump(rate, c, mark_dist, constant_c, size(dc, 1), size(dc, 2))
+function RegularJump(rate,c,dc::AbstractMatrix; constant_c=false, mark_dist = nothing)
+  @warn("The RegularJump interface has changed to be matrix-free. See the documentation for more details.")
+  function _c(du,u,p,t,counts,mark)
+    c(dc,u,p,t,mark)
+    mul!(du,dc,counts)
+  end
+  RegularJump(rate,_c,size(dc,2),mark_dist)
+end
 
 struct MassActionJump{T,S,U} <: AbstractJump
   scaled_rates::T

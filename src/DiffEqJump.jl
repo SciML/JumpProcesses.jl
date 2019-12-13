@@ -61,6 +61,4 @@ export init, solve, solve!
 
 export ExtendedJumpArray
 
-export MatrixFreeTauLeaping
-
 end # module

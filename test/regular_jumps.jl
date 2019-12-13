@@ -21,22 +21,19 @@ jumps = JumpSet(rj)
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))
 jump_prob = JumpProblem(prob,Direct(),rj)
 sol = solve(jump_prob,SimpleTauLeaping();dt=1.0)
-sol = solve(jump_prob,RegularSSA())
 
-## MatrixFree
-function regular_c(u_buffer,uprev,tprev,counts,p,mark)
-    u_buffer .= uprev
-    dc = zeros(3, 2)
-    dc[1,1] = -1
-    dc[2,1] = 1
-    dc[2,2] = -1
-    dc[3,2] = 1
+const _dc = zeros(3, 2)
+dc[1,1] = -1
+dc[2,1] = 1
+dc[2,2] = -1
+dc[3,2] = 1
 
-    u_buffer += dc * counts
+function regular_c(du,u,p,t,counts,mark)
+    mul!(du,dc,counts
 end
 
-rj = RegularJump(regular_rate,regular_c,dc;constant_c=true)
+rj = RegularJump(regular_rate,regular_c,2)
 jumps = JumpSet(rj)
-prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))
+prob = DiscreteProblem([999,1,0],(0.0,250.0))
 jump_prob = JumpProblem(prob,Direct(),rj)
-sol = solve(jump_prob,MatrixFreeTauLeaping();dt=1.0)
+sol = solve(jump_prob,SimpleTauLeaping();dt=1.0)

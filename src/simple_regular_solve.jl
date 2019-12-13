@@ -58,9 +58,11 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
                     rng = Xorshifts.Xoroshiro128Plus(seed)
 
   rj = jump_prob.regular_jump
+  rj.m == length(prob.u0) || @warn "rj.m differs from the length of u0; using the latter."
+
   rate = rj.rate
   c = rj.c
-  dc = zero(rj.dc)
+  dc = zeros(length(prob.u0), rj.n)
   fill!(dc,0)
   rate_cache = zeros(eltype(prob.u0), size(dc,2))
 
@@ -102,9 +104,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::RegularSSA)
   prob = jump_prob.prob
 
   rj = jump_prob.regular_jump
+  rj.m == length(prob.u0) || @warn "rj.m differs from the length of u0; using the latter."
   rate = rj.rate
   c = rj.c
-  dc = zero(rj.dc)
+  dc = zeros(length(prob.u0), rj.n)
   fill!(dc,0)
   rate_cache = zeros(size(dc,2))
   rate_sum = similar(rate_cache)

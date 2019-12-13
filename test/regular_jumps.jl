@@ -29,7 +29,7 @@ dc[2,2] = -1
 dc[3,2] = 1
 
 function regular_c(du,u,p,t,counts,mark)
-    mul!(du,dc,counts
+    mul!(du,dc,counts)
 end
 
 rj = RegularJump(regular_rate,regular_c,2)

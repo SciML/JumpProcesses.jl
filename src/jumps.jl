@@ -24,21 +24,17 @@ VariableRateJump(rate,affect!;
                               rootfind,interp_points,
                               save_positions,abstol,reltol)
 
-struct RegularJump{R,C,DC,MD}
+struct RegularJump{R,C,MD}
     rate::R
     c::C
-    dc::DC 
     mark_dist::MD
     constant_c::Bool
+    m::Integer # number of dependent variables
     n::Integer # number of jumps
 end
 
-RegularJump(rate,c,dc::AbstractMatrix; mark_dist = nothing,constant_c = false) =
-          RegularJump(rate,c,dc,mark_dist,constant_c, size(dc, 2))
-
-RegularJump(rate, c, n::Integer; mark_dist = nothing) = RegularJump(rate, c, nothing, mark_dist, nothing, n)
-
-@deprecate RegularJump(rate,c,dc;mark_dist = nothing,constant_c = false) RegularJump(rate, c, n; mark_dist = nothing)
+# deprecate old call
+@deprecate RegularJump(rate,c,dc::AbstractMatrix; mark_dist = nothing,constant_c = false) RegularJump(rate, c, mark_dist, constant_c, size(dc, 1), size(dc, 2))
 
 struct MassActionJump{T,S,U} <: AbstractJump
   scaled_rates::T

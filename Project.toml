@@ -1,7 +1,7 @@
 name = "DiffEqJump"
 uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "6.4.0"
+version = "6.5.0"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
@@ -20,7 +20,7 @@ TreeViews = "a2a6695c-b41b-5b7d-aed9-dbfdeacea5d7"
 [compat]
 Compat = "2.2, 3.0"
 DataStructures = "0.17"
-DiffEqBase = "6.5"
+DiffEqBase = "6.11"
 FunctionWrappers = "1.0"
 Parameters = "0.12"
 PoissonRandom = "0.4"

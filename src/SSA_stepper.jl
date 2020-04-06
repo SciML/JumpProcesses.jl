@@ -21,7 +21,7 @@ end
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
 (integrator::SSAIntegrator)(out,t) = (out .= integrator.u)
 
-function DiffEqBase.solve(jump_prob::JumpProblem,
+function DiffEqBase.__solve(jump_prob::JumpProblem,
                          alg::SSAStepper;
                          kwargs...)
     integrator = init(jump_prob,alg;kwargs...)
@@ -55,10 +55,11 @@ function DiffEqBase.solve!(integrator)
     end
 end
 
-function DiffEqBase.init(jump_prob::JumpProblem,
+function DiffEqBase.__init(jump_prob::JumpProblem,
                          alg::SSAStepper;
                          save_start = true,
                          save_end = true,
+                         seed = seed_multiplier()*rand(UInt64),
                          saveat = nothing)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
@@ -67,6 +68,9 @@ function DiffEqBase.init(jump_prob::JumpProblem,
     @assert length(jump_prob.jump_callback.discrete_callbacks) == 1
     cb = jump_prob.jump_callback.discrete_callbacks[1]
     prob = jump_prob.prob
+
+    reset_jump_problem!(jump_prob,seed)
+
     if save_start
         t = [prob.tspan[1]]
         u = [copy(prob.u0)]

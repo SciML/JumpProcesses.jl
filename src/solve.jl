@@ -14,16 +14,6 @@ function DiffEqBase.__init(
   callback=nothing, seed = seed_multiplier()*rand(UInt64),
   kwargs...) where {P,recompile_flag}
 
-  if !isempty(jump_prob.jump_callback.discrete_callbacks)
-    Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,seed)
-  end
-
-  if !isempty(jump_prob.variable_jumps)
-    @assert jump_prob.prob.u0 isa ExtendedJumpArray
-    randexp!(jump_prob.prob.u0.jump_u)
-    jump_prob.prob.u0.jump_u .*= -1
-  end
-
   # DDEProblems do not have a recompile_flag argument
   if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
     integrator = init(jump_prob.prob,alg,timeseries,ts,ks;
@@ -33,5 +23,17 @@ function DiffEqBase.__init(
     integrator = init(jump_prob.prob,alg,timeseries,ts,ks,recompile;
                       callback=CallbackSet(callback,jump_prob.jump_callback),
                       kwargs...)
+  end
+end
+
+function reset_jump_problem!(jump_prob,seed)
+  if !isempty(jump_prob.jump_callback.discrete_callbacks)
+    Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,seed)
+  end
+
+  if !isempty(jump_prob.variable_jumps)
+    @assert jump_prob.prob.u0 isa ExtendedJumpArray
+    randexp!(jump_prob.prob.u0.jump_u)
+    jump_prob.prob.u0.jump_u .*= -1
   end
 end

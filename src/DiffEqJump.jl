@@ -3,7 +3,7 @@ __precompile__()
 module DiffEqJump
 
 using DiffEqBase, Compat, RandomNumbers, TreeViews, LinearAlgebra
-using DataStructures, PoissonRandom, Random
+using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, Parameters
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices

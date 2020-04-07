@@ -32,6 +32,7 @@ jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 integrator = init(jump_prob,Tsit5())
 
 sol = solve(jump_prob,Tsit5())
+sol = solve(jump_prob,Rosenbrock23(autodiff=false))
 
 @test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12

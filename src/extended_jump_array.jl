@@ -31,6 +31,13 @@ LinearAlgebra.mul!(c::ExtendedJumpArray,A::AbstractVecOrMat,u::AbstractVector) =
 # Ignore axes
 Base.similar(A::ExtendedJumpArray,::Type{S},axes::Tuple{Base.OneTo{Int}}) where {S} = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 
+# Stiff ODE solver
+function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
+  u = [A.u;A.jump_u]
+  u .* u' .* false
+end
+LinearAlgebra.ldiv!(A,b::ExtendedJumpArray) = LinearAlgebra.ldiv!(A,[A.u;A.jump_u])
+
 function recursivecopy!(dest::T, src::T) where T<:ExtendedJumpArray
   recursivecopy!(dest.u,src.u)
   recursivecopy!(dest.jump_u,src.jump_u)

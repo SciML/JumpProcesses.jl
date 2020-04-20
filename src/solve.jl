@@ -14,6 +14,8 @@ function DiffEqBase.__init(
   callback=nothing, seed = seed_multiplier()*rand(UInt64),
   kwargs...) where {P,recompile_flag}
 
+  reset_jump_problem!(jump_prob,seed)
+
   # DDEProblems do not have a recompile_flag argument
   if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
     integrator = init(jump_prob.prob,alg,timeseries,ts,ks;

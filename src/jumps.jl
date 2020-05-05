@@ -52,7 +52,7 @@ struct MassActionJump{T,S,U} <: AbstractJump
     sr  = copy(rates)
     rs = copy(rs_in)
     for i in eachindex(rs)
-      if (length(rs[i]) == 1) && (rs[i][1][1] == 0)
+      if (length(rs[i]) == 1) && iszero(rs[i][1][1])
         rs[i] = typeof(rs[i])()
       end
     end
@@ -64,7 +64,7 @@ struct MassActionJump{T,S,U} <: AbstractJump
   end
   function MassActionJump{T,S,U}(rate::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: Number, S, U}
     rs = rs_in
-    if (length(rs) == 1) && (rs[1][1] == 0)
+    if (length(rs) == 1) && iszero(rs[1][1])
       rs = typeof(rs)()
     end
     sr = scale_rates ? scalerate(rate, rs) : rate

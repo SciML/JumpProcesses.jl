@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, DiffEqJump, DiffEqBiological, Test
+using OrdinaryDiffEq, DiffEqJump, Test
 j1 = ConstantRateJump((u,p,t)->10,(integrator)->integrator.u[1]+=1)
 j2 = ConstantRateJump((u,p,t)->1u[1],(integrator)->integrator.u[1]-=1)
 u0 = [0]

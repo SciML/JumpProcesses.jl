@@ -2,7 +2,7 @@ struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
 function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
                             seed = nothing,
-                            dt = error("dt is required for MatrixFreeTauLeaping."))
+                            dt = error("dt is required for SimpleTauLeaping."))
 
     # boilerplate from SimpleTauLeaping method
     @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
@@ -14,20 +14,25 @@ function DiffEqBase.solve(jump_prob::JumpProblem,alg::SimpleTauLeaping;
     rate = rj.rate # rate function rate(out,u,p,t)
     numjumps = rj.numjumps # used for size information (# of jump processes)
     c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p, mark)
+  
+    if !isnothing(rj.mark_dist) == nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
+      error("Mark distributions are currently not supported in SimpleTauLeaping")
+    end
+  
     u0 = copy(prob.u0)
     du = similar(u0)
     rate_cache = zeros(float(eltype(u0)), numjumps)
 
     tspan = prob.tspan
     p = prob.p
-    mark = nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
+  
     n = Int((tspan[2] - tspan[1])/dt) + 1
     u = Vector{typeof(prob.u0)}(undef,n)
     u[1] = u0
-    t = [tspan[1] + i*dt for i in 0:n-1]
+    t = tspan[1]:dt:tspan[2]
 
     # iteration variables
-    counts = similar(rate_cache) # counts for each variable
+    counts = zero(rate_cache) # counts for each variable
 
     for i in 2:n # iterate over dt-slices
         uprev = u[i-1]

@@ -4,9 +4,9 @@
 ###############################################################################
 
 @inline @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
-                              majump::MassActionJump{U,V,W})::R where {T,S,R,U <: AbstractVector{R},V,W} 
+                              majump::MassActionJump{U,V,W})::R where {T,S,R,U <: AbstractVector{R},V,W}
     val = one(T)
-    @inbounds for specstoch in majump.reactant_stoch[rxidx] 
+    @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
         val    *= specpop
         @inbounds for k = 2:specstoch[2]
@@ -15,7 +15,7 @@
         end
     end
 
-    @inbounds return val * majump.scaled_rates[rxidx] 
+    @inbounds return val * majump.scaled_rates[rxidx]
 end
 
 @inline @fastmath function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
@@ -25,6 +25,21 @@ end
         speciesvec[specstoch[1]] += specstoch[2]
     end
     nothing
+end
+
+@inline @fastmath function executerx(speciesvec::SVector{T}, rxidx::S,
+                                      majump::MassActionJump{U,V,W}) where {T,S,U,V,W}
+    @inbounds net_stoch = majump.net_stoch[rxidx]
+    @inbounds for specstoch in net_stoch
+        speciesvec = setindex(speciesvec,speciesvec[specstoch[1]]+specstoch[2],specstoch[1])
+    end
+    speciesvec
+
+    #=
+    map(net_stoch) do stoch
+        @inbounds speciesvec[stoch[1]] + stoch[2]
+    end
+    =#
 end
 
 function scalerates!(unscaled_rates::AbstractVector{U}, stochmat::AbstractVector{V}) where {U,S,T,W <: Pair{S,T}, V <: AbstractVector{W}}
@@ -58,7 +73,7 @@ function spec_to_dep_rxs_map(numspec, ma_jumps::MassActionJump)
 
     # map from a species to reactions that depend on it
     spec_to_dep_rxs = [Set{Int}() for n = 1:numspec]
-    for rx in 1:numrxs                    
+    for rx in 1:numrxs
         for (spec,stoch) in ma_jumps.reactant_stoch[rx]
             push!(spec_to_dep_rxs[spec], rx)
         end

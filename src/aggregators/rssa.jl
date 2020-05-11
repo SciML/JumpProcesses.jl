@@ -136,7 +136,11 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
     if p.next_jump <= num_majumps
-        @inbounds executerx!(u, p.next_jump, majumps)
+        if u isa SVector
+          integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+        else
+          @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+        end
     else
         idx = p.next_jump - num_majumps
         @inbounds p.affects![idx](integrator)
@@ -186,7 +190,7 @@ end
     if sum_rate < eps(sum_rate)
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
-        return 
+        return
     end
 
     crlow       = p.cur_rate_low

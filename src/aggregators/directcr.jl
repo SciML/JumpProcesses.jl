@@ -52,9 +52,9 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate
-    minrate = 2.0^minexponent       
+    minrate = 2.0^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
-    
+
     # construct an empty initial priority table -- we'll overwrite this in init anyways...
     rt = PriorityTable{T,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate,
                                                         Vector{PriorityGroup{T,Vector{Int}}}(),
@@ -124,7 +124,11 @@ function execute_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
     # execute jump
     num_ma_rates = get_num_majumps(p.ma_jumps)
     if p.next_jump <= num_ma_rates
-        @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+        if u isa SVector
+          integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+        else
+          @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+        end
     else
         idx = p.next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)

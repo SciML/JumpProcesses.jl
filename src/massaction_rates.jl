@@ -27,13 +27,13 @@ end
     nothing
 end
 
-@inline @fastmath function executerx!(speciesvec::SVector{T}, rxidx::S,
+@inline @fastmath function executerx(speciesvec::SVector{T}, rxidx::S,
                                       majump::MassActionJump{U,V,W}) where {T,S,U,V,W}
     @inbounds net_stoch = majump.net_stoch[rxidx]
-
     @inbounds for specstoch in net_stoch
         speciesvec = setindex(speciesvec,speciesvec[specstoch[1]]+specstoch[2],specstoch[1])
     end
+    speciesvec
 
     #=
     map(net_stoch) do stoch

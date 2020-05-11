@@ -138,6 +138,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     if p.next_jump <= num_majumps
         if u isa SVector
           integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+          u = integrator.u
         else
           @inbounds executerx!(u, p.next_jump, p.ma_jumps)
         end
@@ -145,6 +146,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         idx = p.next_jump - num_majumps
         @inbounds p.affects![idx](integrator)
     end
+
 
     # update bracketing intervals
     ubnds       = p.cur_u_bnds

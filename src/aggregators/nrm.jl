@@ -88,6 +88,7 @@ function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t)
     if p.next_jump <= num_ma_rates
         if u isa SVector
           integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+          u = integrator.u
         else
           @inbounds executerx!(u, p.next_jump, p.ma_jumps)
         end

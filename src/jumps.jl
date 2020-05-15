@@ -36,7 +36,7 @@ end
 
 DiffEqBase.isinplace(::RegularJump{iip,R,C,MD}) where {iip,R,C,MD} = iip
 
-RegularJump(rate,args...; kwargs...) = RegularJump{DiffEqBase.isinplace(rate,4)}(rate,args...;kwargs...)
+RegularJump(rate,c,numjumps::Int; kwargs...) = RegularJump{DiffEqBase.isinplace(rate,4)}(rate,c,numjumps;kwargs...)
 
 # deprecate old call
 function RegularJump(rate,c,dc::AbstractMatrix; constant_c=false, mark_dist = nothing)
@@ -45,7 +45,7 @@ function RegularJump(rate,c,dc::AbstractMatrix; constant_c=false, mark_dist = no
     c(dc,u,p,t,mark)
     mul!(du,dc,counts)
   end
-  RegularJump(rate,_c,size(dc,2),mark_dist)
+  RegularJump{true}(rate,_c,size(dc,2);mark_dist=mark_dist)
 end
 
 struct MassActionJump{T,S,U} <: AbstractJump

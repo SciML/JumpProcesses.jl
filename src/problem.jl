@@ -38,7 +38,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     constant_jump_callback = DiscreteCallback(disc)
   end
 
-  iip = if prob isa DiscreteProblem && prob.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT
+  iip = if prob isa DiscreteProblem && prob.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT && jumps.regular_jump !== nothing
     # Just a default discrete problem f, so don't use it for iip
     DiffEqBase.isinplace(jumps.regular_jump)
   else

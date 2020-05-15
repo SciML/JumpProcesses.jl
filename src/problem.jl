@@ -1,4 +1,4 @@
-mutable struct JumpProblem{P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: DiffEqBase.AbstractJumpProblem{P,J}
+mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: DiffEqBase.AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
   discrete_jump_aggregation::J
@@ -7,6 +7,8 @@ mutable struct JumpProblem{P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,
   regular_jump::J3
   massaction_jump::J4
 end
+
+DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
 JumpProblem(prob::JumpProblem) = prob
 
 JumpProblem(prob,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,JumpSet(jumps);kwargs...)
@@ -36,6 +38,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     constant_jump_callback = DiscreteCallback(disc)
   end
 
+  iip = if prob isa DiscreteProblem && prob.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT
+    # Just a default discrete problem f, so don't use it for iip
+    DiffEqBase.isinplace(jumps.regular_jump)
+  else
+    DiffEqBase.isinplace(prob)
+  end
+
   ## Variable Rate Handling
   if typeof(jumps.variable_jumps) <: Tuple{}
     new_prob = prob
@@ -45,7 +54,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     variable_jump_callback = build_variable_callback(CallbackSet(),0,jumps.variable_jumps...)
   end
   callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
-  JumpProblem{typeof(new_prob),typeof(aggregator),typeof(callbacks),
+  JumpProblem{iip,typeof(new_prob),typeof(aggregator),typeof(callbacks),
               typeof(disc),typeof(jumps.variable_jumps),
               typeof(jumps.regular_jump),typeof(jumps.massaction_jump)}(
                         new_prob,aggregator,disc,

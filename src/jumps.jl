@@ -24,14 +24,19 @@ VariableRateJump(rate,affect!;
                               rootfind,interp_points,
                               save_positions,abstol,reltol)
 
-struct RegularJump{R,C,MD}
+struct RegularJump{iip,R,C,MD}
     rate::R
     c::C
     numjumps::Int
     mark_dist::MD
+    function RegularJump{iip}(rate,c,numjumps::Int; mark_dist = nothing) where iip
+      new{iip,typeof(rate),typeof(c),typeof(mark_dist)}(rate,c,numjumps,mark_dist)
+    end
 end
 
-RegularJump(rate,c,numjumps::Int; mark_dist = nothing) = RegularJump(rate,c,numjumps,mark_dist)
+DiffEqBase.isinplace(::RegularJump{iip,R,C,MD}) where {iip,R,C,MD} = iip
+
+RegularJump(rate,args...; kwargs...) = RegularJump{DiffEqBase.isinplace(rate,4)}(rate,args...;kwargs...)
 
 # deprecate old call
 function RegularJump(rate,c,dc::AbstractMatrix; constant_c=false, mark_dist = nothing)

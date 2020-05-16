@@ -189,7 +189,7 @@ end
     sum_rate    = p.sum_rate
 
     # if no more events possible there is nothing to do
-    if sum_rate < eps(sum_rate)
+    if sum_rate < eps(typeof(sum_rate))
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return
@@ -205,12 +205,13 @@ end
     jidx        = 0
     @inbounds while notdone
         # sample candidate reaction
-        r      = rand(p.rng) * sum_rate
+        r1 = rand(p.rng)
+        r      = r1 * sum_rate #rand(p.rng) * sum_rate
         jidx   = 1
         parsum = crhigh[jidx]
         while parsum < r
             jidx   += 1
-            parsum += crhigh[jidx]
+            parsum += crhigh[jidx]             
         end
 
         # rejection test

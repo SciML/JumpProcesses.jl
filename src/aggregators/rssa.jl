@@ -205,8 +205,7 @@ end
     jidx        = 0
     @inbounds while notdone
         # sample candidate reaction
-        r1 = rand(p.rng)
-        r      = r1 * sum_rate #rand(p.rng) * sum_rate
+        r      = rand(p.rng) * sum_rate
         jidx   = 1
         parsum = crhigh[jidx]
         while parsum < r

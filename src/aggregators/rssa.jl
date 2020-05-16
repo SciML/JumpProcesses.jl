@@ -189,7 +189,7 @@ end
     sum_rate    = p.sum_rate
 
     # if no more events possible there is nothing to do
-    if sum_rate < eps(sum_rate)
+    if sum_rate < eps(typeof(sum_rate))
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return
@@ -210,7 +210,7 @@ end
         parsum = crhigh[jidx]
         while parsum < r
             jidx   += 1
-            parsum += crhigh[jidx]
+            parsum += crhigh[jidx]             
         end
 
         # rejection test

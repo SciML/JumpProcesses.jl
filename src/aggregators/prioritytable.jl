@@ -279,7 +279,7 @@ function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
     @unpack groups, gsum, gsums = pt
 
     # return id zero if total priority is zero
-    (gsum < eps(gsum)) && return zero(eltype(groups[1].pids))
+    (gsum < eps(typeof(gsum))) && return zero(eltype(groups[1].pids))
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!

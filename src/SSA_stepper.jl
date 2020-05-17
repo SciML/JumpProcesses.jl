@@ -59,7 +59,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          alg::SSAStepper;
                          save_start = true,
                          save_end = true,
-                         seed = seed_multiplier()*rand(UInt64),
+                         seed = nothing,
                          alias_jump = Threads.threadid() == 1,
                          saveat = nothing)
     if !(jump_prob.prob isa DiscreteProblem)
@@ -70,12 +70,18 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
 
     if alias_jump
       cb = jump_prob.jump_callback.discrete_callbacks[1]
+      if seed !== nothing
+          Random.seed!(cb.condition.rng,seed)
+      end
     else
       cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[1])
+      if seed === nothing
+          Random.seed!(cb.condition.rng,seed_multiplier()*rand(UInt64))
+      else
+          Random.seed!(cb.condition.rng,seed)
+      end
     end
 
-
-    Random.seed!(cb.condition.rng,seed)
     prob = jump_prob.prob
 
     if save_start

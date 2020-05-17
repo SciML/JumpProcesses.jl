@@ -11,7 +11,7 @@ import Base: size, getindex, setindex!, length, similar, show
 import DataStructures: length, update!
 
 import RecursiveArrayTools: recursivecopy!
-using StaticArrays
+using StaticArrays, Base.Threads
 
 abstract type AbstractJump end
 abstract type AbstractAggregatorAlgorithm end

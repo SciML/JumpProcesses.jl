@@ -14,4 +14,5 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Composition-Rejection Table Tests" begin include("table_test.jl") end
   @time @testset "Extinction test" begin include("extinction_test.jl") end
   @time @testset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
+  @time @testset "Thread Safety test" begin include("thread_safety.jl") end
 end

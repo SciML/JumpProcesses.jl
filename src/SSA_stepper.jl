@@ -60,16 +60,24 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          save_start = true,
                          save_end = true,
                          seed = seed_multiplier()*rand(UInt64),
+                         alias_jump = Threads.threadid() == 1,
                          saveat = nothing)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert length(jump_prob.jump_callback.discrete_callbacks) == 1
-    cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[1])
+
+    if alias_jump
+      cb = jump_prob.jump_callback.discrete_callbacks[1]
+    else
+      cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[1])
+    end
+
+
     Random.seed!(cb.condition.rng,seed)
     prob = jump_prob.prob
-    
+
     if save_start
         t = [prob.tspan[1]]
         u = [copy(prob.u0)]

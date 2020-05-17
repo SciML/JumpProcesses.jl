@@ -11,10 +11,15 @@ end
 function DiffEqBase.__init(
   _jump_prob::DiffEqBase.AbstractJumpProblem{P},
   alg::DiffEqBase.DEAlgorithm,timeseries=[],ts=[],ks=[],recompile::Type{Val{recompile_flag}}=Val{true};
-  callback=nothing, seed = seed_multiplier()*rand(UInt64),
+  callback=nothing, seed = seed_multiplier()*rand(UInt64),alias_jump = Threads.threadid() == 1,
   kwargs...) where {P,recompile_flag}
 
-  jump_prob = resetted_jump_problem(_jump_prob,seed)
+  if alias_jump
+    jump_prob = _jump_prob
+    reset_jump_problem!(jump_prob,seed)
+  else
+    jump_prob = resetted_jump_problem(_jump_prob,seed)
+  end
 
   # DDEProblems do not have a recompile_flag argument
   if jump_prob.prob isa DiffEqBase.AbstractDDEProblem

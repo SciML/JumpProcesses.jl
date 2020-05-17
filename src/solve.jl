@@ -14,7 +14,7 @@ function DiffEqBase.__init(
   callback=nothing, seed = seed_multiplier()*rand(UInt64),
   kwargs...) where {P,recompile_flag}
 
-  jump_prob = reseted_jump_problem(_jump_prob,seed)
+  jump_prob = resetted_jump_problem(_jump_prob,seed)
 
   # DDEProblems do not have a recompile_flag argument
   if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
@@ -28,7 +28,7 @@ function DiffEqBase.__init(
   end
 end
 
-function reseted_jump_problem(_jump_prob,seed)
+function resetted_jump_problem(_jump_prob,seed)
   jump_prob = deepcopy(_jump_prob)
   if !isempty(jump_prob.jump_callback.discrete_callbacks)
     Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,seed)

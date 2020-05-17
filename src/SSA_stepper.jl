@@ -67,10 +67,9 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert length(jump_prob.jump_callback.discrete_callbacks) == 1
     cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[1])
+    Random.seed!(cb.condition.rng,seed)
     prob = jump_prob.prob
-
-    reset_jump_problem!(jump_prob,seed)
-
+    
     if save_start
         t = [prob.tspan[1]]
         u = [copy(prob.u0)]

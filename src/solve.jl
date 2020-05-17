@@ -19,11 +19,11 @@ function DiffEqBase.__init(
   # DDEProblems do not have a recompile_flag argument
   if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
     integrator = init(jump_prob.prob,alg,timeseries,ts,ks;
-                      callback=CallbackSet(callback,jump_prob.jump_callback),
+                      callback=CallbackSet(callback,deepcopy(jump_prob.jump_callback)),
                       kwargs...)
   else
     integrator = init(jump_prob.prob,alg,timeseries,ts,ks,recompile;
-                      callback=CallbackSet(callback,jump_prob.jump_callback),
+                      callback=CallbackSet(callback,deepcopy(jump_prob.jump_callback)),
                       kwargs...)
   end
 end

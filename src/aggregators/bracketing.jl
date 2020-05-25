@@ -48,3 +48,69 @@ end
         return rhigh,rlow
     end
 end
+
+# set up bracketing
+function set_bracketing!(p :: AbstractSSAJumpAggregator, u, params, t)
+    # species bracketing interval
+    ubnds = p.cur_u_bnds
+    @inbounds for (i,uval) in enumerate(u)
+        ubnds[1,i], ubnds[2,i] = get_spec_brackets(p.bracket_data, i, uval)
+    end
+
+    # reaction rate bracketing interval
+    # mass action jumps
+    sum_rate = zero(p.sum_rate)
+    majumps  = p.ma_jumps
+    crlow    = p.cur_rate_low
+    crhigh   = p.cur_rate_high
+    @inbounds for k = 1:get_num_majumps(majumps)
+        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps)
+        sum_rate += crhigh[k]
+    end
+
+    # constant rate jumps
+    k = get_num_majumps(majumps) + 1
+    @inbounds for rate in p.rates
+        crlow[k], crhigh[k] = get_cjump_brackets(p.ulow, p.uhigh, rate, params, t)
+        sum_rate += crhigh[k]
+        k += 1
+    end
+    p.sum_rate = sum_rate
+
+    nothing
+end
+
+function update_bracketing!(p :: AbstractSSAJumpAggregator)
+    # update bracketing intervals
+    ubnds       = p.cur_u_bnds
+    sum_rate    = p.sum_rate
+    crlow       = p.cur_rate_low
+    crhigh      = p.cur_rate_high
+    bd          = p.bracket_data
+    ulow        = p.ulow
+    uhigh       = p.uhigh
+    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+        uval = u[uidx]
+
+        # if new u value is outside the bracketing interval
+        if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
+            # update u bracketing interval
+            ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(bd, uidx, uval)
+
+            # for each dependent jump, update jump rate brackets
+            for jidx in p.vartojumps_map[uidx]
+                sum_rate -= crhigh[jidx]
+                if jidx <= num_majumps
+                    crlow[jidx], crhigh[jidx] = get_majump_brackets(ulow, uhigh, jidx, majumps)
+                else
+                    j = jidx - num_majumps
+                    crlow[jidx], crhigh[jidx] = get_cjump_brackets(ulow, uhigh, p.rates[j], params, t)
+                end
+                sum_rate += crhigh[jidx]
+            end
+        end
+    end
+    p.sum_rate = sum_rate
+
+    nothing
+end

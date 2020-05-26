@@ -4,13 +4,13 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct RSSACRJumpAggregation{T,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V,U<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
-    next_jump::Int
-    next_jump_time::T
-    end_time::T
-    cur_rate_low::Vector{T}
-    cur_rate_high::Vector{T}
-    sum_rate::T
+mutable struct RSSACRJumpAggregation{F,U,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V,P<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
+    next_jump::Integer
+    next_jump_time::AbstractFloat
+    end_time::AbstractFloat
+    cur_rate_low::Vector{AbstractFloat}
+    cur_rate_high::Vector{AbstractFloat}
+    sum_rate::AbstractFloat
     ma_jumps::S
     rates::F1
     affects!::F2
@@ -21,60 +21,47 @@ mutable struct RSSACRJumpAggregation{T,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V,U<:Priorit
     bracket_data::BD
     ulow::T2V
     uhigh::T2V
-    minrate::T
-    maxrate::T   # initial maxrate only, table can increase beyond it!
-    rt::U #rate table
+    minrate::AbstractFloat
+    maxrate::AbstractFloat   # initial maxrate only, table can increase beyond it!
+    rt::P #rate table
     ratetogroup::W
+    cur_u_bnds::Matrix{U} # current bounds on state u
   end
 
-function RSSACRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
-                                      rng::RNG; u::U, vartojumps_map=nothing, jumptovars_map=nothing,
-                                      bracket_data=nothing, minrate=convert(T,MINJUMPRATE), maxrate=convert(T,Inf),
-                                      kwargs...) where {T,S,F1,F2,RNG}
-
+function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; u::U, vartojumps_map=nothing, jumptovars_map=nothing, bracket_data=nothing, minrate=convert(F,MINJUMPRATE), maxrate=convert(F,Inf), kwargs...) where {F,S,F1,F2,RNG,U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         error("To use the RSSA algorithm a map from variables to depedent jumps must be supplied.")
     else
         vtoj_map = vartojumps_map
     end
-
     if jumptovars_map === nothing
         error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
     else
         jtov_map = jumptovars_map
     end
-
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
     crh_bnds = similar(crs)
-
     # a bracket data structure is needed for updating species populations
-    bd = (bracket_data === nothing) ? BracketData{T,eltype(U)}() : bracket_data
-
+    bd = (bracket_data === nothing) ? BracketData{F,eltype(U)}() : bracket_data
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh
     cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
     ulow    = @view cs_bnds[1,:]
     uhigh   = @view cs_bnds[2,:]
-
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
-
     # use the largest power of two that is <= the passed in minrate
     minrate = 2.0^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
-
     # construct an empty initial priority table -- we'll overwrite this in init anyways...
-    rt = PriorityTable{T,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate,
-                                                        Vector{PriorityGroup{T,Vector{Int}}}(),
-                                                        Vector{T}(), zero(T),
-                                                        Vector{Tuple{Int,Int}}(), ratetogroup)
+    rt = PriorityTable{F,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate, Vector{PriorityGroup{F,Vector{Int}}}(), Vector{F}(), zero(F), Vector{Tuple{Int,Int}}(), ratetogroup)
 
-    RSSACRJumpAggregation{T,S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(
-                                            nj, njt, et, crl_bnds, crh_bnds, sr, maj, rs, affs!, sps, rng,
-                                            vtoj_map, jtov_map, bd, ulow, uhigh, minrate, maxrate, rt, ratetogroup)
+    println(eltype(U))
+    println.(typeof.([nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh, minrate, maxrate, rt, ratetogroup, cs_bnds]))
+
+    RSSACRJumpAggregation(nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh, minrate, maxrate, rt, ratetogroup, cs_bnds)
 end
 
 ########### The following routines should be templates for all SSAs ###########
@@ -114,7 +101,7 @@ end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
-    set_bracketing(p,u,params,t)
+    set_bracketing!(p,u,params,t)
 
     # if no maxrate was set, use largest initial rate (pad by 2 for an extra group)
     isinf(p.maxrate) && (p.maxrate = 2*maximum(p.cur_rates))

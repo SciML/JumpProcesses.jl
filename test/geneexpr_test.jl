@@ -3,14 +3,14 @@ using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
-# using BenchmarkTools
-# dobenchmark = false
+using BenchmarkTools
+dobenchmark = false
 
 dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (RSSACR(),RSSA()) #, DirectFW(), FRM(), FRMFW()),
+SSAalgs = (RSSACR(),Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM(), RSSA(), DirectCR()) #, DirectFW(), FRM(), FRMFW()),
 
 # numerical parameters
 Nsims        = 8000
@@ -102,13 +102,13 @@ if dotestmean
 end
 
 
-# # benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
+# benchmark performance
+if dobenchmark
+    # exact methods
+    for alg in SSAalgs
+        println("Solving with method: ", typeof(alg), ", using SSAStepper")
+        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+        @btime solve($jump_prob, SSAStepper())
+    end
+    println()
+end

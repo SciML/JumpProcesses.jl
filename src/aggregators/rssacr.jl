@@ -113,7 +113,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     # execute jump
-    update_state!(p,u)
+    update_state!(p,integrator, u)
 
     # update rates
     update_dependent_rates!(p, u, params, t)
@@ -133,7 +133,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
     @inbounds while notdone
         # sample candidate reaction
         jidx = sample(p.rt, p.cur_rate_high, p.rng)
-        notdone = !is_accepted(p,u,jidx)
+        notdone = !is_accepted(p,u,jidx,params,t)
         rerl += randexp(p.rng)
     end
     p.next_jump = jidx
@@ -146,7 +146,7 @@ end
 
 ######################## SSA specific helper routines #########################
 "Update state based on the p.next_jump"
-function update_state!(p :: AbstractSSAJumpAggregator,u)
+function update_state!(p :: AbstractSSAJumpAggregator, integrator, u)
     num_ma_rates = get_num_majumps(p.ma_jumps)
     if p.next_jump <= num_ma_rates # is next jump a mass action jump
         if u isa SVector
@@ -164,7 +164,7 @@ function update_state!(p :: AbstractSSAJumpAggregator,u)
 end
 
 "perform rejection sampling test"
-function is_accepted(p, u, jidx) :: Bool
+function is_accepted(p, u, jidx, params,t) :: Bool
     crlow       = p.cur_rate_low
     crhigh      = p.cur_rate_high
     majumps     = p.ma_jumps

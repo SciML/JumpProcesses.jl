@@ -113,7 +113,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     # execute jump
-    update_state!(p,integrator, u)
+    u = update_state!(p,integrator, u)
 
     # update rates
     update_dependent_rates!(p, u, params, t)
@@ -159,8 +159,7 @@ function update_state!(p :: AbstractSSAJumpAggregator, integrator, u)
         idx = p.next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
     end
-
-    nothing
+    return u
 end
 
 "perform rejection sampling test"
@@ -203,7 +202,6 @@ function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
     uhigh       = p.uhigh
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
-
         # if new u value is outside the bracketing interval
         if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
             # update u bracketing interval

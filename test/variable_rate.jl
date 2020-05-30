@@ -57,7 +57,6 @@ function ff(du,u,p,t)
 end
 
 function gg(du,u,p,t)
-  @show size(du)
   du[1,1] = 0.3u[1]
   du[1,2] = 0.6u[1]
   du[2,1] = 1.2u[1]

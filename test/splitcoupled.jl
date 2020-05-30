@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq
+using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq, Statistics
 using Test
 
 
@@ -52,7 +52,7 @@ prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
 jump_prob = JumpProblem(prob,Direct(),jump1)
 jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
 coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
-sol =  solve(coupled_prob,SRIW1())
+sol =  solve(coupled_prob,SRIW1(),seed=UInt64(1))
 @test mean([abs(s[1]-s[2]) for s in sol.u])<=5.
 
 # Jump SDE to Jump ODE
@@ -61,7 +61,7 @@ prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
 jump_prob = JumpProblem(prob,Direct(),jump1)
 jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
 coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
-sol =  solve(coupled_prob,SRIW1())
+sol =  solve(coupled_prob,SRIW1(),seed=UInt64(1))
 @test mean([abs(s[1]-s[2]) for s in sol.u])<=5.
 
 # Jump SDE to Discrete
@@ -74,7 +74,7 @@ prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
 jump_prob = JumpProblem(prob,Direct(),jump1)
 jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
 coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
-sol =  solve(coupled_prob,SRIW1())
+sol =  solve(coupled_prob,SRIW1(),seed=UInt64(1))
 
 
 # test mass action jumps coupled to ODE

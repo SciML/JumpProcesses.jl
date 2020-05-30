@@ -8,6 +8,7 @@ affect! = integrator -> (integrator.u[1] = integrator.u[1]/2)
 jump = VariableRateJump(rate, affect!, save_positions=(false,true))
 jump_prob = JumpProblem(prob,Direct(),jump)
 monte_prob = EnsembleProblem(jump_prob)
+println("here0")
 sol = solve(monte_prob,SRIW1(),trajectories=3,parallel_type=:none,
             save_everystep=false,dt=0.001,adaptive=false)
 @test sol[1].t[2] != sol[2].t[2] != sol[3].t[2]
@@ -15,6 +16,7 @@ sol = solve(monte_prob,SRIW1(),trajectories=3,parallel_type=:none,
 jump = ConstantRateJump(rate, affect!)
 jump_prob = JumpProblem(prob,Direct(),jump,save_positions=(true,false))
 monte_prob = EnsembleProblem(jump_prob)
+println("here0b")
 sol = solve(monte_prob,SRIW1(),trajectories=3,parallel_type=:none,
-            save_everystep=false,dt=0.001,adaptive=false, seed=UInt64(1))
-@test_broken sol[1].t[2] != sol[2].t[2] != sol[3].t[2]
+            save_everystep=false,dt=0.001,adaptive=false)
+@test sol[1].t[2] != sol[2].t[2] != sol[3].t[2]

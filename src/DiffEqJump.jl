@@ -39,7 +39,6 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 
 include("problem.jl")
-include("callbacks.jl")
 include("solve.jl")
 include("extended_jump_array.jl")
 include("coupled_array.jl")

@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq
+using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq, Statistics
 using Test
 
 

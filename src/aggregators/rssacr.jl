@@ -130,6 +130,14 @@ function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
     rerl        = zero(sum_rate)
     notdone     = true
     jidx        = 0
+
+    # check if the rate is 0
+    if abs(sum_rate < eps(typeof(sum_rate)))
+        p.next_jump_time = Inf
+        p.next_jump = 1
+        return nothing
+    end
+
     @inbounds while notdone
         # sample candidate reaction
         jidx = sample(p.rt, p.cur_rate_high, p.rng)
@@ -140,7 +148,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
 
     # update time to next jump
     p.next_jump_time = t + rerl / sum_rate
-    nothing
+    return nothing
 end
 
 

@@ -79,38 +79,3 @@ function set_bracketing!(p :: AbstractSSAJumpAggregator, u, params, t)
 
     nothing
 end
-
-function update_bracketing!(p :: AbstractSSAJumpAggregator)
-    # update bracketing intervals
-    ubnds       = p.cur_u_bnds
-    sum_rate    = p.sum_rate
-    crlow       = p.cur_rate_low
-    crhigh      = p.cur_rate_high
-    bd          = p.bracket_data
-    ulow        = p.ulow
-    uhigh       = p.uhigh
-    @inbounds for uidx in p.jumptovars_map[p.next_jump]
-        uval = u[uidx]
-
-        # if new u value is outside the bracketing interval
-        if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
-            # update u bracketing interval
-            ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(bd, uidx, uval)
-
-            # for each dependent jump, update jump rate brackets
-            for jidx in p.vartojumps_map[uidx]
-                sum_rate -= crhigh[jidx]
-                if jidx <= num_majumps
-                    crlow[jidx], crhigh[jidx] = get_majump_brackets(ulow, uhigh, jidx, majumps)
-                else
-                    j = jidx - num_majumps
-                    crlow[jidx], crhigh[jidx] = get_cjump_brackets(ulow, uhigh, p.rates[j], params, t)
-                end
-                sum_rate += crhigh[jidx]
-            end
-        end
-    end
-    p.sum_rate = sum_rate
-
-    nothing
-end

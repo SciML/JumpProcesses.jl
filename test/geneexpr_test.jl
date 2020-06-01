@@ -3,7 +3,7 @@ using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
-using BenchmarkTools
+#using BenchmarkTools
 dobenchmark = false
 
 dotestmean   = true

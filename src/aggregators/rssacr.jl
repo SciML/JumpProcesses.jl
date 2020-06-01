@@ -131,11 +131,11 @@ function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
     notdone     = true
     jidx        = 0
 
-    # check if the rate is 0
-    if abs(sum_rate < eps(typeof(sum_rate)))
-        p.next_jump_time = Inf
-        p.next_jump = 1
-        return nothing
+    # if no more events possible there is nothing to do
+    if sum_rate < eps(typeof(sum_rate))
+        p.next_jump = 0
+        p.next_jump_time = convert(typeof(sum_rate), Inf)
+        return
     end
 
     @inbounds while notdone

@@ -36,6 +36,8 @@ include("aggregators/bracketing.jl")
 include("aggregators/rssa.jl")
 include("aggregators/prioritytable.jl")
 include("aggregators/directcr.jl")
+include("aggregators/rssacr.jl")
+
 include("problem.jl")
 include("solve.jl")
 include("extended_jump_array.jl")
@@ -54,6 +56,7 @@ export SplitCoupledJumpProblem
 export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
+export RSSACR
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

@@ -48,3 +48,34 @@ end
         return rhigh,rlow
     end
 end
+
+# set up bracketing
+function set_bracketing!(p :: AbstractSSAJumpAggregator, u, params, t)
+    # species bracketing interval
+    ubnds = p.cur_u_bnds
+    @inbounds for (i,uval) in enumerate(u)
+        ubnds[1,i], ubnds[2,i] = get_spec_brackets(p.bracket_data, i, uval)
+    end
+
+    # reaction rate bracketing interval
+    # mass action jumps
+    sum_rate = zero(p.sum_rate)
+    majumps  = p.ma_jumps
+    crlow    = p.cur_rate_low
+    crhigh   = p.cur_rate_high
+    @inbounds for k = 1:get_num_majumps(majumps)
+        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps)
+        sum_rate += crhigh[k]
+    end
+
+    # constant rate jumps
+    k = get_num_majumps(majumps) + 1
+    @inbounds for rate in p.rates
+        crlow[k], crhigh[k] = get_cjump_brackets(p.ulow, p.uhigh, rate, params, t)
+        sum_rate += crhigh[k]
+        k += 1
+    end
+    p.sum_rate = sum_rate
+
+    nothing
+end

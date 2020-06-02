@@ -40,21 +40,27 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     else
         jtov_map = jumptovars_map
     end
+
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
     crh_bnds = similar(crs)
+    
     # a bracket data structure is needed for updating species populations
     bd = (bracket_data === nothing) ? BracketData{F,eltype(U)}() : bracket_data
+    
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh
     cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
     ulow    = @view cs_bnds[1,:]
     uhigh   = @view cs_bnds[2,:]
+    
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
+
     # use the largest power of two that is <= the passed in minrate
     minrate = 2.0^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
+
     # construct an empty initial priority table -- we'll overwrite this in init anyways...
     rt = PriorityTable{F,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate, Vector{PriorityGroup{F,Vector{Int}}}(), Vector{F}(), zero(F), Vector{Tuple{Int,Int}}(), ratetogroup)
 
@@ -113,7 +119,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     # execute jump
-    u = update_state!(p,integrator, u)
+    u = update_state!(p, integrator, u)
 
     # update rates
     update_dependent_rates!(p, u, params, t)
@@ -153,22 +159,6 @@ end
 
 
 ######################## SSA specific helper routines #########################
-"Update state based on the p.next_jump"
-function update_state!(p :: AbstractSSAJumpAggregator, integrator, u)
-    num_ma_rates = get_num_majumps(p.ma_jumps)
-    if p.next_jump <= num_ma_rates # is next jump a mass action jump
-        if u isa SVector
-          integrator.u = executerx(u, p.next_jump, p.ma_jumps)
-          u = integrator.u
-        else
-          @inbounds executerx!(u, p.next_jump, p.ma_jumps)
-        end
-    else
-        idx = p.next_jump - num_ma_rates
-        @inbounds p.affects![idx](integrator)
-    end
-    return u
-end
 
 "perform rejection sampling test"
 function is_accepted(p, u, jidx, params,t) :: Bool
@@ -198,7 +188,7 @@ function is_accepted(p, u, jidx, params,t) :: Bool
 end
 
 "update bracketing for species that depend on the just executed jump"
-function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
     # update bracketing intervals
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
@@ -211,7 +201,7 @@ function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
         # if new u value is outside the bracketing interval
-        if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
+        if uval == zero(uval) || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
             # update u bracketing interval
             ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(bd, uidx, uval)
 

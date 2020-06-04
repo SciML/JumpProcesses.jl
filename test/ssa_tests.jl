@@ -23,5 +23,5 @@ integrator.u[1]
 sol = solve(jump_prob,SSAStepper())
 
 jump_prob = JumpProblem(prob,Direct(),jump,jump2,save_positions=(false,false))
-sol = solve(jump_prob,SSAStepper(),saveat=0.0:0.1:3.0)
+sol = solve(jump_prob,SSAStepper(),saveat=0.0:0.1:2.9)
 @test sol.t == collect(0.0:0.1:3.0)

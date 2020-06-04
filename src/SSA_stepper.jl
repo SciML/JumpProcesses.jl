@@ -39,7 +39,7 @@ function DiffEqBase.solve!(integrator)
 
     if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
-        while integrator.cur_saveat < length(integrator.saveat) &&
+        while integrator.cur_saveat <= length(integrator.saveat) &&
            integrator.saveat[integrator.cur_saveat] < integrator.t
 
             push!(integrator.sol.t,integrator.saveat[integrator.cur_saveat])

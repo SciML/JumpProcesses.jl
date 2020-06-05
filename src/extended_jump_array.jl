@@ -1,4 +1,4 @@
-mutable struct ExtendedJumpArray{T,T2} <: AbstractArray{Float64,1}
+struct ExtendedJumpArray{T3<:Number, T1, T<:AbstractArray{T3,T1},T2} <: AbstractArray{T3,1}
   u::T
   jump_u::T2
 end

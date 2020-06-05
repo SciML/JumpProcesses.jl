@@ -123,13 +123,12 @@ end
     if p.next_jump <= num_ma_rates # is next jump a mass action jump
         if u isa SVector
             integrator.u = executerx(u, p.next_jump, p.ma_jumps)
-            u = integrator.u
         else
             @inbounds executerx!(u, p.next_jump, p.ma_jumps)
         end
     else
         idx = p.next_jump - num_ma_rates
-        @inbounds p.affects![idx](integrator)
+        @inbounds p.affects![idx](integrator)        
     end
-    return u
+    return integrator.u
 end

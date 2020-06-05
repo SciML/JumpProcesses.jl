@@ -36,7 +36,7 @@ function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
   u = [A.u;A.jump_u]
   u .* u' .* false
 end
-LinearAlgebra.ldiv!(A,b::ExtendedJumpArray) = LinearAlgebra.ldiv!(A,[A.u;A.jump_u])
+LinearAlgebra.ldiv!(A,b::ExtendedJumpArray) = LinearAlgebra.ldiv!(A,[b.u;b.jump_u])
 
 function recursivecopy!(dest::T, src::T) where T<:ExtendedJumpArray
   recursivecopy!(dest.u,src.u)

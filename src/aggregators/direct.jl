@@ -70,17 +70,7 @@ end
 
 # execute one jump, changing the system state
 @inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
-  num_ma_rates = get_num_majumps(p.ma_jumps)
-  if p.next_jump <= num_ma_rates
-    if u isa SVector
-      integrator.u = executerx(u, p.next_jump, p.ma_jumps)
-    else
-      @inbounds executerx!(u, p.next_jump, p.ma_jumps)
-    end
-  else
-      idx = p.next_jump - num_ma_rates
-      @inbounds p.affects![idx](integrator)
-  end
+  update_state!(p, integrator, u)
   nothing
 end
 

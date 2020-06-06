@@ -99,33 +99,7 @@ end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
-
-    # species bracketing interval
-    ubnds = p.cur_u_bnds
-    @inbounds for (i,uval) in enumerate(u)
-        ubnds[1,i], ubnds[2,i] = get_spec_brackets(p.bracket_data, i, uval)
-    end
-
-    # reaction rate bracketing interval
-    # mass action jumps
-    sum_rate = zero(p.sum_rate)
-    majumps  = p.ma_jumps
-    crlow    = p.cur_rate_low
-    crhigh   = p.cur_rate_high
-    @inbounds for k = 1:get_num_majumps(majumps)
-        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps)
-        sum_rate += crhigh[k]
-    end
-
-    # constant rate jumps
-    k = get_num_majumps(majumps) + 1
-    @inbounds for rate in p.rates
-        crlow[k], crhigh[k] = get_cjump_brackets(p.ulow, p.uhigh, rate, params, t)
-        sum_rate += crhigh[k]
-        k += 1
-    end
-    p.sum_rate = sum_rate
-
+    set_bracketing!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -133,22 +107,11 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     # execute jump
-    majumps     = p.ma_jumps
-    num_majumps = get_num_majumps(majumps)
-    if p.next_jump <= num_majumps
-        if u isa SVector
-          integrator.u = executerx(u, p.next_jump, p.ma_jumps)
-          u = integrator.u
-        else
-          @inbounds executerx!(u, p.next_jump, p.ma_jumps)
-        end
-    else
-        idx = p.next_jump - num_majumps
-        @inbounds p.affects![idx](integrator)
-    end
-
+    u = update_state!(p, integrator, u)
 
     # update bracketing intervals
+    majumps     = p.ma_jumps
+    num_majumps = get_num_majumps(majumps)
     ubnds       = p.cur_u_bnds
     sum_rate    = p.sum_rate
     crlow       = p.cur_rate_low
@@ -160,7 +123,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         uval = u[uidx]
 
         # if new u value is outside the bracketing interval
-        if uval == 0 || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
+        if uval == zero(uval) || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
             # update u bracketing interval
             ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(bd, uidx, uval)
 

@@ -42,10 +42,10 @@ DiscreteCallback(c::AbstractSSAJumpAggregator) = DiscreteCallback(c, c, initiali
 ############################## Generic Routines ###############################
 
 @inline function register_next_jump_time!(integrator, p::AbstractSSAJumpAggregator, t)
-  if p.next_jump_time < p.end_time
-    add_tstop!(integrator, p.next_jump_time)
-  end
-  nothing
+    if p.next_jump_time < p.end_time
+        add_tstop!(integrator, p.next_jump_time)
+    end
+    nothing
 end
 
 # helper routine for setting up standard fields of SSA jump aggregations
@@ -53,66 +53,82 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
                                 affects!, save_positions, rng; kwargs...)
 
   # mass action jumps
-  majumps = ma_jumps
-  if majumps === nothing
-    majumps = MassActionJump(Vector{typeof(t)}(),
+    majumps = ma_jumps
+    if majumps === nothing
+        majumps = MassActionJump(Vector{typeof(t)}(),
                              Vector{Vector{Pair{Int,eltype(u)}}}(),
                              Vector{Vector{Pair{Int,eltype(u)}}}())
-  end
+    end
 
   # current jump rates, allows mass action rates and constant jumps
-  cur_rates = Vector{typeof(t)}(undef,get_num_majumps(majumps) + length(rates))
+    cur_rates = Vector{typeof(t)}(undef, get_num_majumps(majumps) + length(rates))
 
-  sum_rate = zero(typeof(t))
-  next_jump = 0
-  next_jump_time = typemax(typeof(t))
-  jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
+    sum_rate = zero(typeof(t))
+    next_jump = 0
+    next_jump_time = typemax(typeof(t))
+    jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                 majumps, rates, affects!, save_positions, rng; kwargs...)
 end
 
 # reevaluate all rates and total rate
 function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
-  sum_rate = zero(typeof(p.sum_rate))
+    sum_rate = zero(typeof(p.sum_rate))
 
   # mass action jumps
-  majumps   = p.ma_jumps
-  cur_rates = p.cur_rates
-  @inbounds for i in 1:get_num_majumps(majumps)
-      cur_rates[i] = evalrxrate(u, i, majumps)
-      sum_rate    += cur_rates[i]
-  end
+    majumps   = p.ma_jumps
+    cur_rates = p.cur_rates
+    @inbounds for i in 1:get_num_majumps(majumps)
+        cur_rates[i] = evalrxrate(u, i, majumps)
+        sum_rate    += cur_rates[i]
+    end
 
   # constant rates
-  rates = p.rates
-  idx   = get_num_majumps(majumps) + 1
-  @inbounds for rate in rates
-      cur_rates[idx] = rate(u, params, t)
-      sum_rate += cur_rates[idx]
-      idx += 1
-  end
+    rates = p.rates
+    idx   = get_num_majumps(majumps) + 1
+    @inbounds for rate in rates
+        cur_rates[idx] = rate(u, params, t)
+        sum_rate += cur_rates[idx]
+        idx += 1
+    end
 
-  p.sum_rate = sum_rate
-  nothing
+    p.sum_rate = sum_rate
+    nothing
 end
 
 # recalculate jump rates for jumps that depend on the just executed jump
 # requires dependency graph
 function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
-  @inbounds dep_rxs = p.dep_gr[p.next_jump]
-  num_majumps = get_num_majumps(p.ma_jumps)
-  cur_rates   = p.cur_rates
-  sum_rate    = p.sum_rate
-  majumps     = p.ma_jumps
-  @inbounds for rx in dep_rxs
-      sum_rate -= cur_rates[rx]
-      if rx <= num_majumps
-          @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
-      else
-          @inbounds cur_rates[rx] = p.rates[rx-num_majumps](u, params, t)
-      end
-      sum_rate += cur_rates[rx]
-  end
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    num_majumps = get_num_majumps(p.ma_jumps)
+    cur_rates   = p.cur_rates
+    sum_rate    = p.sum_rate
+    majumps     = p.ma_jumps
+    @inbounds for rx in dep_rxs
+        sum_rate -= cur_rates[rx]
+        if rx <= num_majumps
+            @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
+        else
+            @inbounds cur_rates[rx] = p.rates[rx - num_majumps](u, params, t)
+        end
+        sum_rate += cur_rates[rx]
+    end
 
-  p.sum_rate = sum_rate
-  nothing
+    p.sum_rate = sum_rate
+    nothing
+end
+
+# Update state based on the p.next_jump
+@inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u)
+    num_ma_rates = get_num_majumps(p.ma_jumps)
+    if p.next_jump <= num_ma_rates # is next jump a mass action jump
+        if u isa SVector
+            integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+        else
+            @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+        end
+    else
+        idx = p.next_jump - num_ma_rates
+        @inbounds p.affects![idx](integrator)        
+    end
+    return integrator.u
 end

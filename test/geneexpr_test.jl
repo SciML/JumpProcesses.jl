@@ -3,14 +3,14 @@ using Test, Statistics
 
 # using Plots; plotlyjs()
 doplot = false
-# using BenchmarkTools
+#using BenchmarkTools
 # dobenchmark = false
 
 dotestmean   = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (RSSA(), RSSACR()) #, DirectFW(), FRM(), FRMFW()),
+SSAalgs = (RSSACR(),Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM(), RSSA(), DirectCR()) #, DirectFW(), FRM(), FRMFW()),
 
 # numerical parameters
 Nsims        = 8000
@@ -102,7 +102,7 @@ if dotestmean
 end
 
 
-# # benchmark performance
+# benchmark performance
 # if dobenchmark
 #     # exact methods
 #     for alg in SSAalgs

@@ -32,6 +32,8 @@ jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 integrator = init(jump_prob,Tsit5())
 
 sol = solve(jump_prob,Tsit5())
+sol = solve(jump_prob,Rosenbrock23(autodiff=false))
+sol = solve(jump_prob,Rosenbrock23())
 
 @test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12
@@ -74,3 +76,38 @@ jump_switch = VariableRateJump(rate_switch,affect_switch!)
 prob = SDEProblem(ff,gg,ones(2),(0.0,1.0),noise_rate_prototype=zeros(2,2))
 jump_prob = JumpProblem(prob, Direct(), jump_switch)
 solve(jump_prob, SRA1(), dt = 1.0)
+
+
+## Some integration tests
+
+function f2(du,u,p,t)
+  du[1] = u[1]
+end
+
+prob = ODEProblem(f2,[0.2],(0.0,10.0))
+rate2(u,p,t) = 2
+affect2!(integrator) = (integrator.u[1] = integrator.u[1]/2)
+jump = ConstantRateJump(rate2,affect2!)
+jump_prob = JumpProblem(prob,Direct(),jump)
+sol = solve(jump_prob,Tsit5())
+sol(4.0)
+sol[4]
+
+rate2(u,p,t) = u[1]
+affect2!(integrator) = (integrator.u[1] = integrator.u[1]/2)
+jump = VariableRateJump(rate2,affect2!)
+jump2 = deepcopy(jump)
+jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+sol = solve(jump_prob,Tsit5())
+sol(4.0)
+sol[4]
+
+function g2(du,u,p,t)
+  du[1] = u[1]
+end
+
+prob = SDEProblem(f2,g2,[0.2],(0.0,10.0))
+jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+sol = solve(jump_prob,SRIW1())
+sol(4.0)
+sol[4]

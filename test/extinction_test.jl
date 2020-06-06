@@ -1,25 +1,21 @@
 using DiffEqBase, DiffEqJump, StaticArrays
 using Test
 
-reactstoch =
-[
+reactstoch = [
     [1 => 1]
 ]
 
-netstoch =
-[
+netstoch = [
     [1 => -1]
 ]
 
 rates = [1.]
-u0 = [10]
 spec_to_dep_jumps = [[1]]
 jump_to_dep_specs = [[1]]
 dg = [[1]]
 majump = MassActionJump(rates, reactstoch, netstoch)
+u0 = [10]
 dprob = DiscreteProblem(u0,(0.,100.),rates)
-
-
 algs = DiffEqJump.JUMP_AGGREGATORS
 
 for ssa in algs

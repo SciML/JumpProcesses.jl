@@ -1,4 +1,4 @@
-mutable struct ExtendedJumpArray{T,T2} <: AbstractArray{Float64,1}
+struct ExtendedJumpArray{T3<:Number, T1, T<:AbstractArray{T3,T1},T2} <: AbstractArray{T3,1}
   u::T
   jump_u::T2
 end
@@ -31,6 +31,13 @@ LinearAlgebra.mul!(c::ExtendedJumpArray,A::AbstractVecOrMat,u::AbstractVector) =
 # Ignore axes
 Base.similar(A::ExtendedJumpArray,::Type{S},axes::Tuple{Base.OneTo{Int}}) where {S} = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 
+# Stiff ODE solver
+function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
+  u = [A.u;A.jump_u]
+  u .* u' .* false
+end
+LinearAlgebra.ldiv!(A,b::ExtendedJumpArray) = LinearAlgebra.ldiv!(A,[b.u;b.jump_u])
+
 function recursivecopy!(dest::T, src::T) where T<:ExtendedJumpArray
   recursivecopy!(dest.u,src.u)
   recursivecopy!(dest.jump_u,src.jump_u)
@@ -39,47 +46,46 @@ Base.show(io::IO,A::ExtendedJumpArray) = show(io,A.u)
 TreeViews.hastreeview(x::ExtendedJumpArray) = true
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
-###### Broadcast overloading
+## broadcasting
 
-const ExtendedJumpArrayStyle = Broadcast.ArrayStyle{ExtendedJumpArray}
-Base.BroadcastStyle(::Type{<:ExtendedJumpArray}) = Broadcast.ArrayStyle{ExtendedJumpArray}()
-Base.BroadcastStyle(::Broadcast.ArrayStyle{ExtendedJumpArray},::Broadcast.ArrayStyle) = Broadcast.ArrayStyle{ExtendedJumpArray}()
-Base.BroadcastStyle(::Broadcast.ArrayStyle,::Broadcast.ArrayStyle{ExtendedJumpArray}) = Broadcast.ArrayStyle{ExtendedJumpArray}()
-Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{ExtendedJumpArray}},::Type{ElType}) where ElType = similar(bc)
+struct ExtendedJumpArrayStyle{Style <: Broadcast.BroadcastStyle} <: Broadcast.AbstractArrayStyle{Any} end
+ExtendedJumpArrayStyle(::S) where {S} = ExtendedJumpArrayStyle{S}()
+ExtendedJumpArrayStyle(::S, ::Val{N}) where {S,N} = ExtendedJumpArrayStyle(S(Val(N)))
+ExtendedJumpArrayStyle(::Val{N}) where N = ExtendedJumpArrayStyle{Broadcast.DefaultArrayStyle{N}}()
 
-add_idxs1(A,x,expr) = expr
-add_idxs1(A,::Type{T},expr) where {T<:ExtendedJumpArray} = :($(expr).u)
-add_idxs1(A,::Type{T},expr) where {T<:AbstractArray} = :(@view($(expr)[1:length(A.u)]))
+# promotion rules
+@inline function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle{AStyle}, ::ExtendedJumpArrayStyle{BStyle}) where {AStyle, BStyle}
+    ExtendedJumpArrayStyle(Broadcast.BroadcastStyle(AStyle(), BStyle()))
+end
+Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle{Style}, ::Broadcast.DefaultArrayStyle{0}) where Style<:Broadcast.BroadcastStyle = ExtendedJumpArrayStyle{Style}()
+Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle, ::Broadcast.DefaultArrayStyle{N}) where N = Broadcast.DefaultArrayStyle{N}()
 
-add_idxs2(A,x,expr) = expr
-add_idxs2(A,::Type{T},expr) where {T<:ExtendedJumpArray} = :($(expr).jump_u)
-add_idxs2(A,::Type{T},expr) where {T<:AbstractArray} = :(@view($(expr)[1:length(A.jump_u)]))
+combine_styles(args::Tuple{})         = Broadcast.DefaultArrayStyle{0}()
+@inline combine_styles(args::Tuple{Any})      = Broadcast.result_style(Broadcast.BroadcastStyle(args[1]))
+@inline combine_styles(args::Tuple{Any, Any}) = Broadcast.result_style(Broadcast.BroadcastStyle(args[1]), Broadcast.BroadcastStyle(args[2]))
+@inline combine_styles(args::Tuple)   = Broadcast.result_style(Broadcast.BroadcastStyle(args[1]), combine_styles(Base.tail(args)))
 
-function Base.copy(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle})
-    ret = Broadcast.flatten(bc)
-    __broadcast(ret.f,ret.args...)
+function Broadcast.BroadcastStyle(::Type{ExtendedJumpArray{T,S}}) where {T, S}
+    ExtendedJumpArrayStyle(Broadcast.result_style(Broadcast.BroadcastStyle(T)))
 end
 
-function Base.copyto!(dest::AbstractArray, bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle})
-    ret = Broadcast.flatten(bc)
-    __broadcast!(ret.f,dest,ret.args...)
+@inline function Base.copy(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where Style
+    ExtendedJumpArray(copy(unpack(bc, Val(:u))),copy(unpack(bc, Val(:jump_u))))
 end
 
-@generated function __broadcast(f,A::ExtendedJumpArray,B...)
-  exs1 = ((add_idxs1(A,B[i],:(B[$i])) for i in eachindex(B))...,)
-  exs2 = ((add_idxs2(A,B[i],:(B[$i])) for i in eachindex(B))...,)
-  res = quote
-      ExtendedJumpArray(broadcast(f,A.u,$(exs1...)),broadcast(f,A.jump_u,$(exs2...)))
-  end
-  res
+@inline function Base.copyto!(dest::ExtendedJumpArray, bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where Style
+    copyto!(dest.u,unpack(bc, Val(:u)))
+    copyto!(dest.jump_u,unpack(bc, Val(:jump_u)))
+    dest
 end
 
-@generated function __broadcast!(f,A::ExtendedJumpArray,B...)
-  exs1 = ((add_idxs1(A,B[i],:(B[$i])) for i in eachindex(B))...,)
-  exs2 = ((add_idxs2(A,B[i],:(B[$i])) for i in eachindex(B))...,)
-  res = quote
-      broadcast!(f,A.u,$(exs1...));broadcast!(f,A.jump_u,$(exs2...))
-      A
-  end
-  res
-end
+# drop axes because it is easier to recompute
+@inline unpack(bc::Broadcast.Broadcasted{Style}, i) where Style = Broadcast.Broadcasted{Style}(bc.f, unpack_args(i, bc.args))
+@inline unpack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}, i) where Style = Broadcast.Broadcasted{Style}(bc.f, unpack_args(i, bc.args))
+unpack(x,::Any) = x
+unpack(x::ExtendedJumpArray, ::Val{:u}) = x.u
+unpack(x::ExtendedJumpArray, ::Val{:jump_u}) = x.jump_u
+
+@inline unpack_args(i, args::Tuple) = (unpack(args[1], i), unpack_args(i, Base.tail(args))...)
+unpack_args(i, args::Tuple{Any}) = (unpack(args[1], i),)
+unpack_args(::Any, args::Tuple{}) = ()

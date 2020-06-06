@@ -13,6 +13,7 @@ mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAgg
   save_positions::Tuple{Bool,Bool}
   rng::RNG
   dep_gr::DEPGR
+  max_rate::T
 end
 
 
@@ -31,7 +32,8 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     # make sure each jump depends on itself
     add_self_dependencies!(dg)
 
-    return RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg)
+    max_rate = maximum(crs)
+    return RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate)
 
 
 ########### The following routines should be templates for all SSAs ###########
@@ -103,8 +105,19 @@ function generate_jumps!(p::RDirectJumpAggregation, u, params, t)
         return nothing
     end
 
-    @unpack sum_rate, rt, rng, cur_rate_high = p
-    rerl = zero(sum_rate)
+    @unpack sum_rate, rng, cur_rates, max_rate = p
+    r = rand(rng) * length(cur_rates)
+    rx = convert(Integer, ceil(r))
+
+    @inbounds while true
+        # pick a random element
+        pididx = trunc(Int, r)
+        pid    = pids[pididx+1]
+
+        # acceptance test
+        ( (r - pididx)*max_rate < priorities[pid] ) && break
+    end
+
 
     jidx    = sample(rt, cur_rate_high, rng)
     notdone = rejectrx(p, u, jidx, params, t)

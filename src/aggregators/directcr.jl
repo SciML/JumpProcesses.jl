@@ -122,7 +122,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
     # execute jump
-    update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u)
 
     # update current jump rates
     update_dependent_rates!(p, u, params, t)

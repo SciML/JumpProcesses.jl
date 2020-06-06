@@ -88,7 +88,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     # execute jump
-    update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u)
 
     # update search order
     jso   = p.jump_search_order

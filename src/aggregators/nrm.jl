@@ -84,7 +84,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t)
     # execute jump
-    update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u)
 
     # update current jump rates and times
     update_dependent_rates!(p, u, params, t)

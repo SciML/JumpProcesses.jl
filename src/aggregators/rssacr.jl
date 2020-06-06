@@ -128,27 +128,24 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
-    sum_rate    = p.sum_rate
-    crlow       = p.cur_rate_low
-    crhigh      = p.cur_rate_high
-    majumps     = p.ma_jumps
-    num_majumps = get_num_majumps(majumps)
-    rerl        = zero(sum_rate)
-    notdone     = true
-    jidx        = 0
+    sum_rate = p.sum_rate
 
     # if no more events possible there is nothing to do
     if sum_rate < eps(typeof(sum_rate))
-        p.next_jump = 0
+        p.next_jump      = zero(p.next_jump)
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return
     end
 
+    rt = p.rt; rng = p.rng; crhigh = p.cur_rate_high
+    rerl = zero(sum_rate)
+    jidx = 0
+    notdone = true
     @inbounds while notdone
         # sample candidate reaction
-        jidx = sample(p.rt, p.cur_rate_high, p.rng)
-        notdone = !is_accepted(p,u,jidx,params,t)
-        rerl += randexp(p.rng)
+        jidx    = sample(rt, crhigh, rng)
+        notdone = !is_accepted(p, u, jidx, params, t)
+        rerl   += randexp(rng)
     end
     p.next_jump = jidx
 
@@ -161,16 +158,17 @@ end
 ######################## SSA specific helper routines #########################
 
 "perform rejection sampling test"
-function is_accepted(p, u, jidx, params,t) :: Bool
-    crlow       = p.cur_rate_low
-    crhigh      = p.cur_rate_high
-    majumps     = p.ma_jumps
-    num_majumps = get_num_majumps(majumps)
+@inline function is_accepted(p, u, jidx, params, t) :: Bool            
     # rejection test
-    @inbounds r2 = rand(p.rng) * crhigh[jidx]
-    @inbounds if crlow[jidx] > zero(crlow[jidx]) && r2 <= crlow[jidx]
+    @inbounds r2     = rand(p.rng) * p.cur_rate_high[jidx]
+    @inbounds crlow  = p.cur_rate_low[jidx]
+
+    @inbounds if crlow > zero(crlow) && r2 <= crlow
         return true
     else
+        majumps     = p.ma_jumps
+        num_majumps = get_num_majumps(majumps)
+
         # calculate actual propensity, split up for type stability
         if jidx <= num_majumps
             @inbounds crate = evalrxrate(u, jidx, majumps)

@@ -9,9 +9,10 @@ struct FRM <: AbstractAggregatorAlgorithm end
 struct FRMFW <: AbstractAggregatorAlgorithm end
 struct NRM <: AbstractAggregatorAlgorithm end
 struct RSSACR <: AbstractAggregatorAlgorithm end
+struct RDirect <: AbstractAggregatorAlgorithm end
 
 
-const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR())
+const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(), RDirect())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -21,6 +22,7 @@ needs_depgraph(aggregator::AbstractAggregatorAlgorithm) = false
 needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
+needs_depgraph(aggregator::RDirect) = true
 
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from

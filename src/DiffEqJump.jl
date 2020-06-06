@@ -37,6 +37,7 @@ include("aggregators/rssa.jl")
 include("aggregators/prioritytable.jl")
 include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
+include("aggregators/rdirect.jl")
 
 include("problem.jl")
 include("solve.jl")

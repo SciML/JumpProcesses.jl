@@ -144,27 +144,27 @@ function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
     @inbounds while notdone
         # sample candidate reaction
         jidx    = sample(rt, crhigh, rng)
-        notdone = !is_accepted(p, u, jidx, params, t)
+        notdone = rejectrx(p, u, jidx, params, t)
         rerl   += randexp(rng)
     end
     p.next_jump = jidx
 
     # update time to next jump
     p.next_jump_time = t + rerl / sum_rate
-    return nothing
+    nothing
 end
 
 
 ######################## SSA specific helper routines #########################
 
 "perform rejection sampling test"
-@inline function is_accepted(p, u, jidx, params, t) :: Bool            
+@inline function rejectrx(p, u, jidx, params, t)       
     # rejection test
     @inbounds r2     = rand(p.rng) * p.cur_rate_high[jidx]
     @inbounds crlow  = p.cur_rate_low[jidx]
 
     @inbounds if crlow > zero(crlow) && r2 <= crlow
-        return true
+        return false
     else
         majumps     = p.ma_jumps
         num_majumps = get_num_majumps(majumps)
@@ -173,16 +173,16 @@ end
         if jidx <= num_majumps
             @inbounds crate = evalrxrate(u, jidx, majumps)
             if crate > zero(crate) && r2 <= crate
-                return true
+                return false
             end
         else
             @inbounds crate = p.rates[jidx - num_majumps](u, params, t)
             if crate > zero(crate) && r2 <= crate
-                return true
+                return false
             end
         end
     end
-    return false
+    return true
 end
 
 "update bracketing for species that depend on the just executed jump"

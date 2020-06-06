@@ -105,7 +105,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     majumps     = p.ma_jumps
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        @inbounds cur_rates[rx] = calculate_jump_rate(p,u,params,rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(p,u,params,t,rx)
         sum_rate += cur_rates[rx]
     end
 

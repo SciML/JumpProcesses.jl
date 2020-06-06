@@ -44,16 +44,16 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
     crh_bnds = similar(crs)
-    
+
     # a bracket data structure is needed for updating species populations
     bd = (bracket_data === nothing) ? BracketData{F,eltype(U)}() : bracket_data
-    
+
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh
     cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
     ulow    = @view cs_bnds[1,:]
     uhigh   = @view cs_bnds[2,:]
-    
+
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
 
@@ -128,15 +128,12 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
-    sum_rate = p.sum_rate
-
     # if no more events possible there is nothing to do
-    if sum_rate < eps(typeof(sum_rate))
-        p.next_jump      = zero(p.next_jump)
-        p.next_jump_time = convert(typeof(sum_rate), Inf)
-        return
+    if is_total_rate_zero!(p)
+        return nothing
     end
 
+    sum_rate = p.sum_rate
     rt = p.rt; rng = p.rng; crhigh = p.cur_rate_high
     rerl = zero(sum_rate)
     jidx = 0
@@ -156,35 +153,6 @@ end
 
 
 ######################## SSA specific helper routines #########################
-
-"perform rejection sampling test"
-@inline function rejectrx(p, u, jidx, params, t)       
-    # rejection test
-    @inbounds r2     = rand(p.rng) * p.cur_rate_high[jidx]
-    @inbounds crlow  = p.cur_rate_low[jidx]
-
-    @inbounds if crlow > zero(crlow) && r2 <= crlow
-        return false
-    else
-        majumps     = p.ma_jumps
-        num_majumps = get_num_majumps(majumps)
-
-        # calculate actual propensity, split up for type stability
-        if jidx <= num_majumps
-            @inbounds crate = evalrxrate(u, jidx, majumps)
-            if crate > zero(crate) && r2 <= crate
-                return false
-            end
-        else
-            @inbounds crate = p.rates[jidx - num_majumps](u, params, t)
-            if crate > zero(crate) && r2 <= crate
-                return false
-            end
-        end
-    end
-    return true
-end
-
 "update bracketing for species that depend on the just executed jump"
 @inline function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
     # update bracketing intervals

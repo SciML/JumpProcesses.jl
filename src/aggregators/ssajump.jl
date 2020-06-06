@@ -105,11 +105,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     majumps     = p.ma_jumps
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        if rx <= num_majumps
-            @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
-        else
-            @inbounds cur_rates[rx] = p.rates[rx - num_majumps](u, params, t)
-        end
+        @inbounds cur_rates[rx] = calculate_jump_rate(p,u,params,rx)
         sum_rate += cur_rates[rx]
     end
 
@@ -128,7 +124,57 @@ end
         end
     else
         idx = p.next_jump - num_ma_rates
-        @inbounds p.affects![idx](integrator)        
+        @inbounds p.affects![idx](integrator)
     end
     return integrator.u
+end
+
+"check if the rate is 0 and if it is, make the next jump time Inf"
+@inline function is_total_rate_zero!(p) :: Bool
+    if abs(p.sum_rate < eps(typeof(p.sum_rate)))
+        p.next_jump = 0
+        p.next_jump_time = convert(typeof(p.sum_rate), Inf)
+        return true
+    end
+    return false
+end
+
+"perform linear search of r over array. Output element j s.t. array[j-1] < r <= array[j]. Will error if no such r exists"
+@inline function linear_search(array, r)
+    jidx = 1
+    parsum = array[jidx]
+    while parsum < r
+        jidx   += 1
+        parsum += array[jidx]
+    end
+    return jidx
+end
+
+"perform rejection sampling test"
+@inline function rejectrx(p, u, jidx, params, t)
+    # rejection test
+    @inbounds r2     = rand(p.rng) * p.cur_rate_high[jidx]
+    @inbounds crlow  = p.cur_rate_low[jidx]
+
+    @inbounds if crlow > zero(crlow) && r2 <= crlow
+        return false
+    else
+        # calculate actual propensity, split up for type stability
+        @inbounds crate = calculate_jump_rate(p,u,params,t,jidx)
+        if crate > zero(crate) && r2 <= crate
+            return false
+        end
+    end
+    return true
+end
+
+"update the jump rate, assuming p.rates is a vector of functions"
+@inline function calculate_jump_rate(p, u, params, t, rx)
+    ma_jumps = p.ma_jumps
+    num_majumps = get_num_majumps(ma_jumps)
+    if rx <= num_majumps
+        return evalrxrate(u, rx, p.ma_jumps)
+    else
+        return p.rates[rx-num_majumps](u, params, t)
+    end
 end

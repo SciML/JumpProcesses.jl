@@ -108,7 +108,46 @@ end
 function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     # execute jump
     u = update_state!(p, integrator, u)
+    update_rates!(p, u, params, t)
+    nothing
+end
 
+# calculate the next jump / jump time
+@fastmath function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+    # if no more events possible there is nothing to do
+    if is_total_rate_zero!(p)
+        return nothing
+    end
+
+    # next jump type
+    sum_rate    = p.sum_rate
+    crhigh      = p.cur_rate_high
+    #rerl        = one(sum_rate)
+    rerl        = zero(sum_rate)
+
+    r      = rand(p.rng) * sum_rate
+    jidx   = linear_search(crhigh, r)
+    rerl  += randexp(p.rng)
+    @inbounds while rejectrx(p, u, jidx, params, t)
+        # sample candidate reaction
+        r      = rand(p.rng) * sum_rate
+        jidx   = linear_search(crhigh, r)
+        #rerl *= rand(p.rng)
+        rerl += randexp(p.rng)
+    end
+    p.next_jump = jidx
+
+    # update time to next jump
+    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
+    p.next_jump_time = t + rerl / sum_rate
+
+    nothing
+end
+
+######################## SSA specific helper routines #########################
+
+"Update rates"
+@inline function update_rates!(p::RSSAJumpAggregation, u, params, t)
     # update bracketing intervals
     majumps     = p.ma_jumps
     num_majumps = get_num_majumps(majumps)
@@ -141,68 +180,4 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         end
     end
     p.sum_rate = sum_rate
-
-    nothing
-end
-
-# calculate the next jump / jump time
-@fastmath function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
-
-    # next jump type
-    sum_rate    = p.sum_rate
-
-    # if no more events possible there is nothing to do
-    if sum_rate < eps(typeof(sum_rate))
-        p.next_jump = 0
-        p.next_jump_time = convert(typeof(sum_rate), Inf)
-        return
-    end
-
-    crlow       = p.cur_rate_low
-    crhigh      = p.cur_rate_high
-    majumps     = p.ma_jumps
-    num_majumps = get_num_majumps(majumps)
-    #rerl        = one(sum_rate)
-    rerl        = zero(sum_rate)
-    notdone     = true
-    jidx        = 0
-    @inbounds while notdone
-        # sample candidate reaction
-        r      = rand(p.rng) * sum_rate
-        jidx   = 1
-        parsum = crhigh[jidx]
-        while parsum < r
-            jidx   += 1
-            parsum += crhigh[jidx]             
-        end
-
-        # rejection test
-        @inbounds r2 = rand(p.rng) * crhigh[jidx]
-        @inbounds if crlow[jidx] > zero(crlow[jidx]) && r2 <= crlow[jidx]
-            notdone = false
-        else
-            # calculate actual propensity, split up for type stability
-            if jidx <= num_majumps
-                @inbounds crate = evalrxrate(u, jidx, majumps)
-                if crate > zero(crate) && r2 <= crate
-                    notdone = false
-                end
-            else
-                @inbounds crate = p.rates[jidx - num_majumps](u, params, t)
-                if crate > zero(crate) && r2 <= crate
-                    notdone = false
-                end
-            end
-        end
-
-        #rerl *= rand(p.rng)
-        rerl += randexp(p.rng)
-    end
-    p.next_jump = jidx
-
-    # update time to next jump
-    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
-    p.next_jump_time = t + rerl / sum_rate
-
-    nothing
 end

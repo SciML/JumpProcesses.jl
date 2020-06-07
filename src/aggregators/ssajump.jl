@@ -132,7 +132,7 @@ end
 "check if the rate is 0 and if it is, make the next jump time Inf"
 @inline function is_total_rate_zero!(p) :: Bool
     sum_rate = p.sum_rate
-    if abs(sum_rate < eps(typeof(sum_rate)))
+    if sum_rate < eps(typeof(sum_rate))
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return true

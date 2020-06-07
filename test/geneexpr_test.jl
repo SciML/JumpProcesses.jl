@@ -44,8 +44,7 @@ end
 
 # model using mass action jumps
 # ids: DNA=1, mRNA = 2, P = 3, DNAR = 4
-reactstoch =
-[
+reactstoch = [
     [1 => 1],
     [2 => 1],
     [2 => 1],
@@ -53,8 +52,7 @@ reactstoch =
     [1 => 1, 3 => 1],
     [4 => 1]
 ]
-netstoch =
-[
+netstoch = [
     [2 => 1],
     [3 => 1],
     [2 => -1],

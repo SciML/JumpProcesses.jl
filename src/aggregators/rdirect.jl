@@ -31,9 +31,8 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
 
     # make sure each jump depends on itself
     add_self_dependencies!(dg)
-
     max_rate = maximum(crs)
-    return RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate)
+    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate)
 end
 
 ########### The following routines should be templates for all SSAs ###########
@@ -68,13 +67,14 @@ function aggregate(aggregator::RDirect, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(RDirectJumpAggregation, u, p, t, end_time, ma_jumps,
-                          rates, affects!, save_positions, rng; kwargs...)
+                          rates, affects!, save_positions, rng; num_specs = length(u), kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RDirectJumpAggregation, integrator, u, params, t)
-  generate_jumps!(p, integrator, u, params, t)
-  nothing
+    fill_rates_and_sum!(p, u, params, t)
+    generate_jumps!(p, integrator, u, params, t)
+    nothing
 end
 
 "execute one jump, changing the system state and updating rates"
@@ -84,23 +84,22 @@ function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
 
     # update rates
     update_dependent_rates!(p, u, params, t)
+    p.max_rate = maximum(p.cur_rates)
     nothing
 end
 
 "calculate the next jump / jump time"
-function generate_jumps!(p::RDirectJumpAggregation, u, params, t)
+function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     # if no more events possible there is nothing to do
     if is_total_rate_zero!(p)
         return nothing
     end
-
     @unpack sum_rate, rng, cur_rates, max_rate = p
 
-    r = rand(rng) * length(cur_rates)
-    rx = convert(Integer, ceil(r))
-    while !(rx-r)*length(cur_rates) < cur_rates[rx]
-        r = rand(rng) * length(cur_rates)
-        rx = convert(Integer, ceil(r))
+    num_rxs = length(cur_rates)
+    rx = trunc(Integer, rand(rng) * num_rxs)+1
+    while cur_rates[rx] < rand(rng) * max_rate
+        rx = trunc(Integer, rand(rng) * num_rxs)+1
     end
 
     p.next_jump = rx

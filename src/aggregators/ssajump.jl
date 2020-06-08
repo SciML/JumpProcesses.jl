@@ -115,15 +115,16 @@ end
 
 # Update state based on the p.next_jump
 @inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u)
-    num_ma_rates = get_num_majumps(p.ma_jumps)
-    if p.next_jump <= num_ma_rates # is next jump a mass action jump
+    @unpack ma_jumps, next_jump = p
+    num_ma_rates = get_num_majumps(ma_jumps)
+    if next_jump <= num_ma_rates # is next jump a mass action jump
         if u isa SVector
-            integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+            integrator.u = executerx(u, next_jump, ma_jumps)
         else
-            @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+            @inbounds executerx!(u, next_jump, ma_jumps)
         end
     else
-        idx = p.next_jump - num_ma_rates
+        idx = next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
     end
     return integrator.u
@@ -131,9 +132,10 @@ end
 
 "check if the rate is 0 and if it is, make the next jump time Inf"
 @inline function is_total_rate_zero!(p) :: Bool
-    if abs(p.sum_rate < eps(typeof(p.sum_rate)))
+    sum_rate = p.sum_rate
+    if abs(sum_rate < eps(typeof(sum_rate)))
         p.next_jump = 0
-        p.next_jump_time = convert(typeof(p.sum_rate), Inf)
+        p.next_jump_time = convert(typeof(sum_rate), Inf)
         return true
     end
     return false
@@ -173,7 +175,7 @@ end
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
-        return evalrxrate(u, rx, p.ma_jumps)
+        return evalrxrate(u, rx, ma_jumps)
     else
         return p.rates[rx-num_majumps](u, params, t)
     end

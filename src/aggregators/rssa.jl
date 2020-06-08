@@ -120,20 +120,20 @@ end
     end
 
     # next jump type
-    sum_rate    = p.sum_rate
+    @unpack sum_rate, rng = p
     crhigh      = p.cur_rate_high
     #rerl        = one(sum_rate)
     rerl        = zero(sum_rate)
 
-    r      = rand(p.rng) * sum_rate
+    r      = rand(rng) * sum_rate
     jidx   = linear_search(crhigh, r)
-    rerl  += randexp(p.rng)
+    rerl  += randexp(rng)
     @inbounds while rejectrx(p, u, jidx, params, t)
         # sample candidate reaction
-        r      = rand(p.rng) * sum_rate
+        r      = rand(rng) * sum_rate
         jidx   = linear_search(crhigh, r)
         #rerl *= rand(p.rng)
-        rerl += randexp(p.rng)
+        rerl += randexp(rng)
     end
     p.next_jump = jidx
 

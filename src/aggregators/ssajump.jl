@@ -99,10 +99,8 @@ end
 # requires dependency graph
 function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    num_majumps = get_num_majumps(p.ma_jumps)
     cur_rates   = p.cur_rates
     sum_rate    = p.sum_rate
-    majumps     = p.ma_jumps
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
         @inbounds cur_rates[rx] = calculate_jump_rate(p,u,params,t,rx)
@@ -130,9 +128,8 @@ end
     return integrator.u
 end
 
-"check if the rate is 0 and if it is, make the next jump time Inf"
-@inline function is_total_rate_zero!(p) :: Bool
-    sum_rate = p.sum_rate
+"check if the total rate is 0 and if it is, make the next jump time Inf"
+@inline function nomorejumps!(p, sum_rate) :: Bool
     if abs(sum_rate < eps(typeof(sum_rate)))
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
@@ -144,10 +141,10 @@ end
 "perform linear search of r over array. Output element j s.t. array[j-1] < r <= array[j]. Will error if no such r exists"
 @inline function linear_search(array, r)
     jidx = 1
-    parsum = array[jidx]
+    @inbounds parsum = array[jidx]
     while parsum < r
         jidx   += 1
-        parsum += array[jidx]
+        @inbounds parsum += array[jidx]
     end
     return jidx
 end
@@ -177,6 +174,6 @@ end
     if rx <= num_majumps
         return evalrxrate(u, rx, ma_jumps)
     else
-        return p.rates[rx-num_majumps](u, params, t)
+        @inbounds return p.rates[rx-num_majumps](u, params, t)
     end
 end

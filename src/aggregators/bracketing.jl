@@ -49,6 +49,17 @@ end
     end
 end
 
+"get brackets for reaction rx by first checking if the reaction is a massaction reaction"
+@inline function get_jump_brackets(rx, p :: AbstractSSAJumpAggregator, params, t)
+    ma_jumps = p.ma_jumps
+    num_majumps = get_num_majumps(ma_jumps)
+    if rx <= num_majumps
+        return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
+    else
+        @inbounds return get_cjump_brackets(p.ulow, p.uhigh, p.rates[rx - num_majumps], params, t)
+    end
+end
+
 # set up bracketing
 function set_bracketing!(p :: AbstractSSAJumpAggregator, u, params, t)
     # species bracketing interval

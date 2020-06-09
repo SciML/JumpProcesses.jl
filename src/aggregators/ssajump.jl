@@ -130,7 +130,7 @@ end
 
 "check if the total rate is 0 and if it is, make the next jump time Inf"
 @inline function nomorejumps!(p, sum_rate) :: Bool
-    if abs(sum_rate < eps(typeof(sum_rate)))
+    if sum_rate < eps(typeof(sum_rate))
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return true

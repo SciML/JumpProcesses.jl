@@ -22,29 +22,35 @@ rnpar = [1/(h*h)]
 u0 = 10*ones(Int64, N)
 tf = .01
 
-methods = (Direct(),DirectFW(),SortingDirect(),NRM(),DirectCR(),RSSA())
-shortlabels = [string(leg)[12:end-2] for leg in methods]
+algs = (Direct(), RDirect(), DirectFW(),SortingDirect(),NRM(),DirectCR(),RSSA())
+shortlabels = [string(leg)[1:end-2] for leg in algs]
 prob    = prob = DiscreteProblem(u0, (0.0, tf), rnpar)
-ploth   = plot(reuse=false)
-for (i,method) in enumerate(methods)
-    println("Benchmarking method: ", method)
-    jump_prob = JumpProblem(prob, method, rn, save_positions=(false,false))
-    sol = solve(jump_prob, SSAStepper(), saveat=tf/1000.)
-    plot!(ploth,sol.t,sol[Int(N//2),:],label=shortlabels[i], format=fmt)
-end
-
-plot!(ploth, title="Population at middle lattice site", xlabel="time",format=fmt)
+# # ploth   = plot(reuse=false)
+# for (i,method) in enumerate(algs)
+#     println("Plotting method: ", method)
+#     jump_prob = JumpProblem(prob, method, rn, save_positions=(false,false))
+#     sol = solve(jump_prob, SSAStepper(), saveat=tf/1000.)
+#     # plot!(ploth,sol.t,sol[Int(N//2),:],label=shortlabels[i], format=fmt)
+# end
+# # plot!(ploth, title="Population at middle lattice site", xlabel="time",format=fmt)
 
 function run_benchmark!(t, jump_prob, stepper)
     sol = solve(jump_prob, stepper)
     @inbounds for i in 1:length(t)
-        t[i] = @elapsed (sol = solve(jump_prob, stepper))
+        if i%10 == 1
+            println("simulation $i starts")
+        end
+        t[i] = @elapsed (solve(jump_prob, stepper))
+        if i%10 == 1
+            println("simulation $i ended")
+        end
     end
 end
 
 nsims = 50
 benchmarks = Vector{Vector{Float64}}()
-for method in methods
+for method in algs
+    println("Benchmarking method: ", method)
     jump_prob = JumpProblem(prob, method, rn, save_positions=(false,false))
     stepper = SSAStepper()
     t = Vector{Float64}(undef,nsims)
@@ -52,15 +58,16 @@ for method in methods
     push!(benchmarks, t)
 end
 
-medtimes = Vector{Float64}(undef,length(methods))
-stdtimes = Vector{Float64}(undef,length(methods))
-avgtimes = Vector{Float64}(undef,length(methods))
-for i in 1:length(methods)
+medtimes = Vector{Float64}(undef,length(algs))
+stdtimes = Vector{Float64}(undef,length(algs))
+avgtimes = Vector{Float64}(undef,length(algs))
+for i in 1:length(algs)
     medtimes[i] = median(benchmarks[i])
     avgtimes[i] = mean(benchmarks[i])
     stdtimes[i] = std(benchmarks[i])
 end
 
+println("setting up dataframe")
 df = DataFrame(names=shortlabels,medtimes=medtimes,relmedtimes=(medtimes/medtimes[1]),
                 avgtimes=avgtimes, std=stdtimes, cv=stdtimes./avgtimes)
 

@@ -84,7 +84,6 @@ function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
 
     # update rates
     update_dependent_rates!(p, u, params, t)
-    p.max_rate = maximum(p.cur_rates)
     nothing
 end
 
@@ -111,3 +110,21 @@ end
 
 
 ######################## SSA specific helper routines #########################
+
+function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    cur_rates   = p.cur_rates
+    sum_rate    = p.sum_rate
+    @inbounds for rx in dep_rxs
+        sum_rate -= cur_rates[rx]
+        @inbounds new_rate = calculate_jump_rate(p,u,params,t,rx)
+        sum_rate += new_rate
+        cur_rates[rx] = new_rate
+        if new_rate > p.max_rate
+            p.max_rate = new_rate
+        end
+    end
+
+    p.sum_rate = sum_rate
+    nothing
+end

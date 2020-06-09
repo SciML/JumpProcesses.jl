@@ -94,10 +94,11 @@ end
 "calculate the next jump / jump time"
 function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     # if no more events possible there is nothing to do
-    if is_total_rate_zero!(p)
+    sum_rate = p.sum_rate
+    if nomorejumps!(p, sum_rate)
         return nothing
     end
-    @unpack sum_rate, rng, cur_rates, max_rate = p
+    @unpack rng, cur_rates, max_rate = p
 
     num_rxs = length(cur_rates)
     rx = trunc(Integer, rand(rng) * num_rxs)+1
@@ -122,11 +123,10 @@ end
 
 function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    cur_rates   = p.cur_rates
-    sum_rate    = p.sum_rate
+    @unpack ma_jumps, rates, cu_rates, sum_rate
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        @inbounds new_rate = calculate_jump_rate(p,u,params,t,rx)
+        @inbounds new_rate = calculate_jump_rate(ma_jumps, rates, u,params,t,rx)
         sum_rate += new_rate
         cur_rates[rx] = new_rate
         if new_rate > p.max_rate

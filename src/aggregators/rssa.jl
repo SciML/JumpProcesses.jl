@@ -110,25 +110,25 @@ end
 
 # calculate the next jump / jump time
 @fastmath function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+    sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
-    if is_total_rate_zero!(p)
+    if nomorejumps!(p, sum_rate)
         return nothing
     end
     # next jump type
-    sum_rate    = p.sum_rate
-    crhigh      = p.cur_rate_high
+    @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
     #rerl        = one(sum_rate)
     rerl        = zero(sum_rate)
 
-    r      = rand(p.rng) * sum_rate
-    jidx   = linear_search(crhigh, r)
-    rerl  += randexp(p.rng)
-    @inbounds while rejectrx(p, u, jidx, params, t)
+    r      = rand(rng) * sum_rate
+    jidx   = linear_search(cur_rate_high, r)
+    rerl  += randexp(rng)
+    @inbounds while rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
-        r      = rand(p.rng) * sum_rate
-        jidx   = linear_search(crhigh, r)
+        r      = rand(rng) * sum_rate
+        jidx   = linear_search(cur_rate_high, r)
         #rerl *= rand(p.rng)
-        rerl += randexp(p.rng)
+        rerl += randexp(rng)
     end
     p.next_jump = jidx
 
@@ -144,32 +144,22 @@ end
 "Update rates"
 @inline function update_rates!(p::RSSAJumpAggregation, u, params, t)
     # update bracketing intervals
-    majumps     = p.ma_jumps
-    num_majumps = get_num_majumps(majumps)
     ubnds       = p.cur_u_bnds
     sum_rate    = p.sum_rate
-    crlow       = p.cur_rate_low
     crhigh      = p.cur_rate_high
-    bd          = p.bracket_data
-    ulow        = p.ulow
-    uhigh       = p.uhigh
+
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
 
         # if new u value is outside the bracketing interval
         if uval == zero(uval) || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
             # update u bracketing interval
-            ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(bd, uidx, uval)
+            ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]
                 sum_rate -= crhigh[jidx]
-                if jidx <= num_majumps
-                    crlow[jidx], crhigh[jidx] = get_majump_brackets(ulow, uhigh, jidx, majumps)
-                else
-                    j = jidx - num_majumps
-                    crlow[jidx], crhigh[jidx] = get_cjump_brackets(ulow, uhigh, p.rates[j], params, t)
-                end
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
                 sum_rate += crhigh[jidx]
             end
         end

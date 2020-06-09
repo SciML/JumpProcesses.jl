@@ -103,7 +103,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     sum_rate    = p.sum_rate
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        @inbounds cur_rates[rx] = calculate_jump_rate(p,u,params,t,rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, p.rates, u,params,t,rx)
         sum_rate += cur_rates[rx]
     end
 
@@ -113,23 +113,23 @@ end
 
 # Update state based on the p.next_jump
 @inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u)
-    num_ma_rates = get_num_majumps(p.ma_jumps)
-    if p.next_jump <= num_ma_rates # is next jump a mass action jump
+    @unpack ma_jumps, next_jump = p
+    num_ma_rates = get_num_majumps(ma_jumps)
+    if next_jump <= num_ma_rates # is next jump a mass action jump
         if u isa SVector
-            integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+            integrator.u = executerx(u, next_jump, ma_jumps)
         else
-            @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+            @inbounds executerx!(u, next_jump, ma_jumps)
         end
     else
-        idx = p.next_jump - num_ma_rates
+        idx = next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
     end
     return integrator.u
 end
 
-"check if the rate is 0 and if it is, make the next jump time Inf"
-@inline function is_total_rate_zero!(p) :: Bool
-    sum_rate = p.sum_rate
+"check if the total rate is 0 and if it is, make the next jump time Inf"
+@inline function nomorejumps!(p, sum_rate) :: Bool
     if sum_rate < eps(typeof(sum_rate))
         p.next_jump = 0
         p.next_jump_time = convert(typeof(sum_rate), Inf)
@@ -141,25 +141,25 @@ end
 "perform linear search of r over array. Output element j s.t. array[j-1] < r <= array[j]. Will error if no such r exists"
 @inline function linear_search(array, r)
     jidx = 1
-    parsum = array[jidx]
+    @inbounds parsum = array[jidx]
     while parsum < r
         jidx   += 1
-        parsum += array[jidx]
+        @inbounds parsum += array[jidx]
     end
     return jidx
 end
 
 "perform rejection sampling test"
-@inline function rejectrx(p, u, jidx, params, t)
+@inline function rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
     # rejection test
-    @inbounds r2     = rand(p.rng) * p.cur_rate_high[jidx]
-    @inbounds crlow  = p.cur_rate_low[jidx]
+    @inbounds r2     = rand(rng) * cur_rate_high[jidx]
+    @inbounds crlow  = cur_rate_low[jidx]
 
-    @inbounds if crlow > zero(crlow) && r2 <= crlow
+    if crlow > zero(crlow) && r2 <= crlow
         return false
     else
         # calculate actual propensity, split up for type stability
-        @inbounds crate = calculate_jump_rate(p,u,params,t,jidx)
+        crate = calculate_jump_rate(ma_jumps, rates, u, params, t, jidx)
         if crate > zero(crate) && r2 <= crate
             return false
         end
@@ -168,12 +168,11 @@ end
 end
 
 "update the jump rate, assuming p.rates is a vector of functions"
-@inline function calculate_jump_rate(p, u, params, t, rx)
-    ma_jumps = p.ma_jumps
+@inline function calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
-        return evalrxrate(u, rx, p.ma_jumps)
+        return evalrxrate(u, rx, ma_jumps)
     else
-        return p.rates[rx-num_majumps](u, params, t)
+        @inbounds return rates[rx - num_majumps](u, params, t)
     end
 end

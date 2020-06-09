@@ -150,16 +150,16 @@ end
 end
 
 "perform rejection sampling test"
-@inline function rejectrx(p, u, jidx, params, t)
+@inline function rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
     # rejection test
-    @inbounds r2     = rand(p.rng) * p.cur_rate_high[jidx]
-    @inbounds crlow  = p.cur_rate_low[jidx]
+    @inbounds r2     = rand(rng) * cur_rate_high[jidx]
+    @inbounds crlow  = cur_rate_low[jidx]
 
-    @inbounds if crlow > zero(crlow) && r2 <= crlow
+    if crlow > zero(crlow) && r2 <= crlow
         return false
     else
         # calculate actual propensity, split up for type stability
-        @inbounds crate = calculate_jump_rate(p,u,params,t,jidx)
+        crate = calculate_jump_rate(ma_jumps, rates, u, params, t, jidx)
         if crate > zero(crate) && r2 <= crate
             return false
         end
@@ -168,12 +168,11 @@ end
 end
 
 "update the jump rate, assuming p.rates is a vector of functions"
-@inline function calculate_jump_rate(p, u, params, t, rx)
-    ma_jumps = p.ma_jumps
+@inline function calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
         return evalrxrate(u, rx, ma_jumps)
     else
-        @inbounds return p.rates[rx-num_majumps](u, params, t)
+        @inbounds return rates[rx - num_majumps](u, params, t)
     end
 end

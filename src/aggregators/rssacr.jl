@@ -134,12 +134,12 @@ function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
         return nothing
     end
 
-    @unpack rt, rng, cur_rate_high = p
+    @unpack rt, ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
     rerl = zero(sum_rate)
 
     jidx    = sample(rt, cur_rate_high, rng)
     rerl   += randexp(rng)
-    @inbounds while rejectrx(p, u, jidx, params, t)
+    while rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
         jidx    = sample(rt, cur_rate_high, rng)
         rerl   += randexp(rng)

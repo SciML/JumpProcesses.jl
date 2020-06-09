@@ -121,18 +121,17 @@ end
     end
 
     # next jump type
-    rng = p.rng
-    crhigh      = p.cur_rate_high
+    @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
     #rerl        = one(sum_rate)
     rerl        = zero(sum_rate)
 
     r      = rand(rng) * sum_rate
-    jidx   = linear_search(crhigh, r)
+    jidx   = linear_search(cur_rate_high, r)
     rerl  += randexp(rng)
-    @inbounds while rejectrx(p, u, jidx, params, t)
+    @inbounds while rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
         r      = rand(rng) * sum_rate
-        jidx   = linear_search(crhigh, r)
+        jidx   = linear_search(cur_rate_high, r)
         #rerl *= rand(p.rng)
         rerl += randexp(rng)
     end

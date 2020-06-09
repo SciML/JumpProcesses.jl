@@ -104,12 +104,13 @@ end
 # recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
 function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    cur_rates   = p.cur_rates
+    @unpack cur_rates, rates, ma_jumps = p
+    
     @inbounds for rx in dep_rxs
         oldrate = cur_rates[rx]
 
         # update the jump rate
-        @inbounds cur_rates[rx] = calculate_jump_rate(p,u,params,t, rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)

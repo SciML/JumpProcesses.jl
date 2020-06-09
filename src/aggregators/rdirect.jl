@@ -2,8 +2,8 @@
 Direct with rejection sampling
 """
 
-num_reactions = 0
-num_rejections = 0
+#global num_reactions = 0
+#global num_rejections = 0
 
 mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
   next_jump::Int
@@ -95,7 +95,6 @@ end
 function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     # if no more events possible there is nothing to do
     if is_total_rate_zero!(p)
-        println("Average number of rejections per reaction: $(num_rejections/num_reactions)")
         return nothing
     end
     @unpack sum_rate, rng, cur_rates, max_rate = p
@@ -103,15 +102,18 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     num_rxs = length(cur_rates)
     rx = trunc(Integer, rand(rng) * num_rxs)+1
     while cur_rates[rx] < rand(rng) * max_rate
-        num_rejections += 1
+        # global num_rejections += 1
         rx = trunc(Integer, rand(rng) * num_rxs)+1
     end
+    # global num_reactions += 1
 
     p.next_jump = rx
 
     # update time to next jump
     p.next_jump_time = t + randexp(p.rng) / sum_rate
-    num_reactions += 1
+    # if (p.next_jump_time >= p.end_time)
+    #     println("Average number of rejections per reaction: $(num_rejections/num_reactions)")
+    # end
     nothing
 end
 

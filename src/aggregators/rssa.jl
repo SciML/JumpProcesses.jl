@@ -153,7 +153,7 @@ end
     ubnds       = p.cur_u_bnds
     sum_rate    = p.sum_rate
     crhigh      = p.cur_rate_high
-    
+
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
 
@@ -165,7 +165,7 @@ end
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]
                 sum_rate -= crhigh[jidx]
-                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(rx, p, params, t)
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
                 sum_rate += crhigh[jidx]
             end
         end

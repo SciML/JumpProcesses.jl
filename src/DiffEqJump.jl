@@ -17,6 +17,8 @@ abstract type AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 
+abstract type AbstractSpatialAggregatorAlgorithm <: AbstractAggregatorAlgorithm end
+
 import Base.Threads
 @static if VERSION < v"1.3"
   seed_multiplier() = Threads.threadid()

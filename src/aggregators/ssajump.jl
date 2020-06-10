@@ -99,17 +99,11 @@ end
 # requires dependency graph
 function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    num_majumps = get_num_majumps(p.ma_jumps)
     cur_rates   = p.cur_rates
     sum_rate    = p.sum_rate
-    majumps     = p.ma_jumps
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        if rx <= num_majumps
-            @inbounds cur_rates[rx] = evalrxrate(u, rx, majumps)
-        else
-            @inbounds cur_rates[rx] = p.rates[rx - num_majumps](u, params, t)
-        end
+        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, p.rates, u,params,t,rx)
         sum_rate += cur_rates[rx]
     end
 
@@ -119,16 +113,66 @@ end
 
 # Update state based on the p.next_jump
 @inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u)
-    num_ma_rates = get_num_majumps(p.ma_jumps)
-    if p.next_jump <= num_ma_rates # is next jump a mass action jump
+    @unpack ma_jumps, next_jump = p
+    num_ma_rates = get_num_majumps(ma_jumps)
+    if next_jump <= num_ma_rates # is next jump a mass action jump
         if u isa SVector
-            integrator.u = executerx(u, p.next_jump, p.ma_jumps)
+            integrator.u = executerx(u, next_jump, ma_jumps)
         else
-            @inbounds executerx!(u, p.next_jump, p.ma_jumps)
+            @inbounds executerx!(u, next_jump, ma_jumps)
         end
     else
-        idx = p.next_jump - num_ma_rates
-        @inbounds p.affects![idx](integrator)        
+        idx = next_jump - num_ma_rates
+        @inbounds p.affects![idx](integrator)
     end
     return integrator.u
+end
+
+"check if the total rate is 0 and if it is, make the next jump time Inf"
+@inline function nomorejumps!(p, sum_rate) :: Bool
+    if sum_rate < eps(typeof(sum_rate))
+        p.next_jump = 0
+        p.next_jump_time = convert(typeof(sum_rate), Inf)
+        return true
+    end
+    return false
+end
+
+"perform linear search of r over array. Output element j s.t. array[j-1] < r <= array[j]. Will error if no such r exists"
+@inline function linear_search(array, r)
+    jidx = 1
+    @inbounds parsum = array[jidx]
+    while parsum < r
+        jidx   += 1
+        @inbounds parsum += array[jidx]
+    end
+    return jidx
+end
+
+"perform rejection sampling test"
+@inline function rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
+    # rejection test
+    @inbounds r2     = rand(rng) * cur_rate_high[jidx]
+    @inbounds crlow  = cur_rate_low[jidx]
+
+    if crlow > zero(crlow) && r2 <= crlow
+        return false
+    else
+        # calculate actual propensity, split up for type stability
+        crate = calculate_jump_rate(ma_jumps, rates, u, params, t, jidx)
+        if crate > zero(crate) && r2 <= crate
+            return false
+        end
+    end
+    return true
+end
+
+"update the jump rate, assuming p.rates is a vector of functions"
+@inline function calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
+    num_majumps = get_num_majumps(ma_jumps)
+    if rx <= num_majumps
+        return evalrxrate(u, rx, ma_jumps)
+    else
+        @inbounds return rates[rx - num_majumps](u, params, t)
+    end
 end

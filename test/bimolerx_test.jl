@@ -32,16 +32,14 @@ reltol       = .01
 
 # model using mass action jumps
 # ids: A = 1, B = 2, C = 3
-reactstoch =
-[
+reactstoch = [
     [1 => 2],
     [2 => 1],
     [1 => 1, 2 => 1],
     [3 => 1],
     [3 => 3]
 ]
-netstoch =
-[
+netstoch = [
     [1 => -2, 2 => 1],
     [1 => 2, 2 => -1],
     [1 => -1, 2 => -1, 3 => 1],

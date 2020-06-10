@@ -24,7 +24,9 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: Abstr
     uhigh::T2V
   end
 
-function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; u::U, vartojumps_map=nothing, jumptovars_map=nothing, bracket_data=nothing, kwargs...) where {T,S,F1,F2,RNG,U}
+function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1,
+     affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; u::U, vartojumps_map=nothing,
+      jumptovars_map=nothing, bracket_data=nothing, kwargs...) where {T,S,F1,F2,RNG,U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         error("To use the RSSA algorithm a map from variables to depedent jumps must be supplied.")
@@ -117,7 +119,6 @@ end
     end
     # next jump type
     @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
-    #rerl        = one(sum_rate)
     rerl        = zero(sum_rate)
 
     r      = rand(rng) * sum_rate
@@ -127,13 +128,10 @@ end
         # sample candidate reaction
         r      = rand(rng) * sum_rate
         jidx   = linear_search(cur_rate_high, r)
-        #rerl *= rand(p.rng)
         rerl += randexp(rng)
     end
     p.next_jump = jidx
 
-    # update time to next jump
-    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
     p.next_jump_time = t + rerl / sum_rate
 
     nothing

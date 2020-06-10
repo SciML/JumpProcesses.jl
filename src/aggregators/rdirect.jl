@@ -120,7 +120,6 @@ end
 
 
 ######################## SSA specific helper routines #########################
-
 function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     @unpack ma_jumps, rates, cur_rates, sum_rate = p

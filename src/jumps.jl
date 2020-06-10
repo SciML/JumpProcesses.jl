@@ -53,11 +53,11 @@ struct MassActionJump{T,S,U} <: AbstractJump
   reactant_stoch::S
   net_stoch::U
 
-  function MassActionJump{T,S,U}(rates::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: AbstractVector, S, U}
+  function MassActionJump{T,S,U}(rates::T, rs_in::S, ns::U, scale_rates::Bool, useiszero::Bool) where {T <: AbstractVector, S, U}
     sr  = copy(rates)
     rs = copy(rs_in)
     for i in eachindex(rs)
-      if (length(rs[i]) == 1) && iszero(rs[i][1][1])
+      if useiszero && (length(rs[i]) == 1) && iszero(rs[i][1][1])
         rs[i] = typeof(rs[i])()
       end
     end
@@ -67,9 +67,9 @@ struct MassActionJump{T,S,U} <: AbstractJump
     end
     new(sr, rs, ns)
   end
-  function MassActionJump{T,S,U}(rate::T, rs_in::S, ns::U, scale_rates::Bool) where {T <: Number, S, U}
+  function MassActionJump{T,S,U}(rate::T, rs_in::S, ns::U, scale_rates::Bool, useiszero::Bool) where {T <: Number, S, U}
     rs = rs_in
-    if (length(rs) == 1) && iszero(rs[1][1])
+    if useiszero && (length(rs) == 1) && iszero(rs[1][1])
       rs = typeof(rs)()
     end
     sr = scale_rates ? scalerate(rate, rs) : rate
@@ -77,7 +77,7 @@ struct MassActionJump{T,S,U} <: AbstractJump
   end
 
 end
-MassActionJump(usr::T, rs::S, ns::U; scale_rates = true) where {T,S,U} = MassActionJump{T,S,U}(usr, rs, ns, scale_rates)
+MassActionJump(usr::T, rs::S, ns::U; scale_rates = true, useiszero = true) where {T,S,U} = MassActionJump{T,S,U}(usr, rs, ns, scale_rates, useiszero)
 
 @inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
 @inline get_num_majumps(maj::Nothing) = 0

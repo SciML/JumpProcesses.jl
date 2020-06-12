@@ -4,7 +4,7 @@ using ModelingToolkit
 using DiffEqBase
 using DiffEqJump
 using LightGraphs
-using SpecialGraphs
+#using SpecialGraphs
 
 const nedgess = 300
 const nvertss = 50

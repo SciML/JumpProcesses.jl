@@ -3,6 +3,11 @@ function reset_aggregated_jumps!(integrator,uprev = nothing)
      nothing
 end
 
+function reset_aggregated_jumps!(integrator,uprev,callback::Nothing)
+     nothing
+end
+
+
 function reset_aggregated_jumps!(integrator,uprev,callback::CallbackSet)
     if !isempty(callback.discrete_callbacks)
         reset_aggregated_jumps!(integrator,uprev,callback.discrete_callbacks...)

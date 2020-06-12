@@ -15,25 +15,15 @@ affect! = function (integrator)
 end
 jump2 = ConstantRateJump(rate,affect!)
 
-
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))
 jump_prob = JumpProblem(prob,Direct(),jump,jump2)
 integrator = init(jump_prob,FunctionMap())
-sol = solve(jump_prob,FunctionMap())
 
-jump_prob
-
-using Plots; plotly(); plot(sol)
-
-nums = Int[]
-@time for i in 1:1000
-  sol = solve(jump_prob,FunctionMap())
-  push!(nums,sol[end][1])
+condition(u,t,integrator) = t == 100
+function purge_affect!(integrator)
+  integrator.u[2] ÷= 10
+  reset_aggregated_jumps!(integrator)
 end
-mean(nums)
-
-using ProfileView
-@profile for i in 1:1000; solve(jump_prob,FunctionMap()); end
-Profile.clear()
-@profile for i in 1:1000; solve(jump_prob,FunctionMap()); end
-ProfileView.view()
+cb = DiscreteCallback(condition,purge_affect!,save_positions=(false,false))
+sol = solve(jump_prob,FunctionMap(),callback=cb,tstops=[100])
+sol = solve(jump_prob,SSAStepper(),callback=cb,tstops=[100])

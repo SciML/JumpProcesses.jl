@@ -37,6 +37,7 @@ include("aggregators/rssa.jl")
 include("aggregators/prioritytable.jl")
 include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
+include("aggregators/aggregated_api.jl")
 
 include("extended_jump_array.jl")
 include("problem.jl")
@@ -61,6 +62,8 @@ export RSSACR
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
 export init, solve, solve!
+
+export reset_aggregated_jumps!
 
 export ExtendedJumpArray
 

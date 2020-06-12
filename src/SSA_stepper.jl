@@ -142,7 +142,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     if !isempty(integrator.tstops) &&
         integrator.tstops_idx <= length(integrator.tstops) &&
         integrator.tstops[integrator.tstops_idx] < integrator.tstop
-        
+
         integrator.t = integrator.tstops[integrator.tstops_idx]
         integrator.tstops_idx += 1
     else
@@ -150,7 +150,12 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         integrator.cb.affect!(integrator)
     end
 
-    discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
+    if !(typeof(integrator.opts.callback.discrete_callbacks)<:Tuple{})
+        discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
+    else
+        saved_in_cb = false
+    end
+
     !saved_in_cb && savevalues!(integrator)
     nothing
 end

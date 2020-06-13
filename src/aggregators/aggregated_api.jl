@@ -16,19 +16,16 @@ function reset_aggregated_jumps!(integrator,uprev,callback::CallbackSet)
 end
 
 function reset_aggregated_jumps!(integrator,uprev,cb::DiscreteCallback,cbs...)
+    if typeof(cb.condition) <: AbstractSSAJumpAggregator
+        cb.condition(cb,integrator.u,integrator.t,integrator)
+    end
     reset_aggregated_jumps!(integrator,uprev,cbs...)
     nothing
 end
 
-reset_aggregated_jumps!(integrator,uprev,cb::DiscreteCallback) = nothing
-
-function reset_aggregated_jumps!(integrator,uprev,cb::AbstractSSAJumpAggregator,cbs...)
-    cb(cb,integrator.u,t,integrator) # This overload is the aggregated cb's init
-    reset_aggregated_jumps!(integrator,uprev,cbs...)
-    nothing
-end
-
-function reset_aggregated_jumps!(integrator,uprev,cb::AbstractSSAJumpAggregator)
-    reset_aggregated_jumps!(integrator,uprev,cbs...)
+function reset_aggregated_jumps!(integrator,uprev,cb::DiscreteCallback)
+    if typeof(cb.condition) <: AbstractSSAJumpAggregator
+        cb.condition(cb,integrator.u,integrator.t,integrator)
+    end
     nothing
 end

@@ -20,7 +20,6 @@ DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs:
 
 # condition for jump to occur
 @inline function (p::DirectJumpAggregation)(u, t, integrator)
-  @show p.next_jump_time,t
   p.next_jump_time == t
 end
 
@@ -35,9 +34,7 @@ end
 # setting up a new simulation
 function (p::DirectJumpAggregation)(dj, u, t, integrator) # initialize
   initialize!(p, integrator, u, integrator.p, t)
-  @show p.next_jump_time
   register_next_jump_time!(integrator, p, t)
-  @show integrator.t,p.next_jump_time
   nothing
 end
 

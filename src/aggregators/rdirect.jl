@@ -122,7 +122,7 @@ function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
         sum_rate += new_rate
         if new_rate > p.max_rate
             p.max_rate = new_rate
-        elseif abs(cur_rates[rx]-p.max_rate) < eps(typeof(p.max_rate))
+        elseif cur_rates[rx] == p.max_rate
             need_to_recalculate_max_rate = true
         end
         cur_rates[rx] = new_rate

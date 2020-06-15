@@ -115,11 +115,17 @@ function add_neighbor_reactions(spatial_jump_prob, assign_products)
         end
     end
 end
+
 ############ Helper functions ###############
-"given a bimolecular reaction, assign its products to the source and the target"
+"given a multimolecular reaction, assign its products to the source and the target"
 function assign_products(rx, full_net_stoichiometry, (source, source_species), (target, target_species))
     products = [s => c for (s, c) in full_net_stoichiometry if c > 0]
     return source => convert(typeof(full_net_stoichiometry), products), target => convert(typeof(full_net_stoichiometry), [])
+end
+
+"given a multimolecular reaction, get the rate"
+function get_rate(rx, (source, source_species), (target, target_species), rates)
+    rates[rx]
 end
 
 "given a spatial index, get (node index, original species index)."

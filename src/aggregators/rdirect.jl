@@ -100,7 +100,7 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
 
     num_rxs = length(cur_rates)
     rx = trunc(Integer, rand(rng) * num_rxs)+1
-    while cur_rates[rx] < rand(rng) * max_rate
+    @inbounds while cur_rates[rx] < rand(rng) * max_rate
         rx = trunc(Integer, rand(rng) * num_rxs)+1
     end
 
@@ -115,7 +115,7 @@ end
 function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     @unpack ma_jumps, rates, cur_rates, sum_rate = p
-    need_to_reculculate_max_rate = false
+    need_to_recalculate_max_rate = false
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
         @inbounds new_rate = calculate_jump_rate(ma_jumps, rates, u,params,t,rx)
@@ -123,11 +123,11 @@ function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
         if new_rate > p.max_rate
             p.max_rate = new_rate
         elseif abs(cur_rates[rx]-p.max_rate) < eps(typeof(p.max_rate))
-            need_to_reculculate_max_rate = false
+            need_to_recalculate_max_rate = true
         end
         cur_rates[rx] = new_rate
     end
-    if need_to_reculculate_max_rate
+    if need_to_recalculate_max_rate
         p.max_rate = maximum(p.cur_rates)
     end
 

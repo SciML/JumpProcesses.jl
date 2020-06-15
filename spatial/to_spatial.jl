@@ -32,7 +32,7 @@ jump_prob = JumpProblem(prob, NRM(), majumps, vartojumps_map=spec_to_dep_jumps, 
 
 # Graph setup
 num_nodes = 3
-connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes]
+connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes] # this is a cycle graph
 
 diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob.prob.u0))
 diff_rates_for_edge[1] = 0.01
@@ -55,7 +55,7 @@ diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degree
 
 diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
 """
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob)
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob; assign_products = nothing)
     num_nodes = length(connectivity_list)
     sum_degrees = (length ∘ vec ∘ hcat)(connectivity_list...)
     massaction_jump = jump_prob.massaction_jump
@@ -103,7 +103,24 @@ function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob)
     JumpProblem(spatial_prob, jump_prob.aggregator, spatial_majumps, save_positions=(false,false), vartojumps_map=spatial_spec_to_dep_jumps, jumptovars_map=spatial_jump_to_dep_specs)
 end
 
-# Helper functions:
+############## Allow reactions between neighboring nodes ##############
+"given a spatial problem that is an output of to_spatial_jump_prob(), add reactions between neighboring nodes"
+function add_neighbor_reactions(spatial_jump_prob, assign_products)
+    for (i, ((source, target_index), rx)) in enumerate(Iterators.product(source_target_index_pairs, 1:num_majumps))
+        rx_rates[i+num_spacial_majumps] = diff_rates[source][target_index][species]
+        reaction_stoichiometries[i+num_spacial_majumps], net_stoichiometries[i+num_spacial_majumps] = get_diff_stoichiometries(source, connectivity_list[source][target_index], species, connectivity_list, num_species)
+        spatial_jump_to_dep_specs[i+num_spacial_majumps] = [s for (s, c) in net_stoichiometries[i+num_spacial_majumps]]
+        for (s,c) in reaction_stoichiometries[i+num_spacial_majumps]
+            push!(spatial_spec_to_dep_jumps[s], i+num_spacial_majumps)
+        end
+    end
+end
+############ Helper functions ###############
+"given a bimolecular reaction, assign its products to the source and the target"
+function assign_products(rx, full_net_stoichiometry, (source, source_species), (target, target_species))
+    products = [s => c for (s, c) in full_net_stoichiometry if c > 0]
+    return source => convert(typeof(full_net_stoichiometry), products), target => convert(typeof(full_net_stoichiometry), [])
+end
 
 "given a spatial index, get (node index, original species index)."
 function from_spatial_spec(ind, num_species)

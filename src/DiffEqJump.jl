@@ -38,6 +38,7 @@ include("aggregators/prioritytable.jl")
 include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
+include("aggregators/aggregated_api.jl")
 
 include("extended_jump_array.jl")
 include("problem.jl")

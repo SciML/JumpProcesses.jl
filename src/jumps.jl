@@ -14,6 +14,11 @@ struct VariableRateJump{R,F,I,T,T2} <: AbstractJump
   reltol::T2
 end
 
+"""
+Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of
+coupled chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
+DOI:10.1063/1.1835951
+"""
 VariableRateJump(rate,affect!;
                    idxs = nothing,
                    rootfind=true,

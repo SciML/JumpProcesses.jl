@@ -1,5 +1,11 @@
 using DiffEqJump, DiffEqBase, Parameters
 
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob)
+    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, jump_prob.aggregator)
+end
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, assign_products, get_rate)
+    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, jump_prob.aggregator, assign_products, get_rate)
+end
 """
 Construct a spatial jump problem, where diffusions are represented as reactions.
 Given:
@@ -16,7 +22,7 @@ diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degree
 
 diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
 """
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob)
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, alg)
     num_nodes = length(connectivity_list)
     sum_degrees = (length ∘ vec ∘ hcat)(connectivity_list...)
     massaction_jump = jump_prob.massaction_jump
@@ -61,7 +67,7 @@ function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob)
     # NOTE: arbitrary decision to copy the original u0
     starting_state = vec(hcat([prob.u0 for i in 1:num_nodes]...))
     spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
-    JumpProblem(spatial_prob, jump_prob.aggregator, spatial_majumps, save_positions=(false,false), vartojumps_map=spatial_spec_to_dep_jumps, jumptovars_map=spatial_jump_to_dep_specs)
+    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions=(false,false), vartojumps_map=spatial_spec_to_dep_jumps, jumptovars_map=spatial_jump_to_dep_specs)
 end
 
 ############## Allow reactions between neighboring nodes ##############
@@ -83,7 +89,7 @@ diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degree
 
 diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
 """
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, assign_products, get_rate)
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, alg, assign_products, get_rate)
     num_nodes = length(connectivity_list)
     sum_degrees = (length ∘ vec ∘ hcat)(connectivity_list...)
     massaction_jump = jump_prob.massaction_jump
@@ -151,7 +157,7 @@ function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, assign_p
     spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
     spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
     rxs_to_dep_spec = rxs_to_dep_spec_map(spatial_majumps)
-    JumpProblem(spatial_prob, jump_prob.aggregator, spatial_majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
+    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
 end
 
 ############ Helper functions ###############

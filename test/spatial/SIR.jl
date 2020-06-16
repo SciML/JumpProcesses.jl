@@ -1,4 +1,8 @@
 using DiffEqJump, DiffEqBase, Parameters, Plots
+using LightGraphs, BenchmarkTools
+
+doplot = true
+dobenchmark = false
 
 # functions to specify reactions between neighboring nodes
 "given a multimolecular reaction, assign its products to the source and the target"
@@ -28,7 +32,7 @@ spec_to_dep_jumps = [[1],[1,2],convert(Array{Int64,1}, [])]
 jump_to_dep_specs = [[1,2],[2,3]]
 rates = [1e-4, 0.01]
 majumps = MassActionJump(rates, reactstoch, netstoch)
-prob = DiscreteProblem([999,1,0],(0.0,250.0), rates)
+prob = DiscreteProblem([999,1,0],(0.0,20.0), rates)
 jump_prob_SIR = JumpProblem(prob, RSSA(), majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 
 # Graph setup for SIR model
@@ -42,31 +46,60 @@ diff_rates_for_edge[2] = 0.1
 diff_rates_for_edge[3] = 0.1
 diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
-# Solve and plot: neighbors not reacting
-spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR)
-sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
-labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
-trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
-plot1 = plot(sol.t, trajectories[1], label = labels[1])
-for i in 2:length(trajectories)
-    plot!(plot1, sol.t, trajectories[i], label = labels[i])
-end
-title!("SIR with neighbors not allowed to react")
-xaxis!("time")
-yaxis!("number")
+if doplot
+    # Solve and plot: neighbors not reacting
+    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, jump_prob_SIR.aggregator)
+    sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
+    labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
+    trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
+    plot1 = plot(sol.t, trajectories[1], label = labels[1])
+    for i in 2:length(trajectories)
+        plot!(plot1, sol.t, trajectories[i], label = labels[i])
+    end
+    title!("SIR with neighbors not allowed to react")
+    xaxis!("time")
+    yaxis!("number")
 
-# Solve and plot: neighbors reacting
-spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, assign_products, get_rate)
-sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
-labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
-trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
-plot2 = plot(sol.t, trajectories[1], label = labels[1])
-for i in 2:length(trajectories)
-    plot!(plot2, sol.t, trajectories[i], label = labels[i])
-end
-title!("SIR with neighbors allowed to react")
-xaxis!("time")
-yaxis!("number")
+    # Solve and plot: neighbors reacting
+    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, jump_prob_SIR.aggregator, assign_products, get_rate)
+    sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
+    labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
+    trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
+    plot2 = plot(sol.t, trajectories[1], label = labels[1])
+    for i in 2:length(trajectories)
+        plot!(plot2, sol.t, trajectories[i], label = labels[i])
+    end
+    title!("SIR with neighbors allowed to react")
+    xaxis!("time")
+    yaxis!("number")
 
-layout = @layout [a ; b]
-plot(plot1, plot2, layout = layout)
+    layout = @layout [a ; b]
+    plot(plot1, plot2, layout = layout)
+end
+
+################# Benchmarking ################
+if dobenchmark
+    "construct the connectivity list of light graph g"
+    function get_connectivity_list(g)
+        a = adjacency_matrix(g)
+        [[c for c in 1:size(a)[2] if a[r,c] != zero(a[1])] for r in 1:size(a)[1]]
+    end
+
+    alg = RSSA()
+    num_nodes = 500
+    g = random_regular_digraph(num_nodes, 5)
+    connectivity_list = get_connectivity_list(g)
+    println("Have $num_nodes nodes. Using $alg.")
+
+    diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob_SIR.prob.u0))
+    diff_rates_for_edge[1] = 0.01
+    diff_rates_for_edge[2] = 0.01
+    diff_rates_for_edge[3] = 0.01
+    diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
+    println("Setting up the problem: ")
+    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
+    @btime to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
+    sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
+    println("Solving the problem: ")
+    @btime solve(spatial_SIR, SSAStepper(), saveat = 1.)
+end

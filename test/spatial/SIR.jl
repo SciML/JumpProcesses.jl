@@ -1,7 +1,7 @@
 using DiffEqJump, DiffEqBase, Parameters, Plots
 using LightGraphs, BenchmarkTools
 
-doplot = true
+doplot = false
 dobenchmark = true
 
 # functions to specify reactions between neighboring nodes
@@ -78,6 +78,15 @@ if doplot
 end
 
 ################# Benchmarking ################
+function benchmark_n_times(jump_prob, n)
+    @elapsed solve(jump_prob, SSAStepper(), saveat = 10.)
+    times = []
+    for i in 1:n
+        push!(times, @elapsed solve(jump_prob, SSAStepper(), saveat = 10.))
+    end
+    times
+end
+
 if dobenchmark
     "construct the connectivity list of light graph g"
     function get_connectivity_list(g)
@@ -86,6 +95,7 @@ if dobenchmark
     end
 
     num_nodes = 500
+    println("Have $num_nodes nodes.")
     g = random_regular_digraph(num_nodes, 5)
     connectivity_list = get_connectivity_list(g)
 
@@ -96,20 +106,10 @@ if dobenchmark
     diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
     println("Starting benchmark")
     for alg in [RSSA(), RSSACR(), DirectCR(), NRM()]
-        println("Have $num_nodes nodes. Using $alg.")
         spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
-        solve(spatial_SIR, SSAStepper(), saveat = 10.)
-        median_time = median(benchmark_n_times(spatial_SIR, 10))
+        println("Using $(spatial_SIR.aggregator)")
+        median_time = median(benchmark_n_times(spatial_SIR, 5))
         println("Solving the problem took $median_time seconds.")
-        @btime solve(spatial_SIR, SSAStepper(), saveat = 10.)
+        @btime solve($spatial_SIR, $(SSAStepper()), saveat = 10.)
     end
-end
-
-function benchmark_n_times(jump_prob, n)
-    @elapsed solve(spatial_SIR, SSAStepper(), saveat = 10.)
-    times = []
-    for i in 1:n
-        push!(times, @elapsed solve(spatial_SIR, SSAStepper(), saveat = 10.))
-    end
-    times
 end

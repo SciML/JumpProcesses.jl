@@ -46,6 +46,8 @@ include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 
+include("spatial/to_spatial.jl")
+
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
        JumpSet
 
@@ -63,5 +65,7 @@ export get_num_majumps, needs_depgraph, needs_vartojumps_map
 export init, solve, solve!
 
 export ExtendedJumpArray
+
+export to_spatial_jump_prob
 
 end # module

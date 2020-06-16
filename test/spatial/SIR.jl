@@ -2,7 +2,7 @@ using DiffEqJump, DiffEqBase, Parameters, Plots
 using LightGraphs, BenchmarkTools
 
 doplot = true
-dobenchmark = false
+dobenchmark = true
 
 # functions to specify reactions between neighboring nodes
 "given a multimolecular reaction, assign its products to the source and the target"
@@ -85,21 +85,31 @@ if dobenchmark
         [[c for c in 1:size(a)[2] if a[r,c] != zero(a[1])] for r in 1:size(a)[1]]
     end
 
-    alg = RSSA()
     num_nodes = 500
     g = random_regular_digraph(num_nodes, 5)
     connectivity_list = get_connectivity_list(g)
-    println("Have $num_nodes nodes. Using $alg.")
 
     diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob_SIR.prob.u0))
     diff_rates_for_edge[1] = 0.01
     diff_rates_for_edge[2] = 0.01
     diff_rates_for_edge[3] = 0.01
     diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
-    println("Setting up the problem: ")
-    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
-    @btime to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
-    sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
-    println("Solving the problem: ")
-    @btime solve(spatial_SIR, SSAStepper(), saveat = 1.)
+    println("Starting benchmark")
+    for alg in [RSSA(), RSSACR(), DirectCR(), NRM()]
+        println("Have $num_nodes nodes. Using $alg.")
+        spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
+        solve(spatial_SIR, SSAStepper(), saveat = 10.)
+        median_time = median(benchmark_n_times(spatial_SIR, 10))
+        println("Solving the problem took $median_time seconds.")
+        @btime solve(spatial_SIR, SSAStepper(), saveat = 10.)
+    end
+end
+
+function benchmark_n_times(jump_prob, n)
+    @elapsed solve(spatial_SIR, SSAStepper(), saveat = 10.)
+    times = []
+    for i in 1:n
+        push!(times, @elapsed solve(spatial_SIR, SSAStepper(), saveat = 10.))
+    end
+    times
 end

@@ -3,7 +3,7 @@
 # Further suppose that for each edge and for each species there is a diffusion constant/rate
 
 using DiffEqJump, DiffEqBase, Parameters
-# Jump problem setup
+# Gene expression model
 tf           = 1000.0
 u0           = [1,0,0,0]
 
@@ -30,27 +30,88 @@ majumps = MassActionJump(rates, reactstoch, netstoch)
 prob = DiscreteProblem(u0, (0.0, tf), rates)
 jump_prob_gene_expr = JumpProblem(prob, NRM(), majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 
-
-rs = @reaction_network begin
-  1e-4, S + I --> 2I
-  0.01,  I --> R
-end
-prob = DiscreteProblem([999,1,0],(0.0,250.0))
-jump_prob_SIR = GillespieProblem(prob,Direct(),rs)
-
-# Example of graph setup
+# Graph setup for gene expression model
 num_nodes = 3
 connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes] # this is a cycle graph
 
-diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob.prob.u0))
+diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob_gene_expr.prob.u0))
 diff_rates_for_edge[1] = 0.01
 diff_rates_for_edge[2] = 0.01
 diff_rates_for_edge[3] = 1.0
 diff_rates_for_edge[4] = 1.0
 diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
-################## SET UP SPATIAL PROBLEM ################
+spatial_gene_expr = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_gene_expr)
 
+# SIR model
+reactstoch = [
+    [1 => 1, 2 => 1],
+    [2 => 1],
+]
+netstoch = [
+    [1 => -1, 2 => 1],
+    [2 => -1, 3 => 1],
+]
+spec_to_dep_jumps = [[1],[1,2],convert(Array{Int64,1}, [])]
+jump_to_dep_specs = [[1,2],[2,3]]
+rates = [1e-4, 0.01]
+majumps = MassActionJump(rates, reactstoch, netstoch)
+prob = DiscreteProblem([999,1,0],(0.0,250.0), rates)
+jump_prob_SIR = JumpProblem(prob, NRM(), majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+
+# Graph setup for SIR model
+num_nodes = 3
+connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes] # this is a cycle graph
+
+diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob_SIR.prob.u0))
+diff_rates_for_edge[1] = 0.1
+diff_rates_for_edge[2] = 0.1
+diff_rates_for_edge[3] = 0.1
+diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
+
+# Solve and plot: neighbors not reacting
+spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR)
+sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
+labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
+trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
+p = plot(sol.t, trajectories[1], label = labels[1])
+for i in 2:length(trajectories)
+    plot!(p, sol.t, trajectories[i], label = labels[i])
+end
+title!("SIR with neighbors not allowed to react")
+xaxis!("time")
+yaxis!("number")
+display(p)
+
+# Solve and plot: neighbors reacting
+spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, assign_products, get_rate)
+sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
+labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
+trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
+p = plot(sol.t, trajectories[1], label = labels[1])
+for i in 2:length(trajectories)
+    plot!(p, sol.t, trajectories[i], label = labels[i])
+end
+title!("SIR with neighbors allowed to react")
+xaxis!("time")
+yaxis!("number")
+display(p)
+
+"given a multimolecular reaction, assign its products to the source and the target"
+function assign_products(rx, massaction_jump, (node1, species1), (node2, species2))
+    if species1 == 2
+        return [2 => 2], convert(typeof([2 => 2]), [])
+    else
+        return convert(typeof([2 => 2]), []), [2 => 2]
+    end
+end
+
+"given a multimolecular reaction, get the rate"
+function get_rate(rx, (source, source_species), (target, target_species), rates)
+    rates[rx]
+end
+
+################## SET UP SPATIAL PROBLEM ################
 """
 Construct a spatial jump problem, where diffusions are represented as reactions.
 Given:
@@ -116,17 +177,6 @@ function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob)
 end
 
 ############## Allow reactions between neighboring nodes ##############
-"given a multimolecular reaction, assign its products to the source and the target"
-function assign_products(rx, full_net_stoichiometry, (node1, species1), (node2, species2))
-    products = [s => c for (s, c) in full_net_stoichiometry if c > 0]
-    return products, convert(typeof(full_net_stoichiometry), [])
-end
-
-"given a multimolecular reaction, get the rate"
-function get_rate(rx, (source, source_species), (target, target_species), rates)
-    rates[rx]
-end
-
 """
 Construct a jump problem, where diffusions are represented as reactions, and species in neighboring nodes can react.
 Given:
@@ -145,76 +195,76 @@ diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degree
 
 diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
 """
-#function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, assign_products, get_rate)
-num_nodes = length(connectivity_list)
-sum_degrees = (length ∘ vec ∘ hcat)(connectivity_list...)
-massaction_jump = jump_prob.massaction_jump
-@unpack reactant_stoch, net_stoch = massaction_jump
-num_majumps = get_num_majumps(massaction_jump)
-num_species = length(jump_prob.prob.u0)
-prob = jump_prob.prob
-bimolecular_rxs_with_same_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_same_reactants(reactstoch[rx])]
-bimolecular_rxs_with_different_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_different_reactants(reactstoch[rx])]
-num_bimolecular_rxs_with_same_reactants = length(bimolecular_rxs_with_same_reactants)
-num_bimolecular_rxs_with_different_reactants = length(bimolecular_rxs_with_different_reactants)
-rxs_reactants = [Tuple([s for (s,c) in reactant_stoch[rx]]) for rx in 1:num_majumps]
-full_net_stoichiometries = [get_full_net_stoichiometry(rx, reactant_stoch, net_stoch) for rx in 1:num_majumps]
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, assign_products, get_rate)
+    num_nodes = length(connectivity_list)
+    sum_degrees = (length ∘ vec ∘ hcat)(connectivity_list...)
+    massaction_jump = jump_prob.massaction_jump
+    @unpack reactant_stoch, net_stoch = massaction_jump
+    num_majumps = get_num_majumps(massaction_jump)
+    num_species = length(jump_prob.prob.u0)
+    prob = jump_prob.prob
+    bimolecular_rxs_with_same_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_same_reactants(reactstoch[rx])]
+    bimolecular_rxs_with_different_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_different_reactants(reactstoch[rx])]
+    num_bimolecular_rxs_with_same_reactants = length(bimolecular_rxs_with_same_reactants)
+    num_bimolecular_rxs_with_different_reactants = length(bimolecular_rxs_with_different_reactants)
+    rxs_reactants = [Tuple([s for (s,c) in reactant_stoch[rx]]) for rx in 1:num_majumps]
+    full_net_stoichiometries = [get_full_net_stoichiometry(rx, reactant_stoch, net_stoch) for rx in 1:num_majumps]
 
-# spatial constants
-neighboring_pairs = get_neiboring_pairs(connectivity_list)
-num_spacial_majumps = num_nodes * num_majumps + length(neighboring_pairs) * (num_bimolecular_rxs_with_same_reactants + 2*num_bimolecular_rxs_with_different_reactants)
-num_spatial_species = num_species*num_nodes
-source_target_index_pairs = get_source_target_index_pairs(connectivity_list)
-num_spatial_rxs = num_spacial_majumps + num_species*sum_degrees
+    # spatial constants
+    neighboring_pairs = get_neiboring_pairs(connectivity_list)
+    num_spacial_majumps = num_nodes * num_majumps + length(neighboring_pairs) * (num_bimolecular_rxs_with_same_reactants + 2*num_bimolecular_rxs_with_different_reactants)
+    num_spatial_species = num_species*num_nodes
+    source_target_index_pairs = get_source_target_index_pairs(connectivity_list)
+    num_spatial_rxs = num_spacial_majumps + num_species*sum_degrees
 
-# preallocate stoichiometry and rates arrays
-rx_rates = Array{Float64,1}(undef, num_spatial_rxs)
-reaction_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
-net_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
+    # preallocate stoichiometry and rates arrays
+    rx_rates = Array{Float64,1}(undef, num_spatial_rxs)
+    reaction_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
+    net_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
 
-# make stoichiometries for reactions within nodes
-for (i, (node, rx)) in enumerate(Iterators.product(1:num_nodes, 1:num_majumps))
-    rx_rates[i] = prob.p[rx]
-    reaction_stoichiometries[i], net_stoichiometries[i] = get_rx_stoichiometries(node, rx, massaction_jump, num_species)
-end
-
-# make stoichiometries for bimolecular_rxs_with_same_reactants
-for (i, ((node1, node2), rx)) in enumerate(Iterators.product(neighboring_pairs, bimolecular_rxs_with_same_reactants))
-    ind = i + num_nodes * num_majumps
-    rx_rates[ind] = get_rate(rx, (node1, source_species), (node2, target_species), prob.p)
-    reactant1, reactant2 = rxs_reactants[rx]
-    products1, products2 = assign_products(rx, get_full_net_stoichiometry(rx, reactant_stoch, net_stoch), (node1, reactant1), (node2, reactant2))
-    reaction_stoichiometries[ind], net_stoichiometries[ind] = get_bimolecular_rx_stoichiometries((node1, reactant1, products1), (node2, reactant2, products2), rx, massaction_jump, num_species)
-end
-
-# make stoichiometries for bimolecular_rxs_with_different_reactants
-for (i, (j,(node1, node2), rx)) in enumerate(Iterators.product(0:1, neighboring_pairs, bimolecular_rxs_with_different_reactants))
-    ind = i + num_nodes * num_majumps + length(neighboring_pairs) * num_bimolecular_rxs_with_same_reactants
-    if j == 0 # species 1 in reactants is in node 1, and species 2 in reactants is in node 2
-        reactant1, reactant2 = rxs_reactants[rx]
-    else # species 1 in reactants is in node 2, and species 2 in reactants is in node 1
-        reactant1, reactant2 = reverse(rxs_reactants[rx])
+    # make stoichiometries for reactions within nodes
+    for (i, (node, rx)) in enumerate(Iterators.product(1:num_nodes, 1:num_majumps))
+        rx_rates[i] = prob.p[rx]
+        reaction_stoichiometries[i], net_stoichiometries[i] = get_rx_stoichiometries(node, rx, massaction_jump, num_species)
     end
-    products1, products2 = assign_products(rx, get_full_net_stoichiometry(rx, reactant_stoch, net_stoch), (node1, reactant1), (node2, reactant2))
-    reaction_stoichiometries[ind], net_stoichiometries[ind] = get_bimolecular_rx_stoichiometries((node1, reactant1, products1), (node2, reactant2, products2), rx, massaction_jump, num_species)
-    rx_rates[ind] = get_rate(rx, (node1, reactant1), (node2, reactant2), prob.p)
+
+    # make stoichiometries for bimolecular_rxs_with_same_reactants
+    for (i, ((node1, node2), rx)) in enumerate(Iterators.product(neighboring_pairs, bimolecular_rxs_with_same_reactants))
+        ind = i + num_nodes * num_majumps
+        rx_rates[ind] = get_rate(rx, (node1, source_species), (node2, target_species), prob.p)
+        reactant1, reactant2 = rxs_reactants[rx]
+        products1, products2 = assign_products(rx, massaction_jump, (node1, reactant1), (node2, reactant2))
+        reaction_stoichiometries[ind], net_stoichiometries[ind] = get_bimolecular_rx_stoichiometries((node1, reactant1, products1), (node2, reactant2, products2), rx, massaction_jump, num_species)
+    end
+
+    # make stoichiometries for bimolecular_rxs_with_different_reactants
+    for (i, (j,(node1, node2), rx)) in enumerate(Iterators.product(0:1, neighboring_pairs, bimolecular_rxs_with_different_reactants))
+        ind = i + num_nodes * num_majumps + length(neighboring_pairs) * num_bimolecular_rxs_with_same_reactants
+        if j == 0 # species 1 in reactants is in node 1, and species 2 in reactants is in node 2
+            reactant1, reactant2 = rxs_reactants[rx]
+        else # species 1 in reactants is in node 2, and species 2 in reactants is in node 1
+            reactant1, reactant2 = reverse(rxs_reactants[rx])
+        end
+        products1, products2 = assign_products(rx, massaction_jump, (node1, reactant1), (node2, reactant2))
+        reaction_stoichiometries[ind], net_stoichiometries[ind] = get_bimolecular_rx_stoichiometries((node1, reactant1, products1), (node2, reactant2, products2), rx, massaction_jump, num_species)
+        rx_rates[ind] = get_rate(rx, (node1, reactant1), (node2, reactant2), prob.p)
+    end
+
+    # make stoichiometries for diffusions
+    for (i, ((source, target_index), species)) in enumerate(Iterators.product(source_target_index_pairs, 1:num_species))
+        rx_rates[i+num_spacial_majumps] = diff_rates[source][target_index][species]
+        reaction_stoichiometries[i+num_spacial_majumps], net_stoichiometries[i+num_spacial_majumps] = get_diff_stoichiometries(source, connectivity_list[source][target_index], species, connectivity_list, num_species)
+    end
+
+    spatial_majumps = MassActionJump(rx_rates, reaction_stoichiometries, net_stoichiometries)
+
+    # NOTE: arbitrary decision to copy the original u0
+    starting_state = vec(hcat([prob.u0 for i in 1:num_nodes]...))
+    spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
+    spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
+    rxs_to_dep_spec = rxs_to_dep_spec_map(spatial_majumps)
+    JumpProblem(spatial_prob, jump_prob.aggregator, spatial_majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
 end
-
-# make stoichiometries for diffusions
-for (i, ((source, target_index), species)) in enumerate(Iterators.product(source_target_index_pairs, 1:num_species))
-    rx_rates[i+num_spacial_majumps] = diff_rates[source][target_index][species]
-    reaction_stoichiometries[i+num_spacial_majumps], net_stoichiometries[i+num_spacial_majumps] = get_diff_stoichiometries(source, connectivity_list[source][target_index], species, connectivity_list, num_species)
-end
-
-spatial_majumps = MassActionJump(rx_rates, reaction_stoichiometries, net_stoichiometries)
-
-# NOTE: arbitrary decision to copy the original u0
-starting_state = vec(hcat([prob.u0 for i in 1:num_nodes]...))
-spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
-spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
-rxs_to_dep_spec = rxs_to_dep_spec_map(spatial_majumps)
-JumpProblem(spatial_prob, jump_prob.aggregator, spatial_majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
-#end
 
 ############ Helper functions ###############
 "get the stoichiometries for bimolecular reaction rx (non-spatial index) between node1 and node2."
@@ -222,7 +272,7 @@ function get_bimolecular_rx_stoichiometries((node1, reactant1, products1), (node
     @assert is_bimolecular(massaction_jump.reactant_stoch[rx])
     @assert vcat(products1, products2) == [s => c for (s,c) in get_full_net_stoichiometry(rx, massaction_jump.reactant_stoch, massaction_jump.net_stoch) if c > 0]
     [to_spatial_spec(node1, reactant1, num_species) => 1, to_spatial_spec(node2, reactant2, num_species) => 1],
-    vcat([to_spatial_spec(node1, product, num_species) => coeff for (product, coeff) in products1], [to_spatial_spec(node2, product, num_species) => coeff for (product, coeff) in products2])
+    vcat([to_spatial_spec(node1, reactant1, num_species) => -1], [to_spatial_spec(node2, reactant2, num_species) => -1], [to_spatial_spec(node1, product, num_species) => coeff for (product, coeff) in products1], [to_spatial_spec(node2, product, num_species) => coeff for (product, coeff) in products2])
 end
 
 "make a map from reactions to dependent species"
@@ -284,15 +334,15 @@ end
 
 "get the full net stoichiometry vector of massaction reaction rx, with all reactants and products, not only those whose number changes"
 function get_full_net_stoichiometry(rx, reactstoch, netstoch)
-    full_net_stoichiometry = copy(netstoch[rx])
+    full_net_stoichiometry = deepcopy(netstoch[rx])
     for (s, c) in reactstoch[rx]
-        index = findfirst(x-> x[1] == s, netstoch[rx])
+        index = findfirst(x-> x[1] == s, full_net_stoichiometry)
         if index == nothing
             push!(full_net_stoichiometry, s => -c)
             push!(full_net_stoichiometry, s => c)
-        elseif netstoch[rx][index][2] != -c
-            netstoch[rx][index] = (s,-c)
-            push!(full_net_stoichiometry, s => netstoch[rx][index][2] - c)
+        elseif full_net_stoichiometry[index][2] != -c
+            push!(full_net_stoichiometry, s => full_net_stoichiometry[index][2] + c)
+            full_net_stoichiometry[index] = s => -c
         end
     end
     full_net_stoichiometry

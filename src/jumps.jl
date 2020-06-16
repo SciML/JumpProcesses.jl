@@ -202,19 +202,3 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
 
   rates, affects!
 end
-
-# helper method to get the 'full' stoichiometry
-"get the full net stoichiometry vector of reaction rx, with all reactants and products, not only those whose number changes"
-function get_full_net_stoichiometry(rx, reactstoch, netstoch)
-    full_net_stoichiometry = copy(netstoch)
-    for (s, c) in reactstoch
-        index = findfirst(x-> x[1] == 1, netstoch)
-        stoch = netstoch[index][2]
-        coeff_difference = c + stoch
-        if coeff_difference != zero(coeff_difference)
-            full_net_stoichiometry[index] = s => -c
-            push!(full_net_stoichiometry, s => coeff_difference)
-        end
-    end
-    full_net_stoichiometry
-end

@@ -139,6 +139,7 @@ end
 DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
+    doaffect = false
     if !isempty(integrator.tstops) &&
         integrator.tstops_idx <= length(integrator.tstops) &&
         integrator.tstops[integrator.tstops_idx] < integrator.tstop
@@ -147,8 +148,22 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         integrator.tstops_idx += 1
     else
         integrator.t = integrator.tstop
-        integrator.cb.affect!(integrator)
+        doaffect = true # delay effect until after saveat
     end
+
+    @inbounds if integrator.saveat !== nothing && !isempty(integrator.saveat)
+        # Split to help prediction
+        while integrator.cur_saveat < length(integrator.saveat) &&
+           integrator.saveat[integrator.cur_saveat] < integrator.t
+
+            saved = true
+            push!(integrator.sol.t,integrator.saveat[integrator.cur_saveat])
+            push!(integrator.sol.u,copy(integrator.u))
+            integrator.cur_saveat += 1
+        end
+    end
+
+    doaffect && integrator.cb.affect!(integrator)
 
     if !(typeof(integrator.opts.callback.discrete_callbacks)<:Tuple{})
         discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
@@ -162,23 +177,16 @@ end
 
 function DiffEqBase.savevalues!(integrator::SSAIntegrator,force=false)
     saved, savedexactly = false, false
+
+    # No saveat in here since it would only use previous values,
+    # so in the specific case of SSAStepper it's already handled
+
     if integrator.save_everystep || force
         savedexactly = true
         push!(integrator.sol.t,integrator.t)
         push!(integrator.sol.u,copy(integrator.u))
     end
-    @inbounds if integrator.saveat !== nothing && !isempty(integrator.saveat)
-        # Split to help prediction
-        while integrator.cur_saveat < length(integrator.saveat) &&
-           integrator.saveat[integrator.cur_saveat] < integrator.t
 
-            saved = true
-            push!(integrator.sol.t,integrator.saveat[integrator.cur_saveat])
-            push!(integrator.sol.u,copy(integrator.u))
-            integrator.cur_saveat += 1
-
-        end
-    end
     saved, savedexactly
 end
 

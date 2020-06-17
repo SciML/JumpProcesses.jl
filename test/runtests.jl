@@ -14,6 +14,7 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
   @time @testset "Composition-Rejection Table Tests" begin include("table_test.jl") end
   @time @testset "Extinction test" begin include("extinction_test.jl") end
+  @time @testset "Saveat Regression test" begin include("saveat_regression.jl") end
   @time @testset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
   @time @testset "Thread Safety test" begin include("thread_safety.jl") end
 end

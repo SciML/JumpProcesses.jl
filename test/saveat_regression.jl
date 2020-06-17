@@ -10,7 +10,7 @@ dprob = DiscreteProblem(n0, tspan)
 jprob = JumpProblem(dprob, Direct(), maj, save_positions=(false,false))
 ts = collect(0:.002:tspan[2])
 NA = zeros(length(ts))
-Nsims = 100_000
+Nsims = 10_000
 sol = DiffEqJump.solve(EnsembleProblem(jprob), SSAStepper(), saveat=ts, trajectories=Nsims)
 
 for i in 1:length(sol)
@@ -18,12 +18,12 @@ for i in 1:length(sol)
 end
 
 for i in 1:length(ts)
-    @show i
-    @test NA[i] / Nsims ≈ exp(-10*ts[i]) rtol=1e-2
+    @test NA[i] / Nsims ≈ exp(-10*ts[i]) rtol=1e-1
 end
 
 NA = zeros(length(ts))
 jprob = JumpProblem(dprob, Direct(), maj)
+sol = nothing; GC.gc()
 sol = DiffEqJump.solve(EnsembleProblem(jprob), SSAStepper(), trajectories=Nsims)
 
 for i = 1:Nsims
@@ -33,6 +33,5 @@ for i = 1:Nsims
 end
 
 for i in 1:length(ts)
-    @show i
-    @test NA[i] / Nsims ≈ exp(-10*ts[i]) rtol=1e-2
+    @test NA[i] / Nsims ≈ exp(-10*ts[i]) rtol=1e-1
 end

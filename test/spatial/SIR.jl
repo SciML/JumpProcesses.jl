@@ -2,7 +2,7 @@ using DiffEqJump, DiffEqBase, Parameters, Plots
 using LightGraphs, BenchmarkTools
 
 doplot = false
-dobenchmark = true
+dobenchmark = false
 
 # functions to specify reactions between neighboring nodes
 "given a multimolecular reaction, assign its products to the source and the target"
@@ -32,8 +32,8 @@ spec_to_dep_jumps = [[1],[1,2],convert(Array{Int64,1}, [])]
 jump_to_dep_specs = [[1,2],[2,3]]
 rates = [1e-4, 0.01]
 majumps = MassActionJump(rates, reactstoch, netstoch)
-prob = DiscreteProblem([999,1,0],(0.0,20.0), rates)
-jump_prob_SIR = JumpProblem(prob, RSSA(), majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+prob = DiscreteProblem([999,1,0],(0.0,250.0), rates)
+jump_prob_SIR = JumpProblem(prob, RSSACR(), majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 
 # Graph setup for SIR model
 num_nodes = 3
@@ -47,6 +47,7 @@ diff_rates_for_edge[3] = 0.1
 diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
 if doplot
+    println("Starting plotting")
     # Solve and plot: neighbors not reacting
     spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, jump_prob_SIR.aggregator)
     sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
@@ -74,7 +75,9 @@ if doplot
     yaxis!("number")
 
     layout = @layout [a ; b]
-    plot(plot1, plot2, layout = layout)
+    final_plot = plot(plot1, plot2, layout = layout)
+    println("Displaying the plot:")
+    display(final_plot)
 end
 
 ################# Benchmarking ################
@@ -85,6 +88,13 @@ function benchmark_n_times(jump_prob, n)
         push!(times, @elapsed solve(jump_prob, SSAStepper(), saveat = 10.))
     end
     times
+end
+
+function run_n_steps(n, p, integrator)
+    for i in 1:n
+        p(integrator)
+    end
+    nothing
 end
 
 if dobenchmark
@@ -105,11 +115,33 @@ if dobenchmark
     diff_rates_for_edge[3] = 0.01
     diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
     println("Starting benchmark")
-    for alg in [RSSA(), RSSACR(), DirectCR(), NRM()]
+    for alg in [RSSACR(), DirectCR()]
         spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
         println("Using $(spatial_SIR.aggregator)")
-        median_time = median(benchmark_n_times(spatial_SIR, 5))
-        println("Solving the problem took $median_time seconds.")
-        @btime solve($spatial_SIR, $(SSAStepper()), saveat = 10.)
+        # median_time = median(benchmark_n_times(spatial_SIR, 5))
+        # println("Solving the problem took $median_time seconds.")
+        solve(spatial_SIR, SSAStepper())
+        @btime solve($spatial_SIR, $(SSAStepper()))
+        integrator = init(spatial_SIR, SSAStepper())
+        p = spatial_SIR.discrete_jump_aggregation;
+
+        init_allocs = @allocated p(0, integrator.u, integrator.t, integrator)
+        run_allocs = @allocated run_n_steps(10^6, p, integrator)
+        println("$(spatial_SIR.aggregator) allocated $init_allocs bytes to initialize and $run_allocs bytes to run 10^6 steps")
+
     end
 end
+
+using Profile
+
+spatial_SIR_rssa = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, RSSACR(), assign_products, get_rate)
+integrator_rssa = init(spatial_SIR_rssa, SSAStepper())
+p_rssa = spatial_SIR_rssa.discrete_jump_aggregation;
+
+# spatial_SIR_direct = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, DirectCR(), assign_products, get_rate)
+# integrator_direct = init(spatial_SIR_direct, SSAStepper())
+# p_direct = spatial_SIR_direct.discrete_jump_aggregation;
+run_n_steps(10^6, p_rssa, integrator_rssa)
+Profile.clear_malloc_data()
+run_n_steps(10^6, p_rssa, integrator_rssa)
+# run_n_steps(10^6, p_direct, integrator_direct)

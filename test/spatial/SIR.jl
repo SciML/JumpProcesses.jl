@@ -97,12 +97,12 @@ function run_n_steps(n, p, integrator)
     nothing
 end
 
+"construct the connectivity list of light graph g"
+function get_connectivity_list(g)
+    a = adjacency_matrix(g)
+    [[c for c in 1:size(a)[2] if a[r,c] != zero(a[1])] for r in 1:size(a)[1]]
+end
 if dobenchmark
-    "construct the connectivity list of light graph g"
-    function get_connectivity_list(g)
-        a = adjacency_matrix(g)
-        [[c for c in 1:size(a)[2] if a[r,c] != zero(a[1])] for r in 1:size(a)[1]]
-    end
 
     num_nodes = 500
     println("Have $num_nodes nodes.")
@@ -132,16 +132,53 @@ if dobenchmark
     end
 end
 
-using Profile
+################### Allocation tests #######################
 
-spatial_SIR_rssa = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, RSSACR(), assign_products, get_rate)
-integrator_rssa = init(spatial_SIR_rssa, SSAStepper())
-p_rssa = spatial_SIR_rssa.discrete_jump_aggregation;
 
-# spatial_SIR_direct = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, DirectCR(), assign_products, get_rate)
-# integrator_direct = init(spatial_SIR_direct, SSAStepper())
-# p_direct = spatial_SIR_direct.discrete_jump_aggregation;
-run_n_steps(10^6, p_rssa, integrator_rssa)
-Profile.clear_malloc_data()
-run_n_steps(10^6, p_rssa, integrator_rssa)
-# run_n_steps(10^6, p_direct, integrator_direct)
+# num_nodes = 500
+# g = random_regular_digraph(num_nodes, 5)
+# connectivity_list = get_connectivity_list(g)
+# diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob_SIR.prob.u0))
+# diff_rates_for_edge[1] = 0.01
+# diff_rates_for_edge[2] = 0.01
+# diff_rates_for_edge[3] = 0.01
+# diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
+#
+# function test_allocs(alg, spatial_SIR, integrator, p, n)
+#     solve(spatial_SIR, SSAStepper())
+#     p(0, integrator.u, integrator.t, integrator)
+#     init_allocs = @allocated p(0, integrator.u, integrator.t, integrator)
+#     run_n_steps(n, p, integrator)
+#     run_allocs = @allocated run_n_steps(n, p, integrator)
+#     println("$(spatial_SIR.aggregator) allocated $init_allocs bytes to initialize and $run_allocs bytes to run $n steps. This is $(run_allocs/n) allocations per step")
+#     println("Running $n steps:")
+#     @btime run_n_steps(n, p, integrator)
+#     # println("Solving:")
+#     # @btime solve($spatial_SIR, $(SSAStepper()))
+# end
+#
+# n = 10^5
+# for alg in [DirectCR(), RSSACR()]
+#     spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate);
+#     integrator = init(spatial_SIR, SSAStepper());
+#     p = spatial_SIR.discrete_jump_aggregation;
+#     test_allocs(alg, spatial_SIR, integrator, p, n)
+# end
+
+# println(@allocated DiffEqJump.execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t))
+# println(@allocated DiffEqJump.generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t))
+# println(@allocated DiffEqJump.register_next_jump_time!(integrator, p, integrator.t))
+
+
+# println(@allocated DiffEqJump.execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t))
+# println(@allocated DiffEqJump.generate_jumps!(p, integrator.u, integrator.p, integrator.t))
+# println(@allocated DiffEqJump.register_next_jump_time!(integrator, p, integrator.t))
+
+# @btime DiffEqJump.execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+# @btime DiffEqJump.generate_jumps!(p, integrator.u, integrator.p, integrator.t)
+# @btime DiffEqJump.register_next_jump_time!(integrator, p, integrator.t)
+#
+# @code_warntype DiffEqJump.execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+# @code_warntype DiffEqJump.generate_jumps!(p, integrator.u, integrator.p, integrator.t)
+# @code_warntype DiffEqJump.register_next_jump_time!(integrator, p, integrator.t)
+#

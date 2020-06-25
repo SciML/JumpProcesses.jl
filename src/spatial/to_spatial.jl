@@ -41,19 +41,13 @@ diff_rates -- diffusion rates (analagous to reaction rates)
 massaction_jump -- if neighbors_react is true, only uni- and bi-molecular reactions are allowed
 prob -- DiscreteProblem
 alg -- algorithm to use
-save_positions -- when/whether to save positions. Equal to (false, false) by default
-starting_state -- note the ordering of species!
-get_rate -- function to get the rate of a reaction between neighboring nodes
-assign_products -- function to decide where products are assigned
+(optional keyword arg) save_positions -- when/whether to save positions. Equal to (false, false) by default
+(optional keyword arg) starting_state -- note the ordering of species!
+(optional keyword arg) get_rate -- function to get the rate of a reaction between neighboring nodes
+(optional keyword arg) assign_products -- function to decide where products are assigned
 
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
-
-The ordering of reactions is:
-[instances of reaction 1, instances of reaction 2, ..., <-- lengths = num_nodes/num_neighboring_pairs, num_nodes/num_neighboring_pairs, ...
-diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degrees, sum_degrees, ...]
-
-diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
 """
 function to_spatial_jump_prob(connectivity_list, diff_rates, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg; save_positions = (false, false), starting_state = nothing, get_rate = nothing, assign_products = nothing)
 
@@ -196,8 +190,14 @@ function fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_s
     end
     nothing
 end
+"""
+Construct spatial massaction jumps.
+The ordering of reactions is:
+[instances of reaction 1, instances of reaction 2, ..., <-- lengths = num_nodes/num_neighboring_pairs, num_nodes/num_neighboring_pairs, ...
+diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degrees, sum_degrees, ...]
 
-"construct spatial massaction jumps"
+diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
+"""
 function get_spatial_majumps(spatial_constants :: Spatial_Constants, get_rate = nothing, assign_products = nothing)
     @unpack num_spatial_rxs = spatial_constants
     # preallocate stoichiometry and rates arrays

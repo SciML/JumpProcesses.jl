@@ -68,6 +68,6 @@ export init, solve, solve!
 export ExtendedJumpArray
 
 # spatial
-export to_spatial_jump_prob, connectivity_list_from_box, from_spatial_spec, to_spatial_spec, node_to_coordinates, coordinates_to_node
+export to_spatial_jump_prob, connectivity_list_from_box, from_spatial_spec, to_spatial_spec, node_to_coordinates, coordinates_to_node, animate_2d
 
 end # module

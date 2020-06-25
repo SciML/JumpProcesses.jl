@@ -1,8 +1,8 @@
 using DiffEqJump, DiffEqBase, Parameters, Plots
 using LightGraphs, BenchmarkTools
 
-doplot = true
-dobenchmark = false
+doplot = false
+dobenchmark = true
 
 # functions to specify reactions between neighboring nodes
 "given a multimolecular reaction, assign its products to the source and the target"
@@ -119,10 +119,10 @@ if dobenchmark
     for alg in [RSSACR(), DirectCR()]
         spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR.massaction_jump, jump_prob_SIR.prob, alg; get_rate = get_rate, assign_products = assign_products)
         println("Using $(spatial_SIR.aggregator)")
-        # median_time = median(benchmark_n_times(spatial_SIR, 5))
-        # println("Solving the problem took $median_time seconds.")
-        solve(spatial_SIR, SSAStepper())
+        median_time = median(benchmark_n_times(spatial_SIR, 5))
+        println("Solving the problem took $median_time seconds.")
         @btime solve($spatial_SIR, $(SSAStepper()))
+
         integrator = init(spatial_SIR, SSAStepper())
         p = spatial_SIR.discrete_jump_aggregation;
 

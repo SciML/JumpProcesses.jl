@@ -127,5 +127,5 @@ if doanimation
     anim=animate_2d(sol, num_sites_per_edge, species_labels = ["A", "B", "C"], title = "A + B <--> C", verbose = true)
     fps = 15
     path = joinpath(@__DIR__, "test", "spatial")
-    gif(anim, "$(path)anim_$(length(sol.u))frames_$(fps)fps.gif", fps = fps)
+    gif(anim, "$(path)ABC_anim_$(length(sol.u))frames_$(fps)fps.gif", fps = fps)
 end

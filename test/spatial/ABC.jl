@@ -2,8 +2,8 @@ using DiffEqJump, DiffEqBase
 using Plots, BenchmarkTools
 
 doplot = false
-dobenchmark = false
-doanimation = true
+dobenchmark = true
+doanimation = false
 
 function plot_solution(sol)
     println("Plotting")
@@ -76,41 +76,43 @@ function benchmark_n_times(jump_prob, n)
 end
 
 if dobenchmark
-    # these constants can be pplayed with:
-    rates = [1., 10.]
-    diffusivity = 1.
-    num_sites_per_edge = 32
-    prob = DiscreteProblem([500,500,0],(0.0,0.25), rates)
-
+    rates = [0.1, 1.]
     majumps = MassActionJump(rates, reactstoch, netstoch)
-    domain_size = 1.0 #μ-meter
-    hopping_rate = diffusivity * (num_sites_per_edge/domain_size)^2
-    dimension = 2
-    connectivity_list = connectivity_list_from_box(num_sites_per_edge, dimension)
-    num_nodes = length(connectivity_list)
+    u0 = [500,500,0]
+    tf = 0.1
+    prob = DiscreteProblem(u0,(0.0,tf), rates)
+    dimension = 3
+    hopping_rate = 1. # NOTE: using constant hopping rate not prevent diffusions from skyrocketing as number of sites per edge increases
+    println("Using constant hopping rate not prevent diffusions from skyrocketing as number of sites per edge increases")
+    println("rates: $rates, hopping rate: $hopping_rate, dimension: $dimension, starting position: $u0, final time: $tf")
+    nums_sites_per_edge = [8, 16, 32, 64, 128, 256]
+    for (i, num_sites_per_edge) in enumerate(nums_sites_per_edge)
+        num_nodes = num_sites_per_edge^3
+        num_species = length(prob.u0)
+        num_rxs = num_species*6*num_nodes + num_nodes * get_num_majumps(majumps)
+        println("Have $num_sites_per_edge sites per edge, $num_nodes nodes and $num_rxs reactions")
 
-    diff_rates_for_edge = [hopping_rate for species in 1:length(prob.u0)]
-    diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
+        connectivity_list = connectivity_list_from_box(num_sites_per_edge, dimension)
 
-    # Starting state setup
-    starting_state = zeros(Integer, num_nodes*length(prob.u0))
-    # starting_state[1 : length(prob.u0)] = copy(prob.u0)
-    center_node = coordinates_to_node(trunc(Integer,num_sites_per_edge/2),trunc(Integer,num_sites_per_edge/2),num_sites_per_edge)
-    center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
-    starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
+        diff_rates_for_edge = [hopping_rate for species in 1:length(prob.u0)]
+        diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
-    for alg in [RSSACR(), DirectCR(), NRM()]
-        short_label = "$alg"[1:end-2]
-        spatial_jump_prob = to_spatial_jump_prob(connectivity_list, diff_rates, majumps, prob, alg; starting_state = starting_state)
-        println("Solving with $(spatial_jump_prob.aggregator)")
-        solve(jump_prob, SSAStepper())
-        # times = benchmark_n_times(spatial_jump_prob, 5)
-        # median_time = median(times)
-        # println("Solving the problem took $median_time seconds.")
-        @btime solve($spatial_jump_prob, $(SSAStepper()))
-        println("Animating...")
-        sol=solve(jump_prob, SSAStepper(), saveat = prob.tspan[2]/20.)
-        animate_2d(sol, species_labels = ["A", "B", "C"], title = "A + B <--> C", fps = 2)
+        # Starting state setup (place all in the center)
+        starting_state = zeros(Integer, num_nodes*length(prob.u0))
+        center_node = coordinates_to_node(trunc(Integer,num_sites_per_edge/2),trunc(Integer,num_sites_per_edge/2),num_sites_per_edge)
+        center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
+        starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
+
+        for alg in [RSSACR(), DirectCR(), NRM()]
+            short_label = "$alg"[1:end-2]
+            spatial_jump_prob = to_spatial_jump_prob(connectivity_list, diff_rates, majumps, prob, alg; starting_state = starting_state)
+            println("Solving with $(spatial_jump_prob.aggregator)")
+            solve(spatial_jump_prob, SSAStepper())
+            # times = benchmark_n_times(spatial_jump_prob, 5)
+            # median_time = median(times)
+            # println("Solving the problem took $median_time seconds.")
+            @btime solve($spatial_jump_prob, $(SSAStepper()))
+        end
     end
 end
 

@@ -1,128 +1,80 @@
 using DiffEqJump, DiffEqBase, Parameters
 
-# TODO: allow for custom initial state
-# TODO: give types to inputs to functions
-# TODO: factor out common functionality from two functions
-
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob :: JumpProblem)
-    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, jump_prob.aggregator)
-end
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob :: JumpProblem, assign_products, get_rate)
-    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, jump_prob.aggregator, assign_products, get_rate)
-end
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob :: JumpProblem, alg)
-    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob.massaction_jump, jump_prob.prob, alg)
-end
-
+"struct to hold the spatial constants"
 struct Spatial_Constants
-
+    num_nodes
+    sum_degrees
+    reactant_stoch
+    net_stoch
+    num_majumps
+    num_species
+    bimolecular_rxs_with_same_reactants
+    bimolecular_rxs_with_different_reactants
+    num_bimolecular_rxs_with_same_reactants
+    num_bimolecular_rxs_with_different_reactants
+    rxs_reactants
+    full_net_stoichiometries
+    neighboring_pairs
+    num_spacial_majumps
+    num_spatial_species
+    source_target_index_pairs
+    num_spatial_rxs
+    connectivity_list
+    massaction_jump
+    prob
+    diff_rates
+    starting_state
+    neighbors_react
 end
 
-"""
-Construct a spatial jump problem, where diffusions are represented as reactions.
-Given:
-adjacency/connectivity list -- representing a graph. Can be directed.
-diffusion rates (analagous to reaction rates)
-massaction_jump -- mass action jumps
-prob -- DiscreteProblem
-alg -- algorithm to use
 
-The ordering of species is:
-[species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
-
-The ordering of reactions is:
-[instances of reaction 1, instances of reaction 2, ..., <-- lengths = num_neighboring_pairs, num_neighboring_pairs, ...
-diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degrees, sum_degrees, ...]
-
-diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
-"""
-function to_spatial_jump_prob(connectivity_list, diff_rates, starting_state, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg)
-    num_nodes = length(connectivity_list)
-    sum_degrees = sum([length(nbs) for nbs in connectivity_list])
-    num_majumps = get_num_majumps(massaction_jump)
-    num_species = length(prob.u0)
-
-    # spatial constants
-    num_spacial_majumps = num_nodes * num_majumps
-    num_spatial_species = num_species*num_nodes
-    source_target_index_pairs = get_source_target_index_pairs(connectivity_list)
-    num_spatial_rxs = num_spacial_majumps + num_species*sum_degrees
-
-    # NOTE: only mass action jumps
-    rx_rates = Array{Float64,1}(undef, num_spatial_rxs)
-    reaction_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
-    net_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
-
-    fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net_stoichiometries, num_nodes, num_majumps, num_species, num_spacial_majumps, prob, massaction_jump, source_target_index_pairs, diff_rates, connectivity_list)
-
-    spatial_majumps = MassActionJump(rx_rates, reaction_stoichiometries, net_stoichiometries)
-
-    spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
-    spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
-    rxs_to_dep_spec = rxs_to_dep_spec_map(spatial_majumps)
-    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
+"if a jump problem is given, use massaction jump, discrete problem and aggregator (algorithm) from it"
+function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob :: JumpProblem; save_positions = (false, false), starting_state = nothing, get_rate = nothing, assign_products = nothing)
+    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob.massaction_jump, jump_prob.prob, jump_prob.aggregator; save_positions = save_positions, starting_state = starting_state, get_rate = get_rate, assign_products = assign_products)
 end
 
-############## Allow reactions between neighboring nodes ##############
 """
 Construct a jump problem, where diffusions are represented as reactions, and species in neighboring nodes can react.
 Given:
 adjacency/connectivity list -- representing a graph. Can be directed.
-diffusion rates (analagous to reaction rates)
-non-spatial jump problem -- only unimolecular and bimolecular massaction reactions are allowed
-assign_products -- function to decide where products are assigned
+diff_rates -- diffusion rates (analagous to reaction rates)
+massaction_jump -- if neighbors_react is true, only uni- and bi-molecular reactions are allowed
+prob -- DiscreteProblem
+alg -- algorithm to use
+save_positions -- when/whether to save positions. Equal to (false, false) by default
+starting_state -- note the ordering of species!
 get_rate -- function to get the rate of a reaction between neighboring nodes
+assign_products -- function to decide where products are assigned
 
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
 
 The ordering of reactions is:
-[instances of reaction 1, instances of reaction 2, ..., <-- lengths = num_neighboring_pairs, num_neighboring_pairs, ...
+[instances of reaction 1, instances of reaction 2, ..., <-- lengths = num_nodes/num_neighboring_pairs, num_nodes/num_neighboring_pairs, ...
 diffusions of species 1, diffusions of species 2, ...   <-- lengths = sum_degrees, sum_degrees, ...]
 
 diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-- lengths = degree of node 1, degree of node 2, ...
 """
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, alg, assign_products, get_rate)
-    num_nodes = length(connectivity_list)
-    sum_degrees = sum([length(nbs) for nbs in connectivity_list])
-    massaction_jump = jump_prob.massaction_jump
-    @unpack reactant_stoch, net_stoch = massaction_jump
-    num_majumps = get_num_majumps(massaction_jump)
-    num_species = length(jump_prob.prob.u0)
-    prob = jump_prob.prob
+function to_spatial_jump_prob(connectivity_list, diff_rates, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg; save_positions = (false, false), starting_state = nothing, get_rate = nothing, assign_products = nothing)
 
-    bimolecular_rxs_with_same_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_same_reactants(reactant_stoch[rx])]
-    bimolecular_rxs_with_different_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_different_reactants(reactant_stoch[rx])]
-    num_bimolecular_rxs_with_same_reactants = length(bimolecular_rxs_with_same_reactants)
-    num_bimolecular_rxs_with_different_reactants = length(bimolecular_rxs_with_different_reactants)
-    rxs_reactants = [Tuple([s for (s,c) in reactant_stoch[rx]]) for rx in 1:num_majumps]
-    full_net_stoichiometries = [get_full_net_stoichiometry(rx, reactant_stoch, net_stoch) for rx in 1:num_majumps]
+    neighbors_react = (get_rate != nothing && assign_products != nothing)
+    if starting_state == nothing
+        starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...)
+    end
 
-    # spatial constants
-    neighboring_pairs = get_neiboring_pairs(connectivity_list)
-    num_spacial_majumps = num_nodes * num_majumps + length(neighboring_pairs) * (num_bimolecular_rxs_with_same_reactants + 2*num_bimolecular_rxs_with_different_reactants)
-    num_spatial_species = num_species*num_nodes
-    source_target_index_pairs = get_source_target_index_pairs(connectivity_list)
-    num_spatial_rxs = num_spacial_majumps + num_species*sum_degrees
+    spatial_constants = Spatial_Constants(connectivity_list, diff_rates, starting_state, massaction_jump :: MassActionJump, prob :: DiscreteProblem, false)
 
-    # preallocate stoichiometry and rates arrays
-    rx_rates = Array{Float64,1}(undef, num_spatial_rxs)
-    reaction_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
-    net_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
+    if neighbors_react
+        rx_rates, spatial_majumps = get_spatial_majumps(spatial_constants, get_rate, assign_products)
+    else
+        rx_rates, spatial_majumps = get_spatial_majumps(spatial_constants)
+    end
 
-    # rates and stoichiometries for within-node reactions and diffusions
-    fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net_stoichiometries, num_nodes, num_majumps, num_species, num_spacial_majumps, prob, massaction_jump, source_target_index_pairs, diff_rates, connectivity_list)
-    # rates and stoichiometries for across-nodes bimolecular reactions
-    fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_stoichiometries, net_stoichiometries, neighboring_pairs, bimolecular_rxs_with_same_reactants, bimolecular_rxs_with_different_reactants, num_majumps, num_nodes, num_bimolecular_rxs_with_same_reactants, prob, rxs_reactants, massaction_jump)
-
-    spatial_majumps = MassActionJump(rx_rates, reaction_stoichiometries, net_stoichiometries)
-
-    # NOTE: arbitrary decision to copy the original u0
-    starting_state = vcat([prob.u0 for i in 1:num_nodes]...)
+    @unpack num_spatial_species = spatial_constants
     spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
     spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
     rxs_to_dep_spec = rxs_to_dep_spec_map(spatial_majumps)
-    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
+    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions = save_positions, vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
 end
 
 ############ Helper functions ###############
@@ -156,15 +108,6 @@ function is_bimolecular(rx_stoichiometry)
     is_bimolecular_with_same_reactants(rx_stoichiometry) || is_bimolecular_with_different_reactants(rx_stoichiometry)
 end
 
-"given a spatial index, get (node index, original species index)."
-function from_spatial_spec(ind, num_species)
-    fldmod1(ind, num_species)
-end
-
-"get the sptial index of the species in node"
-function to_spatial_spec(node, ind, num_species)
-    return (node-1)*num_species + ind
-end
 
 "get the stoichiometries for reaction rx (non-spatial index) in node"
 function get_rx_stoichiometries(node, rx, massaction_jump, num_species)
@@ -208,7 +151,8 @@ function get_full_net_stoichiometry(rx, reactstoch, netstoch)
 end
 
 "Fill rates and stoichiometries with within-node reactions and diffusions"
-function fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net_stoichiometries, num_nodes, num_majumps, num_species, num_spacial_majumps, prob, massaction_jump, source_target_index_pairs, diff_rates, connectivity_list)
+function fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net_stoichiometries, spatial_constants :: Spatial_Constants)
+    @unpack num_nodes, num_majumps, num_species, num_spacial_majumps, prob, massaction_jump, source_target_index_pairs, diff_rates, connectivity_list = spatial_constants
     # fill stoichiometries for reactions
     for (i, (node, rx)) in enumerate(Iterators.product(1:num_nodes, 1:num_majumps))
         rx_rates[i] = prob.p[rx]
@@ -223,7 +167,8 @@ function fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net
 end
 
 "Fill rates and stoichiometries with across-nodes bimolecular reactions"
-function fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_stoichiometries, net_stoichiometries, neighboring_pairs, bimolecular_rxs_with_same_reactants, bimolecular_rxs_with_different_reactants, num_majumps, num_nodes, num_bimolecular_rxs_with_same_reactants, prob, rxs_reactants, massaction_jump)
+function fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_stoichiometries, net_stoichiometries, spatial_constants :: Spatial_Constants, get_rate, assign_products)
+    @unpack neighboring_pairs, bimolecular_rxs_with_same_reactants, bimolecular_rxs_with_different_reactants, num_majumps, num_nodes, num_bimolecular_rxs_with_same_reactants, prob, rxs_reactants, massaction_jump, num_species = spatial_constants
     # make stoichiometries for bimolecular_rxs_with_same_reactants
     for (i, ((node1, node2), rx)) in enumerate(Iterators.product(neighboring_pairs, bimolecular_rxs_with_same_reactants))
         ind = i + num_nodes * num_majumps
@@ -250,4 +195,51 @@ function fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_s
         reaction_stoichiometries[ind], net_stoichiometries[ind] = get_bimolecular_rx_stoichiometries((node1, reactant1, products1), (node2, reactant2, products2), rx, massaction_jump, num_species)
     end
     nothing
+end
+
+"construct spatial massaction jumps"
+function get_spatial_majumps(spatial_constants :: Spatial_Constants, get_rate = nothing, assign_products = nothing)
+    @unpack num_spatial_rxs = spatial_constants
+    # preallocate stoichiometry and rates arrays
+    rx_rates = Array{Float64,1}(undef, num_spatial_rxs)
+    reaction_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
+    net_stoichiometries = Array{Array{Pair{Int64,Int64},1},1}(undef, num_spatial_rxs)
+
+    # rates and stoichiometries for within-node reactions and diffusions
+    fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net_stoichiometries, spatial_constants)
+
+    if get_rate != nothing && assign_products != nothing
+        # rates and stoichiometries for across-nodes bimolecular reactions
+        fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_stoichiometries, net_stoichiometries, spatial_constants, get_rate, assign_products)
+    end
+
+    rx_rates, MassActionJump(rx_rates, reaction_stoichiometries, net_stoichiometries)
+end
+
+"initialize constants"
+function Spatial_Constants(connectivity_list, diff_rates, starting_state, massaction_jump :: MassActionJump, prob :: DiscreteProblem, neighbors_react)
+    num_nodes = length(connectivity_list)
+    sum_degrees = sum([length(nbs) for nbs in connectivity_list])
+    @unpack reactant_stoch, net_stoch = massaction_jump
+    num_majumps = get_num_majumps(massaction_jump)
+    num_species = length(prob.u0)
+
+    bimolecular_rxs_with_same_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_same_reactants(reactant_stoch[rx])]
+    bimolecular_rxs_with_different_reactants = [rx for rx in 1:num_majumps if is_bimolecular_with_different_reactants(reactant_stoch[rx])]
+    num_bimolecular_rxs_with_same_reactants = length(bimolecular_rxs_with_same_reactants)
+    num_bimolecular_rxs_with_different_reactants = length(bimolecular_rxs_with_different_reactants)
+    rxs_reactants = [Tuple([s for (s,c) in reactant_stoch[rx]]) for rx in 1:num_majumps]
+    full_net_stoichiometries = [get_full_net_stoichiometry(rx, reactant_stoch, net_stoch) for rx in 1:num_majumps]
+
+    # spatial constants
+    neighboring_pairs = get_neiboring_pairs(connectivity_list)
+    if neighbors_react
+        num_spacial_majumps = num_nodes * num_majumps + length(neighboring_pairs) * (num_bimolecular_rxs_with_same_reactants + 2*num_bimolecular_rxs_with_different_reactants)
+    else
+        num_spacial_majumps = num_nodes * num_majumps
+    end
+    num_spatial_species = num_species*num_nodes
+    source_target_index_pairs = get_source_target_index_pairs(connectivity_list)
+    num_spatial_rxs = num_spacial_majumps + num_species*sum_degrees
+    Spatial_Constants(num_nodes, sum_degrees, reactant_stoch, net_stoch, num_majumps, num_species, bimolecular_rxs_with_same_reactants, bimolecular_rxs_with_different_reactants, num_bimolecular_rxs_with_same_reactants, num_bimolecular_rxs_with_different_reactants, rxs_reactants, full_net_stoichiometries, neighboring_pairs, num_spacial_majumps, num_spatial_species, source_target_index_pairs, num_spatial_rxs, connectivity_list, massaction_jump, prob, diff_rates, starting_state, neighbors_react)
 end

@@ -1,7 +1,7 @@
 using DiffEqJump, DiffEqBase, Parameters, Plots
 using LightGraphs, BenchmarkTools
 
-doplot = false
+doplot = true
 dobenchmark = false
 
 # functions to specify reactions between neighboring nodes
@@ -47,10 +47,11 @@ diff_rates_for_edge[3] = 0.1
 diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
 if doplot
-    println("Starting plotting")
     # Solve and plot: neighbors not reacting
-    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, jump_prob_SIR.aggregator)
+    println("Solving...")
+    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR)
     sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
+    println("Plotting...")
     labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
     trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
     plot1 = plot(sol.t, trajectories[1], label = labels[1])
@@ -62,7 +63,7 @@ if doplot
     yaxis!("number")
 
     # Solve and plot: neighbors reacting
-    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, jump_prob_SIR.aggregator, assign_products, get_rate)
+    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR; get_rate = get_rate, assign_products = assign_products)
     sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
     labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
     trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
@@ -116,7 +117,7 @@ if dobenchmark
     diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
     println("Starting benchmark")
     for alg in [RSSACR(), DirectCR()]
-        spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR, alg, assign_products, get_rate)
+        spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR.massaction_jump, jump_prob_SIR.prob, alg; get_rate = get_rate, assign_products = assign_products)
         println("Using $(spatial_SIR.aggregator)")
         # median_time = median(benchmark_n_times(spatial_SIR, 5))
         # println("Solving the problem took $median_time seconds.")

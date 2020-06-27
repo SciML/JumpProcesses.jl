@@ -2,8 +2,8 @@ using DiffEqJump, DiffEqBase
 using Plots, BenchmarkTools
 
 doplot = false
-dobenchmark = true
-doanimation = false
+dobenchmark = false
+doanimation = true
 
 function plot_solution(sol)
     println("Plotting")
@@ -126,6 +126,6 @@ if doanimation
     println("Animating...")
     anim=animate_2d(sol, num_sites_per_edge, species_labels = ["A", "B", "C"], title = "A + B <--> C", verbose = true)
     fps = 15
-    path = joinpath(@__DIR__, "test", "spatial")
-    gif(anim, "$(path)ABC_anim_$(length(sol.u))frames_$(fps)fps.gif", fps = fps)
+    path = joinpath(@__DIR__, "test", "spatial", "ABC_anim_$(length(sol.u))frames_$(fps)fps.gif")
+    gif(anim, path, fps = fps)
 end

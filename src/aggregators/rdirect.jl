@@ -99,9 +99,9 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     @unpack rng, cur_rates, max_rate = p
 
     num_rxs = length(cur_rates)
-    rx = trunc(Integer, rand(rng) * num_rxs)+1
+    rx = trunc(Int, rand(rng) * num_rxs)+1
     @inbounds while cur_rates[rx] < rand(rng) * max_rate
-        rx = trunc(Integer, rand(rng) * num_rxs)+1
+        rx = trunc(Int, rand(rng) * num_rxs)+1
     end
 
     p.next_jump = rx

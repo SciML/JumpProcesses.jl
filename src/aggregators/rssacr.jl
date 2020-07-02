@@ -5,7 +5,7 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
 mutable struct RSSACRJumpAggregation{F,U,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V,P<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
-    next_jump::Integer
+    next_jump::Int
     next_jump_time::F
     end_time::F
     cur_rate_low::Vector{F}

@@ -1,3 +1,8 @@
+"""
+David F. Anderson, Masanori Koyama; An asymptotic relationship between coupling
+methods for stochastically modeled population processes. IMA J Numer Anal 2015;
+35 (4): 1757-1778. doi: 10.1093/imanum/dru044
+"""
 SplitCoupledJumpProblem(prob::DiffEqBase.AbstractJumpProblem,prob_control::DiffEqBase.AbstractJumpProblem,aggregator::AbstractAggregatorAlgorithm,coupling_map::Vector{Tuple{Int,Int}})= JumpProblem(cat_problems(prob.prob,prob_control.prob),aggregator,build_split_jumps(prob,prob_control,coupling_map)...)
 
 # make new problem by joining initial_data

@@ -3,7 +3,7 @@
 
 struct SSAStepper <: DiffEqBase.DEAlgorithm end
 
-mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DiffEqBase.DEIntegrator{SSAStepper,Nothing,uType,tType}
+mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEIntegrator{SSAStepper,Nothing,uType,tType}
     f::F
     u::uType
     t::tType
@@ -16,6 +16,10 @@ mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA} <: DiffEqBase.DEIntegrator
     save_everystep::Bool
     save_end::Bool
     cur_saveat::Int
+    opts::OPT
+    tstops::TS
+    tstops_idx::Int
+    u_modified::Bool
 end
 
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
@@ -61,20 +65,21 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          save_end = true,
                          seed = nothing,
                          alias_jump = Threads.threadid() == 1,
-                         saveat = nothing)
+                         saveat = nothing,
+                         callback = nothing,
+                         tstops = ())
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
-    @assert length(jump_prob.jump_callback.discrete_callbacks) == 1
 
     if alias_jump
-      cb = jump_prob.jump_callback.discrete_callbacks[1]
+      cb = jump_prob.jump_callback.discrete_callbacks[end]
       if seed !== nothing
           Random.seed!(cb.condition.rng,seed)
       end
     else
-      cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[1])
+      cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[end])
       if seed === nothing
           Random.seed!(cb.condition.rng,seed_multiplier()*rand(UInt64))
       else
@@ -82,6 +87,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
       end
     end
 
+    opts = (callback = CallbackSet(callback),)
     prob = jump_prob.prob
 
     if save_start
@@ -91,8 +97,11 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         t = typeof(prob.tspan[1])[]
         u = typeof(prob.u0)[]
     end
+
+
     sol = DiffEqBase.build_solution(prob,alg,t,u,dense=false,
                          calculate_error = false,
+                         destats = DiffEqBase.DEStats(0),
                          interp = DiffEqBase.ConstantInterpolation(t,u))
     save_everystep = any(cb.save_positions)
 
@@ -121,33 +130,64 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
 
     integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.p,
                                sol,1,prob.tspan[1],
-                               cb,_saveat,save_everystep,save_end,cur_saveat)
+                               cb,_saveat,save_everystep,save_end,cur_saveat,
+                               opts,tstops,1,false)
     cb.initialize(cb,u[1],prob.tspan[1],integrator)
-
     integrator
 end
 
 DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
-    integrator.t = integrator.tstop
-    integrator.cb.affect!(integrator)
-    if integrator.save_everystep
-        push!(integrator.sol.t,integrator.t)
-        push!(integrator.sol.u,copy(integrator.u))
+    doaffect = false
+    if !isempty(integrator.tstops) &&
+        integrator.tstops_idx <= length(integrator.tstops) &&
+        integrator.tstops[integrator.tstops_idx] < integrator.tstop
+
+        integrator.t = integrator.tstops[integrator.tstops_idx]
+        integrator.tstops_idx += 1
+    else
+        integrator.t = integrator.tstop
+        doaffect = true # delay effect until after saveat
     end
+
     @inbounds if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
         while integrator.cur_saveat < length(integrator.saveat) &&
            integrator.saveat[integrator.cur_saveat] < integrator.t
 
+            saved = true
             push!(integrator.sol.t,integrator.saveat[integrator.cur_saveat])
             push!(integrator.sol.u,copy(integrator.u))
             integrator.cur_saveat += 1
-
         end
     end
+
+    doaffect && integrator.cb.affect!(integrator)
+
+    if !(typeof(integrator.opts.callback.discrete_callbacks)<:Tuple{})
+        discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
+    else
+        saved_in_cb = false
+    end
+
+    !saved_in_cb && savevalues!(integrator)
     nothing
+end
+
+function DiffEqBase.savevalues!(integrator::SSAIntegrator,force=false)
+    saved, savedexactly = false, false
+
+    # No saveat in here since it would only use previous values,
+    # so in the specific case of SSAStepper it's already handled
+
+    if integrator.save_everystep || force
+        savedexactly = true
+        push!(integrator.sol.t,integrator.t)
+        push!(integrator.sol.u,copy(integrator.u))
+    end
+
+    saved, savedexactly
 end
 
 export SSAStepper

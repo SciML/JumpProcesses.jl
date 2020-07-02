@@ -64,8 +64,8 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
-  function jump_f(du,u,p,t)
-    prob.f(@view(du[1:length(u.u)]),u.u,p,t)
+  function jump_f(du::ExtendedJumpArray,u::ExtendedJumpArray,p,t)
+    prob.f(du.u,u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
@@ -74,13 +74,13 @@ end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
   function jump_f(du,u,p,t)
-    prob.f(@view(du[1:length(u.u)]),u.u,p,t)
+    prob.f(du.u,u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
 
   if prob.noise_rate_prototype === nothing
     jump_g = function (du,u,p,t)
-      prob.g(@view(du[1:length(u.u)]),u.u,p,t)
+      prob.g(du.u,u.u,p,t)
     end
   else
     jump_g = function (du,u,p,t)
@@ -94,7 +94,7 @@ end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
   jump_f = function (du,u,h,p,t)
-    prob.f(@view(du[1:length(u.u)]),u.u,h,p,t)
+    prob.f(du.u,u.u,h,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])
@@ -104,7 +104,7 @@ end
 # Not sure if the DAE one is correct: Should be a residual of sorts
 function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
   jump_f = function (out,du,u,p,t)
-    prob.f(@view(out[1:length(u.u)]),du.u,u.u,t)
+    prob.f(out.u,du.u,u.u,t)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
   u0 = ExtendedJumpArray(prob.u0,[-randexp() for i in 1:length(jumps.variable_jumps)])

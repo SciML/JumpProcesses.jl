@@ -97,7 +97,7 @@ of a priority is its position within this vector.
 """
 function PriorityTable(priortogid::Function, priorities::AbstractVector, minpriority, maxpriority)
 
-    numgroups  = priortogid(maxpriority) 
+    numgroups  = priortogid(maxpriority)
     numgroups -= one(typeof(numgroups))
     pidtype    = typeof(numgroups)
     ptype      = eltype(priorities)
@@ -259,7 +259,6 @@ end
 
     pididx = 0
     pid    = zero(eltype(pids))
-    notdone = true
 
     @inbounds while true
 

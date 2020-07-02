@@ -2,8 +2,8 @@ using DiffEqJump, DiffEqBase
 using Plots, BenchmarkTools
 
 doplot = false
-dobenchmark = false
-doanimation = true
+dobenchmark = true
+doanimation = false
 
 function plot_solution(sol)
     println("Plotting")
@@ -47,9 +47,9 @@ diff_rates_for_edge = [hopping_rate for species in 1:length(prob.u0)]
 diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
 # Starting state setup
-starting_state = zeros(Integer, num_nodes*length(prob.u0))
+starting_state = zeros(Int, num_nodes*length(prob.u0))
 # starting_state[1 : length(prob.u0)] = copy(prob.u0)
-center_node = coordinates_to_node(trunc(Integer,num_sites_per_edge/2),trunc(Integer,num_sites_per_edge/2),num_sites_per_edge)
+center_node = coordinates_to_node(trunc(Int,num_sites_per_edge/2),trunc(Int,num_sites_per_edge/2),num_sites_per_edge)
 center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
 starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
 
@@ -98,8 +98,8 @@ if dobenchmark
         diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
         # Starting state setup (place all in the center)
-        starting_state = zeros(Integer, num_nodes*length(prob.u0))
-        center_node = coordinates_to_node(trunc(Integer,num_sites_per_edge/2),trunc(Integer,num_sites_per_edge/2),num_sites_per_edge)
+        starting_state = zeros(Int, num_nodes*length(prob.u0))
+        center_node = coordinates_to_node(trunc(Int,num_sites_per_edge/2),trunc(Int,num_sites_per_edge/2),num_sites_per_edge)
         center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
         starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
 

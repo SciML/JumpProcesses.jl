@@ -5,6 +5,8 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/github/JuliaDiffEq/DiffEqJump.jl?branch=master&svg=true)](https://ci.appveyor.com/project/ChrisRackauckas/diffeqjump-jl/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/SciML/DiffEqJump.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/DiffEqJump.jl?branch=master)
 [![codecov.io](https://codecov.io/gh/SciML/DiffEqJump.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/DiffEqJump.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://diffeq.sciml.ai/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://diffeq.sciml.ai/dev/)
 
 DiffEqJump.jl is a component package in the [SciML](https://sciml.ai/) ecosystem. It
 holds the utilities for building jump equations, like Gillespie stochastic Simulation Algorithms (i.e. Kinetic Monte Carlo methods) and jump

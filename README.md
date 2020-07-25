@@ -9,7 +9,7 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://diffeq.sciml.ai/dev/)
 
 DiffEqJump.jl is a component package in the [SciML](https://sciml.ai/) ecosystem. It
-holds the utilities for building jump equations, like Gillespie stochastic Simulation Algorithms (i.e. Kinetic Monte Carlo methods) and jump
-diffusions, and is one of the core solver libraries included in [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl). 
+holds the utilities for building jump equations, like stochastic simulation algorithms (SSAs), Gillespie methods or Kinetic Monte Carlo methods; and for building jump
+diffusions. It is one of the core solver libraries included in [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl). 
 Users interested in using this functionality should see the 
 [DifferentialEquations.jl documentation](https://diffeq.sciml.ai/latest/).

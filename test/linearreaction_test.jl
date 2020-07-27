@@ -302,7 +302,7 @@ for method in SSAalgs
 end
 
 # for dependency graph methods just test with mass action jumps
-SSAalgs        = [NRM(), SortingDirect(), DirectCR()]
+SSAalgs        = [RDirect(), NRM(), SortingDirect(), DirectCR()]
 jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens

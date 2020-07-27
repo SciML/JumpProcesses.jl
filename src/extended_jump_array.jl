@@ -33,10 +33,10 @@ Base.similar(A::ExtendedJumpArray,::Type{S},axes::Tuple{Base.OneTo{Int}}) where 
 
 # Stiff ODE solver
 function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
-  u = [A.u;A.jump_u]
+  u = [vec(A.u);vec(A.jump_u)]
   u .* u' .* false
 end
-LinearAlgebra.ldiv!(A,b::ExtendedJumpArray) = LinearAlgebra.ldiv!(A,[b.u;b.jump_u])
+LinearAlgebra.ldiv!(A,b::ExtendedJumpArray) = LinearAlgebra.ldiv!(A,[vec(b.u);vec(b.jump_u)])
 
 function recursivecopy!(dest::T, src::T) where T<:ExtendedJumpArray
   recursivecopy!(dest.u,src.u)

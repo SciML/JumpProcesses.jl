@@ -16,7 +16,7 @@ mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAgg
   dep_gr::DEPGR
   max_rate::T
   counter::Int
-  no_update_window::Int
+  counter_threshold::Int
 end
 
 
@@ -35,8 +35,8 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     # make sure each jump depends on itself
     add_self_dependencies!(dg)
     max_rate = maximum(crs)
-    no_update_window = 10
-    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate, 0, no_update_window)
+    counter_threshold = 2*length(crs)
+    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate, 0, counter_threshold)
 end
 
 ########### The following routines should be templates for all SSAs ###########
@@ -129,21 +129,10 @@ function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
         end
         cur_rates[rx] = new_rate
     end
-    if !max_rate_increased && p.counter > 2*length(cur_rates)
+    if !max_rate_increased && p.counter > p.counter_threshold
         p.max_rate = maximum(p.cur_rates)
     end
 
     p.sum_rate = sum_rate
     nothing
-end
-
-function do_rejection(cur_rates, max_rate, num_rxs)
-    @inbounds while cur_rates[rx] < rand() * max_rate
-        rx = trunc(Int, rand() * num_rxs)+1
-    end
-    rx
-end
-
-function do_update(cur_rates, max_rate)
-    max_rate = maximum(cur_rates)
 end

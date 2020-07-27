@@ -15,6 +15,8 @@ mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAgg
   rng::RNG
   dep_gr::DEPGR
   max_rate::T
+  counter::Int
+  no_update_window::Int
 end
 
 
@@ -33,7 +35,8 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     # make sure each jump depends on itself
     add_self_dependencies!(dg)
     max_rate = maximum(crs)
-    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate)
+    no_update_window = 10
+    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate, 0, no_update_window)
 end
 
 ########### The following routines should be templates for all SSAs ###########
@@ -99,6 +102,7 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     @unpack rng, cur_rates, max_rate = p
 
     num_rxs = length(cur_rates)
+    p.counter = 0
     rx = trunc(Int, rand(rng) * num_rxs)+1
     @inbounds while cur_rates[rx] < rand(rng) * max_rate
         rx = trunc(Int, rand(rng) * num_rxs)+1
@@ -115,22 +119,31 @@ end
 function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     @unpack ma_jumps, rates, cur_rates, sum_rate = p
-    need_to_recalculate_max_rate = false
+    max_rate_increased = false
     @inbounds for rx in dep_rxs
-        sum_rate -= cur_rates[rx]
         @inbounds new_rate = calculate_jump_rate(ma_jumps, rates, u,params,t,rx)
-        sum_rate += new_rate
+        sum_rate += new_rate - cur_rates[rx]
         if new_rate > p.max_rate
             p.max_rate = new_rate
-        elseif cur_rates[rx] == p.max_rate
-            need_to_recalculate_max_rate = true
+            max_rate_increased = true
         end
         cur_rates[rx] = new_rate
     end
-    if need_to_recalculate_max_rate
+    if !max_rate_increased && p.counter > 2*length(cur_rates)
         p.max_rate = maximum(p.cur_rates)
     end
 
     p.sum_rate = sum_rate
     nothing
+end
+
+function do_rejection(cur_rates, max_rate, num_rxs)
+    @inbounds while cur_rates[rx] < rand() * max_rate
+        rx = trunc(Int, rand() * num_rxs)+1
+    end
+    rx
+end
+
+function do_update(cur_rates, max_rate)
+    max_rate = maximum(cur_rates)
 end

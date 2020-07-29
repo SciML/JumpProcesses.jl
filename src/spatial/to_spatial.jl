@@ -17,10 +17,13 @@ alg -- algorithm to use
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
 """
-function JumpProblem(prob, aggregator::WellMixedSpatial, massaction_jump::MassActionJump, connectivity_list; diff_rates = 0.0, save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,false) : (true,true), starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
-    to_spatial_jump_prob(connectivity_list, massaction_jump, prob, aggregator.WellMixedSSA;  diff_rates = diff_rates, save_positions = save_positions, starting_state = starting_state, get_rate = get_rate, assign_products = assign_products, kwargs...)
+function JumpProblem(prob, aggregator::WellMixedSpatial, massaction_jump::MassActionJump; connectivity_list = nothing, diff_rates = 0.0, save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,false) : (true,true), rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
+    if connectivity_list === nothing
+        error("No graph was given. Constructing a non-spatial problem.")
+    else
+        return to_spatial_jump_prob(connectivity_list, massaction_jump, prob, aggregator.WellMixedSSA;  diff_rates = diff_rates, save_positions = save_positions, starting_state = starting_state, get_rate = get_rate, assign_products = assign_products, rng = rng, kwargs...)
+    end
 end
-
 
 "struct to hold the spatial constants"
 struct Spatial_Constants
@@ -65,7 +68,7 @@ alg -- algorithm to use
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
 """
-function to_spatial_jump_prob(connectivity_list, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg;  diff_rates = 0.0, save_positions = (false, false), starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
+function to_spatial_jump_prob(connectivity_list, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg;  diff_rates = 0.0, save_positions = (false, false), starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
 
     if diff_rates isa Number
         diff_rates_for_edge = ones(length(prob.u0))*diff_rates
@@ -81,7 +84,7 @@ function to_spatial_jump_prob(connectivity_list, massaction_jump :: MassActionJu
     spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
     spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
     rxs_to_dep_spec = DiffEqJump.rxs_to_dep_spec_map(spatial_majumps)
-    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions = save_positions, vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec, kwargs...)
+    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions = save_positions, vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec, rng = rng, kwargs...)
 end
 
 """

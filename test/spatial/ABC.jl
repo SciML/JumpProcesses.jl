@@ -55,7 +55,7 @@ if doplot
     # Solving
     alg = WellMixedSpatial(RSSACR())
     println("Solving with $alg")
-    spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = hopping_rate, starting_state = starting_state, save_positions=(false,false))
+    spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/50)
     # Plotting
     plt = plot_solution(sol)
@@ -98,7 +98,7 @@ if dobenchmark
 
         for alg in [RSSACR(), DirectCR(), NRM()]
             short_label = "$alg"[1:end-2]
-            spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = hopping_rate, starting_state = starting_state, save_positions=(false,false))
+            spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state, save_positions=(false,false))
             println("Solving with $(spatial_jump_prob.aggregator)")
             solve(spatial_jump_prob, SSAStepper())
             # times = benchmark_n_times(spatial_jump_prob, 5)
@@ -113,7 +113,7 @@ end
 if doanimation
     alg = RSSACR()
     println("Setting up...")
-    spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = hopping_rate, starting_state = starting_state)
+    spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
     println("Solving...")
     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/200)
     println("Animating...")

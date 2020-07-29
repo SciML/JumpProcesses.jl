@@ -39,5 +39,5 @@ diff_rates_for_edge[4] = 1.0
 starting_state = zeros(Int, num_nodes*length(prob.u0))
 starting_state[1 : length(prob.u0)] = copy(prob.u0)
 alg = WellMixedSpatial(NRM())
-spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = diff_rates_for_edge, starting_state = starting_state, save_positions=(false,false))
+spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = diff_rates_for_edge, starting_state = starting_state, save_positions=(false,false))
 sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/200)

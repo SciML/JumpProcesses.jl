@@ -16,6 +16,7 @@ using StaticArrays, Base.Threads
 abstract type AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
+abstract type AbstractSpatialAggregatorAlgorithm end
 
 import Base.Threads
 @static if VERSION < v"1.3"
@@ -73,6 +74,6 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # spatial
-export to_spatial_jump_prob, connectivity_list_from_box, from_spatial_spec, to_spatial_spec, node_to_coordinates, coordinates_to_node, animate_2d
+export WellMixedSpatial, connectivity_list_from_box, from_spatial_spec, to_spatial_spec, node_to_coordinates, coordinates_to_node, animate_2d
 
 end # module

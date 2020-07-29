@@ -1,8 +1,8 @@
 using DiffEqJump, DiffEqBase, Parameters, Plots
 using LightGraphs, BenchmarkTools
 
-doplot = false
-dobenchmark = true
+doplot = true
+dobenchmark = false
 
 # functions to specify reactions between neighboring nodes
 "given a multimolecular reaction, assign its products to the source and the target"
@@ -33,23 +33,19 @@ jump_to_dep_specs = [[1,2],[2,3]]
 rates = [1e-4, 0.01]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 prob = DiscreteProblem([999,1,0],(0.0,250.0), rates)
-jump_prob_SIR = JumpProblem(prob, RSSACR(), majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 
 # Graph setup for SIR model
 num_nodes = 3
 # NOTE: to change the graph, change connectivity_list
 connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes] # this is a cycle graph
 
-diff_rates_for_edge = Array{Float64,1}(undef,length(jump_prob_SIR.prob.u0))
-diff_rates_for_edge[1] = 0.1
-diff_rates_for_edge[2] = 0.1
-diff_rates_for_edge[3] = 0.1
-diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
+# diff_rate = 0.1
 
 if doplot
     # Solve and plot: neighbors not reacting
+    alg = WellMixedSpatial(RDirect())
+    spatial_SIR = JumpProblem(prob, alg, majumps, connectivity_list)
     println("Solving...")
-    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR)
     sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
     println("Plotting...")
     labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
@@ -63,7 +59,7 @@ if doplot
     yaxis!("number")
 
     # Solve and plot: neighbors reacting
-    spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR; get_rate = get_rate, assign_products = assign_products)
+    spatial_SIR = JumpProblem(prob, alg, majumps, connectivity_list; assign_products = assign_products)
     sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
     labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
     trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
@@ -117,7 +113,7 @@ if dobenchmark
     diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
     println("Starting benchmark")
     for alg in [RSSACR(), DirectCR()]
-        spatial_SIR = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob_SIR.massaction_jump, jump_prob_SIR.prob, alg; get_rate = get_rate, assign_products = assign_products)
+        spatial_SIR = JumpProblem(prob, WellMixedSpatial(alg), majumps, connectivity_list; assign_products = assign_products)
         println("Using $(spatial_SIR.aggregator)")
         median_time = median(benchmark_n_times(spatial_SIR, 5))
         println("Solving the problem took $median_time seconds.")

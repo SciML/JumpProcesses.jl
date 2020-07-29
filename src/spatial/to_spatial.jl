@@ -1,5 +1,27 @@
 using DiffEqJump, DiffEqBase, Parameters
 
+# NOTE: save_positions = (false, false) for DiscreteProblem by default
+"""
+Construct a jump problem, where diffusions are represented as reactions.
+Given:
+adjacency/connectivity list -- representing a graph. Can be directed.
+massaction_jump -- if neighbors_react is true, only uni- and bi-molecular reactions are allowed
+prob -- DiscreteProblem
+alg -- algorithm to use
+(optional keyword arg) diff_rates -- diffusion rates (analagous to reaction rates). 0.0 by default.
+(optional keyword arg) save_positions -- when/whether to save positions. Equal to (false, false) by default.
+(optional keyword arg) starting_state -- note the ordering of species. Fills all nodes with prob.u0 by default.
+(optional keyword arg) get_rate -- function to get the rate of a reaction between neighboring nodes. Equal to (rx, _, _, rates) -> rates[rx] by defualt
+(optional keyword arg) assign_products -- function to decide where products are assigned
+
+The ordering of species is:
+[species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
+"""
+function JumpProblem(prob, aggregator::WellMixedSpatial, massaction_jump::MassActionJump, connectivity_list; diff_rates = 0.0, save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,false) : (true,true), starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
+    to_spatial_jump_prob(connectivity_list, massaction_jump, prob, aggregator.WellMixedSSA;  diff_rates = diff_rates, save_positions = save_positions, starting_state = starting_state, get_rate = get_rate, assign_products = assign_products, kwargs...)
+end
+
+
 "struct to hold the spatial constants"
 struct Spatial_Constants
     num_nodes
@@ -27,32 +49,30 @@ struct Spatial_Constants
     neighbors_react
 end
 
-
-"if a jump problem is given, use massaction jump, discrete problem and aggregator (algorithm) from it"
-function to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob :: JumpProblem; save_positions = (false, false), starting_state = nothing, get_rate = nothing, assign_products = nothing)
-    to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob.massaction_jump, jump_prob.prob, jump_prob.aggregator; save_positions = save_positions, starting_state = starting_state, get_rate = get_rate, assign_products = assign_products)
-end
-
 """
-Construct a jump problem, where diffusions are represented as reactions, and species in neighboring nodes can react.
+Construct a jump problem, where diffusions are represented as reactions.
 Given:
 adjacency/connectivity list -- representing a graph. Can be directed.
-diff_rates -- diffusion rates (analagous to reaction rates)
 massaction_jump -- if neighbors_react is true, only uni- and bi-molecular reactions are allowed
 prob -- DiscreteProblem
 alg -- algorithm to use
-(optional keyword arg) save_positions -- when/whether to save positions. Equal to (false, false) by default
-(optional keyword arg) starting_state -- note the ordering of species!
-(optional keyword arg) get_rate -- function to get the rate of a reaction between neighboring nodes
+(optional keyword arg) diff_rates -- diffusion rates (analagous to reaction rates). 0.0 by default.
+(optional keyword arg) save_positions -- when/whether to save positions. Equal to (false, false) by default.
+(optional keyword arg) starting_state -- note the ordering of species. Fills all nodes with prob.u0 by default.
+(optional keyword arg) get_rate -- function to get the rate of a reaction between neighboring nodes. Equal to (rx, _, _, rates) -> rates[rx] by defualt
 (optional keyword arg) assign_products -- function to decide where products are assigned
 
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
 """
-function to_spatial_jump_prob(connectivity_list, diff_rates, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg; save_positions = (false, false), starting_state = nothing, get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing)
+function to_spatial_jump_prob(connectivity_list, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg;  diff_rates = 0.0, save_positions = (false, false), starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
 
-    if starting_state == nothing
-        starting_state = vcat([prob.u0 for i in 1:length(connectivity_list)]...)
+    if diff_rates isa Number
+        diff_rates_for_edge = ones(length(prob.u0))*diff_rates
+        diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:length(connectivity_list)]
+    elseif diff_rates isa Array
+        @assert length(diff_rates) == length(prob.u0)
+        diff_rates = [[diff_rates*1.0 for j in 1:length(connectivity_list[i])] for i in 1:length(connectivity_list)]
     end
 
     rx_rates, spatial_majumps = get_spatial_rates_and_massaction_jumps(connectivity_list, diff_rates, massaction_jump, prob, alg; save_positions = save_positions, starting_state = starting_state, get_rate = get_rate, assign_products = assign_products)
@@ -61,7 +81,7 @@ function to_spatial_jump_prob(connectivity_list, diff_rates, massaction_jump :: 
     spatial_prob = DiscreteProblem(starting_state, prob.tspan, rx_rates)
     spec_to_dep_rxs = DiffEqJump.spec_to_dep_rxs_map(num_spatial_species, spatial_majumps)
     rxs_to_dep_spec = DiffEqJump.rxs_to_dep_spec_map(spatial_majumps)
-    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions = save_positions, vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec)
+    JumpProblem(spatial_prob, alg, spatial_majumps, save_positions = save_positions, vartojumps_map=spec_to_dep_rxs, jumptovars_map=rxs_to_dep_spec, kwargs...)
 end
 
 """
@@ -179,7 +199,7 @@ function get_full_net_stoichiometry(rx, reactstoch, netstoch)
     full_net_stoichiometry = deepcopy(netstoch[rx])
     for (s, c) in reactstoch[rx]
         index = findfirst(x-> x[1] == s, full_net_stoichiometry)
-        if index == nothing
+        if index === nothing
             push!(full_net_stoichiometry, s => -c)
             push!(full_net_stoichiometry, s => c)
         elseif full_net_stoichiometry[index][2] != -c

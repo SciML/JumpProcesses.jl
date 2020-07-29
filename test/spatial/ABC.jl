@@ -43,9 +43,6 @@ dimension = 2
 connectivity_list = connectivity_list_from_box(num_sites_per_edge, dimension)
 num_nodes = length(connectivity_list)
 
-diff_rates_for_edge = [hopping_rate for species in 1:length(prob.u0)]
-diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
-
 # Starting state setup
 starting_state = zeros(Int, num_nodes*length(prob.u0))
 starting_state[1 : length(prob.u0)] = copy(prob.u0)
@@ -56,10 +53,9 @@ starting_state[1 : length(prob.u0)] = copy(prob.u0)
 
 if doplot
     # Solving
-    alg = RSSACR()
+    alg = WellMixedSpatial(RSSACR())
     println("Solving with $alg")
-    jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
-    spatial_jump_prob = to_spatial_jump_prob(connectivity_list, diff_rates, jump_prob, starting_state = starting_state)
+    spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = hopping_rate, starting_state = starting_state, save_positions=(false,false))
     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/50)
     # Plotting
     plt = plot_solution(sol)
@@ -85,7 +81,7 @@ if dobenchmark
     hopping_rate = 1. # NOTE: using constant hopping rate not prevent diffusions from skyrocketing as number of sites per edge increases
     println("Using constant hopping rate not prevent diffusions from skyrocketing as number of sites per edge increases")
     println("rates: $rates, hopping rate: $hopping_rate, dimension: $dimension, starting position: $u0, final time: $tf")
-    nums_sites_per_edge = [8, 16, 32, 64, 128, 256]
+    nums_sites_per_edge = [8, 16, 32]
     for (i, num_sites_per_edge) in enumerate(nums_sites_per_edge)
         num_nodes = num_sites_per_edge^3
         num_species = length(prob.u0)
@@ -93,9 +89,6 @@ if dobenchmark
         println("Have $num_sites_per_edge sites per edge, $num_nodes nodes and $num_rxs reactions")
 
         connectivity_list = connectivity_list_from_box(num_sites_per_edge, dimension)
-
-        diff_rates_for_edge = [hopping_rate for species in 1:length(prob.u0)]
-        diff_rates = [[diff_rates_for_edge for j in 1:length(connectivity_list[i])] for i in 1:num_nodes]
 
         # Starting state setup (place all in the center)
         starting_state = zeros(Int, num_nodes*length(prob.u0))
@@ -105,7 +98,7 @@ if dobenchmark
 
         for alg in [RSSACR(), DirectCR(), NRM()]
             short_label = "$alg"[1:end-2]
-            spatial_jump_prob = to_spatial_jump_prob(connectivity_list, diff_rates, majumps, prob, alg; starting_state = starting_state)
+            spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = hopping_rate, starting_state = starting_state, save_positions=(false,false))
             println("Solving with $(spatial_jump_prob.aggregator)")
             solve(spatial_jump_prob, SSAStepper())
             # times = benchmark_n_times(spatial_jump_prob, 5)
@@ -120,7 +113,7 @@ end
 if doanimation
     alg = RSSACR()
     println("Setting up...")
-    spatial_jump_prob = to_spatial_jump_prob(connectivity_list, diff_rates, majumps, prob, alg, starting_state = starting_state)
+    spatial_jump_prob = JumpProblem(prob, alg, majumps, connectivity_list; diff_rates = hopping_rate, starting_state = starting_state)
     println("Solving...")
     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/200)
     println("Animating...")

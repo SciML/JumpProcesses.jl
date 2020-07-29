@@ -66,6 +66,9 @@ systems with many species and many channels, Journal of Physical Chemistry A,
 struct NRM <: AbstractAggregatorAlgorithm end
 struct RSSACR <: AbstractAggregatorAlgorithm end
 struct RDirect <: AbstractAggregatorAlgorithm end
+struct WellMixedSpatial  <: AbstractSpatialAggregatorAlgorithm
+    WellMixedSSA :: AbstractAggregatorAlgorithm
+end
 
 
 const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(), RDirect())

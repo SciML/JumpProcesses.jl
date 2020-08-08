@@ -73,8 +73,8 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 if doplot
     plothand = plot(reuse=false)
     for alg in SSAalgs
-        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
-        sol = solve(jump_prob, SSAStepper())
+        local jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+        local sol = solve(jump_prob, SSAStepper())
         plot!(plothand, sol.t, sol[3,:], seriestype=:steppost)
     end
     display(plothand)
@@ -84,7 +84,7 @@ end
 if dotestmean
     means = zeros(Float64,length(SSAalgs))
     for (i,alg) in enumerate(SSAalgs)
-        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+        local jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
         means[i]  = runSSAs(jump_prob)
         relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans

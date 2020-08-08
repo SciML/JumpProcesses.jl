@@ -30,8 +30,8 @@ sol = solve(jump_prob,FunctionMap())
 
 nums = Int[]
 @time for i in 1:10000
-  jump_prob = JumpProblem(prob,Direct(),jump,jump2)
-  sol = solve(jump_prob,FunctionMap())
+  local jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+  local sol = solve(jump_prob,FunctionMap())
   push!(nums,sol[end])
 end
 
@@ -45,8 +45,8 @@ sol = solve(jump_prob,FunctionMap())
 
 nums = Int[]
 @time for i in 1:10000
-  jump_prob = JumpProblem(prob,Direct(),jump,jump2)
-  sol = solve(jump_prob,FunctionMap())
+  local jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+  local sol = solve(jump_prob,FunctionMap())
   push!(nums,sol[2])
 end
 

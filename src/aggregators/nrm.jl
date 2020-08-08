@@ -39,29 +39,6 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
 end
 
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::NRMJumpAggregation)(u, t, integrator)
-    p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::NRMJumpAggregation)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
-# setting up a new simulation
-function (p::NRMJumpAggregation)(dj, u, t, integrator) # initialize
-    initialize!(p, integrator, u, integrator.p, t)
-    register_next_jump_time!(integrator, p, t)
-    nothing
-end
-
-
 +############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,

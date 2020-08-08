@@ -16,28 +16,6 @@ DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs:
   DirectJumpAggregation{T,S,F1,F2,RNG}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng)
 
 
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::DirectJumpAggregation)(u, t, integrator)
-  p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::DirectJumpAggregation)(integrator)
-  execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-  generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-  register_next_jump_time!(integrator, p, integrator.t)
-  nothing
-end
-
-# setting up a new simulation
-function (p::DirectJumpAggregation)(dj, u, t, integrator) # initialize
-  initialize!(p, integrator, u, integrator.p, t)
-  register_next_jump_time!(integrator, p, t)
-  nothing
-end
-
 ############################# Required Functions #############################
 
 # creating the JumpAggregation structure (tuple-based constant jumps)

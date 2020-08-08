@@ -67,28 +67,6 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     RSSACRJumpAggregation{typeof(njt),eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh, minrate, maxrate, rt, ratetogroup, cs_bnds)
 end
 
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::RSSACRJumpAggregation)(u, t, integrator)
-    p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::RSSACRJumpAggregation)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    generate_jumps!(p, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
-# setting up a new simulation
-function (p::RSSACRJumpAggregation)(dj, u, t, integrator) # initialize
-    initialize!(p, integrator, u, integrator.p, t)
-    register_next_jump_time!(integrator, p, t)
-    nothing
-end
-
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)

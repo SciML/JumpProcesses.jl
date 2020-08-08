@@ -3,7 +3,7 @@ An aggregator interface for SSA-like algorithms.
 
 ### Required Fields
 - `next_jump`          # the next jump to execute
-- `last_jump`          # the previous jump that was executed
+- `prev_jump`          # the previous jump that was executed
 - `next_jump_time`     # the time of the next jump
 - `end_time`           # the time to stop a simulation
 - `cur_rates`          # vector of current propensity values
@@ -176,6 +176,9 @@ Execute `p.next_jump`.
         idx = next_jump - num_ma_rates
         @inbounds p.affects![idx](integrator)
     end
+
+    # save jump that was just exectued 
+    p.prev_jump = next_jump
     return integrator.u
 end
 

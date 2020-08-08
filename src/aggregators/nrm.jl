@@ -3,6 +3,7 @@
 
 mutable struct NRMJumpAggregation{T,S,F1,F2,RNG,DEPGR,PQ} <: AbstractSSAJumpAggregator
     next_jump::Int
+    prev_jump::Int
     next_jump_time::T
     end_time::T
     cur_rates::Vector{T}
@@ -36,7 +37,8 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     pq = MutableBinaryMinHeap{T}()
 
-    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
+    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, sr, maj, 
+                                                            rs, affs!, sps, rng, dg, pq)
 end
 
 +############################# Required Functions ##############################

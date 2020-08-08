@@ -4,6 +4,7 @@ Direct with rejection sampling
 
 mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
   next_jump::Int
+  prev_jump::Int
   next_jump_time::T
   end_time::T
   cur_rates::Vector{T}
@@ -17,8 +18,9 @@ mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAgg
   max_rate::T
 end
 
-
-function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG,DEPGR}
+function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, 
+                                rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; 
+                                num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG,DEPGR}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
@@ -33,7 +35,8 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     # make sure each jump depends on itself
     add_self_dependencies!(dg)
     max_rate = maximum(crs)
-    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate)
+    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, nj, njt, et, crs, sr, maj, rs, 
+                                                            affs!, sps, rng, dg, max_rate)
 end
 
 ############################# Required Functions #############################

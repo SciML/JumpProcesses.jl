@@ -6,6 +6,7 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 mutable struct RSSACRJumpAggregation{F,U,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V,P<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
     next_jump::Int
+    prev_jump::Int
     next_jump_time::F
     end_time::F
     cur_rate_low::Vector{F}
@@ -28,7 +29,11 @@ mutable struct RSSACRJumpAggregation{F,U,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V,P<:Prior
     cur_u_bnds::Matrix{U} # current bounds on state u
   end
 
-function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; u::U, vartojumps_map=nothing, jumptovars_map=nothing, bracket_data=nothing, minrate=convert(F,MINJUMPRATE), maxrate=convert(F,Inf), kwargs...) where {F,S,F1,F2,RNG,U}
+function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S, rs::F1, 
+                               affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; u::U, 
+                               vartojumps_map=nothing, jumptovars_map=nothing, 
+                               bracket_data=nothing, minrate=convert(F,MINJUMPRATE), 
+                               maxrate=convert(F,Inf), kwargs...) where {F,S,F1,F2,RNG,U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         error("To use the RSSA algorithm a map from variables to depedent jumps must be supplied.")
@@ -62,9 +67,12 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll overwrite this in init anyways...
-    rt = PriorityTable{F,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate, Vector{PriorityGroup{F,Vector{Int}}}(), Vector{F}(), zero(F), Vector{Tuple{Int,Int}}(), ratetogroup)
+    rt = PriorityTable{F,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate, Vector{PriorityGroup{F,Vector{Int}}}(), 
+                                                      Vector{F}(), zero(F), Vector{Tuple{Int,Int}}(), ratetogroup)
 
-    RSSACRJumpAggregation{typeof(njt),eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh, minrate, maxrate, rt, ratetogroup, cs_bnds)
+    RSSACRJumpAggregation{typeof(njt),eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(
+                            nj, nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, 
+                            jtov_map, bd, ulow, uhigh, minrate, maxrate, rt, ratetogroup, cs_bnds)
 end
 
 ############################# Required Functions ##############################
@@ -90,7 +98,7 @@ function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
     # setup PriorityTable
     p.rt = PriorityTable(p.ratetogroup, p.cur_rate_high, p.minrate, p.maxrate)
 
-    generate_jumps!(p, u, params, t)
+    generate_jumps!(p, integrator, u, params, t)
     nothing
 end
 
@@ -105,7 +113,7 @@ function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::RSSACRJumpAggregation, u, params, t)
+function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
     if nomorejumps!(p, sum_rate)

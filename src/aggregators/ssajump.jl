@@ -199,8 +199,8 @@ end
 """
     linear_search(array, r)
 
-Perform linear search for `r` over array of increasing elements. Output element
-j s.t. array[j-1] < r <= array[j]. Will error if no such r exists
+Perform linear search for `r` over array. Output index
+j s.t. sum(array[1:j-1]) < r <= sum(array[1:j]). Will error if no such j exists
 """
 @inline function linear_search(array, r)
     jidx = 1

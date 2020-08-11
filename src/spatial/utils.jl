@@ -9,6 +9,9 @@ coordinates_to_node(x,y,z,m) = x + (y-1)*m + (z-1)*m^2
 "return node index from coordinates and number of sites per box edge"
 coordinates_to_node(x,y,m) = x + (y-1)*m
 
+"return node index from coordinates and number of sites per box edge"
+coordinates_to_node(x,m) = x
+
 function connectivity_list_from_box(box_width :: Integer, dimension :: Integer)
     @assert 1 <= dimension <= 3
     vol_num = box_width^dimension

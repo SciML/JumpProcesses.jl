@@ -1,22 +1,44 @@
 using DiffEqJump, DiffEqBase
 using Plots, BenchmarkTools
+using Test
 
-doplot = true
+dotest = true
+# doplot = false
 dobenchmark = false
 doanimation = false
 
-function plot_solution(sol)
+function get_mean_end_state(jump_prob, Nsims)
+    end_state = zeros(1:length(jump_prob.prob.u0))
+    for i in 1:Nsims
+        sol = solve(jump_prob, SSAStepper())
+        end_state += sol.u[end]
+    end
+    end_state/Nsims
+end
+
+function plot_solution(sol, nodes)
     println("Plotting")
     labels = vcat([["A $i", "B $i", "C $i"] for i in 1:num_nodes]...)
     trajectories = [hcat(sol.u...)[i,:] for i in 1:length(spatial_jump_prob.prob.u0)]
-    plot1 = plot(sol.t, trajectories[1], label = labels[1])
-    for i in 2:3
-        plot!(plot1, sol.t, trajectories[i], label = labels[i])
+    p = plot()
+    for node in nodes
+        for species in 1:3
+            plot!(p, sol.t, trajectories[3*(node-1)+species], label = labels[3*(node-1)+species])
+        end
     end
     title!("A + B <--> C RDME")
     xaxis!("time")
     yaxis!("number")
-    plot1
+    p
+end
+
+function benchmark_n_times(jump_prob, n)
+    solve(jump_prob, SSAStepper())
+    times = zeros(n)
+    for i in 1:n
+        times[i] = @elapsed solve(jump_prob, SSAStepper())
+    end
+    times
 end
 
 # ABC model A + B <--> C
@@ -28,48 +50,56 @@ netstoch = [
     [1 => -1, 2 => -1, 3 => 1],
     [1 => 1, 2 => 1, 3 => -1]
 ]
-spec_to_dep_jumps = [[1],[1],[2]]
-jump_to_dep_specs = [[1,2,3],[1,2,3]]
 rates = [0.1, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
-prob = DiscreteProblem([500,500,0],(0.0,0.25), rates)
+prob = DiscreteProblem([500,500,0],(0.0,10.0), rates)
 
 # Graph setup
 domain_size = 1.0 #μ-meter
-num_sites_per_edge = 32
-diffusivity = 0.01
+num_sites_per_edge = 16
+diffusivity = 0.1
 hopping_rate = diffusivity * (num_sites_per_edge/domain_size)^2
-dimension = 2
-connectivity_list = connectivity_list_from_box(num_sites_per_edge, dimension)
+dimension = 1
+connectivity_list = connectivity_list_from_box(num_sites_per_edge, dimension) # this is a grid graph
 num_nodes = length(connectivity_list)
 
 # Starting state setup
 starting_state = zeros(Int, num_nodes*length(prob.u0))
-starting_state[1 : length(prob.u0)] = copy(prob.u0)
-# center_node = coordinates_to_node(trunc(Int,num_sites_per_edge/2),trunc(Int,num_sites_per_edge/2),num_sites_per_edge)
-# center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
-# starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
+# starting_state[1 : length(prob.u0)] = copy(prob.u0)
+center_node = coordinates_to_node(trunc(Int,num_sites_per_edge/2),num_sites_per_edge)
+center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
+starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
 
 
-if doplot
-    # Solving
+if dotest
+    Nsims        = 1000
+    reltol       = 0.1
+
+    N = sum(starting_state)
+    k = num_nodes/2 * rates[2]/rates[1]
+    A = B = (-k + √(k^2 + N*k))/num_nodes
+    C = N/(2*num_nodes) - A
+    equilibrium_state = vcat([[A, B, C] for node in 1:num_nodes]...)
+
     alg = WellMixedSpatial(RSSACR())
-    println("Solving with $alg")
     spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
-    sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/50)
-    # Plotting
-    plt = plot_solution(sol)
-    display(plt)
+    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+    diff = mean_end_state - equilibrium_state
+    @test [d < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
 end
 
-function benchmark_n_times(jump_prob, n)
-    solve(jump_prob, SSAStepper())
-    times = zeros(n)
-    for i in 1:n
-        times[i] = @elapsed solve(jump_prob, SSAStepper())
-    end
-    times
-end
+# if doplot
+#     # Solving
+#     alg = WellMixedSpatial(RSSACR())
+#     println("Solving with $alg")
+#     spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
+#     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/50)
+#     # Plotting
+#     nodes = [1,8]
+#     plt = plot_solution(sol, nodes)
+#     display(plt)
+# end
+
 
 if dobenchmark
     rates = [0.1, 1.]
@@ -108,6 +138,16 @@ if dobenchmark
         end
     end
 end
+
+# quick benchmark:
+# algs = [RSSA(), RSSACR(), NRM(), SortingDirect(), RDirect(), Direct()]
+# using BenchmarkTools
+# for alg in algs
+#     spatial_jump_prob = JumpProblem(prob, WellMixedSpatial(alg), majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
+#     println("Solving with $(spatial_jump_prob.aggregator)")
+#     solve(spatial_jump_prob, SSAStepper())
+#     @time solve(spatial_jump_prob, SSAStepper())
+# end
 
 # Make animation
 if doanimation

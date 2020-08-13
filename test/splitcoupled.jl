@@ -92,7 +92,7 @@ Nsims = 8000
 Amean = 0.
 for i in 1:Nsims
   global Amean
-  sol    = solve(jump_prob,Tsit5(),saveat=10.)
+  local sol = solve(jump_prob,Tsit5(),saveat=10.)
   Amean += sol[1,end]
 end
 Amean /= Nsims

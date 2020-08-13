@@ -17,4 +17,6 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Saveat Regression test" begin include("saveat_regression.jl") end
   @time @testset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
   @time @testset "Thread Safety test" begin include("thread_safety.jl") end
+  @time @testset "Spatial A+B <--C" begin include("spatial//ABC.jl") end
+
 end

@@ -1,9 +1,10 @@
 using DiffEqJump, DiffEqBase
-using Plots, BenchmarkTools
+# using BenchmarkTools
 using Test
+using HypergeometricFunctions
 
-dospatialtest = true
-domixedtest = false
+dospatialtest = false
+domixedtest = true
 # doplot = false
 dobenchmark = false
 doanimation = false
@@ -42,6 +43,12 @@ function benchmark_n_times(jump_prob, n)
     times
 end
 
+function test_alg(jump_prob, Nsims, equilibrium_state)
+    diff = get_mean_end_state(jump_prob, Nsims) - equilibrium_state
+    println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
+    return diff
+end
+
 # ABC model A + B <--> C
 reactstoch = [
     [1 => 1, 2 => 1],
@@ -55,23 +62,6 @@ rates = [0.1, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 prob = DiscreteProblem([500,500,0],(0.0,10.0), rates)
 
-function test_alg(jump_prob, Nsims, equilibrium_state)
-    diff = get_mean_end_state(jump_prob, Nsims) - equilibrium_state
-    println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
-    return diff
-end
-if domixedtest
-    Nsims = 10^5
-
-    alg = RSSACR()
-    jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map = DiffEqJump.spec_to_dep_rxs_map(length(prob.u0), majumps), jumptovars_map = DiffEqJump.rxs_to_dep_spec_map(majumps))
-    N = sum(starting_state)
-    k = rates[2]/rates[1] * 1/2
-    A = B = -k + √(k^2 + N*k)
-    C = N/2 - A
-    equilibrium_state = [A, B, C]
-    diff = test_alg(jump_prob, Nsims, equilibrium_state)
-end
 # Graph setup
 domain_size = 1.0 #μ-meter
 num_sites_per_edge = 10
@@ -89,9 +79,17 @@ center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0
 starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
 
 
+K = rates[2]/rates[1]
+function analyticmean(u, K)
+    α = u[1]; β = u[2]; γ = u[3]
+    @assert β ≥ α "A(0) must not exceed B(0)"
+    K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
+end
+analytic = analyticmean(u0, K)
+
 if dospatialtest
-    Nsims        = 10000
-    reltol       = 0.05
+    Nsims        = 1000
+    reltol       = 0.01
 
     N = sum(starting_state)
     k = num_nodes/2 * rates[2]/rates[1]

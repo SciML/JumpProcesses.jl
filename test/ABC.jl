@@ -1,4 +1,5 @@
-using DiffEqJump, HypergeometricFunctions
+using DiffEqJump, DiffEqBase
+using Test, HypergeometricFunctions
 
 Nsims = 1e4
 
@@ -16,6 +17,8 @@ u0 = [500,500,0]
 tspan = (0.0,10.0)
 prob = DiscreteProblem([500,500,0],(0.0,2.0), rates)
 majumps = MassActionJump(rates, reactstoch, netstoch)
+rx_to_spec = rxs_to_dep_spec_map(majumps)
+spec_to_rx = spec_to_dep_rxs_map(3, majumps)
 
 function getmean(jprob,Nsims)
     Amean = 0
@@ -27,8 +30,6 @@ function getmean(jprob,Nsims)
     Amean
 end
 
-Amean = getmean(jprob, Nsims)
-
 K = 1/.1
 function analyticmean(u, K)
     α = u[1]; β = u[2]; γ = u[3]
@@ -37,11 +38,11 @@ function analyticmean(u, K)
 end
 analytic_mean = analyticmean(u0, K)
 
-relative_tolerance = 0.01
 
 algs = DiffEqJump.JUMP_AGGREGATORS
+relative_tolerance = 0.01
 for alg in algs
-    if needs_depgraph(alg)
-    jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
+    jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false),vartojumps_map=spec_to_rx, jumptovars_map=rx_to_spec)
+    Amean = getmean(jprob, Nsims)
     @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
 end

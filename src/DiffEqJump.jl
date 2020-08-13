@@ -63,6 +63,8 @@ export RSSACR, RDirect
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
+export spec_to_dep_rxs_map, rxs_to_dep_spec_map, make_dependency_graph
+
 export init, solve, solve!
 
 export reset_aggregated_jumps!

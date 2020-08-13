@@ -1,20 +1,25 @@
 using DiffEqJump, HypergeometricFunctions
 
-Nsims = 1e5
+Nsims = 1e4
 
-rn = @reaction_network begin
-    .1, A + B --> C
-    1.0, C --> A + B
-end
+# ABC model A + B <--> C
+reactstoch = [
+    [1 => 1, 2 => 1],
+    [3 => 1],
+]
+netstoch = [
+    [1 => -1, 2 => -1, 3 => 1],
+    [1 => 1, 2 => 1, 3 => -1]
+]
+rates = [0.1, 1.]
 u0 = [500,500,0]
 tspan = (0.0,10.0)
-dprob = DiscreteProblem(rn,u0,tspan)
-jprob = JumpProblem(rn,dprob,Direct(),save_positions=(false,false))
+prob = DiscreteProblem([500,500,0],(0.0,2.0), rates)
+majumps = MassActionJump(rates, reactstoch, netstoch)
 
 function getmean(jprob,Nsims)
     Amean = 0
     for i = 1:Nsims
-        (mod(i,div(Nsims,100)) == 0) && println("i = $i")
         sol = solve(jprob,SSAStepper())
         Amean += sol[1,end]
     end
@@ -30,6 +35,12 @@ function analyticmean(u, K)
     @assert β ≥ α "A(0) must not exceed B(0)"
     K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
 end
-analytic = analyticmean(u0, K)
+analytic_mean = analyticmean(u0, K)
 
-println("Amean = $Amean, analytic = $analytic")
+relative_tolerance = 0.01
+
+algs = DiffEqJump.JUMP_AGGREGATORS
+for alg in algs
+    jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
+    @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
+end

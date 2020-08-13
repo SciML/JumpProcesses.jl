@@ -42,6 +42,10 @@ function benchmark_n_times(jump_prob, n)
     times
 end
 
+# physical constants
+domain_size = 1.0 #μ-meter
+num_sites_per_edge = 10
+mesh_size = domain_size/num_sites_per_edge
 # ABC model A + B <--> C
 reactstoch = [
     [1 => 1, 2 => 1],
@@ -51,13 +55,11 @@ netstoch = [
     [1 => -1, 2 => -1, 3 => 1],
     [1 => 1, 2 => 1, 3 => -1]
 ]
-rates = [0.1, 1.]
+rates = [0.1/mesh_size, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 prob = DiscreteProblem([500,500,0],(0.0,10.0), rates)
 
 # Graph setup
-domain_size = 1.0 #μ-meter
-num_sites_per_edge = 10
 diffusivity = 0.1
 hopping_rate = diffusivity * (num_sites_per_edge/domain_size)^2
 dimension = 1
@@ -72,7 +74,7 @@ center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0
 starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
 
 
-K = rates[2]/rates[1]
+K = rates[2]/(rates[1]*mesh_size)
 function analyticmean(u, K)
     α = u[1]; β = u[2]; γ = u[3]
     @assert β ≥ α "A(0) must not exceed B(0)"
@@ -95,14 +97,6 @@ if dospatialtest
     @test [abs(d) < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
 end
 
-function get_mean_sol(jump_prob)
-    sol = solve(jump_prob, SSAStepper())
-    for i in 1:999
-        sol += solve(jump_prob, SSAStepper())
-    end
-    mean_sol = sol / 1000
-end
-get_mean_sol(spatial_jump_prob)
 # if doplot
 #     # Solving
 #     alg = WellMixedSpatial(RSSACR())

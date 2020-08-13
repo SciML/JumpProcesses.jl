@@ -1,7 +1,7 @@
 name = "DiffEqJump"
 uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "6.9.3"
+version = "6.9.4"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
@@ -10,14 +10,13 @@ DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 FunctionWrappers = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 PoissonRandom = "e409e4f3-bfea-5376-8464-e040bb5c01ab"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RandomNumbers = "e6cf234a-135c-5ec9-84dd-332b85af5143"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TreeViews = "a2a6695c-b41b-5b7d-aed9-dbfdeacea5d7"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
 ArrayInterface = "2.8"
@@ -25,20 +24,19 @@ Compat = "2.2, 3.0"
 DataStructures = "0.17"
 DiffEqBase = "6.11"
 FunctionWrappers = "1.0"
-Parameters = "0.12"
 PoissonRandom = "0.4"
 RandomNumbers = "1.3"
 RecursiveArrayTools = "2"
 StaticArrays = "0.10, 0.11, 0.12"
 TreeViews = "0.3"
+UnPack = "1.0.1"
 julia = "1.3"
 
 [extras]
-DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["DiffEqProblemLibrary", "Distributions", "OrdinaryDiffEq", "StochasticDiffEq", "Test"]
+test = ["OrdinaryDiffEq", "Statistics", "StochasticDiffEq", "Test"]

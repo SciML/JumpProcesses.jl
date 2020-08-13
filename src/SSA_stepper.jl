@@ -7,6 +7,7 @@ mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEInt
     f::F
     u::uType
     t::tType
+    tprev::tType
     p::P
     sol::S
     i::Int
@@ -128,7 +129,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
      sizehint!(t,2)
    end
 
-    integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.p,
+    integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.tspan[1],prob.p,
                                sol,1,prob.tspan[1],
                                cb,_saveat,save_everystep,save_end,cur_saveat,
                                opts,tstops,1,false)
@@ -139,6 +140,8 @@ end
 DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
+    integrator.tprev = integrator.t
+
     doaffect = false
     if !isempty(integrator.tstops) &&
         integrator.tstops_idx <= length(integrator.tstops) &&

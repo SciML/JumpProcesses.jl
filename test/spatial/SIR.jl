@@ -15,7 +15,7 @@ function assign_products(rx, massaction_jump, (node1, species1), (node2, species
 end
 
 "given a multimolecular reaction, get the rate"
-function get_rate(rx, (source, source_species), (target, target_species), rates)
+function get_rate(rx, (node1, species1), (node2, species2), rates)
     rates[rx]
 end
 
@@ -32,18 +32,18 @@ spec_to_dep_jumps = [[1],[1,2],convert(Array{Int64,1}, [])]
 jump_to_dep_specs = [[1,2],[2,3]]
 rates = [1e-4, 0.01]
 majumps = MassActionJump(rates, reactstoch, netstoch)
-prob = DiscreteProblem([999,1,0],(0.0,250.0), rates)
+u0 = [999,1,0]
 
 # Graph setup for SIR model
 num_nodes = 3
 # NOTE: to change the graph, change connectivity_list
 connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes] # this is a cycle graph
-
-# diff_rate = 0.1
+starting_state = [u0 for i in 1:num_nodes]
+prob = DiscreteProblem(starting_state,(0.0,250.0), rates))
 
 if doplot
     # Solve and plot: neighbors not reacting
-    alg = WellMixedSpatial(RDirect())
+    alg = WellMixedSpatial(RDirect()
     spatial_SIR = JumpProblem(prob, alg, majumps, connectivity_list = connectivity_list)
     println("Solving...")
     sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)

@@ -24,7 +24,6 @@ spec_to_dep_jumps = [[1,5],[2,3],[4,5],[6]]
 jump_to_dep_specs = [[2],[3],[2],[3],[1,3,4],[1,3,4]]
 rates = [.5, (20*log(2.)/120.), (log(2.)/120.), (log(2.)/600.), .025, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
-prob = DiscreteProblem(u0, (0.0, tf), rates)
 
 # Graph setup for gene expression model
 num_nodes = 30
@@ -36,8 +35,10 @@ diff_rates_for_edge[2] = 0.01
 diff_rates_for_edge[3] = 1.0
 diff_rates_for_edge[4] = 1.0
 
-starting_state = zeros(Int, num_nodes*length(prob.u0))
-starting_state[1 : length(prob.u0)] = copy(prob.u0)
+starting_state = zeros(Int, num_nodes*length(u0))
+starting_state[1 : length(prob.u0)] = copy(u0)
+prob = DiscreteProblem(starting_state, (0.0, tf), rates)
+
 alg = WellMixedSpatial(NRM())
-spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = diff_rates_for_edge, starting_state = starting_state, save_positions=(false,false))
+spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = diff_rates_for_edge)
 sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/200)

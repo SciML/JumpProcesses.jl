@@ -41,6 +41,7 @@ relative_tolerance = 0.01
 
 algs = DiffEqJump.JUMP_AGGREGATORS
 for alg in algs
+    if needs_depgraph(alg)
     jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
     @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
 end

@@ -3,11 +3,10 @@ using DiffEqJump, DiffEqBase
 using Test
 using HypergeometricFunctions
 
-dospatialtest = false
-domixedtest = true
+dospatialtest = true
 # doplot = false
-dobenchmark = false
-doanimation = false
+# dobenchmark = false
+# doanimation = false
 
 function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(1:length(jump_prob.prob.u0))
@@ -41,12 +40,6 @@ function benchmark_n_times(jump_prob, n)
         times[i] = @elapsed solve(jump_prob, SSAStepper())
     end
     times
-end
-
-function test_alg(jump_prob, Nsims, equilibrium_state)
-    diff = get_mean_end_state(jump_prob, Nsims) - equilibrium_state
-    println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
-    return diff
 end
 
 # ABC model A + B <--> C
@@ -85,24 +78,31 @@ function analyticmean(u, K)
     @assert β ≥ α "A(0) must not exceed B(0)"
     K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
 end
-analytic = analyticmean(u0, K)
 
 if dospatialtest
     Nsims        = 1000
-    reltol       = 0.01
+    reltol       = 0.05
 
-    N = sum(starting_state)
-    k = num_nodes/2 * rates[2]/rates[1]
-    A = B = (-k + √(k^2 + N*k))/num_nodes
-    C = N/(2*num_nodes) - A
-    equilibrium_state = vcat([[A, B, C] for node in 1:num_nodes]...)
+    analytic_A = analytic_B = analyticmean(prob.u0, K)
+    analytic_C = ((prob.u0[1]+prob.u0[2]+2*prob.u0[3]) - (analytic_A + analytic_B))/2
+    equilibrium_state = vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...)
 
     alg = WellMixedSpatial(RSSACR())
     spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
-    diff = test_alg(spatial_jump_prob, Nsims, equilibrium_state)
+    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+    diff =  mean_end_state - equilibrium_state
+    println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
     @test [abs(d) < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
 end
 
+function get_mean_sol(jump_prob)
+    sol = solve(jump_prob, SSAStepper())
+    for i in 1:999
+        sol += solve(jump_prob, SSAStepper())
+    end
+    mean_sol = sol / 1000
+end
+get_mean_sol(spatial_jump_prob)
 # if doplot
 #     # Solving
 #     alg = WellMixedSpatial(RSSACR())

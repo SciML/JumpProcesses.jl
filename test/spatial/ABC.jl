@@ -2,7 +2,8 @@ using DiffEqJump, DiffEqBase
 using Plots, BenchmarkTools
 using Test
 
-dotest = true
+dospatialtest = true
+domixedtest = false
 # doplot = false
 dobenchmark = false
 doanimation = false
@@ -54,9 +55,26 @@ rates = [0.1, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 prob = DiscreteProblem([500,500,0],(0.0,10.0), rates)
 
+function test_alg(jump_prob, Nsims, equilibrium_state)
+    diff = get_mean_end_state(jump_prob, Nsims) - equilibrium_state
+    println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
+    return diff
+end
+if domixedtest
+    Nsims = 10^5
+
+    alg = RSSACR()
+    jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map = DiffEqJump.spec_to_dep_rxs_map(length(prob.u0), majumps), jumptovars_map = DiffEqJump.rxs_to_dep_spec_map(majumps))
+    N = sum(starting_state)
+    k = rates[2]/rates[1] * 1/2
+    A = B = -k + √(k^2 + N*k)
+    C = N/2 - A
+    equilibrium_state = [A, B, C]
+    diff = test_alg(jump_prob, Nsims, equilibrium_state)
+end
 # Graph setup
 domain_size = 1.0 #μ-meter
-num_sites_per_edge = 16
+num_sites_per_edge = 10
 diffusivity = 0.1
 hopping_rate = diffusivity * (num_sites_per_edge/domain_size)^2
 dimension = 1
@@ -71,9 +89,9 @@ center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0
 starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
 
 
-if dotest
-    Nsims        = 1000
-    reltol       = 0.1
+if dospatialtest
+    Nsims        = 10000
+    reltol       = 0.05
 
     N = sum(starting_state)
     k = num_nodes/2 * rates[2]/rates[1]
@@ -83,9 +101,8 @@ if dotest
 
     alg = WellMixedSpatial(RSSACR())
     spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
-    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-    diff = mean_end_state - equilibrium_state
-    @test [d < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
+    diff = test_alg(spatial_jump_prob, Nsims, equilibrium_state)
+    @test [abs(d) < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
 end
 
 # if doplot

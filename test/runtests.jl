@@ -19,4 +19,5 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Thread Safety test" begin include("thread_safety.jl") end
   @time @testset "Spatial A+B <--C" begin include("spatial//ABC.jl") end
   @time @testset "diffusion" begin include("spatial//diffusion.jl") end
+  @time @testset "spatial SIR, neighbors react" begin include("spatial//SIR.jl") end
 end

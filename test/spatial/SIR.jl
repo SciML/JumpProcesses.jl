@@ -1,8 +1,18 @@
-using DiffEqJump, DiffEqBase, Parameters, Plots
-using LightGraphs, BenchmarkTools
+using DiffEqJump, DiffEqBase, Parameters
+# using Plots
+# using LightGraphs, BenchmarkTools
+using Test
 
-doplot = true
+doplot = false
 dobenchmark = false
+
+function get_mean_sol(jump_prob, Nsims, saveat)
+    sol = solve(jump_prob, SSAStepper(), saveat = saveat).u
+    for i in 1:Nsims-1
+        sol += solve(jump_prob, SSAStepper(), saveat = saveat).u
+    end
+    sol/Nsims
+end
 
 # functions to specify reactions between neighboring nodes
 "given a multimolecular reaction, assign its products to the source and the target"
@@ -14,10 +24,11 @@ function assign_products(rx, massaction_jump, (node1, species1), (node2, species
     end
 end
 
-"given a multimolecular reaction, get the rate"
-function get_rate(rx, (node1, species1), (node2, species2), rates)
-    rates[rx]
-end
+# NOTE: this is the default get_rate:
+# "given a multimolecular reaction, get the rate"
+# function get_rate(rx, (node1, species1), (node2, species2), rates)
+#     rates[rx]
+# end
 
 # SIR model
 reactstoch = [
@@ -32,49 +43,57 @@ spec_to_dep_jumps = [[1],[1,2],convert(Array{Int64,1}, [])]
 jump_to_dep_specs = [[1,2],[2,3]]
 rates = [1e-4, 0.01]
 majumps = MassActionJump(rates, reactstoch, netstoch)
-u0 = [999,1,0]
+u0 = [998,2,0]
 
 # Graph setup for SIR model
 num_nodes = 3
-# NOTE: to change the graph, change connectivity_list
 connectivity_list = [[mod1(i-1,num_nodes),mod1(i+1,num_nodes)] for i in 1:num_nodes] # this is a cycle graph
-starting_state = [u0 for i in 1:num_nodes]
-prob = DiscreteProblem(starting_state,(0.0,250.0), rates))
+starting_state = vcat([u0 for i in 1:num_nodes]...)
+tf = 250.
+prob = DiscreteProblem(starting_state,(0.0,tf), rates)
+
+alg = WellMixedSpatial(RDirect())
+jprob = JumpProblem(prob, alg, majumps, connectivity_list = connectivity_list)
+jprob_neighbors_react = JumpProblem(prob, alg, majumps, connectivity_list = connectivity_list, assign_products = assign_products)
+sol1 = get_mean_sol(jprob, 100, 1.)
+sol2 = get_mean_sol(jprob_neighbors_react, 100, 1.)
+trajectories1 = [hcat(sol1...)[i,:] for i in 1:3*num_nodes]
+trajectories2 = [hcat(sol2...)[i,:] for i in 1:3*num_nodes]
+
+# testing that if neighbors react people get infected faster.
+@test sum(sol1[45][2:3:end]) < 0.5 * sum(sol2[45][2:3:end])
 
 if doplot
-    # Solve and plot: neighbors not reacting
-    alg = WellMixedSpatial(RDirect()
-    spatial_SIR = JumpProblem(prob, alg, majumps, connectivity_list = connectivity_list)
-    println("Solving...")
-    sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
-    println("Plotting...")
+    Nsims = 100
+    alg = WellMixedSpatial(RDirect())
+    jprob = JumpProblem(prob, alg, majumps, connectivity_list = connectivity_list)
+    jprob_neighbors_react = JumpProblem(prob, alg, majumps, connectivity_list = connectivity_list, assign_products = assign_products)
+    sol1 = get_mean_sol(jprob, Nsims, 1.)
+    sol2 = get_mean_sol(jprob_neighbors_react, Nsims, 1.)
+
     labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
-    trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
-    plot1 = plot(sol.t, trajectories[1], label = labels[1])
-    for i in 2:length(trajectories)
-        plot!(plot1, sol.t, trajectories[i], label = labels[i])
+    trajectories1 = [hcat(sol1...)[i,:] for i in 1:3*num_nodes]
+    plot1 = plot()
+    for i in 1:length(trajectories)
+        plot!(plot1, 0:1:tf, trajectories1[i], label = labels[i])
     end
     title!("SIR with neighbors not allowed to react")
     xaxis!("time")
     yaxis!("number")
 
-    # Solve and plot: neighbors reacting
-    spatial_SIR = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, assign_products = assign_products)
-    sol = solve(spatial_SIR, SSAStepper(), saveat = 1.)
-    labels = vcat([["S $i", "I $i", "R $i"] for i in 1:num_nodes]...)
-    trajectories = [hcat(sol.u...)[i,:] for i in 1:3*num_nodes]
-    plot2 = plot(sol.t, trajectories[1], label = labels[1])
-    for i in 2:length(trajectories)
-        plot!(plot2, sol.t, trajectories[i], label = labels[i])
+    trajectories2 = [hcat(sol2...)[i,:] for i in 1:3*num_nodes]
+    plot2 = plot()
+    for i in 1:length(trajectories)
+        plot!(plot2, 0:1:tf, trajectories2[i], label = labels[i])
     end
-    title!("SIR with neighbors allowed to react")
+    title!("SIR with neighbors not allowed to react")
     xaxis!("time")
     yaxis!("number")
 
     layout = @layout [a ; b]
     final_plot = plot(plot1, plot2, layout = layout)
-    println("Displaying the plot:")
     display(final_plot)
+
 end
 
 ################# Benchmarking ################

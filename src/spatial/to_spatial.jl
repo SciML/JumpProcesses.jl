@@ -25,7 +25,7 @@ The ordering of species is:
 function JumpProblem(prob, aggregator::WellMixedSpatial, massaction_jump::MassActionJump; connectivity_list = nothing,
     diff_rates = 0.0, save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,false) : (true,true),
     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)),
-    get_rate = nothing, assign_products = nothing, kwargs...)
+    get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
 
     if connectivity_list === nothing
         error("A graph needs to be given for RDME.")

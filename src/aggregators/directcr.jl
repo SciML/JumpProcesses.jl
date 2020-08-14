@@ -12,6 +12,7 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
     next_jump::Int
+    prev_jump::Int
     next_jump_time::T
     end_time::T
     cur_rates::Vector{T}
@@ -62,33 +63,10 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
                                                         Vector{Tuple{Int,Int}}(), ratetogroup)
 
     DirectCRJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(rt),typeof(ratetogroup)}(
-                                            nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
+                                            nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
                                             dg, minrate, maxrate, rt, ratetogroup)
 end
 
-
-
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::DirectCRJumpAggregation)(u, t, integrator)
-    p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::DirectCRJumpAggregation)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
-# setting up a new simulation
-function (p::DirectCRJumpAggregation)(dj, u, t, integrator) # initialize
-    initialize!(p, integrator, u, integrator.p, t)
-    register_next_jump_time!(integrator, p, t)
-    nothing
-end
 
 ############################# Required Functions ##############################
 

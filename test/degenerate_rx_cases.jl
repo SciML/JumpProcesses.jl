@@ -99,8 +99,8 @@ jump_to_dep_specs = [[1],[1]]
 namedpars = (dep_graph=dep_graph, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
 
 for method in methods
-    jump_prob = JumpProblem(prob, method, jump, jump2; namedpars...)
-    sol = solve(jump_prob, SSAStepper())
+    local jump_prob = JumpProblem(prob, method, jump, jump2; namedpars...)
+    local sol = solve(jump_prob, SSAStepper())
 
     if doplot
         plot!(plothand2, sol, label=("A <-> 0, " * string(method)))

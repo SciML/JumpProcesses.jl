@@ -4,6 +4,7 @@ Direct with rejection sampling
 
 mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
   next_jump::Int
+  prev_jump::Int
   next_jump_time::T
   end_time::T
   cur_rates::Vector{T}
@@ -19,8 +20,9 @@ mutable struct RDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAgg
   counter_threshold::Int
 end
 
-
-function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG; num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG,DEPGR}
+function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
+                                rs::F1, affs!::F2, sps::Tuple{Bool,Bool}, rng::RNG;
+                                num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG,DEPGR}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
@@ -36,29 +38,8 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     add_self_dependencies!(dg)
     max_rate = maximum(crs)
     counter_threshold = 2*length(crs)
-    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, max_rate, 0, counter_threshold)
-end
-
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::RDirectJumpAggregation)(u, t, integrator)
-  p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::RDirectJumpAggregation)(integrator)
-  execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-  generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-  register_next_jump_time!(integrator, p, integrator.t)
-  nothing
-end
-
-# setting up a new simulation
-function (p::RDirectJumpAggregation)(dj, u, t, integrator) # initialize
-  initialize!(p, integrator, u, integrator.p, t)
-  register_next_jump_time!(integrator, p, t)
-  nothing
+    return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
+        dg, max_rate, 0, counter_threshold)
 end
 
 ############################# Required Functions #############################

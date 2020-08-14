@@ -1,5 +1,7 @@
 # define new aggregator algorithms here and specify their properties
 
+# Direct type methods
+
 """
 Gillespie, Daniel T. (1976). A General Method for Numerically Simulating the
 Stochastic Time Evolution of Coupled Chemical Reactions. Journal of
@@ -45,6 +47,18 @@ struct SortingDirect <: AbstractAggregatorAlgorithm end
 struct RSSA <: AbstractAggregatorAlgorithm end
 
 """
+V. H. Thanh, R. Zunino, and C. Priami, Efficient Constant-Time Complexity
+Algorithm for Stochastic Simulation of Large Reaction Networks, IEEE/ACM
+Transactions on Computational Biology and Bioinformatics, Vol. 14, No. 3,
+657-667 (2017).
+"""
+struct RSSACR <: AbstractAggregatorAlgorithm end
+
+struct RDirect <: AbstractAggregatorAlgorithm end
+
+# NRM-based methods
+
+"""
 Gillespie, Daniel T. (1976). A General Method for Numerically Simulating the
 Stochastic Time Evolution of Coupled Chemical Reactions. Journal of
 Computational Physics. 22 (4): 403–434. doi:10.1016/0021-9991(76)90041-3.
@@ -64,11 +78,9 @@ systems with many species and many channels, Journal of Physical Chemistry A,
 104 (9), 1876-1889 (2000). doi:10.1021/jp993732q
 """
 struct NRM <: AbstractAggregatorAlgorithm end
-struct RSSACR <: AbstractAggregatorAlgorithm end
-struct RDirect <: AbstractAggregatorAlgorithm end
 
 
-const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(), RDirect())
+const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end

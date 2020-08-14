@@ -14,11 +14,11 @@ netstoch = [
 ]
 rates = [0.1, 1.]
 u0 = [500,500,0]
-tspan = (0.0,10.0)
+tspan = (0.0,5.0)
 prob = DiscreteProblem([500,500,0],(0.0,2.0), rates)
 majumps = MassActionJump(rates, reactstoch, netstoch)
-rx_to_spec = rxs_to_dep_spec_map(majumps)
-spec_to_rx = spec_to_dep_rxs_map(3, majumps)
+rx_to_spec = DiffEqJump.rxs_to_dep_spec_map(majumps)
+spec_to_rx = DiffEqJump.spec_to_dep_rxs_map(3, majumps)
 
 function getmean(jprob,Nsims)
     Amean = 0

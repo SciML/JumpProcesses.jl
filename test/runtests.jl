@@ -18,5 +18,5 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
   @time @testset "Thread Safety test" begin include("thread_safety.jl") end
   @time @testset "Spatial A+B <--C" begin include("spatial//ABC.jl") end
-
+  @time @testset "diffusion" begin include("spatial//diffusion.jl") end
 end

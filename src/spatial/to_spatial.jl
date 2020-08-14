@@ -274,7 +274,7 @@ function Spatial_Constants(connectivity_list, diff_rates, massaction_jump :: Mas
     else
         num_spacial_majumps = num_nodes * num_majumps
     end
-    num_spatial_species = num_species*num_nodes
+    num_spatial_species = num_species
     source_target_index_pairs = get_source_target_index_pairs(connectivity_list)
     num_spatial_rxs = num_spacial_majumps + num_species*sum_degrees
 

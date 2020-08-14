@@ -6,12 +6,18 @@ Construct a jump problem, where diffusions are represented as reactions.
 Given:
 adjacency/connectivity list -- representing a graph. Can be directed.
 massaction_jump -- if assign_products is given, only uni- and bi-molecular reactions are allowed
-prob -- DiscreteProblem
-alg -- algorithm to use
+prob -- spatial DiscreteProblem. prob.u0 is the starting state, prob.tspan is the timespan, prob.p are the rates of reactions.
+    If length(prob.p) == number of non-spatial jumps, the same rates are used in all nodes. Otherwise length(prob.p) must be number
+    of jumps times the number of nodes, and distinct rates are used for each nodes.
+alg -- SSA to use
 (optional keyword arg) diff_rates -- diffusion rates (analagous to reaction rates). 0.0 by default.
 (optional keyword arg) save_positions -- when/whether to save positions. Equal to (false, false) by default.
-(optional keyword arg) get_rate -- function to get the rate of a reaction between neighboring nodes. Equal to (rx, _, _, rates) -> rates[rx] by defualt
-(optional keyword arg) assign_products -- function to decide where products are assigned
+(optional keyword arg) get_rate(rx, (node1, species1), (node2, species2), rates) -- function to get the rate of reaction rx between neighboring nodes.
+    rx is the (non-spatial) index of the reaction, node1 is the node with species1, rates is prob.p (of length number
+    of jumps times the number of nodes).
+(optional keyword arg) assign_products(rx, massaction_jump, (node1, species1), (node2, species2)) -- function to decide where products are assigned. Has to return (all products for node 1 in form [non-spatial molecule index =>  number of products, ...], same for node 2)
+
+get_rate and assign_products are not needed for vanilla RDME. They are needed for simulating neighboring nodes reacting.
 
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
@@ -19,7 +25,7 @@ The ordering of species is:
 function JumpProblem(prob, aggregator::WellMixedSpatial, massaction_jump::MassActionJump; connectivity_list = nothing,
     diff_rates = 0.0, save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,false) : (true,true),
     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)),
-    get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, kwargs...)
+    get_rate = nothing, assign_products = nothing, kwargs...)
 
     if connectivity_list === nothing
         error("A graph needs to be given for RDME.")
@@ -69,7 +75,7 @@ alg -- algorithm to use
 The ordering of species is:
 [species in node 1, species in node 2, ... ] <-- lengths = num_species, num_species, ...
 """
-function to_spatial_jump_prob(connectivity_list, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg;  diff_rates = 0.0, save_positions = (false, false), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing, rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
+function to_spatial_jump_prob(connectivity_list, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg;  diff_rates = 0.0, save_positions = (false, false), get_rate = nothing, assign_products = nothing, rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
 
     rx_rates, spatial_majumps = get_spatial_rates_and_massaction_jumps(connectivity_list, diff_rates, massaction_jump, prob, alg; save_positions = save_positions, get_rate = get_rate, assign_products = assign_products)
 

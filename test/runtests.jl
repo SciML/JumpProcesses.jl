@@ -20,4 +20,5 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Spatial A+B <--C" begin include("spatial//ABC.jl") end
   @time @testset "diffusion" begin include("spatial//diffusion.jl") end
   @time @testset "spatial SIR, neighbors react" begin include("spatial//SIR.jl") end
+  @time @testset "A + B <--> C" begin include("reversible_binding.jl") end
 end

@@ -79,7 +79,7 @@ function spec_to_dep_rxs_map(numspec, ma_jumps::MassActionJump)
         end
     end
 
-    spec_to_dep_rxs
+    [collect(s) for s in spec_to_dep_rxs]
 end
 
 "make a map from reactions to dependent species"

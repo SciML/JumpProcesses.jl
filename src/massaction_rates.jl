@@ -67,7 +67,7 @@ end
 ###############################################################################
 
 # map from species to Set of reactions depending on that species
-function spec_to_dep_rxs_map(numspec, ma_jumps::MassActionJump)
+function var_to_jumps_map(numspec, ma_jumps::MassActionJump)
 
     numrxs = get_num_majumps(ma_jumps)
 
@@ -83,7 +83,7 @@ function spec_to_dep_rxs_map(numspec, ma_jumps::MassActionJump)
 end
 
 "make a map from reactions to dependent species"
-function rxs_to_dep_spec_map(majumps)
+function jump_to_vars_map(majumps)
     [[s for (s, c) in majumps.net_stoch[i]] for i in 1:get_num_majumps(majumps)]
 end
 
@@ -93,7 +93,7 @@ end
 function make_dependency_graph(numspec, ma_jumps::MassActionJump)
 
     numrxs          = get_num_majumps(ma_jumps)
-    spec_to_dep_rxs = spec_to_dep_rxs_map(numspec, ma_jumps)
+    spec_to_dep_rxs = var_to_jumps_map(numspec, ma_jumps)
 
     # create map from rx to reactions depending on it
     dep_sets = [SortedSet{Int}() for n = 1:numrxs]

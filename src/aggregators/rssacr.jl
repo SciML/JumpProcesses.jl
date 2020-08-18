@@ -36,12 +36,21 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
                                maxrate=convert(F,Inf), kwargs...) where {F,S,F1,F2,RNG,U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
-        error("To use the RSSA algorithm a map from variables to depedent jumps must be supplied.")
+        if (get_num_majumps(maj) == 0) || !isempty(rs)
+            error("To use the RSSACR algorithm a map from variables to dependent jumps must be supplied.")
+        else
+            vtoj_map = var_to_jumps_map(length(u), maj)
+        end
     else
         vtoj_map = vartojumps_map
     end
+
     if jumptovars_map === nothing
-        error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
+        if (get_num_majumps(maj) == 0) || !isempty(rs)
+            error("To use the RSSACR algorithm a map from jumps to dependent variables must be supplied.")
+        else
+            jtov_map = jump_to_vars_map(maj)
+        end
     else
         jtov_map = jumptovars_map
     end

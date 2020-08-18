@@ -17,8 +17,6 @@ u0 = [500,500,0]
 tspan = (0.0,5.0)
 prob = DiscreteProblem([500,500,0],(0.0,2.0), rates)
 majumps = MassActionJump(rates, reactstoch, netstoch)
-rx_to_spec = DiffEqJump.rxs_to_dep_spec_map(majumps)
-spec_to_rx = DiffEqJump.spec_to_dep_rxs_map(3, majumps)
 
 function getmean(jprob,Nsims)
     Amean = 0
@@ -42,7 +40,7 @@ analytic_mean = analyticmean(u0, K)
 algs = DiffEqJump.JUMP_AGGREGATORS
 relative_tolerance = 0.01
 for alg in algs
-    jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false),vartojumps_map=spec_to_rx, jumptovars_map=rx_to_spec)
+    jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
     Amean = getmean(jprob, Nsims)
     @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
 end

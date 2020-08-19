@@ -84,7 +84,7 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
-    @fastmath p.next_jump_time = t + randexp(p.rng) / p.sum_rate
+    p.next_jump_time = t + randexp(p.rng) / p.sum_rate
 
     # search for next jump
     if p.next_jump_time < p.end_time            

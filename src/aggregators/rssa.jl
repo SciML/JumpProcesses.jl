@@ -98,7 +98,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-@fastmath function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
     if nomorejumps!(p, sum_rate)

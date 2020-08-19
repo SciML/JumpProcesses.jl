@@ -147,8 +147,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     p.next_jump = jidx
 
     # update time to next jump
-    # if jidx = 0 we force the simulation to end
-    p.next_jump_time = iszero(jidx) ? Inf : (t + rerl / sum_rate)
+    p.next_jump_time = t + rerl / sum_rate
 
     nothing
 end

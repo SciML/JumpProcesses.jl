@@ -286,6 +286,7 @@ function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
     @inbounds r = rand(rng) * gsum - gsums[gid]
     while r > zero(r)
         gid -= one(gid)
+        iszero(gid) && return gid   # if no result found return zero
         @inbounds r -= gsums[gid]
     end
 

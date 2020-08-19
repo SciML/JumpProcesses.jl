@@ -312,6 +312,7 @@ for method in SSAalgs
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
                     ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
+        @show method
         @test abs(meanval - exactmeanval) < 1.
 
         # if dobenchmark

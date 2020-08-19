@@ -130,11 +130,14 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     end
 
     @unpack rt, ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
+    num_majumps = get_num_majumps(ma_jumps)
     rerl = zero(sum_rate)
 
     jidx    = sample(rt, cur_rate_high, rng)
     rerl   += randexp(rng)
-    while rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
+    while (jidx > zero(jidx)) && rejectrx(ma_jumps, num_majumps, rates, 
+                                          cur_rate_high, cur_rate_low, 
+                                          rng, u, jidx, params, t)
         # sample candidate reaction
         jidx    = sample(rt, cur_rate_high, rng)
         rerl   += randexp(rng)
@@ -143,6 +146,8 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
 
     # update time to next jump
     p.next_jump_time = t + rerl / sum_rate
+    #@assert !(iszero(jidx) && (p.next_jump_time <= p.end_time)) "Error, no jump was sampled but the next jump time is smaller than the end_time, idx=$jidx, time=$(p.next_jump_time), end_time=$(p.end_time)."
+
     nothing
 end
 

@@ -33,22 +33,22 @@ DiscreteCallback(c::AbstractSSAJumpAggregator) = DiscreteCallback(c, c, initiali
 
 # condition for jump to occur
 @inline function (p::AbstractSSAJumpAggregator)(u, t, integrator)
-  p.next_jump_time == t
+    p.next_jump_time == t
 end
 
 # executing jump at the next jump time
 function (p::AbstractSSAJumpAggregator)(integrator)
-  execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-  generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-  register_next_jump_time!(integrator, p, integrator.t)
-  nothing
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
 end
 
 # setting up a new simulation
 function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
-  initialize!(p, integrator, u, integrator.p, t)
-  register_next_jump_time!(integrator, p, integrator.t)
-  nothing
+    initialize!(p, integrator, u, integrator.p, t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
 end
 
 ############################## Generic Routines ###############################
@@ -100,7 +100,7 @@ Reevaluate all rates and their sum.
 function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
     sum_rate = zero(typeof(p.sum_rate))
 
-  # mass action jumps
+    # mass action jumps
     majumps   = p.ma_jumps
     cur_rates = p.cur_rates
     @inbounds for i in 1:get_num_majumps(majumps)
@@ -108,7 +108,7 @@ function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
         sum_rate    += cur_rates[i]
     end
 
-  # constant rates
+    # constant rates
     rates = p.rates
     idx   = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
@@ -127,8 +127,7 @@ end
 
 Recalculate the rate for the jump with index `rx`.
 """
-@inline function calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
-    num_majumps = get_num_majumps(ma_jumps)
+@inline function calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
     if rx <= num_majumps
         return evalrxrate(u, rx, ma_jumps)
     else
@@ -148,10 +147,11 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     cur_rates   = p.cur_rates
     sum_rate    = p.sum_rate
+    num_majumps = get_num_majumps(p.ma_jumps)
     @inbounds for rx in dep_rxs
-        sum_rate -= cur_rates[rx]
-        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, p.rates, u,params,t,rx)
-        sum_rate += cur_rates[rx]
+        oldrate = cur_rates[rx]
+        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,params,t,rx)
+        sum_rate += cur_rates[rx] - oldrate
     end
 
     p.sum_rate = sum_rate
@@ -199,16 +199,29 @@ end
 """
     linear_search(array, r)
 
-Perform linear search for `r` over array. Output index
-j s.t. sum(array[1:j-1]) < r <= sum(array[1:j]). Will error if no such j exists
+Perform linear search for `r` over array. Output index j s.t. sum(array[1:j-1])
+< r <= sum(array[1:j]).
+
+Notes:
+- Returns index one if the search is unsuccessful. Assumes this corresponds to
+  the case of an infinite next reaction time and so the jump index does not
+  matter.
 """
 @inline function linear_search(array, r)
-    jidx = 1
-    @inbounds parsum = array[jidx]
-    while parsum < r
-        jidx   += 1
-        @inbounds parsum += array[jidx]
+    jidx = 0
+    @inbounds parsum = r
+    @inbounds for idx = 1:length(array)
+        parsum -= array[idx]
+        if parsum < zero(parsum)
+            jidx = idx
+            break
+        end
     end
+    # while parsum < r
+    #     jidx   += 1
+    #     @assert jidx <= length(array) "$parsum, $r, $jidx, $(length(array)), $(sum(array))"
+    #     @inbounds parsum += array[jidx]        
+    # end
     return jidx
 end
 
@@ -217,7 +230,7 @@ end
 
 Perform rejection sampling test (used in RSSA methods).
 """
-@inline function rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
+@inline function rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
     # rejection test
     @inbounds r2     = rand(rng) * cur_rate_high[jidx]
     @inbounds crlow  = cur_rate_low[jidx]
@@ -226,7 +239,7 @@ Perform rejection sampling test (used in RSSA methods).
         return false
     else
         # calculate actual propensity, split up for type stability
-        crate = calculate_jump_rate(ma_jumps, rates, u, params, t, jidx)
+        crate = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, jidx)
         if crate > zero(crate) && r2 <= crate
             return false
         end

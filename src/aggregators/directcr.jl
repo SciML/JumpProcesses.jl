@@ -109,23 +109,16 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
-    @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
+    p.next_jump_time  = t + randexp(p.rng) / p.sum_rate
+    
+    if p.next_jump_time < p.end_time
+        p.next_jump = sample(p.rt, p.cur_rates, p.rng)
+    end    
     nothing
 end
 
 
 ######################## SSA specific helper routines #########################
-
-# searches down the rate list for the next reaction
-@fastmath function calc_next_jump!(p::DirectCRJumpAggregation, u, params, t)
-
-    # next jump type
-    p.next_jump = sample(p.rt, p.cur_rates, p.rng)
-
-    # return time to next jump
-    randexp(p.rng) / p.sum_rate
-end
-
 
 # recalculate jump rates for jumps that depend on the just executed jump
 # requires dependency graph
@@ -138,15 +131,10 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
         oldrate = cur_rates[rx]
 
         # update rate
-        if rx <= num_majumps
-            newrate = evalrxrate(u, rx, ma_jumps)
-        else
-            newrate = rates[rx-num_majumps](u, params, t)
-        end
-        cur_rates[rx] = newrate
+        cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
 
         # update table
-        update!(rt, rx, oldrate, newrate)
+        update!(rt, rx, oldrate, cur_rates[rx])
     end
 
     p.sum_rate = groupsum(rt)

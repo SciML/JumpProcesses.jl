@@ -98,7 +98,7 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-@fastmath function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
     if nomorejumps!(p, sum_rate)
@@ -106,26 +106,34 @@ end
     end
     # next jump type
     @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
-    #rerl        = one(sum_rate)
+    num_majumps = get_num_majumps(ma_jumps)
     rerl        = zero(sum_rate)
 
-    r      = rand(rng) * sum_rate
-    jidx   = linear_search(cur_rate_high, r)
-    rerl  += randexp(rng)
-    @inbounds while rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
+    r    = rand(rng) * sum_rate
+    jidx = linear_search(cur_rate_high, r)
+    if iszero(jidx)
+        p.next_jump_time = Inf
+        return nothing 
+    end
+    rerl += randexp(rng)
+    @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, 
+                             cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
-        r      = rand(rng) * sum_rate
-        jidx   = linear_search(cur_rate_high, r)
-        #rerl *= rand(p.rng)
+        r     = rand(rng) * sum_rate
+        jidx  = linear_search(cur_rate_high, r)
         rerl += randexp(rng)
     end
     p.next_jump = jidx
 
-    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
     p.next_jump_time = t + rerl / sum_rate
-
     nothing
 end
+
+# alt erlang sampling above
+#rerl = one(sum_rate)
+#rerl *= rand(p.rng)
+#p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
+
 
 ######################## SSA specific helper routines #########################
 

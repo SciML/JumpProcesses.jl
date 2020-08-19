@@ -130,14 +130,19 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     end
 
     @unpack rt, ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
+    num_majumps = get_num_majumps(ma_jumps)
     rerl = zero(sum_rate)
 
-    jidx    = sample(rt, cur_rate_high, rng)
-    rerl   += randexp(rng)
-    while rejectrx(ma_jumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
+    jidx = sample(rt, cur_rate_high, rng)
+    if iszero(jidx)
+        p.next_jump_time = Inf
+        return nothing 
+    end
+    rerl += randexp(rng)
+    while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
-        jidx    = sample(rt, cur_rate_high, rng)
-        rerl   += randexp(rng)
+        jidx  = sample(rt, cur_rate_high, rng)
+        rerl += randexp(rng)
     end
     p.next_jump = jidx
 
@@ -165,6 +170,7 @@ end
             for jidx in p.vartojumps_map[uidx]
                 oldrate = crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+
                 # update the priority table
                 update!(p.rt, jidx, oldrate, crhigh[jidx])
             end

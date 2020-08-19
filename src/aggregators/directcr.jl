@@ -109,9 +109,11 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
-    p.next_jump       = sample(p.rt, p.cur_rates, p.rng)
     p.next_jump_time  = t + randexp(p.rng) / p.sum_rate
-    #@assert !(iszero(p.next_jump) && (t <= p.end_time)) "Error, no jump was sampled but the next jump time is smaller than the end_time, idx=$(p.next_jump), time=$(p.next_jump_time), end_time=$(p.end_time), sum_rate=$(p.sum_rate)."
+    
+    if p.next_jump_time < p.end_time
+        p.next_jump = sample(p.rt, p.cur_rates, p.rng)
+    end    
     nothing
 end
 

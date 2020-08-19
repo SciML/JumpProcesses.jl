@@ -84,30 +84,24 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
-    @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
+    @fastmath p.next_jump_time = t + randexp(p.rng) / p.sum_rate
+
+    # search for next jump
+    if p.next_jump_time < p.end_time            
+        cur_rates = p.cur_rates
+        numjumps  = length(cur_rates)
+        jso       = p.jump_search_order
+        rn        = p.sum_rate * rand(p.rng)
+        @inbounds for idx = 1:numjumps
+            rn -= cur_rates[jso[idx]]
+            if rn < zero(rn)
+                p.jump_search_idx = idx
+                break
+            end
+        end
+        @inbounds p.next_jump = jso[p.jump_search_idx]
+    end    
+
     nothing
 end
 
-
-######################## SSA specific helper routines #########################
-
-# searches down the rate list for the next reaction
-@fastmath function calc_next_jump!(p, u, params, t)
-
-    # next jump type
-    cur_rates = p.cur_rates
-    numjumps  = length(cur_rates)
-    jso       = p.jump_search_order
-    rn        = p.sum_rate * rand(p.rng)
-    @inbounds for idx = 1:numjumps
-        rn -= cur_rates[jso[idx]]
-        if rn < zero(rn)
-            p.jump_search_idx = idx
-            break
-        end
-    end
-    @inbounds p.next_jump = jso[p.jump_search_idx]
-
-    # return time to next jump
-    randexp(p.rng) / p.sum_rate
-end

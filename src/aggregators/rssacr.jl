@@ -133,20 +133,22 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     num_majumps = get_num_majumps(ma_jumps)
     rerl = zero(sum_rate)
 
-    jidx    = sample(rt, cur_rate_high, rng)
-    rerl   += randexp(rng)
-    while (jidx > zero(jidx)) && rejectrx(ma_jumps, num_majumps, rates, 
-                                          cur_rate_high, cur_rate_low, 
-                                          rng, u, jidx, params, t)
+    jidx = sample(rt, cur_rate_high, rng)
+    if iszero(jidx)
+        p.next_jump_time = Inf
+        return nothing 
+    end
+    rerl += randexp(rng)
+    while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
-        jidx    = sample(rt, cur_rate_high, rng)
-        rerl   += randexp(rng)
+        jidx  = sample(rt, cur_rate_high, rng)
+        rerl += randexp(rng)
     end
     p.next_jump = jidx
 
     # update time to next jump
-    p.next_jump_time = t + rerl / sum_rate
-    #@assert !(iszero(jidx) && (p.next_jump_time <= p.end_time)) "Error, no jump was sampled but the next jump time is smaller than the end_time, idx=$jidx, time=$(p.next_jump_time), end_time=$(p.end_time)."
+    # if jidx = 0 we force the simulation to end
+    p.next_jump_time = iszero(jidx) ? Inf : (t + rerl / sum_rate)
 
     nothing
 end
@@ -170,6 +172,7 @@ end
             for jidx in p.vartojumps_map[uidx]
                 oldrate = crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+
                 # update the priority table
                 update!(p.rt, jidx, oldrate, crhigh[jidx])
             end

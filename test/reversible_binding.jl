@@ -40,7 +40,7 @@ analytic_mean = analyticmean(u0, K)
 algs = DiffEqJump.JUMP_AGGREGATORS
 relative_tolerance = 0.01
 for alg in algs
-    jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
-    Amean = getmean(jprob, Nsims)
+    local jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
+    local Amean = getmean(jprob, Nsims)
     @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
 end

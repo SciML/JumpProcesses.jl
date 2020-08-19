@@ -149,9 +149,9 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     sum_rate    = p.sum_rate
     num_majumps = get_num_majumps(p.ma_jumps)
     @inbounds for rx in dep_rxs
-        oldrate = cur_rates[rx]
+        sum_rate -= cur_rates[rx]
         @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,params,t,rx)
-        sum_rate += cur_rates[rx] - oldrate
+        sum_rate += cur_rates[rx]
     end
 
     p.sum_rate = sum_rate
@@ -203,7 +203,7 @@ Perform linear search for `r` over array. Output index j s.t. sum(array[1:j-1])
 < r <= sum(array[1:j]).
 
 Notes:
-- Returns index one if the search is unsuccessful. Assumes this corresponds to
+- Returns index zero if the search is unsuccessful. Assumes this corresponds to
   the case of an infinite next reaction time and so the jump index does not
   matter.
 """
@@ -217,11 +217,7 @@ Notes:
             break
         end
     end
-    # while parsum < r
-    #     jidx   += 1
-    #     @assert jidx <= length(array) "$parsum, $r, $jidx, $(length(array)), $(sum(array))"
-    #     @inbounds parsum += array[jidx]        
-    # end
+
     return jidx
 end
 

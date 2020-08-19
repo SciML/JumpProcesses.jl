@@ -107,29 +107,33 @@ end
     # next jump type
     @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
     num_majumps = get_num_majumps(ma_jumps)
-    #rerl        = one(sum_rate)
     rerl        = zero(sum_rate)
 
-    r      = rand(rng) * sum_rate
-    jidx   = linear_search(cur_rate_high, r)
-    rerl  += randexp(rng)
-    @inbounds while (jidx > zero(jidx)) && rejectrx(ma_jumps, num_majumps, rates, 
-                                                    cur_rate_high, cur_rate_low, 
-                                                    rng, u, jidx, params, t)
+    r    = rand(rng) * sum_rate
+    jidx = linear_search(cur_rate_high, r)
+    if iszero(jidx)
+        p.next_jump_time = Inf
+        return nothing 
+    end
+    rerl += randexp(rng)
+    @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, 
+                             cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
-        r      = rand(rng) * sum_rate
-        jidx   = linear_search(cur_rate_high, r)
-        #rerl *= rand(p.rng)
+        r     = rand(rng) * sum_rate
+        jidx  = linear_search(cur_rate_high, r)
         rerl += randexp(rng)
     end
     p.next_jump = jidx
 
-    #p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
     p.next_jump_time = t + rerl / sum_rate
-    #@assert !(iszero(jidx) && (p.next_jump_time <= p.end_time)) "Error, no jump was sampled but the next jump time is smaller than the end_time, idx=$jidx, time=$(p.next_jump_time), end_time=$(p.end_time)."
-
     nothing
 end
+
+# alt erlang sampling above
+#rerl = one(sum_rate)
+#rerl *= rand(p.rng)
+#p.next_jump_time = t + (-one(sum_rate) / sum_rate) * log(rerl)
+
 
 ######################## SSA specific helper routines #########################
 

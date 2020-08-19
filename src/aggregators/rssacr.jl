@@ -148,7 +148,6 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
 
     # update time to next jump
     p.next_jump_time = t + rerl / sum_rate
-
     nothing
 end
 

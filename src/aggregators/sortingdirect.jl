@@ -32,10 +32,10 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
         end
     else
         dg = dep_graph
-    end
 
-    # make sure each jump depends on itself
-    add_self_dependencies!(dg)
+        # make sure each jump depends on itself
+        add_self_dependencies!(dg)
+    end
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))

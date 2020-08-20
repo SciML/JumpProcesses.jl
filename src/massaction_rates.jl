@@ -66,20 +66,24 @@ end
 # dependency graph when MassActionJump uses pairs to represent (species,stoich)
 ###############################################################################
 
-# map from species to Set of reactions depending on that species
+# map from species to reactions depending on that species
+# uses a Vector instead of a Set as the latter requires isEqual,
+# and by using an underlying Dict can be slower for small numbers
+# of dependencies
 function var_to_jumps_map(numspec, ma_jumps::MassActionJump)
 
     numrxs = get_num_majumps(ma_jumps)
 
     # map from a species to reactions that depend on it
-    spec_to_dep_rxs = [Set{Int}() for n = 1:numspec]
+    spec_to_dep_rxs = [Vector{Int}() for n = 1:numspec]
     for rx in 1:numrxs
         for (spec,stoch) in ma_jumps.reactant_stoch[rx]
             push!(spec_to_dep_rxs[spec], rx)
         end
     end
 
-    [collect(s) for s in spec_to_dep_rxs]
+    foreach(s -> unique!(sort!(s)), spec_to_dep_rxs)
+    spec_to_dep_rxs
 end
 
 "make a map from reactions to dependent species"
@@ -96,33 +100,29 @@ function make_dependency_graph(numspec, ma_jumps::MassActionJump)
     spec_to_dep_rxs = var_to_jumps_map(numspec, ma_jumps)
 
     # create map from rx to reactions depending on it
-    dep_sets = [SortedSet{Int}() for n = 1:numrxs]
+    dep_graph = [Vector{Int}() for n = 1:numrxs]
     for rx in 1:numrxs
 
         # rx changes spec, hence rxs depending on spec depend on rx
         for (spec,stoch) in ma_jumps.net_stoch[rx]
             for dependent_rx in spec_to_dep_rxs[spec]
-                push!(dep_sets[rx], dependent_rx)
+                push!(dep_graph[rx], dependent_rx)
             end
         end
     end
-
-    # convert to Vectors of Vectors
-    dep_graph = Vector{Vector{Int}}(undef, numrxs)
-    for rx = 1:numrxs
-        dep_graph[rx] = [dep for dep in dep_sets[rx]]
-    end
-
+    
+    add_self_dependencies!(dep_graph, dosort=false)
+    foreach(deps -> unique!(sort!(deps)), dep_graph)
     dep_graph
 end
 
 
 # update dependency graph to make sure jumps depend on themselves
-function add_self_dependencies!(dg)
+function add_self_dependencies!(dg; dosort=true)
     for (i,jump_deps) in enumerate(dg)
         if !any(y->isequal(y,i), jump_deps)
             push!(jump_deps, i)
-            sort!(jump_deps)
+            dosort && sort!(jump_deps)
         end
     end
 end

@@ -32,10 +32,11 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
         end
     else
         dg = dep_graph
+
+        # make sure each jump depends on itself
+        add_self_dependencies!(dg)
     end
 
-    # make sure each jump depends on itself
-    add_self_dependencies!(dg)
     max_rate = maximum(crs)
     return RDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
         dg, max_rate, 0, counter_threshold)

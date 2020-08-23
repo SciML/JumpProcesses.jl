@@ -74,7 +74,7 @@ Helper routine for setting up standard fields of SSA jump aggregations.
 function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
                                 affects!, save_positions, rng; kwargs...)
 
-  # mass action jumps
+    # mass action jumps
     majumps = ma_jumps
     if majumps === nothing
         majumps = MassActionJump(Vector{typeof(t)}(),
@@ -82,7 +82,7 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
                              Vector{Vector{Pair{Int,eltype(u)}}}())
     end
 
-  # current jump rates, allows mass action rates and constant jumps
+    # current jump rates, allows mass action rates and constant jumps
     cur_rates = Vector{typeof(t)}(undef, get_num_majumps(majumps) + length(rates))
 
     sum_rate = zero(typeof(t))

@@ -70,7 +70,8 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          alias_jump = Threads.threadid() == 1,
                          saveat = nothing,
                          callback = nothing,
-                         tstops = ())
+                         tstops = (),
+                         numsteps_hint=100)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
@@ -124,8 +125,8 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
      sizehint!(u,length(_saveat)+1)
      sizehint!(t,length(_saveat)+1)
    elseif save_everystep
-     sizehint!(u,10000)
-     sizehint!(t,10000)
+     sizehint!(u,numsteps_hint)
+     sizehint!(t,numsteps_hint)
    else
      sizehint!(u,2)
      sizehint!(t,2)

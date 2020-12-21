@@ -7,6 +7,7 @@ mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEInt
     f::F
     u::uType
     t::tType
+    tprev::tType
     p::P
     sol::S
     i::Int
@@ -20,6 +21,7 @@ mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEInt
     tstops::TS
     tstops_idx::Int
     u_modified::Bool
+    keep_stepping::Bool          # false if should terminate a simulation
 end
 
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
@@ -34,8 +36,9 @@ function DiffEqBase.__solve(jump_prob::JumpProblem,
 end
 
 function DiffEqBase.solve!(integrator)
+
     end_time = integrator.sol.prob.tspan[2]
-    while integrator.t < integrator.tstop # It stops before adding a tstop over
+    while integrator.keep_stepping && (integrator.t < integrator.tstop) # It stops before adding a tstop over
         step!(integrator)
     end
 
@@ -67,7 +70,8 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          alias_jump = Threads.threadid() == 1,
                          saveat = nothing,
                          callback = nothing,
-                         tstops = ())
+                         tstops = (),
+                         numsteps_hint=100)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
@@ -121,17 +125,17 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
      sizehint!(u,length(_saveat)+1)
      sizehint!(t,length(_saveat)+1)
    elseif save_everystep
-     sizehint!(u,10000)
-     sizehint!(t,10000)
+     sizehint!(u,numsteps_hint)
+     sizehint!(t,numsteps_hint)
    else
      sizehint!(u,2)
      sizehint!(t,2)
    end
 
-    integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.p,
+    integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.tspan[1],prob.p,
                                sol,1,prob.tspan[1],
                                cb,_saveat,save_everystep,save_end,cur_saveat,
-                               opts,tstops,1,false)
+                               opts,tstops,1,false,true)
     cb.initialize(cb,u[1],prob.tspan[1],integrator)
     integrator
 end
@@ -139,6 +143,8 @@ end
 DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
+    integrator.tprev = integrator.t
+
     doaffect = false
     if !isempty(integrator.tstops) &&
         integrator.tstops_idx <= length(integrator.tstops) &&
@@ -182,6 +188,7 @@ function DiffEqBase.savevalues!(integrator::SSAIntegrator,force=false)
     # so in the specific case of SSAStepper it's already handled
 
     if integrator.save_everystep || force
+        saved = true
         savedexactly = true
         push!(integrator.sol.t,integrator.t)
         push!(integrator.sol.u,copy(integrator.u))
@@ -195,4 +202,12 @@ function reset_aggregated_jumps!(integrator::SSAIntegrator,uprev = nothing)
      nothing
 end
 
+function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = :Terminated)
+    integrator.keep_stepping = false
+    integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, retcode)
+    nothing
+end
+
 export SSAStepper
+
+

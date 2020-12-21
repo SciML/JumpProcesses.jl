@@ -3,6 +3,7 @@
 
 mutable struct NRMJumpAggregation{T,S,F1,F2,RNG,DEPGR,PQ} <: AbstractSSAJumpAggregator
     next_jump::Int
+    prev_jump::Int
     next_jump_time::T
     end_time::T
     cur_rates::Vector{T}
@@ -29,38 +30,16 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         end
     else
         dg = dep_graph
-    end
 
-    # make sure each jump depends on itself
-    add_self_dependencies!(dg)
+        # make sure each jump depends on itself
+        add_self_dependencies!(dg)
+    end
 
     pq = MutableBinaryMinHeap{T}()
 
-    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, njt, et, crs, sr, maj, rs, affs!, sps, rng, dg, pq)
+    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, sr, maj, 
+                                                            rs, affs!, sps, rng, dg, pq)
 end
-
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::NRMJumpAggregation)(u, t, integrator)
-    p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::NRMJumpAggregation)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
-# setting up a new simulation
-function (p::NRMJumpAggregation)(dj, u, t, integrator) # initialize
-    initialize!(p, integrator, u, integrator.p, t)
-    register_next_jump_time!(integrator, p, t)
-    nothing
-end
-
 
 +############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
@@ -105,12 +84,13 @@ end
 function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     @unpack cur_rates, rates, ma_jumps = p
+    num_majumps = get_num_majumps(ma_jumps)
     
     @inbounds for rx in dep_rxs
         oldrate = cur_rates[rx]
 
         # update the jump rate
-        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)

@@ -4,6 +4,7 @@
 
 mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
     next_jump::Int
+    prev_jump::Int
     next_jump_time::T
     end_time::T
     cur_rates::Vector{T}
@@ -31,38 +32,15 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
         end
     else
         dg = dep_graph
-    end
 
-    # make sure each jump depends on itself
-    add_self_dependencies!(dg)
+        # make sure each jump depends on itself
+        add_self_dependencies!(dg)
+    end
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
-    SortingDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, njt, et, crs, sr,
+    SortingDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, nj, njt, et, crs, sr,
                                 maj, rs, affs!, sps, rng, dg, jtoidx, zero(Int))
-end
-
-
-########### The following routines should be templates for all SSAs ###########
-
-# condition for jump to occur
-@inline function (p::SortingDirectJumpAggregation)(u, t, integrator)
-    p.next_jump_time == t
-end
-
-# executing jump at the next jump time
-function (p::SortingDirectJumpAggregation)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
-# setting up a new simulation
-function (p::SortingDirectJumpAggregation)(dj, u, t, integrator) # initialize
-    initialize!(p, integrator, u, integrator.p, t)
-    register_next_jump_time!(integrator, p, t)
-    nothing
 end
 
 ############################# Required Functions ##############################
@@ -106,30 +84,24 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
-    @fastmath p.next_jump_time = t + calc_next_jump!(p, u, params, t)
+    p.next_jump_time = t + randexp(p.rng) / p.sum_rate
+
+    # search for next jump
+    if p.next_jump_time < p.end_time            
+        cur_rates = p.cur_rates
+        numjumps  = length(cur_rates)
+        jso       = p.jump_search_order
+        rn        = p.sum_rate * rand(p.rng)
+        @inbounds for idx = 1:numjumps
+            rn -= cur_rates[jso[idx]]
+            if rn < zero(rn)
+                p.jump_search_idx = idx
+                break
+            end
+        end
+        @inbounds p.next_jump = jso[p.jump_search_idx]
+    end    
+
     nothing
 end
 
-
-######################## SSA specific helper routines #########################
-
-# searches down the rate list for the next reaction
-@fastmath function calc_next_jump!(p, u, params, t)
-
-    # next jump type
-    cur_rates = p.cur_rates
-    numjumps  = length(cur_rates)
-    jso       = p.jump_search_order
-    rn        = p.sum_rate * rand(p.rng)
-    @inbounds for idx = 1:numjumps
-        rn -= cur_rates[jso[idx]]
-        if rn < zero(rn)
-            p.jump_search_idx = idx
-            break
-        end
-    end
-    @inbounds p.next_jump = jso[p.jump_search_idx]
-
-    # return time to next jump
-    randexp(p.rng) / p.sum_rate
-end

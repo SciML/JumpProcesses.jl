@@ -1,14 +1,12 @@
-__precompile__()
-
 module DiffEqJump
 
 using DiffEqBase, Compat, RandomNumbers, TreeViews, LinearAlgebra
 using DataStructures, PoissonRandom, Random, ArrayInterface
-using FunctionWrappers, Parameters
+using FunctionWrappers, UnPack
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, show
-import DataStructures: length, update!
+import DataStructures: update!
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads

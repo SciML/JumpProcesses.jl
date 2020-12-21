@@ -67,9 +67,9 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 # plotting one full trajectory
 if doplot
     for alg in SSAalgs
-        jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
-        sol = solve(jump_prob, SSAStepper())
-        plothand = plot(sol, seriestype=:steppost, reuse=false)
+        local jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+        local sol = solve(jump_prob, SSAStepper())
+        local plothand = plot(sol, seriestype=:steppost, reuse=false)
         display(plothand)
     end
 end
@@ -78,7 +78,7 @@ end
 if dotestmean
     means = zeros(Float64,length(SSAalgs))
     for (i,alg) in enumerate(SSAalgs)
-        jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
+        local jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs)
         means[i]  = runSSAs(jump_prob)
         relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans

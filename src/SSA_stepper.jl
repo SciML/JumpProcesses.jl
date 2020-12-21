@@ -197,6 +197,10 @@ function DiffEqBase.savevalues!(integrator::SSAIntegrator,force=false)
     saved, savedexactly
 end
 
+function reset_aggregated_jumps!(integrator::SSAIntegrator,uprev = nothing)
+     reset_aggregated_jumps!(integrator,uprev,integrator.cb)
+     nothing
+end
 
 function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = :Terminated)
     integrator.keep_stepping = false

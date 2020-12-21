@@ -1,5 +1,5 @@
 function reset_aggregated_jumps!(integrator,uprev = nothing)
-     reset_aggregated_jumps!(integrator,uprev,integrator.cb)
+     reset_aggregated_jumps!(integrator,uprev,integrator.opts.callback)
      nothing
 end
 

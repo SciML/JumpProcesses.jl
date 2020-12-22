@@ -38,7 +38,8 @@ end
 function DiffEqBase.solve!(integrator)
 
     end_time = integrator.sol.prob.tspan[2]
-    while integrator.keep_stepping && (integrator.t < integrator.tstop) # It stops before adding a tstop over
+
+    while integrator.keep_stepping && (integrator.t < end_time) # It stops before adding a tstop over
         step!(integrator)
     end
 
@@ -145,15 +146,22 @@ DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tsto
 function DiffEqBase.step!(integrator::SSAIntegrator)
     integrator.tprev = integrator.t
 
+    end_time = integrator.sol.prob.tspan[2]
+    next_jump_time = integrator.t >= integrator.tstop ? end_time : integrator.tstop
+
     doaffect = false
     if !isempty(integrator.tstops) &&
         integrator.tstops_idx <= length(integrator.tstops) &&
-        integrator.tstops[integrator.tstops_idx] < integrator.tstop
+        integrator.tstops[integrator.tstops_idx] < next_jump_time
 
         integrator.t = integrator.tstops[integrator.tstops_idx]
         integrator.tstops_idx += 1
     else
-        integrator.t = integrator.tstop
+        integrator.t = next_jump_time
+        if integrator.t >= end_time
+            integrator.t = end_time
+            return
+        end
         doaffect = true # delay effect until after saveat
     end
 

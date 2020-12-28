@@ -136,7 +136,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                                sol,1,prob.tspan[1],
                                cb,_saveat,save_everystep,save_end,cur_saveat,
                                opts,tstops,1,false,true)
-    cb.initialize(cb,copy(prob.u0),prob.tspan[1],integrator)
+    cb.initialize(cb,integrator.u,prob.tspan[1],integrator)
     integrator
 end
 
@@ -224,5 +224,4 @@ function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = :Terminated)
 end
 
 export SSAStepper
-
 

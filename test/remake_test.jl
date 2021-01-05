@@ -24,16 +24,16 @@ sol = solve(jprob, SSAStepper())
 @test sol[1,end] == 0
 
 u02 = [1000,1,0]
-p2 = (0.0,.01)
+p2 = (.1/1000,0.0)
 dprob2 = remake(dprob, u0=u02, p=p2)
 jprob2 = remake(jprob, prob=dprob2)
 sol2 = solve(jprob2, SSAStepper())
-@test sol2[1,end] == 1000
+@test sol2[2,end] == 1001
 
 tspan2 = (0.0, 250.0)
 jprob3 = remake(jprob, p=p2, tspan=tspan2)
 sol3 = solve(jprob3, SSAStepper())
-@test sol3[1,end] == 999
+@test sol3[2,end] == 1000
 
 # test error handling
 @test_throws ErrorException jprob4 = remake(jprob, prob=dprob2, p=p2)

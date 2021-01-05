@@ -30,10 +30,11 @@ jprob2 = remake(jprob, prob=dprob2)
 sol2 = solve(jprob2, SSAStepper())
 @test sol2[2,end] == 1001
 
-tspan2 = (0.0, 250.0)
+tspan2 = (0.0, 25000.0)
 jprob3 = remake(jprob, p=p2, tspan=tspan2)
 sol3 = solve(jprob3, SSAStepper())
 @test sol3[2,end] == 1000
+@test sol3.t[end] == 25000.0
 
 # test error handling
 @test_throws ErrorException jprob4 = remake(jprob, prob=dprob2, p=p2)

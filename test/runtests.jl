@@ -19,4 +19,5 @@ using DiffEqJump, DiffEqBase, Test
   @time @testset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
   @time @testset "Thread Safety test" begin include("thread_safety.jl") end
   @time @testset "A + B <--> C" begin include("reversible_binding.jl") end
+  @time @testset "Remake tests" begin include("remake_test.jl") end
 end

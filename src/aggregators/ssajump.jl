@@ -48,6 +48,7 @@ end
 function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)
+    u_modified!(integrator,false)
     nothing
 end
 

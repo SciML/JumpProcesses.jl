@@ -144,7 +144,21 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     integrator
 end
 
-DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
+function DiffEqBase.add_tstop!(integrator::SSAIntegrator{<:Any,<:Any,<:Any,<:Any,<:Any,<:Any,<:Any,<:Any,<:Vector},tstop)
+    insert_index = searchsortedfirst(integrator.tstops, tstop)
+    if insert_index >= integrator.tstops_idx
+        # we only insert the tstop if insert_index >= integrator.tstops_idx and thus
+        # ignore tstops in the past
+        Base.insert!(integrator.tstops, insert_index, tstop) 
+    end
+end
+
+# The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator
+# such that we can achieve maximum performance
+@inline function register_next_jump_time!(integrator::SSAIntegrator, p::AbstractSSAJumpAggregator, t)
+    integrator.tstop = p.next_jump_time
+    nothing
+end
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
     integrator.tprev = integrator.t

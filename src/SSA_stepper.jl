@@ -27,6 +27,10 @@ end
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
 (integrator::SSAIntegrator)(out,t) = (out .= integrator.u)
 
+function u_modified!(integrator::SSAIntegrator,bool::Bool)
+    integrator.u_modified = bool
+  end
+
 function DiffEqBase.__solve(jump_prob::JumpProblem,
                          alg::SSAStepper;
                          kwargs...)

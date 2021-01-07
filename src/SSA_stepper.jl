@@ -64,6 +64,8 @@ function DiffEqBase.solve!(integrator)
         push!(integrator.sol.t,end_time)
         push!(integrator.sol.u,copy(integrator.u))
     end
+
+    DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)
 end
 
 function DiffEqBase.__init(jump_prob::JumpProblem,
@@ -141,6 +143,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                                cb,_saveat,save_everystep,save_end,cur_saveat,
                                opts,tstops,1,false,true)
     cb.initialize(cb,integrator.u,prob.tspan[1],integrator)
+    DiffEqBase.initialize!(opts.callback,integrator.u,prob.tspan[1],integrator)
     integrator
 end
 

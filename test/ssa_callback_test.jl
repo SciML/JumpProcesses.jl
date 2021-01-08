@@ -29,17 +29,20 @@ sol = solve(jump_prob, SSAStepper(), callback=cb, tstops=[5])
 @test sol(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
 
 # test that callback initializer/finalizer is called and add_tstop! works as expected
+random_tstops = rand(100) .* 10 # 100 random Float64 between 0.0 and 10.0
+
 function fuel_init!(cb,u,t,integrator)
-  for tstop in 1:9
+  for tstop in random_tstops
     add_tstop!(integrator, tstop)
   end
+  @test issorted(integrator.tstops)
 end
 finalizer_called = 0
 fuel_finalize(cb, u, t, integrator) = global finalizer_called += 1
 
 cb2 = DiscreteCallback(condition, fuel_affect!, initialize=fuel_init!, finalize=fuel_finalize)
 sol = solve(jump_prob, SSAStepper(), callback=cb2)
-for tstop in 1:9
+for tstop in random_tstops
   @test tstop ∈ sol.t
 end
 @test finalizer_called == 1

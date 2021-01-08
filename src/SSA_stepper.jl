@@ -148,10 +148,9 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
 end
 
 function DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop)
-    insert_index = searchsortedfirst(integrator.tstops, tstop)
-    if insert_index >= integrator.tstops_idx
-        # we only insert the tstop if insert_index >= integrator.tstops_idx and thus
-        # ignore tstops in the past
+    if tstop > integrator.t
+        future_tstops = @view integrator.tstops[integrator.tstops_idx:end]
+        insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
         Base.insert!(integrator.tstops, insert_index, tstop) 
     end
 end

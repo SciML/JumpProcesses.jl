@@ -64,6 +64,8 @@ function DiffEqBase.solve!(integrator)
         push!(integrator.sol.t,end_time)
         push!(integrator.sol.u,copy(integrator.u))
     end
+
+    DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)
 end
 
 function DiffEqBase.__init(jump_prob::JumpProblem,
@@ -74,7 +76,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          alias_jump = Threads.threadid() == 1,
                          saveat = nothing,
                          callback = nothing,
-                         tstops = (),
+                         tstops = [],
                          numsteps_hint=100)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
@@ -141,10 +143,24 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                                cb,_saveat,save_everystep,save_end,cur_saveat,
                                opts,tstops,1,false,true)
     cb.initialize(cb,integrator.u,prob.tspan[1],integrator)
+    DiffEqBase.initialize!(opts.callback,integrator.u,prob.tspan[1],integrator)
     integrator
 end
 
-DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop) = integrator.tstop = tstop
+function DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop)
+    if tstop > integrator.t
+        future_tstops = @view integrator.tstops[integrator.tstops_idx:end]
+        insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
+        Base.insert!(integrator.tstops, insert_index, tstop) 
+    end
+end
+
+# The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator
+# such that we can achieve maximum performance
+@inline function register_next_jump_time!(integrator::SSAIntegrator, p::AbstractSSAJumpAggregator, t)
+    integrator.tstop = p.next_jump_time
+    nothing
+end
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
     integrator.tprev = integrator.t

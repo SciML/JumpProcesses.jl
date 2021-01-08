@@ -76,7 +76,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          alias_jump = Threads.threadid() == 1,
                          saveat = nothing,
                          callback = nothing,
-                         tstops = (),
+                         tstops = [],
                          numsteps_hint=100)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
@@ -147,7 +147,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     integrator
 end
 
-function DiffEqBase.add_tstop!(integrator::SSAIntegrator{<:Any,<:Any,<:Any,<:Any,<:Any,<:Any,<:Any,<:Any,<:Vector},tstop)
+function DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop)
     insert_index = searchsortedfirst(integrator.tstops, tstop)
     if insert_index >= integrator.tstops_idx
         # we only insert the tstop if insert_index >= integrator.tstops_idx and thus

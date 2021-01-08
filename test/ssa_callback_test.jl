@@ -38,7 +38,7 @@ finalizer_called = 0
 fuel_finalize(cb, u, t, integrator) = global finalizer_called += 1
 
 cb2 = DiscreteCallback(condition, fuel_affect!, initialize=fuel_init!, finalize=fuel_finalize)
-sol = solve(jump_prob, SSAStepper(), callback=cb2, tstops=[])
+sol = solve(jump_prob, SSAStepper(), callback=cb2)
 for tstop in 1:9
   @test tstop ∈ sol.t
 end

@@ -93,7 +93,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem,jumps)
-  error("VariableRateJumps and VariableRateReactions require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
+  error("VariableRateJumps require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)

@@ -1,6 +1,7 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq, StochasticDiffEq, Statistics
 using Test
-
+using StableRNGs
+rng = StableRNG(12345)
 
 rate = (u,p,t) -> 1.0*u[1]
 affect! = function (integrator)
@@ -11,11 +12,11 @@ jump1 = ConstantRateJump(rate,affect!)
 prob = DiscreteProblem([10],(0.0,50.0))
 prob_control = DiscreteProblem([10],(0.0,50.0))
 
-jump_prob = JumpProblem(prob,Direct(),jump1)
-jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
+jump_prob = JumpProblem(prob,Direct(),jump1; rng=rng)
+jump_prob_control = JumpProblem(prob_control,Direct(),jump1; rng=rng)
 
 coupling_map = [(1, 1)]
-coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
+coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map; rng=rng)
 
 @time sol =  solve(coupled_prob,FunctionMap())
 @time solve(jump_prob,FunctionMap())
@@ -40,27 +41,27 @@ end
 # Jump ODE to jump ODE
 prob = ODEProblem(f,[1.],(0.0,1.0))
 prob_control = ODEProblem(f,[1.],(0.0,1.0))
-jump_prob = JumpProblem(prob,Direct(),jump1)
-jump_prob_control = JumpProblem(prob_control,Direct(),jump2)
-coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
+jump_prob = JumpProblem(prob,Direct(),jump1; rng=rng)
+jump_prob_control = JumpProblem(prob_control,Direct(),jump2; rng=rng)
+coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map; rng=rng)
 sol =  solve(coupled_prob,Tsit5())
 @test mean([abs(s[1]-s[2]) for s in sol.u])<=5.
 
 # Jump SDE to Jump SDE
 prob = SDEProblem(f,g,[1.],(0.0,1.0))
 prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
-jump_prob = JumpProblem(prob,Direct(),jump1)
-jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
-coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
+jump_prob = JumpProblem(prob,Direct(),jump1; rng=rng)
+jump_prob_control = JumpProblem(prob_control,Direct(),jump1; rng=rng)
+coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map; rng=rng)
 sol =  solve(coupled_prob,SRIW1())
 @test mean([abs(s[1]-s[2]) for s in sol.u])<=5.
 
 # Jump SDE to Jump ODE
 prob = ODEProblem(f,[1.],(0.0,1.0))
 prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
-jump_prob = JumpProblem(prob,Direct(),jump1)
-jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
-coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
+jump_prob = JumpProblem(prob,Direct(),jump1; rng=rng)
+jump_prob_control = JumpProblem(prob_control,Direct(),jump1; rng=rng)
+coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map; rng=rng)
 sol =  solve(coupled_prob,SRIW1())
 @test mean([abs(s[1]-s[2]) for s in sol.u])<=5.
 
@@ -71,9 +72,9 @@ affect! = function (integrator)
 end
 prob = DiscreteProblem([1.],(0.0,1.0))
 prob_control = SDEProblem(f,g,[1.],(0.0,1.0))
-jump_prob = JumpProblem(prob,Direct(),jump1)
-jump_prob_control = JumpProblem(prob_control,Direct(),jump1)
-coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map)
+jump_prob = JumpProblem(prob,Direct(),jump1; rng=rng)
+jump_prob_control = JumpProblem(prob_control,Direct(),jump1; rng=rng)
+coupled_prob = SplitCoupledJumpProblem(jump_prob,jump_prob_control,Direct(),coupling_map; rng=rng)
 sol =  solve(coupled_prob,SRIW1())
 
 
@@ -87,7 +88,7 @@ f = function (du,u,p,t)
   du[1] = -1.0*u[1]
 end
 odeprob     = ODEProblem(f,[10.0],(0.0,10.0))
-jump_prob   = JumpProblem(odeprob, Direct(), majumps, save_positions=(false,false))
+jump_prob   = JumpProblem(odeprob, Direct(), majumps, save_positions=(false,false); rng=rng)
 Nsims = 8000
 Amean = 0.
 for i in 1:Nsims

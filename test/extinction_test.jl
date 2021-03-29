@@ -1,5 +1,7 @@
 using DiffEqBase, DiffEqJump, StaticArrays
 using Test
+using StableRNGs
+rng = StableRNG(12345)
 
 reactstoch = [
     [1 => 1]
@@ -19,7 +21,7 @@ algs = DiffEqJump.JUMP_AGGREGATORS
 
 for n = 1:Nsims
     for ssa in algs
-        local jprob = JumpProblem(dprob, ssa, majump, save_positions=(false,false))
+        local jprob = JumpProblem(dprob, ssa, majump, save_positions=(false,false), rng=rng)
         local sol = solve(jprob, SSAStepper())
         @test sol[1,end] == 0
         @test sol.t[end] < Inf
@@ -30,7 +32,7 @@ u0 = SA[10]
 dprob = DiscreteProblem(u0,(0.,100.),rates)
 
 for ssa in algs
-    local jprob = JumpProblem(dprob, ssa, majump, save_positions=(false,false))
+    local jprob = JumpProblem(dprob, ssa, majump, save_positions=(false,false), rng=rng)
     local sol = solve(jprob, SSAStepper(), saveat=100.)
     @test sol[1,end] == 0
     @test sol.t[end] < Inf
@@ -49,7 +51,7 @@ function extinction_affect!(integrator)
 end
 cb = DiscreteCallback(extinction_condition, extinction_affect!, save_positions=(false,false))
 dprob = DiscreteProblem(u0,(0.,1000.),rates)
-jprob = JumpProblem(dprob, Direct(), majump; save_positions=(false,false))
+jprob = JumpProblem(dprob, Direct(), majump; save_positions=(false,false), rng=rng)
 sol = solve(jprob, SSAStepper(), callback=cb, save_end=false)
 @test sol.t[end] < 1000.0
 
@@ -64,7 +66,7 @@ function extinction_affect!(integrator)
 end
 cb = DiscreteCallback(extinction_condition, extinction_affect!, save_positions=(false,false))
 dprob = DiscreteProblem(u0,(0.,1000.),rates)
-jprob = JumpProblem(dprob, Direct(), majump; save_positions=(false,false))
+jprob = JumpProblem(dprob, Direct(), majump; save_positions=(false,false), rng=rng)
 sol = solve(jprob, SSAStepper(), callback=cb, save_end=false)
 @test sol[1,end] == 1
 @test sol.retcode == :Terminated

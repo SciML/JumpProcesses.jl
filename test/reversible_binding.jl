@@ -1,5 +1,7 @@
 using DiffEqJump, DiffEqBase
 using Test, HypergeometricFunctions
+using StableRNGs
+rng = StableRNG(12345)
 
 Nsims = 1e4
 
@@ -40,7 +42,7 @@ analytic_mean = analyticmean(u0, K)
 algs = DiffEqJump.JUMP_AGGREGATORS
 relative_tolerance = 0.01
 for alg in algs
-    local jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false))
+    local jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false), rng=rng)
     local Amean = getmean(jprob, Nsims)
     @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
 end

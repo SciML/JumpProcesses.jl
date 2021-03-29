@@ -1,5 +1,7 @@
 using DiffEqJump, DiffEqBase
 using Test
+using StableRNGs
+rng = StableRNG(12345)
 
 rate = (u, p, t) -> u[1]
 affect! = function (integrator)
@@ -9,7 +11,7 @@ end
 jump = ConstantRateJump(rate, affect!)
 
 prob = DiscreteProblem([0.0, 0.0], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), jump; rng=rng)
 
 sol = solve(jump_prob, SSAStepper())
 
@@ -29,7 +31,7 @@ sol = solve(jump_prob, SSAStepper(), callback=cb, tstops=[5])
 @test sol(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
 
 # test that callback initializer/finalizer is called and add_tstop! works as expected
-random_tstops = rand(100) .* 10 # 100 random Float64 between 0.0 and 10.0
+random_tstops = rand(rng,100) .* 10 # 100 random Float64 between 0.0 and 10.0
 
 function fuel_init!(cb,u,t,integrator)
   for tstop in random_tstops

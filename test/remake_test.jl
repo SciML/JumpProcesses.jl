@@ -1,4 +1,6 @@
 using DiffEqJump, DiffEqBase
+using StableRNGs
+rng = StableRNG(12345)
 
 rate = (u,p,t) -> p[1]*u[1]*u[2]
 affect! = function (integrator)
@@ -19,7 +21,7 @@ p = (.1/1000,.01)
 tspan = (0.0,2500.0)
 
 dprob  = DiscreteProblem(u0,tspan,p)
-jprob = JumpProblem(dprob,Direct(),jump,jump2,save_positions=(false,false))
+jprob = JumpProblem(dprob,Direct(),jump,jump2,save_positions=(false,false), rng=rng)
 sol = solve(jprob, SSAStepper())
 @test sol[1,end] == 0
 

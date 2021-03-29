@@ -1,5 +1,7 @@
 using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Test
+using StableRNGs
+rng = StableRNG(12345)
 
 rate = (u,p,t) -> (0.1/1000.0)*u[1]*u[2]
 affect! = function (integrator)
@@ -16,7 +18,7 @@ end
 jump2 = ConstantRateJump(rate,affect!)
 
 prob = DiscreteProblem([999.0,1.0,0.0],(0.0,250.0))
-jump_prob = JumpProblem(prob,Direct(),jump,jump2)
+jump_prob = JumpProblem(prob,Direct(),jump,jump2; rng=rng)
 integrator = init(jump_prob,FunctionMap())
 
 condition(u,t,integrator) = t == 100

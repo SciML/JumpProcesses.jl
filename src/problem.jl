@@ -202,8 +202,8 @@ end
 
 ### Displays
 
-Base.summary(prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
-function Base.show(io::IO, A::JumpProblem)
+Base.summary(io::IO, prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
+function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
   println(io,summary(A))
   println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation === nothing ? 0 : length(A.discrete_jump_aggregation.rates))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))

@@ -189,17 +189,20 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         end
     end
 
+    # FP error means the new time may equal the old if the next jump time is 
+    # sufficiently small, hence we add this check to execute jumps until
+    # this is no longer true.
     while integrator.t == integrator.tstop
         doaffect && integrator.cb.affect!(integrator)
-
-        if !(typeof(integrator.opts.callback.discrete_callbacks)<:Tuple{})
-            discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
-        else
-            saved_in_cb = false
-        end
-
-        !saved_in_cb && savevalues!(integrator)
     end
+
+    if !(typeof(integrator.opts.callback.discrete_callbacks)<:Tuple{})
+        discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
+    else
+        saved_in_cb = false
+    end
+
+    !saved_in_cb && savevalues!(integrator)
 
     nothing
 end

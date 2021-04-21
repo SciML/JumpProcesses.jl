@@ -44,8 +44,7 @@ function DiffEqBase.solve!(integrator)
     end_time = integrator.sol.prob.tspan[2]
     while should_continue_solve(integrator) # It stops before adding a tstop over
         step!(integrator)
-    end
-
+    end    
     integrator.t = end_time
 
     if integrator.saveat !== nothing && !isempty(integrator.saveat)
@@ -190,7 +189,12 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         end
     end
 
-    doaffect && integrator.cb.affect!(integrator)
+    # FP error means the new time may equal the old if the next jump time is 
+    # sufficiently small, hence we add this check to execute jumps until
+    # this is no longer true.
+    while integrator.t == integrator.tstop
+        doaffect && integrator.cb.affect!(integrator)
+    end
 
     if !(typeof(integrator.opts.callback.discrete_callbacks)<:Tuple{})
         discrete_modified,saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,integrator.opts.callback.discrete_callbacks...)
@@ -199,6 +203,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     end
 
     !saved_in_cb && savevalues!(integrator)
+
     nothing
 end
 
@@ -219,7 +224,7 @@ function DiffEqBase.savevalues!(integrator::SSAIntegrator,force=false)
 end
 
 function should_continue_solve(integrator::SSAIntegrator)
-    end_time = integrator.sol.prob.tspan[2]
+    end_time = integrator.sol.prob.tspan[2]    
 
     # we continue the solve if there is a tstop between now and end_time
     has_tstop = !isempty(integrator.tstops) &&

@@ -30,10 +30,10 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         end
     else
         dg = dep_graph
-    end
 
-    # make sure each jump depends on itself
-    add_self_dependencies!(dg)
+        # make sure each jump depends on itself
+        add_self_dependencies!(dg)
+    end
 
     pq = MutableBinaryMinHeap{T}()
 
@@ -84,12 +84,13 @@ end
 function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     @unpack cur_rates, rates, ma_jumps = p
+    num_majumps = get_num_majumps(ma_jumps)
     
     @inbounds for rx in dep_rxs
         oldrate = cur_rates[rx]
 
         # update the jump rate
-        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)

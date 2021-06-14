@@ -1,3 +1,12 @@
+function isinplace_jump(p,rj)
+    if p isa DiscreteProblem && p.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT && rj !== nothing
+        # Just a default discrete problem f, so don't use it for iip
+        DiffEqBase.isinplace(rj)
+    else
+        DiffEqBase.isinplace(p)
+    end
+end
+
 mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: DiffEqBase.AbstractJumpProblem{P,J}
   prob::P
   aggregator::A
@@ -6,6 +15,31 @@ mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2
   variable_jumps::J2
   regular_jump::J3
   massaction_jump::J4
+end
+function JumpProblem(p::P,a::A,dj::J,jc::C,vj::J2,rj::J3,mj::J4) where {P,A,J,C,J2,J3,J4}
+    iip = isinplace_jump(p,rj)
+    JumpProblem{iip,P,A,C,J,J2,J3,J4}(p,a,dj,jc,vj,rj,mj)
+end
+
+# for remaking
+Base.@pure remaker_of(prob::T) where {T <: JumpProblem} = DiffEqBase.parameterless_type(T)
+function DiffEqBase.remake(thing::JumpProblem; kwargs...)
+  T = remaker_of(thing)
+
+  errmesg = """
+  JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem. Feel free to open an issue on DiffEqJump to discuss further.
+  """
+  !issubset(keys(kwargs),(:u0,:p,:tspan,:prob)) && error(errmesg)
+
+  if :prob ∉ keys(kwargs)
+    dprob = DiffEqBase.remake(thing.prob; kwargs...)
+  else
+    any(k -> k in keys(kwargs), (:u0,:p,:tspan)) && error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
+    dprob = kwargs[:prob]
+  end
+
+  T(dprob, thing.aggregator, thing.discrete_jump_aggregation, thing.jump_callback,
+     thing.variable_jumps, thing.regular_jump, thing.massaction_jump)
 end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
@@ -38,12 +72,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     constant_jump_callback = DiscreteCallback(disc)
   end
 
-  iip = if prob isa DiscreteProblem && prob.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT && jumps.regular_jump !== nothing
-    # Just a default discrete problem f, so don't use it for iip
-    DiffEqBase.isinplace(jumps.regular_jump)
-  else
-    DiffEqBase.isinplace(prob)
-  end
+  iip = isinplace_jump(prob, jumps.regular_jump)
 
   ## Variable Rate Handling
   if typeof(jumps.variable_jumps) <: Tuple{}
@@ -61,6 +90,10 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                         callbacks,
                         jumps.variable_jumps,
                         jumps.regular_jump, jumps.massaction_jump)
+end
+
+function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem,jumps)
+  error("VariableRateJumps require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
@@ -169,8 +202,8 @@ end
 
 ### Displays
 
-Base.summary(prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
-function Base.show(io::IO, A::JumpProblem)
+Base.summary(io::IO, prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
+function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
   println(io,summary(A))
   println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation === nothing ? 0 : length(A.discrete_jump_aggregation.rates))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))

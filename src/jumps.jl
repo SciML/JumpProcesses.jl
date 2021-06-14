@@ -99,7 +99,10 @@ JumpSet(jump::ConstantRateJump) = JumpSet((),(jump,),nothing,nothing)
 JumpSet(jump::VariableRateJump) = JumpSet((jump,),(),nothing,nothing)
 JumpSet(jump::RegularJump)      = JumpSet((),(),jump,nothing)
 JumpSet(jump::MassActionJump)   = JumpSet((),(),nothing,jump)
-JumpSet() = JumpSet((),(),nothing,nothing)
+function JumpSet(; variable_jumps=(), constant_jumps=(), 
+                   regular_jumps=nothing, massaction_jumps=nothing) 
+  JumpSet(variable_jumps, constant_jumps, regular_jumps, massaction_jumps)
+end
 JumpSet(jb::Nothing) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable

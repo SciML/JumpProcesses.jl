@@ -1,8 +1,7 @@
 # DiffEqJump.jl
 
 [![Join the chat at https://gitter.im/JuliaDiffEq/Lobby](https://badges.gitter.im/JuliaDiffEq/Lobby.svg)](https://gitter.im/JuliaDiffEq/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/SciML/DiffEqJump.jl.svg?branch=master)](https://travis-ci.org/SciML/DiffEqJump.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/github/JuliaDiffEq/DiffEqJump.jl?branch=master&svg=true)](https://ci.appveyor.com/project/ChrisRackauckas/diffeqjump-jl/branch/master)
+[![Build Status](https://github.com/SciML/DiffEqJump.jl/workflows/CI/badge.svg)](https://github.com/SciML/DiffEqJump.jl/actions?query=workflow%3ACI)
 [![Coverage Status](https://coveralls.io/repos/github/SciML/DiffEqJump.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/DiffEqJump.jl?branch=master)
 [![codecov.io](https://codecov.io/gh/SciML/DiffEqJump.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/DiffEqJump.jl)
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://diffeq.sciml.ai/stable/)

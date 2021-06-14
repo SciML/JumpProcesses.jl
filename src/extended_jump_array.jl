@@ -8,8 +8,8 @@ Base.size(A::ExtendedJumpArray) = (length(A),)
 @inline function Base.getindex(A::ExtendedJumpArray,i::Int)
   i <= length(A.u) ? A.u[i] : A.jump_u[i-length(A.u)]
 end
-@inline function Base.getindex(A::ExtendedJumpArray,I...)
-  A[CartesianIndices(A.u,I...)]
+@inline function Base.getindex(A::ExtendedJumpArray,I::Int...)
+  prod(I) <= length(A.u) ? A.u[I...] : A.jump_u[prod(I)-length(A.u)]
 end
 @inline function Base.getindex(A::ExtendedJumpArray,I::CartesianIndex{1})
   A[I[1]]

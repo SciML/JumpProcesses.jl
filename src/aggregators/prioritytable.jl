@@ -282,12 +282,23 @@ function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
-    gid = length(gsums)
-    @inbounds r = rand(rng) * gsum - gsums[gid]
-    while r > zero(r)
-        gid -= one(gid)
-        @inbounds r -= gsums[gid]
+    # gid = length(gsums)
+    # @inbounds r = rand(rng) * gsum - gsums[gid]
+    # while r > zero(r)
+    #     gid -= one(gid)
+    #     iszero(gid) && return gid   # if no result found return zero
+    #     @inbounds r -= gsums[gid]
+    # end
+    gid = 0
+    r   = rand(rng) * gsum
+    @inbounds for i = length(gsums):-1:1
+        r -= gsums[i]
+        if r <= zero(r)
+            gid = i
+            break
+        end        
     end
+    iszero(gid) && return gid
 
     # sample element within the group
     @inbounds sample(groups[gid], priorities, rng)

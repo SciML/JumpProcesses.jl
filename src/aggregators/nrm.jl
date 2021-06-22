@@ -37,7 +37,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     pq = MutableBinaryMinHeap{T}()
 
-    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, sr, maj, 
+    NRMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, sr, maj,
                                                             rs, affs!, sps, rng, dg, pq)
 end
 
@@ -85,7 +85,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     @unpack cur_rates, rates, ma_jumps = p
     num_majumps = get_num_majumps(ma_jumps)
-    
+
     @inbounds for rx in dep_rxs
         oldrate = cur_rates[rx]
 

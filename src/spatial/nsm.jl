@@ -1,38 +1,7 @@
 # Implementation of the Next Subvolume Method on a grid
 
-abstract type AbstractSpatialJump end
 
-struct SpatialReaction{S} <: AbstractSpatialJump
-    site::S
-    reaction_id::Int
-end
-
-struct SpatialDiffusion{S} <: AbstractSpatialJump
-    source_site::S
-    target_site::S
-    species_id::Int
-end
-
-struct SpatialRates{T}
-    reaction_rates::Vector{T}
-    diffusion_rates::Vector{T}
-end
-
-function SpatialRates(ma_jumps::S, cartesian_grid::CartesianGrid) where S
-    num_sites = cartesian_grid.linear_size^cartesian_grid.dimension
-    # TODO
-    reaction_rates = Vector{}(undef, num_sites)
-end
-
-"""
-Contains all info about the topology of the system
-"""
-abstract type AbstractSpatialSystem end
-
-struct CartesianGrid <: AbstractSpatialSystem
-    dimension::Int
-    linear_size::Int #side length of the grid
-end
+############################ NSM ###################################
 
 mutable struct NSMJumpAggregation{J,T,S,RNG,DEPGR,PQ} <: AbstractSSAJumpAggregator
     next_jump::J #some structure to identify the next event: reaction or diffusion

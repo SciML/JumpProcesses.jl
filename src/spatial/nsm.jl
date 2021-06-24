@@ -2,14 +2,14 @@
 
 
 ############################ NSM ###################################
+struct NSM <: AbstractAggregatorAlgorithm end
 
-mutable struct NSMJumpAggregation{J,T,S,RNG,DEPGR,PQ} <: AbstractSSAJumpAggregator
+mutable struct NSMJumpAggregation{J,T,R,S,RNG,DEPGR,PQ} # <: AbstractSpatialSSAJumpAggregator
     next_jump::J #some structure to identify the next event: reaction or diffusion
     prev_jump::J ##some structure to identify the previous event: reaction or diffusion
     next_jump_time::T
     end_time::T
     cur_rates::R #some structure to store current rates
-    sum_rate::T
     ma_jumps::S #massaction jumps
     # rates::F1 #rates for constant-rate jumps
     # affects!::F2 #affects! function determines the effect of constant-rate jumps
@@ -17,12 +17,12 @@ mutable struct NSMJumpAggregation{J,T,S,RNG,DEPGR,PQ} <: AbstractSSAJumpAggregat
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each locale
     pq::PQ
-    spatial::AbstractSpatialSystem
+    spatial_system::AbstractSpatialSystem
 end
 
-function NSMJumpAggregation(nj::J, njt::T, et::T, crs::R, sr::T,
+function NSMJumpAggregation(nj::AbstractSpatialJump, njt::T, et::T, crs::R,
                                       maj::S, sps::Tuple{Bool,Bool},
-                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG}
+                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, dep_graph=nothing, kwargs...) where {T,S,R,F1,F2,RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -36,19 +36,30 @@ function NSMJumpAggregation(nj::J, njt::T, et::T, crs::R, sr::T,
 
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, sr, maj,
+    # TODO is using `AbstractSpatialJump` here good style? How to do better?
+    NSMJumpAggregation{AbstractSpatialJump,T,R,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, maj,
                                                             sps, rng, dg, pq, spatial_system)
 end
 
 +############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::NSM, u, p, t, end_time,
-                   ma_jumps, save_positions, rng, spatial_system; kwargs...)
+function aggregate(aggregator::NSM, u, end_time, ma_jumps, save_positions, rng, spatial_system; kwargs...)
 
-    # TODO write a specialized function to initialize
-    build_spatial_jump_aggregation(NSMJumpAggregation, u, p, t, end_time, ma_jumps,
-                           save_positions, rng; num_specs=length(u), kwargs...)
+    majumps = ma_jumps
+    if majumps === nothing
+        majumps = MassActionJump(Vector{typeof(end_time)}(), Vector{Vector{Pair{Int,eltype(u[1])}}}(), Vector{Vector{Pair{Int,eltype(u[1])}}}())
+    end
+
+    num_species = length(u[1])
+    next_jump = NoSpatialJump()
+    next_jump_time = typemax(typeof(end_time))
+    current_rates = SpatialRates(get_num_majumps(majumps), num_species, number_of_sites(spatial_system))
+
+    # TODO how should this works?
+    NSM(next_jump, next_jump_time, end_time, current_rates, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
+
+
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)

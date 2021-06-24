@@ -60,6 +60,8 @@ end
 
 abstract type AbstractSpatialRates end
 
+#TODO refactor names of functions?
+
 #return rate of site
 function get_site_rate(spatial_rates_struct, site_id)
     site_reactions_rate(site_id)+site_diffusions_rate(site_id)
@@ -119,12 +121,12 @@ end
 
 #return rate of reactions at site
 function get_site_reactions_rate(spatial_rates, site_id)
-    spatial_rates.reaction_rates_sum
+    spatial_rates.reaction_rates_sum[site_id]
 end
 
 #return rate of diffusions at site
 function get_site_diffusions_rate(spatial_rates, site_id)
-    spatial_rates.diffusion_rates_sum
+    spatial_rates.diffusion_rates_sum[site_id]
 end
 
 #returns an iterator over reaction rates of a site
@@ -150,44 +152,3 @@ function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
     spatial_rates.diffusion_rates[site_id][site_id] = rate
     spatial_rates.diffusion_rates_sum = diffusion_rates_sum - old_rate + rate
 end
-
-
-
-# TODO do I need this?
-# "return coordinates from node index and number of sites per box edge"
-# node_to_coordinates(j,m) = ( (j-1)%m+1,(div(j-1,m))%m+1,(div(j-1,m^2)+1) )
-#
-# "return node index from coordinates and number of sites per box edge"
-# coordinates_to_node(x,y,z,m) = x + (y-1)*m + (z-1)*m^2
-#
-# "return node index from coordinates and number of sites per box edge"
-# coordinates_to_node(x,y,m) = x + (y-1)*m
-#
-# "return node index from coordinates and number of sites per box edge"
-# coordinates_to_node(x,m) = x
-#
-# function connectivity_list_from_box(box_width :: Integer, dimension :: Integer)
-#     @assert 1 <= dimension <= 3
-#     vol_num = box_width^dimension
-#     connectivity_matrix = Array{Array{Int64,1},1}(undef, 0)
-#     for j in 1:vol_num
-#         x,y,z = node_to_coordinates(j, box_width)
-#         if dimension == 1
-#             potential_neighbors = [(x-1,y,z), (x+1,y,z)]
-#         elseif dimension == 2
-#             potential_neighbors = [(x-1,y,z), (x+1,y,z), (x,y-1,z), (x,y+1,z)]
-#         elseif dimension == 3
-#             potential_neighbors = [(x-1,y,z), (x+1,y,z), (x,y-1,z), (x,y+1,z), (x,y,z-1), (x,y,z+1)]
-#         end
-#         real_neighbors = Int[]
-#         for (x,y,z) in potential_neighbors
-#
-#             if 1<=x<=box_width && 1<=y<=box_width && 1<=z<=box_width
-#                 push!(real_neighbors, coordinates_to_node(x,y,z,box_width))
-#             end
-#         end
-#         push!(connectivity_matrix, real_neighbors)
-#     end
-#     return connectivity_matrix
-# end
-#

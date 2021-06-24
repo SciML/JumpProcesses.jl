@@ -62,12 +62,10 @@ end
 #QUESTION do I need to pass in integrator if I don't use it?
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     fill_rates_and_get_times!(p, u, params, t)
-    # TODO write specialized function to generate next jump (takes the top site and chooses the reaction/diffusion within it)
     generate_jumps!(p, u, params, t)
     nothing
 end
 
-#TODO finish this
 #QUESTION do I need to pass in `u` if `integrator` is passed in?
 # calculate the next jump / jump time
 function generate_jumps!(p::NRMJumpAggregation, u, params, t)
@@ -75,10 +73,10 @@ function generate_jumps!(p::NRMJumpAggregation, u, params, t)
 
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(p.rng)*get_site_rate(cur_rates, site) < get_site_reactions_rate(cur_rates, site)
-        #linear search for the reaction
+        #TODO linear search for the reaction
     else
-        #linear search for the species to diffuse
-        #linear search for the neighbor to diffuse to using neighbors function
+        #TODO linear search for the species to diffuse
+        #TODO linear search for the neighbor to diffuse to using neighbors function
     nothing
 end
 
@@ -88,8 +86,7 @@ function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t)
     u = update_state!(p, integrator, u)
 
     # update current jump rates and times
-    # TODO write specialized functon to update the dependent rates (maybe a function to update in case of a reaction and another function to update in case of a diffusion)
-    update_dependent_rates!(p, u, params, t)
+    update_dependent_rates_and_draw_new_firing_times!(p, u, params, t)
     nothing
 end
 
@@ -99,42 +96,45 @@ end
 updates state based on p.next_jump
 """
 function update_state!(p, integrator)
-    #TODO
+    @unpack next_jump = p
+    execute_spatial_jump!(p,integrator,next_jump)
+    # save jump that was just exectued
+    p.prev_jump = next_jump
+    return integrator.u
 end
 
 ######################## SSA specific helper routines ########################
 
-# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
-function update_dependent_rates!(p::NSMJumpAggregation, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    @unpack cur_rates, rates, ma_jumps = p
-    num_majumps = get_num_majumps(ma_jumps)
+function update_rates_after_jump!(p, u, t, jump::SpatialReaction)
+    @unpack site, reaction_id = jump
+    @inbounds dep_rxs = p.dep_gr[p.reaction_id]
+    @unpack cur_rates, ma_jumps = p
 
     @inbounds for rx in dep_rxs
-        oldrate = cur_rates[rx]
-
-        # update the jump rate
-        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
-
-        # calculate new jump times for dependent jumps
-        if rx != p.next_jump && oldrate > zero(oldrate)
-            if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(p.pq, rx, t + oldrate / cur_rates[rx] * (p.pq[rx] - t))
-            else
-                update!(p.pq, rx, typemax(t))
-            end
-        else
-            if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(p.pq, rx, t + randexp(p.rng) / cur_rates[rx])
-            else
-                update!(p.pq, rx, typemax(t))
-            end
-        end
-
+        rate = evalrxrate(u, reaction_id, ma_jumps)
+        set_site_reaction_rate!(cur_rates, site, reaction_id, rate)
     end
-    nothing
+
+    # draw new firing time for site
+    site_rate = get_site_rate(cur_rates, site)
+    if site_rate > zero(typeof(site_rate))
+        update!(p.pq, site, t + randexp(p.rng) / rate)
+    else
+        update!(p.pq, site, typemax(t))
+    end
 end
 
+function update_rates_after_jump!(p, u, t, jump::SpatialDiffusion)
+    @unpack source_site, target_site, species_id = jump
+    #TODO figure out which reactions depend on the species, update their rates in both sites, draw new times for both sites
+end
+
+# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
+function update_dependent_rates_and_draw_new_firing_times!(p::NSMJumpAggregation, u, t)
+    @unpack jump = p
+    update_rates_after_jump!(p, u, t, jump)
+    end
+end
 
 """
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
@@ -166,4 +166,22 @@ function fill_rates_and_get_times!(aggregation::NRMJumpAggregation, u, t)
 
     aggregation.pq = MutableBinaryMinHeap(pqdata)
     nothing
+end
+
+######################## helper routines for all spatial SSAs ########################
+function execute_spatial_jump!(p,integrator,jump::SpatialReaction)
+    @unpack majumps = p
+    @unpack site, reaction_id = jump
+    #QUESTION what is SVector and does it matter for diffusion?
+    if u_site isa SVector
+        integrator.u[site] = executerx(integrator.u[site], reaction_id, ma_jumps)
+    else
+        executerx!(integrator.u[site], reaction_id, ma_jumps)
+    end
+end
+
+function execute_spatial_jump!(p,integrator,jump::SpatialDiffusion)
+    @unpack source_site, target_site, species_id = jump
+    integrator.u[source_site][species_id] -= 1
+    integrator.u[target_site][species_id] += 1
 end

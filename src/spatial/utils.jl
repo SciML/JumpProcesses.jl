@@ -106,8 +106,8 @@ initializes SpatialRates with undefined rates
 function SpatialRates(num_jumps,num_species,num_sites)
     reaction_rates = [Vector{Real}(undef, num_jumps) for i in 1:num_sites]
     diffusion_rates = [Vector{Real}(undef, num_species) for i in 1:num_sites]
-    reaction_rates_sum = 0
-    diffusion_rates_sum = 0
+    reaction_rates_sum = zeros(num_sites)
+    diffusion_rates_sum = zeros(num_sites)
     SpatialRates{Real}(reaction_rates,diffusion_rates,reaction_rates_sum,diffusion_rates_sum)
 end
 

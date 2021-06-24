@@ -26,7 +26,7 @@ function NSMJumpAggregation(nj::AbstractSpatialJump, njt::T, et::T, crs::R,
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
-        dg = make_dependency_graph(num_specs, maj)
+        dg = DiffEqJump.make_dependency_graph(num_specs, maj)
     else
         dg = dep_graph
 
@@ -43,20 +43,18 @@ end
 
 +############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::NSM, u, end_time, ma_jumps, save_positions, rng, spatial_system; kwargs...)
+function aggregate(aggregator::NSM, num_species, end_time, ma_jumps, save_positions, rng, spatial_system; kwargs...)
 
     majumps = ma_jumps
     if majumps === nothing
         majumps = MassActionJump(Vector{typeof(end_time)}(), Vector{Vector{Pair{Int,eltype(u[1])}}}(), Vector{Vector{Pair{Int,eltype(u[1])}}}())
     end
 
-    num_species = length(u[1])
     next_jump = NoSpatialJump()
     next_jump_time = typemax(typeof(end_time))
     current_rates = SpatialRates(get_num_majumps(majumps), num_species, number_of_sites(spatial_system))
 
-    # TODO how should this works?
-    NSM(next_jump, next_jump_time, end_time, current_rates, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
+    NSMJumpAggregation(next_jump, next_jump_time, end_time, current_rates, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
 
 

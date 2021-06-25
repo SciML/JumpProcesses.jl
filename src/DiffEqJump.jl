@@ -37,6 +37,8 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 
+include("spatial/nrm.jl")
+
 include("aggregators/aggregated_api.jl")
 
 include("extended_jump_array.jl")

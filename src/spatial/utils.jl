@@ -2,22 +2,13 @@
 A file with types, structs and functions for spatial simulations
 """
 
-abstract type AbstractSpatialJump end
-
 """
-placeholder for a jump
+stores info for a spatial jump
 """
-struct NoSpatialJump <: AbstractSpatialJump end
-
-struct SpatialReaction{S} <: AbstractSpatialJump
-    site::S
-    reaction_id::Int
-end
-
-struct SpatialDiffusion{S} <: AbstractSpatialJump
-    source_site::S
-    target_site::S
-    species_id::Int
+struct SpatialJump{J}
+    site::J #where the jump happens
+    index::Int #diffusion or reaction
+    target_site::J #target of diffusive hop
 end
 
 ############ abstract spatial system struct ##################
@@ -35,6 +26,11 @@ function neighbors end
 returns total number of sites
 """
 function number_of_sites end
+
+"""
+return the number of neighbors of a site
+"""
+function num_neighbors end
 
 ################### CartesianGrid <: AbstractSpatialSystem ########################
 
@@ -55,6 +51,19 @@ return a generator that iterates over the neighbors of the given site in grid
 function neighbors(grid, site_id)
     (site_id + j*grid.linear_size^(i-1) for i in 1:dimension(grid), j in -1:2:1 if is_site(grid,site_id + j*grid.linear_size^(i-1)))
 end
+
+function num_neighbors(grid,site_id)
+    return dimension(grid)*2
+end
+
+function nth_neighbor(grid,site,n)
+    #TODO can make this faster?
+    nth(neighbors(grid,site))
+end
+
+#TODO dealing with escaping:
+# make function that returns the ith neighbor for a site -- this might be the sink state in case of absorbing
+# or just don't update the target site if it's not a valid site
 
 ################### abstract spatial rates struct ###############
 

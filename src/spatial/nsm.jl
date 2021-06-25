@@ -6,7 +6,7 @@ struct NSM <: AbstractAggregatorAlgorithm end
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE diffusion_constants is a matrix. diffusion_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,PQ,SS<:AbstractSpatialSystem} <: AbstractSpatialSSAJumpAggregator
+mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS<:AbstractSpatialSystem} <: AbstractSpatialSSAJumpAggregator
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or diffusion
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or diffusion
     next_jump_time::T
@@ -18,7 +18,9 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,PQ,S
     # affects!::F2 #affects! function determines the effect of constant-rate jumps
     save_positions::Tuple{Bool,Bool}
     rng::RNG
-    dep_gr::DEPGR #dep graph is same for each locale
+    dep_gr::DEPGR #dep graph is same for each site
+    vartojumps_map::VJMAP #vartojumps_map is same for each site
+    jumptovars_map::JVMAP #jumptovars_map is same for each site
     pq::PQ
     spatial_system::SS
 end
@@ -27,27 +29,39 @@ end
 
 function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion_constants::C,
                                       maj::S, sps::Tuple{Bool,Bool},
-                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, dep_graph=nothing, kwargs...) where {T,S,R,C,F1,F2,RNG}
+                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {T,S,R,C,F1,F2,RNG}
 
-    # a dependency graph is needed and must be provided if there are constant rate jumps
+    # a dependency graph is needed
     if dep_graph === nothing
         dg = DiffEqJump.make_dependency_graph(num_specs, maj)
     else
         dg = dep_graph
-
         # make sure each jump depends on itself
         add_self_dependencies!(dg)
     end
 
+    # a species-to-reactions graph is needed
+    if vartojumps_map === nothing
+        vtoj_map = var_to_jumps_map(num_specs, maj)
+    else
+        vtoj_map = vartojumps_map
+    end
+
+    if jumptovars_map === nothing
+        jtov_map = jump_to_vars_map(maj)
+    else
+        jtov_map = jumptovars_map
+    end
+
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{J,T,R,C,S,F1,F2,RNG,typeof(dg),typeof(pq)}(nj, nj, njt, et, crs, diffusion_constants, maj,
-                                                            sps, rng, dg, pq, spatial_system)
+    NSMJumpAggregation{J,T,R,C,S,F1,F2,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq)}(nj, nj, njt, et, crs, diffusion_constants, maj,
+                                                            sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system)
 end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-#QUESTION what needs to be changed if the signature of aggregate changes?
+#TODO write a SpatialJumpProblem with new `aggregate`
 function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, ma_jumps, save_positions, rng, spatial_system; kwargs...)
 
     majumps = ma_jumps
@@ -90,23 +104,22 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator)
 
     # update current jump rates and times
-    update_dependent_rates_and_draw_new_firing_times!(p, u, params, t)
+    update_dependent_rates_and_firing_times!(p, u, t)
     nothing
 end
-
 
 ######################## SSA specific helper routines ########################
 """
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NRMJumpAggregation, u, t)
-    @unpack majumps, cur_rates, diffusion_constants, spatial_system = aggregation
+    @unpack ma_jumps, cur_rates, diffusion_constants, spatial_system = aggregation
     @unpack reaction_rates, diffusion_rates = cur_rates
     num_sites = number_of_sites(spatial_system)
-    num_majumps = get_num_majumps(majumps)
+    num_majumps = get_num_majumps(ma_jumps)
     num_species = length(u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
 
     @assert cur_rates.reaction_rates_sum == zeros(typeof(cur_rates.reaction_rates_sum[1]),num_sites)
@@ -114,16 +127,8 @@ function fill_rates_and_get_times!(aggregation::NRMJumpAggregation, u, t)
 
     pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites
-        #reactions
-        for rx in 1:num_majumps
-            rate = evalrxrate(u[:,site], rx, majumps)
-            set_site_reaction_rate!(cur_rates, site, rx, rate)
-        end
-        #diffusions
-        for species in 1:num_species
-            rate = u[species,site]*diffusion_constants[species,site]
-            set_site_diffusion_rate!(cur_rates, site, species, rate)
-        end
+        update_reaction_rates!(cur_rates, 1:num_majumps, u, ma_jumps, site)
+        update_diffusion_rates!(cur_rates, 1:num_species, diffusion_constants, u, site, spatial_system)
         pqdata[site] = t + randexp(aggregation.rng) / get_site_rate(spatial_rates, site)
     end
 
@@ -132,42 +137,64 @@ function fill_rates_and_get_times!(aggregation::NRMJumpAggregation, u, t)
 end
 
 """
-    update_dependent_rates_and_draw_new_firing_times!(p, u, t)
+    update_dependent_rates_and_firing_times!(p, u, t)
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates_and_draw_new_firing_times!(p, u, t)
+function update_dependent_rates_and_firing_times!(p, u, t)
     jump = p.prev_jump
-    site = jump.site
     if is_diffusion(p, jump)
-        update_rates_after_diffusion!(p, u, t, site, jump.target_site, jump.index)
-        #TODO draw new times
-    else
-        update_rates_after_reaction!(p, u, t, site, reaction_id_from_jump(p,jump))
-        # draw new firing time for site
-        site_rate = get_site_rate(cur_rates, site)
-        if site_rate > zero(typeof(site_rate))
-            update!(p.pq, site, t + randexp(p.rng) / site_rate)
-        else
-            update!(p.pq, site, typemax(t))
+        source_site = jump.site
+        target_site = jump.target_site
+        update_rates_after_diffusion!(p, u, t, source_site, target_site, jump.index)
+        for site in [source_site, target_site]
+            update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
         end
+    else
+        site = jump.site
+        update_rates_after_reaction!(p, u, t, site, reaction_id_from_jump(p,jump))
+        update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
+    end
+end
+
+function update_site_time!(pq, rng, cur_rates, site, t)
+    site_rate = get_site_rate(cur_rates, site)
+    if site_rate > zero(typeof(site_rate))
+        update!(pq, site, t + randexp(rng) / site_rate)
+    else
+        update!(pq, site, typemax(t))
     end
 end
 
 ######################## helper routines for all spatial SSAs ########################
 function update_rates_after_reaction!(p, u, t, site, reaction_id)
-    @inbounds dep_rxs = p.dep_gr[p.reaction_id]
-    @unpack cur_rates, ma_jumps = p
-
-    @inbounds for rx in dep_rxs
-        rate = evalrxrate(u, reaction_id, ma_jumps)
-        set_site_reaction_rate!(cur_rates, site, reaction_id, rate)
-    end
+    update_reaction_rates!(p.cur_rates, p.dep_gr[reaction_id], u, p.ma_jumps, site)
+    update_diffusion_rates!(p.cur_rates, p.jumptovars_map[reaction_id], p.diffusion_constants, u, site, p.spatial_system)
 end
 
 function update_rates_after_diffusion!(p, u, t, source_site, target_site, species)
-    #TODO figure out which reactions depend on the species, update their rates in both sites, draw new times for both sites
-    # use var_to_jumps_map from rssa
+    for site in [source_site, target_site]
+        update_reaction_rates!(p.cur_rates, p.vartojumps_map[species], u, p.ma_jumps, site)
+        update_diffusion_rates!(p.cur_rates, [species], p.diffusion_constants, u, site, p.spatial_system)
+    end
+end
+
+"""
+update rates of all reactions in rxs at site
+"""
+function update_reaction_rates!(cur_rates, rxs, u, ma_jumps, site)
+    for rx in rxs
+        set_site_reaction_rate!(cur_rates, site, rx, evalrxrate(u, rx, ma_jumps))
+    end
+end
+
+"""
+update rates of all specs in list species at site
+"""
+function update_diffusion_rates!(cur_rates, species, diffusion_constants, u, site, spatial_system)
+    for spec in species
+        set_site_diffusion_rate!(cur_rates, site, spec, evaldiffrate(diffusion_constants, u, spec, site, spatial_system))
+    end
 end
 
 """
@@ -214,4 +241,14 @@ return reaction id by subtracting the number of diffusive hops
 """
 function reaction_id_from_jump(p,jump)
     jump.index - length(p.diffusion_constants[:,jump.site])
+end
+
+"""
+    evaldiffrate(args)
+
+documentation
+"""
+function evaldiffrate(diffusion_constants, u, species, site, spatial_system)
+    #TODO this is wrong. Must multiply by the number of neighbors as well
+    u[species,site]*diffusion_constants[species,site]*num_neighbors(spatial_system, site)
 end

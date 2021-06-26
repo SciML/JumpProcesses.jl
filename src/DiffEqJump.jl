@@ -37,6 +37,7 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 
+include("spatial/utils.jl")
 include("spatial/nsm.jl")
 
 include("aggregators/aggregated_api.jl")

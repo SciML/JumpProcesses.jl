@@ -79,6 +79,11 @@ systems with many species and many channels, Journal of Physical Chemistry A,
 """
 struct NRM <: AbstractAggregatorAlgorithm end
 
+#TODO add citation
+"""
+citation
+"""
+struct NSM <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
 

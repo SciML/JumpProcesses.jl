@@ -2,7 +2,6 @@
 
 
 ############################ NSM ###################################
-struct NSM <: AbstractAggregatorAlgorithm end
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE diffusion_constants is a matrix. diffusion_constants[i,j] is species i, site j

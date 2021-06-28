@@ -5,7 +5,7 @@
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE diffusion_constants is a matrix. diffusion_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS<:AbstractSpatialSystem} <: AbstractSpatialSSAJumpAggregator
+mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS<:AbstractSpatialSystem} <: AbstractSSAJumpAggregator
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or diffusion
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or diffusion
     next_jump_time::T
@@ -28,7 +28,7 @@ end
 
 function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion_constants::C,
                                       maj::S, sps::Tuple{Bool,Bool},
-                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {T,S,R,C,F1,F2,RNG}
+                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,S,R,C,F1,F2,RNG}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -85,7 +85,7 @@ end
 
 #NOTE integrator and params are not used. They remain to adhere to the interface of `AbstractSSAJumpAggregator` defined in ssajump.jl
 # calculate the next jump / jump time
-function generate_jumps!(p::NRMJumpAggregation, integrator, params, u, t)
+function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     @unpack cur_rates, rng = p
 
     p.next_jump_time, site = top_with_handle(p.pq)

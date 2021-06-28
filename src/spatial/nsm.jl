@@ -2,6 +2,7 @@
 
 
 ############################ NSM ###################################
+# NOTE make 0 a sink state for absorbing boundary condition
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE diffusion_constants is a matrix. diffusion_constants[i,j] is species i, site j
@@ -24,11 +25,10 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMA
     spatial_system::SS
 end
 
-# NOTE make 0 a sink state
 
 function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion_constants::C,
                                       maj::S, sps::Tuple{Bool,Bool},
-                                      rng::RNG, spatial_system::AbstractSpatialSystem; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,S,R,C,F1,F2,RNG}
+                                      rng::RNG, spatial_system::SS; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,S,R,C,RNG,SS}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -54,8 +54,7 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion
 
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{J,T,R,C,S,F1,F2,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq)}(nj, nj, njt, et, crs, diffusion_constants, maj,
-                                                            sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system)
+    NSMJumpAggregation{J,T,R,C,S,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq),SS}(nj, nj, njt, et, crs, diffusion_constants, maj, sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system)
 end
 
 ############################# Required Functions ##############################

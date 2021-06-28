@@ -83,7 +83,7 @@ struct NRM <: AbstractAggregatorAlgorithm end
 """
 citation
 """
-struct NSM <: AbstractAggregatorAlgorithm end
+struct NSM <: AbstractSpatialAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
 

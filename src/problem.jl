@@ -58,6 +58,8 @@ JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::MassActionJump;k
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps...);kwargs...)
 JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 
+JumpProblem(prob,aggregator::AbstractSpatialAggregatorAlgorithm,jumps::MassActionJump,diffusion_constants, spatial_system;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps),diffusion_constants, spatial_system;kwargs...)
+
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
                      save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
                      rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
@@ -92,8 +94,32 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                         jumps.regular_jump, jumps.massaction_jump)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem,jumps)
-  error("VariableRateJumps require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
+function JumpProblem(prob, aggregator::AbstractSpatialAggregatorAlgorithm, jumps::JumpSet, diffusion_constants, spatial_system;
+                     save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
+                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
+
+  _,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0
+  disc = aggregate(aggregator, length(u), end_time, diffusion_constants, jumps.massaction_jump, save_positions, rng, spatial_system; kwargs...)
+  constant_jump_callback = DiscreteCallback(disc)
+
+  iip = isinplace_jump(prob, jumps.regular_jump)
+
+  ## Variable Rate Handling
+  if typeof(jumps.variable_jumps) <: Tuple{}
+    new_prob = prob
+    variable_jump_callback = CallbackSet()
+  else
+    new_prob = extend_problem(prob,jumps)
+    variable_jump_callback = build_variable_callback(CallbackSet(),0,jumps.variable_jumps...)
+  end
+  callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
+  JumpProblem{iip,typeof(new_prob),typeof(aggregator),typeof(callbacks),
+              typeof(disc),typeof(jumps.variable_jumps),
+              typeof(jumps.regular_jump),typeof(jumps.massaction_jump)}(
+                        new_prob,aggregator,disc,
+                        callbacks,
+                        jumps.variable_jumps,
+                        jumps.regular_jump, jumps.massaction_jump)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)

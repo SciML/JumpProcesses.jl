@@ -78,7 +78,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     fill_rates_and_get_times!(p, u, t)
-    generate_jumps!(p, u, t)
+    generate_jumps!(p, integrator, params, u, t)
     nothing
 end
 
@@ -90,11 +90,12 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*get_site_rate(cur_rates, site) < get_site_reactions_rate(cur_rates, site)
         rx = linear_search(get_site_reactions_rate(cur_rates, site), rand(rng) * get_site_reactions_rate(cur_rates, site))
-        p.next_jump = SpatialJump(site, rx, site)
+        p.next_jump = SpatialJump(site, rx+length(p.diffusion_constants[:,site]), site)
     else
         species_to_diffuse = linear_search(get_site_diffusions_iterator(cur_rates, site), rand(rng) * get_site_diffusions_rate(cur_rates, site))
-        n = rand(rng,1:num_neighbors(spatial_system, site))
-        target_site = nth_neighbor(grid,site,n)
+        #TODO this is not efficient. We iterate over neighbors twice. 
+        n = rand(rng,1:num_neighbors(p.spatial_system, site))
+        target_site = nth_neighbor(p.spatial_system,site,n)
         p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
     end
 end
@@ -102,10 +103,10 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t)
     # execute jump
-    u = update_state!(p, integrator)
+    update_state!(p, integrator)
 
     # update current jump rates and times
-    update_dependent_rates_and_firing_times!(p, u, t)
+    update_dependent_rates_and_firing_times!(p, integrator.u, t)
     nothing
 end
 
@@ -113,12 +114,13 @@ end
 """
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
-function fill_rates_and_get_times!(aggregation::NRMJumpAggregation, u, t)
-    @unpack ma_jumps, cur_rates, diffusion_constants, spatial_system = aggregation
-    @unpack reaction_rates, diffusion_rates = cur_rates
-    num_sites = number_of_sites(spatial_system)
+function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
+    @unpack ma_jumps, diffusion_constants, spatial_system = aggregation
+
     num_majumps = get_num_majumps(ma_jumps)
     num_species = length(u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
+    num_sites = number_of_sites(spatial_system)
+    cur_rates = SpatialRates(num_majumps,num_species,num_sites)
 
     @assert cur_rates.reaction_rates_sum == zeros(typeof(cur_rates.reaction_rates_sum[1]),num_sites)
     @assert cur_rates.diffusion_rates_sum == zeros(typeof(cur_rates.diffusion_rates_sum[1]),num_sites)
@@ -127,9 +129,10 @@ function fill_rates_and_get_times!(aggregation::NRMJumpAggregation, u, t)
     for site in 1:num_sites
         update_reaction_rates!(cur_rates, 1:num_majumps, u, ma_jumps, site)
         update_diffusion_rates!(cur_rates, 1:num_species, diffusion_constants, u, site, spatial_system)
-        pqdata[site] = t + randexp(aggregation.rng) / get_site_rate(spatial_rates, site)
+        pqdata[site] = t + randexp(aggregation.rng) / get_site_rate(cur_rates, site)
     end
 
+    aggregation.cur_rates = cur_rates
     aggregation.pq = MutableBinaryMinHeap(pqdata)
     nothing
 end
@@ -182,7 +185,7 @@ update rates of all reactions in rxs at site
 """
 function update_reaction_rates!(cur_rates, rxs, u, ma_jumps, site)
     for rx in rxs
-        set_site_reaction_rate!(cur_rates, site, rx, evalrxrate(u, rx, ma_jumps))
+        set_site_reaction_rate!(cur_rates, site, rx, evalrxrate(u[:,site], rx, ma_jumps))
     end
 end
 
@@ -205,12 +208,15 @@ function update_state!(p, integrator)
     if is_diffusion(p, jump)
         execute_diffusion!(integrator, jump.site, jump.target_site, jump.index)
     else
+        u_site = integrator.u[:,jump.site]
         rx_index = reaction_id_from_jump(p,jump)
-        executerx!(integrator.u[:,jump.site], rx_index, p.ma_jumps)
+        executerx!(u_site, rx_index, p.ma_jumps)
+        #QUESTION why does this not happen in-place?
+        integrator.u[:,jump.site] = u_site
     end
     # save jump that was just exectued
     p.prev_jump = jump
-    return integrator.u
+    nothing
 end
 
 """
@@ -250,3 +256,8 @@ function evaldiffrate(diffusion_constants, u, species, site, spatial_system)
     #TODO this is wrong. Must multiply by the number of neighbors as well
     u[species,site]*diffusion_constants[species,site]*num_neighbors(spatial_system, site)
 end
+
+"""
+number of constant rate jumps
+"""
+num_constant_rate_jumps(aggregator::NSMJumpAggregation) = 0

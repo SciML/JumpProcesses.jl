@@ -53,13 +53,26 @@ function neighbors(grid, site_id)
 end
 
 function num_neighbors(grid,site_id)
-    return dimension(grid)*2
+    return length(collect(neighbors(grid,site_id)))
 end
 
+"""
+a copy of `nth` function from IterTools 
+"""
 function nth_neighbor(grid,site,n)
     #TODO can make this faster?
-    nth(neighbors(grid,site))
+    xs = neighbors(grid,site)
+    n > 0 || throw(BoundsError(xs, n))
+
+    for (i, val) in enumerate(xs)
+        i >= n && return val
+    end
+
+    # catch iterators with no length but actual finite size less then n
+    throw(BoundsError(xs, n))
 end
+
+#TODO use the Sampler + rand interface to draw a random neighbor as described here https://docs.julialang.org/en/v1/stdlib/Random/#Random.Sampler.
 
 #TODO dealing with escaping:
 # make function that returns the ith neighbor for a site -- this might be the sink state in case of absorbing
@@ -73,7 +86,7 @@ abstract type AbstractSpatialRates end
 
 #return rate of site
 function get_site_rate(spatial_rates_struct, site_id)
-    site_reactions_rate(site_id)+site_diffusions_rate(site_id)
+    get_site_reactions_rate(spatial_rates_struct,site_id)+get_site_diffusions_rate(spatial_rates_struct,site_id)
 end
 
 #return rate of reactions at site
@@ -89,14 +102,16 @@ function get_site_reactions_iterator end
 function get_site_diffusions_iterator end
 
 #sets the rate of reaction at site
-function set_site_reaction_rate end
+function set_site_reaction_rate! end
 
 #sets the rate of diffusion at site
-function set_site_diffusion_rate end
+function set_site_diffusion_rate! end
 
 #################### SpatialRates <: AbstractSpatialRates ######################
 
 # NOTE: for now assume diffusion rate only depends on the site and species (and not the neighbor of the site)
+# TODO make these matrices instead of vectors of vectors for better performance
+# TODO refactor names
 struct SpatialRates{R} <: AbstractSpatialRates
     reaction_rates::Vector{Vector{R}}
     diffusion_rates::Vector{Vector{R}}
@@ -108,18 +123,16 @@ end
 standard constructor, assumes numeric values for rates
 """
 function SpatialRates(reaction_rates::Vector{Vector{R}}, diffusion_rates::Vector{Vector{R}}) where {R}
-    SpatialRates{R}(reaction_rates, diffusion_rates, sum(reaction_rates), sum(diffusion_rates))
+    SpatialRates{R}(reaction_rates, diffusion_rates, [sum(site) for site in reaction_rates], [sum(site) for site in diffusion_rates])
 end
 
 """
-initializes SpatialRates with undefined rates
+initializes SpatialRates with zero rates
 """
-function SpatialRates(num_jumps,num_species,num_sites::Int)
-    reaction_rates = [Vector{Real}(undef, num_jumps) for i in 1:num_sites]
-    diffusion_rates = [Vector{Real}(undef, num_species) for i in 1:num_sites]
-    reaction_rates_sum = zeros(num_sites)
-    diffusion_rates_sum = zeros(num_sites)
-    SpatialRates{Real}(reaction_rates,diffusion_rates,reaction_rates_sum,diffusion_rates_sum)
+function SpatialRates(num_jumps::Integer,num_species::Integer,num_sites::Integer)
+    reaction_rates = [zeros(Float64, num_jumps) for i in 1:num_sites]
+    diffusion_rates = [zeros(Float64, num_species) for i in 1:num_sites]
+    SpatialRates(reaction_rates,diffusion_rates)
 end
 
 function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSystem) where S
@@ -152,12 +165,26 @@ end
 function set_site_reaction_rate!(spatial_rates, site_id, reaction_id, rate)
     old_rate = spatial_rates.reaction_rates[site_id][reaction_id]
     spatial_rates.reaction_rates[site_id][reaction_id] = rate
-    spatial_rates.reaction_rates_sum = reaction_rates_sum - old_rate + rate
+    spatial_rates.reaction_rates_sum[site_id] += rate - old_rate
 end
 
 #sets the rate of diffusion at site
 function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
     old_rate = spatial_rates.diffusion_rates[site_id][species_id]
-    spatial_rates.diffusion_rates[site_id][site_id] = rate
-    spatial_rates.diffusion_rates_sum = diffusion_rates_sum - old_rate + rate
+    spatial_rates.diffusion_rates[site_id][species_id] = rate
+    spatial_rates.diffusion_rates_sum[site_id] += rate - old_rate
 end
+
+
+# Tests for SpatialRates
+# using Test
+# num_jumps = 2
+# num_species = 3
+# num_sites = 5
+# spatial_rates = DiffEqJump.SpatialRates(num_jumps, num_species, num_sites)
+
+# set_site_reaction_rate!(spatial_rates, 1, 1, 10.0)
+# set_site_reaction_rate!(spatial_rates, 1, 1, 20.0)
+# set_site_diffusion_rate!(spatial_rates, 1, 1, 30.0)
+# @test get_site_reactions_rate(spatial_rates, 1) == 20.0
+# @test get_site_diffusions_rate(spatial_rates, 1) == 30.0

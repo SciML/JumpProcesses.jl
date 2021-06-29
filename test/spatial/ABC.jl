@@ -44,7 +44,7 @@ end
 
 # physical constants
 domain_size = 1.0 #μ-meter
-linear_size = 10
+linear_size = 5
 mesh_size = domain_size/linear_size
 # ABC model A + B <--> C
 reactstoch = [
@@ -60,18 +60,18 @@ majumps = MassActionJump(rates, reactstoch, netstoch)
 u0 = [500,500,0]
 
 # spatial system setup
-diffusivity = 0.1
+diffusivity = 0.05
 hopping_rate = diffusivity * (linear_size/domain_size)^2
 dim = 1
-grid = CartesianGrid(dim, linear_size)
-num_nodes = number_of_sites(grid)
+grid = DiffEqJump.CartesianGrid(dim, linear_size)
+num_nodes = DiffEqJump.number_of_sites(grid)
 
 # Starting state setup
 starting_state = zeros(Int, length(u0), num_nodes)
 # starting_state[1 : length(prob.u0)] = copy(prob.u0)
 center_node = trunc(Int,num_nodes/2)
 starting_state[:,center_node] = copy(u0)
-prob = DiscreteProblem(starting_state,(0.0,10.0), rates)
+prob = DiscreteProblem(starting_state,(0.0,1.0), rates)
 
 diffusion_constants = [hopping_rate for i in starting_state]
 
@@ -93,6 +93,7 @@ equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, a
 
 alg = NSM()
 spatial_jump_prob = JumpProblem(prob, alg, majumps, diffusion_constants, grid)
+solution = solve(spatial_jump_prob, SSAStepper())
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 diff =  mean_end_state - equilibrium_state
 println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")

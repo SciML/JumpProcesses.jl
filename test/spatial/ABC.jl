@@ -8,6 +8,42 @@ dospatialtest = true
 # dobenchmark = false
 # doanimation = false
 
+# physical constants
+domain_size = 1.0 #μ-meter
+linear_size = 5
+mesh_size = domain_size/linear_size
+# ABC model A + B <--> C
+reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
+netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
+rates = [0.1/mesh_size, 1.]
+majumps = MassActionJump(rates, reactstoch, netstoch)
+u0 = [500,500,0]
+
+# spatial system setup
+diffusivity = 0.1
+hopping_rate = diffusivity * (linear_size/domain_size)^2
+dim = 1
+grid = DiffEqJump.CartesianGrid(dim, linear_size)
+num_nodes = DiffEqJump.number_of_sites(grid)
+
+# Starting state setup
+starting_state = zeros(Int, length(u0), num_nodes)
+# starting_state[1 : length(prob.u0)] = copy(prob.u0)
+center_node = trunc(Int,(num_nodes+1)/2)
+starting_state[:,center_node] = copy(u0)
+prob = DiscreteProblem(starting_state,(0.0,1.0), rates)
+
+diffusion_constants = [hopping_rate for i in starting_state]
+
+# if dospatialtest
+alg = NSM()
+spatial_jump_prob = JumpProblem(prob, alg, majumps, diffusion_constants, grid)
+@run solution = solve(spatial_jump_prob, SSAStepper())
+
+
+
+#TODO test with 1 A and 1 B
+
 function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(1:length(jump_prob.prob.u0))
     for i in 1:Nsims
@@ -17,6 +53,28 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
+K = rates[2]/(rates[1]*mesh_size)
+#TODO fix the analytic mean
+function analyticmean(u, K)
+    α = u[1]; β = u[2]; γ = u[3]
+    @assert β ≥ α "A(0) must not exceed B(0)"
+    K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
+end
+
+analytic_A = analytic_B = analyticmean(u0, K)
+analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
+equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
+Nsims        = 1000
+reltol       = 0.05
+# mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+# diff =  mean_end_state - equilibrium_state
+# println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
+# @test [abs(d) < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
+# end
+
+
+
+# PLotting and benchmarking
 function plot_solution(sol, nodes)
     println("Plotting")
     labels = vcat([["A $i", "B $i", "C $i"] for i in 1:num_nodes]...)
@@ -41,65 +99,6 @@ function benchmark_n_times(jump_prob, n)
     end
     times
 end
-
-# physical constants
-domain_size = 1.0 #μ-meter
-linear_size = 5
-mesh_size = domain_size/linear_size
-# ABC model A + B <--> C
-reactstoch = [
-    [1 => 1, 2 => 1],
-    [3 => 1],
-]
-netstoch = [
-    [1 => -1, 2 => -1, 3 => 1],
-    [1 => 1, 2 => 1, 3 => -1]
-]
-rates = [0.1/mesh_size, 1.]
-majumps = MassActionJump(rates, reactstoch, netstoch)
-u0 = [500,500,0]
-
-# spatial system setup
-diffusivity = 0.05
-hopping_rate = diffusivity * (linear_size/domain_size)^2
-dim = 1
-grid = DiffEqJump.CartesianGrid(dim, linear_size)
-num_nodes = DiffEqJump.number_of_sites(grid)
-
-# Starting state setup
-starting_state = zeros(Int, length(u0), num_nodes)
-# starting_state[1 : length(prob.u0)] = copy(prob.u0)
-center_node = trunc(Int,num_nodes/2)
-starting_state[:,center_node] = copy(u0)
-prob = DiscreteProblem(starting_state,(0.0,1.0), rates)
-
-diffusion_constants = [hopping_rate for i in starting_state]
-
-K = rates[2]/(rates[1]*mesh_size)
-#TODO fix the analytic mean
-function analyticmean(u, K)
-    α = u[1]; β = u[2]; γ = u[3]
-    @assert β ≥ α "A(0) must not exceed B(0)"
-    K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
-end
-
-# if dospatialtest
-Nsims        = 1000
-reltol       = 0.05
-
-analytic_A = analytic_B = analyticmean(u0, K)
-analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
-equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
-
-alg = NSM()
-spatial_jump_prob = JumpProblem(prob, alg, majumps, diffusion_constants, grid)
-solution = solve(spatial_jump_prob, SSAStepper())
-mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-diff =  mean_end_state - equilibrium_state
-println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
-@test [abs(d) < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
-# end
-
 # if doplot
 #     # Solving
 #     alg = WellMixedSpatial(RSSACR())

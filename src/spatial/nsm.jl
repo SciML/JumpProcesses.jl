@@ -86,7 +86,7 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     @unpack cur_rates, rng = p
-
+    
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*get_site_rate(cur_rates, site) < get_site_reactions_rate(cur_rates, site)
         rx = linear_search(get_site_reactions_rate(cur_rates, site), rand(rng) * get_site_reactions_rate(cur_rates, site))
@@ -98,6 +98,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
         target_site = nth_neighbor(p.spatial_system,site,n)
         p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
     end
+    #TODO if generated jump makes one of the species negative, stop and check what is happenning.
 end
 
 # execute one jump, changing the system state

@@ -11,7 +11,7 @@ dospatialtest = true
 dim = 1
 linear_size = 5
 u0 = [500,500,0]
-diffusivity = 0.0
+diffusivity = 1.0
 end_time = 10.0
 
 # physical constants
@@ -30,7 +30,6 @@ num_nodes = DiffEqJump.number_of_sites(grid)
 
 # Starting state setup
 starting_state = zeros(Int, length(u0), num_nodes)
-# starting_state[1 : length(prob.u0)] = copy(prob.u0)
 center_node = trunc(Int,(num_nodes+1)/2)
 starting_state[:,center_node] = copy(u0)
 prob = DiscreteProblem(starting_state,(0.0,end_time), rates)
@@ -43,7 +42,7 @@ spatial_jump_prob = JumpProblem(prob, alg, majumps, diffusion_constants, grid)
 solution = solve(spatial_jump_prob, SSAStepper())
 
 function get_mean_end_state(jump_prob, Nsims)
-    end_state = zeros(size(starting_state))
+    end_state = zeros(size(jump_prob.prob.u0))
     for i in 1:Nsims
         sol = solve(jump_prob, SSAStepper())
         end_state += sol.u[end]
@@ -51,21 +50,30 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
-Nsims        = 1000
+Nsims        = 100
 reltol       = 0.05
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 
 #analytic solution based on 'McQuarrie 1967'
-K = rates[1]/rates[2]
-function analyticmean(u, K)
-    α = u[1]; β = u[2]; γ = u[3]
-    @assert β ≥ α "A(0) must not exceed B(0)"
-    K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
-end
+#TODO this is incorrect
+# K = rates[1]/rates[2]
+# function analyticmean(u, K)
+#     α = u[1]; β = u[2]; γ = u[3]
+#     @assert β ≥ α "A(0) must not exceed B(0)"
+#     K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
+# end
 
-analytic_A = analytic_B = analyticmean(u0, K)
-analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
-equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
+# analytic_A = analytic_B = analyticmean(u0, K)
+# analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
+# equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
+
+#using non-spatial SSAs to get the mean
+# non_spatial_prob = DiscreteProblem(u0,(0.0,end_time), rates)
+# jump_prob = JumpProblem(non_spatial_prob, Direct(), majumps)
+# non_spatial_mean = get_mean_end_state(jump_prob, Nsims)
+
+non_spatial_mean = [30.426, 30.426, 469.574] #mean of 10,000 simulations
+equilibrium_state = reshape(vcat([non_spatial_mean./num_nodes for node in 1:num_nodes]...), length(u0), num_nodes)
 
 diff =  mean_end_state - equilibrium_state
 println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")

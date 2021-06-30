@@ -141,22 +141,30 @@ function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSyst
     SpatialRates(num_jumps,num_species,num_sites)
 end
 
-#return rate of reactions at site
+"""
+return rate of reactions at site
+"""
 function get_site_reactions_rate(spatial_rates, site_id)
     spatial_rates.reaction_rates_sum[site_id]
 end
 
-#return rate of diffusions at site
+"""
+return rate of diffusions at site
+"""
 function get_site_diffusions_rate(spatial_rates, site_id)
     spatial_rates.diffusion_rates_sum[site_id]
 end
 
-#returns an iterator over reaction rates of a site
+"""
+returns an iterator over reaction rates of a site
+"""
 function get_site_reactions_iterator(spatial_rates, site_id)
     spatial_rates.reaction_rates[site_id]
 end
 
-#returns an iterator over diffusion rates of a site
+"""
+returns an iterator over diffusion rates of a site
+"""
 function get_site_diffusions_iterator(spatial_rates, site_id)
     spatial_rates.diffusion_rates[site_id]
 end

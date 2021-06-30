@@ -11,7 +11,7 @@ dospatialtest = true
 dim = 1
 linear_size = 5
 u0 = [500,500,0]
-diffusivity = 0.1
+diffusivity = 0.0
 end_time = 10.0
 
 # physical constants
@@ -51,12 +51,12 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
-Nsims        = 10
+Nsims        = 1000
 reltol       = 0.05
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 
-#anaytic solution
-K = rates[2]/(rates[1]*mesh_size)
+#analytic solution based on 'McQuarrie 1967'
+K = rates[1]/rates[2]
 function analyticmean(u, K)
     α = u[1]; β = u[2]; γ = u[3]
     @assert β ≥ α "A(0) must not exceed B(0)"

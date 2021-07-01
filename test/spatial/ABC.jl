@@ -3,43 +3,31 @@ using DiffEqJump, DiffEqBase
 using Test
 using HypergeometricFunctions
 
-dospatialtest = true
-# doplot = false
-# dobenchmark = false
-# doanimation = false
-
-dim = 1
-linear_size = 5
-u0 = [500,500,0]
-diffusivity = 1.0
-end_time = 10.0
-
-# physical constants
-domain_size = 1.0 #μ-meter
-mesh_size = domain_size/linear_size
-# ABC model A + B <--> C
-reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
-netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
-rates = [0.1/mesh_size, 1.]
-majumps = MassActionJump(rates, reactstoch, netstoch)
-
-# spatial system setup
-hopping_rate = diffusivity * (linear_size/domain_size)^2
-grid = DiffEqJump.CartesianGrid(dim, linear_size)
-num_nodes = DiffEqJump.number_of_sites(grid)
-
-# Starting state setup
-starting_state = zeros(Int, length(u0), num_nodes)
-center_node = trunc(Int,(num_nodes+1)/2)
-starting_state[:,center_node] = copy(u0)
-prob = DiscreteProblem(starting_state,(0.0,end_time), rates)
-
-diffusion_constants = [hopping_rate for i in starting_state]
-
-# if dospatialtest
-alg = NSM()
-spatial_jump_prob = JumpProblem(prob, alg, majumps, diffusion_constants, grid)
-solution = solve(spatial_jump_prob, SSAStepper())
+function ABC_setup(dim, linear_size, u0, diffusivity, end_time)
+    grid = DiffEqJump.CartesianGrid(dim, linear_size)
+    domain_size = 1.0 #μ-meter
+    mesh_size = domain_size/linear_size
+    # ABC model A + B <--> C
+    reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
+    netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
+    rates = [0.1/mesh_size, 1.]
+    majumps = MassActionJump(rates, reactstoch, netstoch)
+    
+    # spatial system setup
+    hopping_rate = diffusivity * (linear_size/domain_size)^2
+    num_nodes = DiffEqJump.number_of_sites(grid)
+    
+    # Starting state setup
+    starting_state = zeros(Int, length(u0), num_nodes)
+    center_node = trunc(Int,(num_nodes+1)/2)
+    starting_state[:,center_node] = copy(u0)
+    prob = DiscreteProblem(starting_state,(0.0,end_time), rates)
+    
+    diffusion_constants = [hopping_rate for i in starting_state]
+    
+    alg = NSM()
+    return JumpProblem(prob, alg, majumps, diffusion_constants, grid, save_positions=(false,false))
+end
 
 function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(size(jump_prob.prob.u0))
@@ -50,65 +38,86 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
+
+# dospatialtest = true
+# doplot = false
+# dobenchmark = false
+# doanimation = false
+
+dim = 1
+linear_size = 5
+u0 = [500,500,0]
+
+end_time = 10.0
+diffusivity = 1.0
+
+spatial_jump_prob = ABC_setup(dim, linear_size, u0, diffusivity, end_time)
+solution = solve(spatial_jump_prob, SSAStepper())
+
 Nsims        = 100
 reltol       = 0.05
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 
-#analytic solution based on 'McQuarrie 1967'
-#TODO this is incorrect
-# K = rates[1]/rates[2]
+# analytic solution based on 'McQuarrie 1967'
+# TODO this is incorrect
+# K = .1/1
 # function analyticmean(u, K)
 #     α = u[1]; β = u[2]; γ = u[3]
 #     @assert β ≥ α "A(0) must not exceed B(0)"
 #     K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
 # end
-
+# analytic_mean = analyticmean(u0, K)
 # analytic_A = analytic_B = analyticmean(u0, K)
 # analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
 # equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
 
 #using non-spatial SSAs to get the mean
-# non_spatial_prob = DiscreteProblem(u0,(0.0,end_time), rates)
+# non_spatial_rates = [0.1,1.0]
+# reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
+# netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
+# majumps = MassActionJump(non_spatial_rates, reactstoch, netstoch)
+# non_spatial_prob = DiscreteProblem(u0,(0.0,end_time), non_spatial_rates)
 # jump_prob = JumpProblem(non_spatial_prob, Direct(), majumps)
-# non_spatial_mean = get_mean_end_state(jump_prob, Nsims)
+# non_spatial_mean = get_mean_end_state(jump_prob, 10000)
 
-non_spatial_mean = [30.426, 30.426, 469.574] #mean of 10,000 simulations
-equilibrium_state = reshape(vcat([non_spatial_mean./num_nodes for node in 1:num_nodes]...), length(u0), num_nodes)
+non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
 
-diff =  mean_end_state - equilibrium_state
-println("max relative error: $(maximum(abs.(diff./equilibrium_state)))")
-@test [abs(d) < reltol*equilibrium_state[i] for (i,d) in enumerate(diff)] == [true for d in diff]
-
+diff =  [sum(mean_end_state[i,:]) for i in 1:length(u0)] - non_spatial_mean
+println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
+for (i,d) in enumerate(diff)
+    @test abs(d) < reltol*non_spatial_mean[i]
+end
 
 # end
 
 
 
 # PLotting and benchmarking
-function plot_solution(sol, nodes)
-    println("Plotting")
-    labels = vcat([["A $i", "B $i", "C $i"] for i in 1:num_nodes]...)
-    trajectories = [hcat(sol.u...)[i,:] for i in 1:length(spatial_jump_prob.prob.u0)]
-    p = plot()
-    for node in nodes
-        for species in 1:3
-            plot!(p, sol.t, trajectories[3*(node-1)+species], label = labels[3*(node-1)+species])
-        end
-    end
-    title!("A + B <--> C RDME")
-    xaxis!("time")
-    yaxis!("number")
-    p
-end
+# function plot_solution(sol, nodes)
+#     println("Plotting")
+#     labels = vcat([["A $i", "B $i", "C $i"] for i in 1:num_nodes]...)
+#     trajectories = [hcat(sol.u...)[i,:] for i in 1:length(spatial_jump_prob.prob.u0)]
+#     p = plot()
+#     for node in nodes
+#         for species in 1:3
+#             plot!(p, sol.t, trajectories[3*(node-1)+species], label = labels[3*(node-1)+species])
+#         end
+#     end
+#     title!("A + B <--> C RDME")
+#     xaxis!("time")
+#     yaxis!("number")
+#     p
+# end
 
-function benchmark_n_times(jump_prob, n)
-    solve(jump_prob, SSAStepper())
-    times = zeros(n)
-    for i in 1:n
-        times[i] = @elapsed solve(jump_prob, SSAStepper())
-    end
-    times
-end
+# function benchmark_n_times(jump_prob, n)
+#     solve(jump_prob, SSAStepper())
+#     times = zeros(n)
+#     for i in 1:n
+#         times[i] = @elapsed solve(jump_prob, SSAStepper())
+#     end
+#     times
+# end
+
 # if doplot
 #     # Solving
 #     alg = WellMixedSpatial(RSSACR())

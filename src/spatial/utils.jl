@@ -33,7 +33,7 @@ return the number of neighbors of a site
 function num_neighbors end
 
 ################### CartesianGrid <: AbstractSpatialSystem ########################
-
+#TODO store the number of neighbors for each site or store all neighbors for each site.
 struct CartesianGrid <: AbstractSpatialSystem
     dimension::Int
     linear_size::Int #side length of the grid
@@ -53,11 +53,15 @@ function neighbors(grid, site_id)
 end
 
 function num_neighbors(grid,site_id)
-    return length(collect(neighbors(grid,site_id)))
+    counter = 0
+    for _ in neighbors(grid,site_id)
+        counter += 1
+    end
+    counter
 end
 
 """
-a copy of `nth` function from IterTools 
+a copy of `nth` function from IterTools
 """
 function nth_neighbor(grid,site,n)
     #TODO can make this faster?

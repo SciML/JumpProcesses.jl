@@ -86,14 +86,14 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     @unpack cur_rates, rng = p
-    
+
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*get_site_rate(cur_rates, site) < get_site_reactions_rate(cur_rates, site)
         rx = linear_search(get_site_reactions_iterator(cur_rates, site), rand(rng) * get_site_reactions_rate(cur_rates, site))
         p.next_jump = SpatialJump(site, rx+length(p.diffusion_constants[:,site]), site)
     else
         species_to_diffuse = linear_search(get_site_diffusions_iterator(cur_rates, site), rand(rng) * get_site_diffusions_rate(cur_rates, site))
-        #TODO this is not efficient. We iterate over neighbors twice. 
+        #TODO this is not efficient. We iterate over neighbors twice.
         n = rand(rng,1:num_neighbors(p.spatial_system, site))
         target_site = nth_neighbor(p.spatial_system,site,n)
         p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
@@ -253,7 +253,6 @@ end
 documentation
 """
 function evaldiffrate(diffusion_constants, u, species, site, spatial_system)
-    #TODO this is wrong. Must multiply by the number of neighbors as well
     u[species,site]*diffusion_constants[species,site]*num_neighbors(spatial_system, site)
 end
 

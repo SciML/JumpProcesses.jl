@@ -197,32 +197,32 @@ Check if the total rate is zero, and if it is, make the next jump time Inf.
     return false
 end
 
-#QUESTION should this be kept?
-"""
-    linear_search(array, r)
+# #QUESTION should this be kept?
+# """
+#     linear_search(array, r)
 
-Perform linear search for `r` over array. Output index j s.t. sum(array[1:j-1])
-< r <= sum(array[1:j]).
+# Perform linear search for `r` over array. Output index j s.t. sum(array[1:j-1])
+# < r <= sum(array[1:j]).
 
-Notes:
-- The array must have all positive numbers
-- Returns index zero if the search is unsuccessful. Assumes this corresponds to
-  the case of an infinite next reaction time and so the jump index does not
-  matter.
-"""
-@inline function linear_search(array::AbstractArray, r)
-    jidx = 0
-    @inbounds parsum = r
-    @inbounds for idx = 1:length(array)
-        parsum -= array[idx]
-        if parsum < zero(parsum)
-            jidx = idx
-            break
-        end
-    end
+# Notes:
+# - The array must have all positive numbers
+# - Returns index zero if the search is unsuccessful. Assumes this corresponds to
+#   the case of an infinite next reaction time and so the jump index does not
+#   matter.
+# """
+# @inline function linear_search(array::AbstractArray, r)
+#     jidx = 0
+#     @inbounds parsum = r
+#     @inbounds for idx = 1:length(array)
+#         parsum -= array[idx]
+#         if parsum < zero(parsum)
+#             jidx = idx
+#             break
+#         end
+#     end
 
-    return jidx
-end
+#     return jidx
+# end
 
 """
     linear_search(iterator, r)

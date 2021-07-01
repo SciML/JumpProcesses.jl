@@ -104,6 +104,7 @@ function JumpProblem(prob, aggregator::AbstractSpatialAggregatorAlgorithm, jumps
 
   iip = isinplace_jump(prob, jumps.regular_jump)
 
+  #QUESTION what does this do?
   ## Variable Rate Handling
   if typeof(jumps.variable_jumps) <: Tuple{}
     new_prob = prob

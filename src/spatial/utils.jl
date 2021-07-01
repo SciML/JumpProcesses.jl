@@ -129,7 +129,7 @@ standard constructor, assumes numeric values for rates
 function SpatialRates(reaction_rates::Vector{Vector{R}}, diffusion_rates::Vector{Vector{R}}) where {R}
     SpatialRates{R}(reaction_rates, diffusion_rates, [sum(site) for site in reaction_rates], [sum(site) for site in diffusion_rates])
 end
-
+#QUESTION are the type annotations here correct?
 """
 initializes SpatialRates with zero rates
 """
@@ -139,7 +139,7 @@ function SpatialRates(num_jumps::Integer,num_species::Integer,num_sites::Integer
     SpatialRates(reaction_rates,diffusion_rates)
 end
 
-function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSystem) where S
+function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSystem)
     num_sites = number_of_sites(spatial_system)
     num_jumps = get_num_majumps(ma_jumps)
     SpatialRates(num_jumps,num_species,num_sites)

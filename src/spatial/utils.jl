@@ -37,7 +37,7 @@ function num_neighbors end
 ################### CartesianGrid <: AbstractSpatialSystem ########################
 #TODO store the number of neighbors for each site or store all neighbors for each site.
 struct CartesianGrid <: AbstractSpatialSystem
-    dimension::Int
+    dimension::Int # dimension of the grid, e.g. 1, 2 or 3
     linear_size::Int #side length of the grid
 end
 
@@ -45,6 +45,9 @@ dimension(grid::CartesianGrid) = grid.dimension
 
 number_of_sites(grid) = grid.linear_size^dimension(grid)
 
+"""
+check if the given site_id is a valid site in the grid
+"""
 is_site(grid,site_id) = site_id >= 1 && site_id <= number_of_sites(grid)
 
 """
@@ -54,6 +57,9 @@ function neighbors(grid, site_id)
     (site_id + j*grid.linear_size^(i-1) for i in 1:dimension(grid), j in -1:2:1 if is_site(grid,site_id + j*grid.linear_size^(i-1)))
 end
 
+"""
+number of neighbors of the site
+"""
 function num_neighbors(grid,site_id)
     counter = 0
     for _ in neighbors(grid,site_id)
@@ -63,7 +69,7 @@ function num_neighbors(grid,site_id)
 end
 
 """
-a copy of `nth` function from IterTools
+return the nth neighbor of the site
 """
 function nth_neighbor(grid,site,n)
     #TODO can make this faster?
@@ -121,18 +127,11 @@ function set_site_diffusion_rate! end
 # TODO refactor names
 # TODO add doc strings to explain what these are
 struct SpatialRates{R} <: AbstractSpatialRates
-    reaction_rates::Vector{Vector{R}}
-    diffusion_rates::Vector{Vector{R}}
-    reaction_rates_sum::Vector{R}
-    diffusion_rates_sum::Vector{R}
+    reaction_rates::Vector{Vector{R}} # [[reaction rates for site 1],...,[reaction rates for last site]]
+    diffusion_rates::Vector{Vector{R}} # [[diffusion rates for site 1],...,[diffusion rates for last site]]
+    reaction_rates_sum::Vector{R} # [sum of reaction rates for site 1,...,sum of reaction rates for last site]
+    diffusion_rates_sum::Vector{R} # [sum of diffusion rates for site 1,...,sum of diffusion rates for last site]
 end
-
-# diffusion_rates[i] = [diff_rate_for_spec_1,...,diff_rate_for_spec_end]
-
-# neighbors = [nbs1,...,nbsend]
-# diffusion_rates = [rates1,...,ratesend]
-# starting_points = [pointers ]
-
 
 """
 standard constructor, assumes numeric values for rates
@@ -140,7 +139,7 @@ standard constructor, assumes numeric values for rates
 function SpatialRates(reaction_rates::Vector{Vector{R}}, diffusion_rates::Vector{Vector{R}}) where {R}
     SpatialRates{R}(reaction_rates, diffusion_rates, [sum(site) for site in reaction_rates], [sum(site) for site in diffusion_rates])
 end
-#QUESTION are the type annotations here correct?
+#QUESTION are the type annotations here correct? Do I need them at all?
 """
 initializes SpatialRates with zero rates
 """
@@ -150,6 +149,9 @@ function SpatialRates(num_jumps::Integer,num_species::Integer,num_sites::Integer
     SpatialRates(reaction_rates,diffusion_rates)
 end
 
+"""
+initializes SpatialRates with zero rates
+"""
 function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSystem)
     num_sites = number_of_sites(spatial_system)
     num_jumps = get_num_majumps(ma_jumps)
@@ -184,14 +186,18 @@ function get_site_diffusions_iterator(spatial_rates, site_id)
     spatial_rates.diffusion_rates[site_id]
 end
 
-#sets the rate of reaction at site
+"""
+set the rate of reaction at site
+"""
 function set_site_reaction_rate!(spatial_rates, site_id, reaction_id, rate)
     old_rate = spatial_rates.reaction_rates[site_id][reaction_id]
     spatial_rates.reaction_rates[site_id][reaction_id] = rate
     spatial_rates.reaction_rates_sum[site_id] += rate - old_rate
 end
 
-#sets the rate of diffusion at site
+"""
+sets the rate of diffusion at site
+"""
 function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
     old_rate = spatial_rates.diffusion_rates[site_id][species_id]
     spatial_rates.diffusion_rates[site_id][species_id] = rate

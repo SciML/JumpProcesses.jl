@@ -26,7 +26,7 @@ function ABC_setup(dim, linear_size, u0, diffusivity, end_time)
     diffusion_constants = [hopping_rate for i in starting_state]
     
     alg = NSM()
-    return JumpProblem(prob, alg, majumps, diffusion_constants, grid, save_positions=(false,false))
+    return JumpProblem(prob, alg, majumps, diffusion_constants=diffusion_constants, spatial_system = grid, save_positions=(false,false))
 end
 
 function get_mean_end_state(jump_prob, Nsims)

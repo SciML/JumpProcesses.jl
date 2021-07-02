@@ -74,6 +74,11 @@ function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, 
     NSMJumpAggregation(next_jump, next_jump_time, end_time, current_rates, diffusion_constants, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
 
+function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; diffusion_constants, spatial_system, kwargs...)
+    num_species = length(@view starting_state[:,1])
+    aggregate(aggregator, num_species, end_time, diffusion_constants, ma_jumps, save_positions, rng, spatial_system; kwargs...)
+end
+
 #NOTE integrator and params are not used. They remain to adhere to the interface of `AbstractSSAJumpAggregator` defined in ssajump.jl
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
@@ -90,7 +95,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*get_site_rate(cur_rates, site) < get_site_reactions_rate(cur_rates, site)
         rx = linear_search(get_site_reactions_iterator(cur_rates, site), rand(rng) * get_site_reactions_rate(cur_rates, site))
-        p.next_jump = SpatialJump(site, rx+length(p.diffusion_constants[:,site]), site)
+        p.next_jump = SpatialJump(site, rx+length(@view p.diffusion_constants[:,site]), site)
     else
         species_to_diffuse = linear_search(get_site_diffusions_iterator(cur_rates, site), rand(rng) * get_site_diffusions_rate(cur_rates, site))
         #TODO this is not efficient. We iterate over neighbors twice.
@@ -118,7 +123,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
     @unpack ma_jumps, diffusion_constants, spatial_system = aggregation
 
     num_majumps = get_num_majumps(ma_jumps)
-    num_species = length(u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
+    num_species = length(@view u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
     num_sites = number_of_sites(spatial_system)
     cur_rates = SpatialRates(num_majumps,num_species,num_sites)
 
@@ -185,7 +190,7 @@ update rates of all reactions in rxs at site
 """
 function update_reaction_rates!(cur_rates, rxs, u, ma_jumps, site)
     for rx in rxs
-        set_site_reaction_rate!(cur_rates, site, rx, evalrxrate(u[:,site], rx, ma_jumps))
+        set_site_reaction_rate!(cur_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps))
     end
 end
 
@@ -208,12 +213,12 @@ function update_state!(p, integrator)
     if is_diffusion(p, jump)
         execute_diffusion!(integrator, jump.site, jump.target_site, jump.index)
     else
-        u_site = integrator.u[:,jump.site]
+        # u_site = integrator.u[:,jump.site]
         rx_index = reaction_id_from_jump(p,jump)
-        #executerx!(@view integrator.u[:,jump.site], rx_index, p.ma_jumps)
-        executerx!(u_site, rx_index, p.ma_jumps)
+        executerx!((@view integrator.u[:,jump.site]), rx_index, p.ma_jumps)
+        # executerx!(u_site, rx_index, p.ma_jumps)
         #QUESTION why does this not happen in-place?
-        integrator.u[:,jump.site] = u_site
+        # integrator.u[:,jump.site] = u_site
     end
     # save jump that was just exectued
     p.prev_jump = jump
@@ -227,7 +232,7 @@ true if jump is a diffusion
 """
 function is_diffusion(p, jump)
     # size(p.diffusion_constants,1)
-    jump.index <= length(p.diffusion_constants[:,jump.site])
+    jump.index <= length(@view p.diffusion_constants[:,jump.site])
 end
 
 """
@@ -246,7 +251,7 @@ end
 return reaction id by subtracting the number of diffusive hops
 """
 function reaction_id_from_jump(p,jump)
-    jump.index - length(p.diffusion_constants[:,jump.site])
+    jump.index - length(@view p.diffusion_constants[:,jump.site])
 end
 
 """

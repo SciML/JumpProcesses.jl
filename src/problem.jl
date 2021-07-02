@@ -94,6 +94,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                         jumps.regular_jump, jumps.massaction_jump)
 end
 
+# TODO stick with the default constructor with keyword arguments
 function JumpProblem(prob, aggregator::AbstractSpatialAggregatorAlgorithm, jumps::JumpSet, diffusion_constants, spatial_system;
                      save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
                      rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)

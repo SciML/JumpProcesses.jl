@@ -25,6 +25,7 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMA
     spatial_system::SS
 end
 
+#TODO go through and see if I need to slice or use @view
 
 function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion_constants::C,
                                       maj::S, sps::Tuple{Bool,Bool},
@@ -59,7 +60,6 @@ end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-#TODO write a SpatialJumpProblem with new `aggregate`
 function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, ma_jumps, save_positions, rng, spatial_system; kwargs...)
 
     majumps = ma_jumps
@@ -210,6 +210,7 @@ function update_state!(p, integrator)
     else
         u_site = integrator.u[:,jump.site]
         rx_index = reaction_id_from_jump(p,jump)
+        #executerx!(@view integrator.u[:,jump.site], rx_index, p.ma_jumps)
         executerx!(u_site, rx_index, p.ma_jumps)
         #QUESTION why does this not happen in-place?
         integrator.u[:,jump.site] = u_site
@@ -225,6 +226,7 @@ end
 true if jump is a diffusion
 """
 function is_diffusion(p, jump)
+    # size(p.diffusion_constants,1)
     jump.index <= length(p.diffusion_constants[:,jump.site])
 end
 

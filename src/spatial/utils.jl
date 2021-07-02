@@ -32,6 +32,8 @@ return the number of neighbors of a site
 """
 function num_neighbors end
 
+# TODO make a graph struct with connectivity list, compare with CartesianGrid
+
 ################### CartesianGrid <: AbstractSpatialSystem ########################
 #TODO store the number of neighbors for each site or store all neighbors for each site.
 struct CartesianGrid <: AbstractSpatialSystem
@@ -66,6 +68,7 @@ a copy of `nth` function from IterTools
 function nth_neighbor(grid,site,n)
     #TODO can make this faster?
     xs = neighbors(grid,site)
+    #TODO return negative number instead of BoundsError
     n > 0 || throw(BoundsError(xs, n))
 
     for (i, val) in enumerate(xs)
@@ -116,12 +119,20 @@ function set_site_diffusion_rate! end
 # NOTE: for now assume diffusion rate only depends on the site and species (and not the neighbor of the site)
 # TODO make these matrices instead of vectors of vectors for better performance
 # TODO refactor names
+# TODO add doc strings to explain what these are
 struct SpatialRates{R} <: AbstractSpatialRates
     reaction_rates::Vector{Vector{R}}
     diffusion_rates::Vector{Vector{R}}
     reaction_rates_sum::Vector{R}
     diffusion_rates_sum::Vector{R}
 end
+
+# diffusion_rates[i] = [diff_rate_for_spec_1,...,diff_rate_for_spec_end]
+
+# neighbors = [nbs1,...,nbsend]
+# diffusion_rates = [rates1,...,ratesend]
+# starting_points = [pointers ]
+
 
 """
 standard constructor, assumes numeric values for rates

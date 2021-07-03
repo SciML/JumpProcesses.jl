@@ -30,7 +30,6 @@ function getmean(jprob,Nsims)
     Amean
 end
 
-K = rates[1] / rates[2] 
 function analyticmean(u, rates)
     α = u[1]; β = u[2]; γ = u[3]
     d₊ = [rates[1]*(a+1)*(β-α+a+1) for a in 0:(α-1)]

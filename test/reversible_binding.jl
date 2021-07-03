@@ -1,5 +1,5 @@
 using DiffEqJump, DiffEqBase
-using Test, HypergeometricFunctions
+using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)
 

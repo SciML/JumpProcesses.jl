@@ -30,7 +30,7 @@ function getmean(jprob,Nsims)
     Amean
 end
 
-function analyticmean(u, rates)
+function mastereqmean(u, rates)
     α = u[1]; β = u[2]; γ = u[3]
     d₊ = [rates[1]*(a+1)*(β-α+a+1) for a in 0:(α-1)]
     d₋ = [rates[2]*(γ+α-a+1) for a in 1:α]
@@ -41,7 +41,7 @@ function analyticmean(u, rates)
     P_a .= abs.(P_a)
     sum((a-1)*p for (a,p) in enumerate(P_a))
 end
-analytic_mean = analyticmean(u0, rates)
+mastereq_mean = mastereqmean(u0, rates)
 
 
 algs = DiffEqJump.JUMP_AGGREGATORS
@@ -49,5 +49,5 @@ relative_tolerance = 0.01
 for alg in algs
     local jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false), rng=rng)
     local Amean = getmean(jprob, Nsims)
-    @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance    
+    @test abs(Amean - mastereq_mean)/mastereq_mean < relative_tolerance    
 end

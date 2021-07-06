@@ -75,11 +75,10 @@ function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, 
 end
 
 function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; diffusion_constants, spatial_system, kwargs...)
-    num_species = length(@view starting_state[:,1])
+    num_species = size(starting_state,1)
     aggregate(aggregator, num_species, end_time, diffusion_constants, ma_jumps, save_positions, rng, spatial_system; kwargs...)
 end
 
-#NOTE integrator and params are not used. They remain to adhere to the interface of `AbstractSSAJumpAggregator` defined in ssajump.jl
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     fill_rates_and_get_times!(p, u, t)
@@ -87,7 +86,6 @@ function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     nothing
 end
 
-#NOTE integrator and params are not used. They remain to adhere to the interface of `AbstractSSAJumpAggregator` defined in ssajump.jl
 # calculate the next jump / jump time
 function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     @unpack cur_rates, rng = p
@@ -150,14 +148,14 @@ recalculate jump rates for jumps that depend on the just executed jump (p.prev_j
 function update_dependent_rates_and_firing_times!(p, u, t)
     jump = p.prev_jump
     if is_diffusion(p, jump)
-        source_site = jump.site
-        target_site = jump.target_site
-        update_rates_after_diffusion!(p, u, t, source_site, target_site, jump.index)
+        source_site = jump.src
+        target_site = jump.dst
+        update_rates_after_diffusion!(p, u, t, source_site, target_site, jump.jidx)
         for site in [source_site, target_site]
             update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
         end
     else
-        site = jump.site
+        site = jump.src
         update_rates_after_reaction!(p, u, t, site, reaction_id_from_jump(p,jump))
         update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
     end
@@ -211,14 +209,10 @@ updates state based on p.next_jump
 function update_state!(p, integrator)
     jump = p.next_jump
     if is_diffusion(p, jump)
-        execute_diffusion!(integrator, jump.site, jump.target_site, jump.index)
+        execute_diffusion!(integrator, jump.src, jump.dst, jump.jidx)
     else
-        # u_site = integrator.u[:,jump.site]
         rx_index = reaction_id_from_jump(p,jump)
-        executerx!((@view integrator.u[:,jump.site]), rx_index, p.ma_jumps)
-        # executerx!(u_site, rx_index, p.ma_jumps)
-        #QUESTION why does this not happen in-place?
-        # integrator.u[:,jump.site] = u_site
+        executerx!((@view integrator.u[:,jump.src]), rx_index, p.ma_jumps)
     end
     # save jump that was just exectued
     p.prev_jump = jump
@@ -231,8 +225,7 @@ end
 true if jump is a diffusion
 """
 function is_diffusion(p, jump)
-    # size(p.diffusion_constants,1)
-    jump.index <= length(@view p.diffusion_constants[:,jump.site])
+    jump.jidx <= size(p.diffusion_constants,1)
 end
 
 """
@@ -251,7 +244,7 @@ end
 return reaction id by subtracting the number of diffusive hops
 """
 function reaction_id_from_jump(p,jump)
-    jump.index - length(@view p.diffusion_constants[:,jump.site])
+    jump.jidx - size(p.diffusion_constants,1)
 end
 
 """

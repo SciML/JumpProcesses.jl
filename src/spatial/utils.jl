@@ -6,9 +6,9 @@ A file with types, structs and functions for spatial simulations
 stores info for a spatial jump
 """
 struct SpatialJump{J}
-    site::J #where the jump happens
-    index::Int #diffusion or reaction
-    target_site::J #target of diffusive hop
+    src::J    # source location
+    jidx::Int # index of jump as a diffusion hop or reaction
+    dst::J    # destination location
 end
 
 ############ abstract spatial system struct ##################
@@ -143,8 +143,8 @@ end
 """
 initializes SpatialRates with zero rates
 """
-function SpatialRates(num_jumps::Integer,num_species::Integer,num_sites::Integer)
-    reaction_rates = [zeros(Float64, num_jumps) for i in 1:num_sites]
+function SpatialRates(numrxjumps::Integer,num_species::Integer,num_sites::Integer)
+    reaction_rates = [zeros(Float64, numrxjumps) for i in 1:num_sites]
     diffusion_rates = [zeros(Float64, num_species) for i in 1:num_sites]
     SpatialRates(reaction_rates,diffusion_rates)
 end
@@ -187,21 +187,23 @@ function get_site_diffusions_iterator(spatial_rates, site_id)
 end
 
 """
-set the rate of reaction at site
+set the rate of reaction at site. Return the old rate
 """
 function set_site_reaction_rate!(spatial_rates, site_id, reaction_id, rate)
     old_rate = spatial_rates.reaction_rates[site_id][reaction_id]
     spatial_rates.reaction_rates[site_id][reaction_id] = rate
     spatial_rates.reaction_rates_sum[site_id] += rate - old_rate
+    old_rate
 end
 
 """
-sets the rate of diffusion at site
+sets the rate of diffusion at site. Return the old rate
 """
 function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
     old_rate = spatial_rates.diffusion_rates[site_id][species_id]
     spatial_rates.diffusion_rates[site_id][species_id] = rate
     spatial_rates.diffusion_rates_sum[site_id] += rate - old_rate
+    old_rate
 end
 
 

@@ -1,7 +1,6 @@
 using DiffEqJump, DiffEqBase
 # using BenchmarkTools
 using Test
-using HypergeometricFunctions
 
 function ABC_setup(dim, linear_size, u0, diffusivity, end_time)
     grid = DiffEqJump.CartesianGrid(dim, linear_size)

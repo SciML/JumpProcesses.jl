@@ -69,7 +69,7 @@ function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, 
 
     next_jump = SpatialJump{Int}(typemax(Int),typemax(Int),typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
-    current_rates = SpatialRates(get_num_majumps(majumps), num_species, number_of_sites(spatial_system))
+    current_rates = SpatialRates(get_num_majumps(majumps), num_species, num_sites(spatial_system))
 
     NSMJumpAggregation(next_jump, next_jump_time, end_time, current_rates, diffusion_constants, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
@@ -96,9 +96,8 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
         p.next_jump = SpatialJump(site, rx+length(@view p.diffusion_constants[:,site]), site)
     else
         species_to_diffuse = linear_search(get_site_diffusions_iterator(cur_rates, site), rand(rng) * get_site_diffusions_rate(cur_rates, site))
-        #TODO this is not efficient. We iterate over neighbors twice.
-        n = rand(rng,1:num_neighbors(p.spatial_system, site))
-        target_site = nth_neighbor(p.spatial_system,site,n)
+        nbs = neighbors(p.spatial_system, site)
+        target_site = nbs[rand(rng,1:length(nbs))] # random neighbor
         p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
     end
 end
@@ -122,7 +121,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
 
     num_majumps = get_num_majumps(ma_jumps)
     num_species = length(@view u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
-    num_sites = number_of_sites(spatial_system)
+    num_sites = num_sites(spatial_system)
     cur_rates = SpatialRates(num_majumps,num_species,num_sites)
 
     @assert cur_rates.reaction_rates_sum == zeros(typeof(cur_rates.reaction_rates_sum[1]),num_sites)

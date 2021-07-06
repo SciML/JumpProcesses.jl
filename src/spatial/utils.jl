@@ -25,7 +25,7 @@ function neighbors end
 """
 returns total number of sites
 """
-function number_of_sites end
+function num_sites end
 
 """
 return the number of neighbors of a site
@@ -36,53 +36,59 @@ function num_neighbors end
 
 ################### CartesianGrid <: AbstractSpatialSystem ########################
 #TODO store the number of neighbors for each site or store all neighbors for each site.
-struct CartesianGrid <: AbstractSpatialSystem
-    dimension::Int # dimension of the grid, e.g. 1, 2 or 3
-    linear_size::Int #side length of the grid
+"""
+Cartesian Grid of dimension D
+"""
+struct CartesianGrid{D} <: AbstractSpatialSystem
+    linear_sizes::Vector{Int} #side lengths of the grid
 end
 
-dimension(grid::CartesianGrid) = grid.dimension
-
-number_of_sites(grid) = grid.linear_size^dimension(grid)
-
-"""
-check if the given site_id is a valid site in the grid
-"""
-is_site(grid,site_id) = site_id >= 1 && site_id <= number_of_sites(grid)
-
-"""
-return a generator that iterates over the neighbors of the given site in grid
-"""
-function neighbors(grid, site_id)
-    (site_id + j*grid.linear_size^(i-1) for i in 1:dimension(grid), j in -1:2:1 if is_site(grid,site_id + j*grid.linear_size^(i-1)))
+function CartesianGrid(linear_sizes::Vector)
+    CartesianGrid{length(linear_sizes)}(linear_sizes)
 end
 
+function CartesianGrid(dimension, linear_size)
+    CartesianGrid{dimension}([linear_size for i in 1:dimension])
+end
+
+dimension(grid::CartesianGrid{D}) where D = D
+
+num_sites(grid) = prod(grid.linear_sizes)
+
+
 """
-number of neighbors of the site
+return coordinates of the site
 """
-function num_neighbors(grid,site_id)
-    counter = 0
-    for _ in neighbors(grid,site_id)
-        counter += 1
+to_coordinates(grid::CartesianGrid{1}, site) = site
+to_coordinates(grid::CartesianGrid{2}, site) = (mod1(site, grid.linear_sizes[1]),fld1(site, grid.linear_sizes[1]))
+function to_coordinates(grid::CartesianGrid{3}, site)
+    temp = mod1(site,grid.linear_sizes[1]*grid.linear_sizes[2])
+    (mod1(temp, grid.linear_sizes[1]),fld1(temp, grid.linear_sizes[1]), fld1(site, grid.linear_sizes[1]*grid.linear_sizes[2]))
+end
+
+from_coordinates(grid::CartesianGrid{1}, x) = x
+from_coordinates(grid::CartesianGrid{2}, (x,y)) = (y-1) * grid.linear_sizes[1] + x
+from_coordinates(grid::CartesianGrid{3}, (x,y,z)) = (y-1) * grid.linear_sizes[1] + x + (z-1)*grid.linear_sizes[1]*grid.linear_sizes[2]
+
+is_site(grid,site_id::Int) = site_id >= 1 && site_id <= num_sites(grid)
+function is_site(grid,site_coordinates::Tuple)
+    length(p) == dimension(grid) || return false
+    for (i,c) in enumerate(site_coordinates)
+        1 <= c && c <= grid.linear_sizes[i] || return false
     end
-    counter
+    return true
 end
 
-"""
-return the nth neighbor of the site
-"""
-function nth_neighbor(grid,site,n)
-    #TODO can make this faster?
-    xs = neighbors(grid,site)
-    #TODO return negative number instead of BoundsError
-    n > 0 || throw(BoundsError(xs, n))
+# TODO make these iterators so they don't allocate memory
+potential_neighbors(grid::CartesianGrid{1}, x) = [x-1,x+1]
+potential_neighbors(grid::CartesianGrid{2}, (x,y)) = [(x,y-1),(x-1,y),(x+1,y),(x,y+1)]
+potential_neighbors(grid::CartesianGrid{3}, (x,y,z)) = [(x,y,z-1),(x,y-1,z),(x-1,y,z),(x+1,y,z),(x,y+1,z),(x,y,z+1)]
 
-    for (i, val) in enumerate(xs)
-        i >= n && return val
-    end
-
-    # catch iterators with no length but actual finite size less then n
-    throw(BoundsError(xs, n))
+"""
+return neighbors of site in CartesianGrid
+"""
+function neighbors(grid::CartesianGrid, site::Int)
+    [from_coordinates(grid, nb) for nb in potential_neighbors(grid,to_coordinates(grid,site)) if is_site(grid, nb)]
 end
 
 #TODO use the Sampler + rand interface to draw a random neighbor as described here https://docs.julialang.org/en/v1/stdlib/Random/#Random.Sampler.
@@ -153,7 +159,7 @@ end
 initializes SpatialRates with zero rates
 """
 function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSystem)
-    num_sites = number_of_sites(spatial_system)
+    num_sites = num_sites(spatial_system)
     num_jumps = get_num_majumps(ma_jumps)
     SpatialRates(num_jumps,num_species,num_sites)
 end
@@ -205,6 +211,14 @@ function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
     spatial_rates.diffusion_rates_sum[site_id] += rate - old_rate
     old_rate
 end
+
+
+# Tests for CartesianGrid
+# using Test
+# grid = CartesianGrid([4,3,2])
+# for site in 1:length(num_sites(grid))
+#     @test from_coordinates(grid,to_coordinates(grid,site)) == site
+# end
 
 
 # Tests for SpatialRates

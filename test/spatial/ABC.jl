@@ -60,7 +60,7 @@ reltol       = 0.05
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 
 # analytic solution based on 'McQuarrie 1967'
-# TODO this is incorrect
+# NOTE this is incorrect
 # K = .1/1
 # function analyticmean(u, K)
 #     α = u[1]; β = u[2]; γ = u[3]
@@ -72,7 +72,7 @@ mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 # analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
 # equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
 
-# TODO can get analytic solution by taking expectation of a_∞ using Pₐ(∞) from equation (29) in https://server.math.umanitoba.ca/~jarino/courses/math8410_MathBio/private/Laurenzi%20%282000%29%20Analytical%20solution%20of%20master%20equation.pdf.
+# NOTE can get analytic solution by taking expectation of a_∞ using Pₐ(∞) from equation (29) in https://server.math.umanitoba.ca/~jarino/courses/math8410_MathBio/private/Laurenzi%20%282000%29%20Analytical%20solution%20of%20master%20equation.pdf.
 
 #using non-spatial SSAs to get the mean
 # non_spatial_rates = [0.1,1.0]

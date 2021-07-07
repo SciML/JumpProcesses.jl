@@ -25,8 +25,6 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMA
     spatial_system::SS
 end
 
-#TODO go through and see if I need to slice or use @view
-
 function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion_constants::C,
                                       maj::S, sps::Tuple{Bool,Bool},
                                       rng::RNG, spatial_system::SS; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,S,R,C,RNG,SS}

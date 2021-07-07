@@ -14,7 +14,7 @@ function ABC_setup(dim, linear_size, u0, diffusivity, end_time)
     
     # spatial system setup
     hopping_rate = diffusivity * (linear_size/domain_size)^2
-    num_nodes = DiffEqJump.number_of_sites(grid)
+    num_nodes = DiffEqJump.num_sites(grid)
     
     # Starting state setup
     starting_state = zeros(Int, length(u0), num_nodes)

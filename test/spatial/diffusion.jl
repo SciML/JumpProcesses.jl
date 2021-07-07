@@ -22,7 +22,7 @@ linear_size = 32
 diffusivity = 0.1
 dim = 1
 grid = DiffEqJump.CartesianGrid(dim, linear_size)
-num_nodes = DiffEqJump.number_of_sites(grid)
+num_nodes = DiffEqJump.num_sites(grid)
 
 # Starting state setup
 starting_state = zeros(Int, length(u0), num_nodes)

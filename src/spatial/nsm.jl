@@ -60,8 +60,8 @@ end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, ma_jumps, save_positions, rng, spatial_system; kwargs...)
-
+function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; diffusion_constants, spatial_system, kwargs...)
+    num_species = size(starting_state,1)
     majumps = ma_jumps
     if majumps === nothing
         majumps = MassActionJump(Vector{typeof(end_time)}(), Vector{Vector{Pair{Int,Int}}}(), Vector{Vector{Pair{Int,Int}}}())
@@ -72,11 +72,6 @@ function aggregate(aggregator::NSM, num_species, end_time, diffusion_constants, 
     current_rates = SpatialRates(get_num_majumps(majumps), num_species, num_sites(spatial_system))
 
     NSMJumpAggregation(next_jump, next_jump_time, end_time, current_rates, diffusion_constants, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
-end
-
-function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; diffusion_constants, spatial_system, kwargs...)
-    num_species = size(starting_state,1)
-    aggregate(aggregator, num_species, end_time, diffusion_constants, ma_jumps, save_positions, rng, spatial_system; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -117,15 +112,15 @@ end
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
-    @unpack ma_jumps, diffusion_constants, spatial_system = aggregation
+    @unpack ma_jumps, diffusion_constants, spatial_system, cur_rates = aggregation
 
+    reset!(cur_rates)
     num_majumps = get_num_majumps(ma_jumps)
     num_species = length(@view u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
-    num_sites = num_sites(spatial_system)
-    cur_rates = SpatialRates(num_majumps,num_species,num_sites)
+    num_sites = DiffEqJump.num_sites(spatial_system)
 
-    @assert cur_rates.reaction_rates_sum == zeros(typeof(cur_rates.reaction_rates_sum[1]),num_sites)
-    @assert cur_rates.diffusion_rates_sum == zeros(typeof(cur_rates.diffusion_rates_sum[1]),num_sites)
+    @assert cur_rates.rx_rates_sum == zeros(typeof(cur_rates.rx_rates_sum[1]),num_sites)
+    @assert cur_rates.hop_rates_sum == zeros(typeof(cur_rates.hop_rates_sum[1]),num_sites)
 
     pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites

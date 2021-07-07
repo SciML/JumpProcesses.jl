@@ -47,7 +47,7 @@ function CartesianGrid(dimension, linear_size)
 end
 
 dimension(grid::CartesianGrid{D}) where D = D
-num_sites(grid) = prod(grid.linear_sizes)
+num_sites(grid::CartesianGrid) = prod(grid.linear_sizes)
 
 to_coordinates(grid::CartesianGrid{1}, site) = site
 to_coordinates(grid::CartesianGrid{2}, site) = (mod1(site, grid.linear_sizes[1]),fld1(site, grid.linear_sizes[1]))
@@ -80,6 +80,8 @@ return neighbors of site in CartesianGrid
 function neighbors(grid::CartesianGrid, site::Int)
     [from_coordinates(grid, nb) for nb in potential_neighbors(grid,to_coordinates(grid,site)) if is_site(grid, nb)]
 end
+
+num_neighbors(grid::CartesianGrid, site) = length(neighbors(grid, site))
 
 #TODO use the Sampler + rand interface to draw a random neighbor as described here https://docs.julialang.org/en/v1/stdlib/Random/#Random.Sampler.
 
@@ -119,29 +121,27 @@ function set_site_diffusion_rate! end
 #################### SpatialRates <: AbstractSpatialRates ######################
 
 # NOTE: for now assume diffusion rate only depends on the site and species (and not the neighbor of the site)
-# TODO make these matrices instead of vectors of vectors for better performance
-# TODO refactor names
-# TODO add doc strings to explain what these are
 struct SpatialRates{R} <: AbstractSpatialRates
-    reaction_rates::Vector{Vector{R}} # [[reaction rates for site 1],...,[reaction rates for last site]]
-    diffusion_rates::Vector{Vector{R}} # [[diffusion rates for site 1],...,[diffusion rates for last site]]
-    reaction_rates_sum::Vector{R} # [sum of reaction rates for site 1,...,sum of reaction rates for last site]
-    diffusion_rates_sum::Vector{R} # [sum of diffusion rates for site 1,...,sum of diffusion rates for last site]
+    rx_rates::Matrix{R} # rx_rates[i,j] is rate of reaction i at site j
+    hop_rates::Matrix{R} # hop_rates[i,j] is rate of species i at site j
+    rx_rates_sum::Vector{R} # [sum of reaction rates for site 1,...,sum of reaction rates for last site]
+    hop_rates_sum::Vector{R} # [sum of diffusion rates for site 1,...,sum of diffusion rates for last site]
 end
 
 """
 standard constructor, assumes numeric values for rates
 """
-function SpatialRates(reaction_rates::Vector{Vector{R}}, diffusion_rates::Vector{Vector{R}}) where {R}
-    SpatialRates{R}(reaction_rates, diffusion_rates, [sum(site) for site in reaction_rates], [sum(site) for site in diffusion_rates])
+function SpatialRates(rx_rates::Matrix{R}, hop_rates::Matrix{R}) where {R}
+    num_sites = size(rx_rates, 2)
+    SpatialRates{R}(rx_rates, hop_rates, [sum(@view rx_rates[:,i]) for i in 1:num_sites], [sum(@view hop_rates[:,i]) for i in 1:num_sites])
 end
-#QUESTION are the type annotations here correct? Do I need them at all?
+
 """
 initializes SpatialRates with zero rates
 """
 function SpatialRates(numrxjumps::Integer,num_species::Integer,num_sites::Integer)
-    reaction_rates = [zeros(Float64, numrxjumps) for i in 1:num_sites]
-    diffusion_rates = [zeros(Float64, num_species) for i in 1:num_sites]
+    reaction_rates = zeros(Float64, numrxjumps, num_sites)
+    diffusion_rates = zeros(Float64, num_species, num_sites)
     SpatialRates(reaction_rates,diffusion_rates)
 end
 
@@ -155,40 +155,50 @@ function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSyst
 end
 
 """
+make all rates zero
+"""
+function reset!(spatial_rates)
+    fill!(spatial_rates.rx_rates, zero(eltype(spatial_rates.rx_rates)))
+    fill!(spatial_rates.hop_rates, zero(eltype(spatial_rates.hop_rates)))
+    fill!(spatial_rates.rx_rates_sum, zero(eltype(spatial_rates.rx_rates_sum)))
+    fill!(spatial_rates.hop_rates_sum, zero(eltype(spatial_rates.hop_rates_sum)))
+    nothing
+end
+"""
 return rate of reactions at site
 """
 function get_site_reactions_rate(spatial_rates, site_id)
-    spatial_rates.reaction_rates_sum[site_id]
+    spatial_rates.rx_rates_sum[site_id]
 end
 
 """
 return rate of diffusions at site
 """
 function get_site_diffusions_rate(spatial_rates, site_id)
-    spatial_rates.diffusion_rates_sum[site_id]
+    spatial_rates.hop_rates_sum[site_id]
 end
 
 """
 returns an iterator over reaction rates of a site
 """
 function get_site_reactions_iterator(spatial_rates, site_id)
-    spatial_rates.reaction_rates[site_id]
+    @view spatial_rates.rx_rates[:,site_id]
 end
 
 """
 returns an iterator over diffusion rates of a site
 """
 function get_site_diffusions_iterator(spatial_rates, site_id)
-    spatial_rates.diffusion_rates[site_id]
+    @view spatial_rates.hop_rates[:,site_id]
 end
 
 """
 set the rate of reaction at site. Return the old rate
 """
 function set_site_reaction_rate!(spatial_rates, site_id, reaction_id, rate)
-    old_rate = spatial_rates.reaction_rates[site_id][reaction_id]
-    spatial_rates.reaction_rates[site_id][reaction_id] = rate
-    spatial_rates.reaction_rates_sum[site_id] += rate - old_rate
+    old_rate = spatial_rates.rx_rates[reaction_id, site_id]
+    spatial_rates.rx_rates[reaction_id, site_id] = rate
+    spatial_rates.rx_rates_sum[site_id] += rate - old_rate
     old_rate
 end
 
@@ -196,9 +206,9 @@ end
 sets the rate of diffusion at site. Return the old rate
 """
 function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
-    old_rate = spatial_rates.diffusion_rates[site_id][species_id]
-    spatial_rates.diffusion_rates[site_id][species_id] = rate
-    spatial_rates.diffusion_rates_sum[site_id] += rate - old_rate
+    old_rate = spatial_rates.hop_rates[species_id, site_id]
+    spatial_rates.hop_rates[species_id, site_id] = rate
+    spatial_rates.hop_rates_sum[site_id] += rate - old_rate
     old_rate
 end
 
@@ -215,8 +225,8 @@ end
 # using Test
 # num_jumps = 2
 # num_species = 3
-# num_sites = 5
-# spatial_rates = DiffEqJump.SpatialRates(num_jumps, num_species, num_sites)
+# # numb_sites = 5
+# spatial_rates = DiffEqJump.SpatialRates(num_jumps, num_species, 5)
 
 # set_site_reaction_rate!(spatial_rates, 1, 1, 10.0)
 # set_site_reaction_rate!(spatial_rates, 1, 1, 20.0)

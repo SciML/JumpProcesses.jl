@@ -18,24 +18,19 @@ Contains all info about the topology of the system
 abstract type AbstractSpatialSystem end
 
 """
-returns neighbors of site
-"""
-function neighbors end
-
-"""
 returns total number of sites
 """
 function num_sites end
 
 """
-return the number of neighbors of a site
+returns neighbors of site
 """
-function num_neighbors end
+function neighbors end
 
-# TODO make a graph struct with connectivity list, compare with CartesianGrid
+################### LightGraph ########################
+num_sites(graph) = nv(graph)
 
 ################### CartesianGrid <: AbstractSpatialSystem ########################
-#TODO store the number of neighbors for each site or store all neighbors for each site.
 """
 Cartesian Grid of dimension D
 """
@@ -52,13 +47,8 @@ function CartesianGrid(dimension, linear_size)
 end
 
 dimension(grid::CartesianGrid{D}) where D = D
-
 num_sites(grid) = prod(grid.linear_sizes)
 
-
-"""
-return coordinates of the site
-"""
 to_coordinates(grid::CartesianGrid{1}, site) = site
 to_coordinates(grid::CartesianGrid{2}, site) = (mod1(site, grid.linear_sizes[1]),fld1(site, grid.linear_sizes[1]))
 function to_coordinates(grid::CartesianGrid{3}, site)

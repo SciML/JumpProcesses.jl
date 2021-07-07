@@ -1,6 +1,9 @@
 module DiffEqJump
 
-using DiffEqBase, Compat, RandomNumbers, TreeViews, LinearAlgebra
+using Reexport
+@reexport using DiffEqBase
+
+using Compat, RandomNumbers, TreeViews, LinearAlgebra
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 

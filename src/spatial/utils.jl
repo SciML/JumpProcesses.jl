@@ -109,10 +109,10 @@ function rx_rates_at_site end
 function hop_rates_at_site end
 
 #sets the rate of reaction at site
-function set_rx_rate_at_site!! end
+function set_rx_rate_at_site! end
 
 #sets the rate of diffusion at site
-function set_hop_rate_at_site end
+function set_hop_rate_at_site! end
 
 #################### SpatialRates <: AbstractSpatialRates ######################
 

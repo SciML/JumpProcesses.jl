@@ -14,7 +14,6 @@ using StaticArrays, Base.Threads
 abstract type AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
-abstract type AbstractSpatialAggregatorAlgorithm end
 
 import Base.Threads
 @static if VERSION < v"1.3"

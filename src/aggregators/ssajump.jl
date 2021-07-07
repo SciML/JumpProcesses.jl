@@ -16,7 +16,7 @@ An aggregator interface for SSA-like algorithms.
 
 ### Optional fields:
 - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should
-                       # be updated when rx i occurs.
+                       # be updated when rx i occurs.    
 """
 abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 
@@ -139,9 +139,9 @@ end
 """
     update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
 
-Recalculate jump rates for jumps that depend on the just executed jump.
+Recalculate jump rates for jumps that depend on the just executed jump. 
 
-Notes:
+Notes: 
     - Intended for methods that have a dependency graph, i.e. define `p.dep_gr`.
 """
 function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
@@ -178,7 +178,7 @@ Execute `p.next_jump`.
         @inbounds p.affects![idx](integrator)
     end
 
-    # save jump that was just exectued
+    # save jump that was just executed
     p.prev_jump = next_jump
     return integrator.u
 end

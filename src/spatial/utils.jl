@@ -62,7 +62,7 @@ from_coordinates(grid::CartesianGrid{3}, (x,y,z)) = (y-1) * grid.linear_sizes[1]
 
 is_site(grid,site_id::Int) = site_id >= 1 && site_id <= num_sites(grid)
 function is_site(grid,site_coordinates::Tuple)
-    length(p) == dimension(grid) || return false
+    length(site_coordinates) == dimension(grid) || return false
     for (i,c) in enumerate(site_coordinates)
         1 <= c && c <= grid.linear_sizes[i] || return false
     end
@@ -219,7 +219,11 @@ end
 # for site in 1:length(num_sites(grid))
 #     @test from_coordinates(grid,to_coordinates(grid,site)) == site
 # end
-
+# @test neighbors(grid,1) == [2,5,13]
+# @test neighbors(grid,4) == [3,8,16]
+# @test neighbors(grid,17) == [5,13,18,21]
+# @test neighbors(grid,21) == [9,17,22]
+# @test num_neighbors(grid, 1) == 3
 
 # Tests for SpatialRates
 # using Test

@@ -88,7 +88,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*get_site_rate(cur_rates, site) < get_site_reactions_rate(cur_rates, site)
         rx = linear_search(get_site_reactions_iterator(cur_rates, site), rand(rng) * get_site_reactions_rate(cur_rates, site))
-        p.next_jump = SpatialJump(site, rx+length(@view p.diffusion_constants[:,site]), site)
+        p.next_jump = SpatialJump(site, rx+size(p.diffusion_constants, 1), site)
     else
         species_to_diffuse = linear_search(get_site_diffusions_iterator(cur_rates, site), rand(rng) * get_site_diffusions_rate(cur_rates, site))
         nbs = neighbors(p.spatial_system, site)
@@ -116,11 +116,8 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
 
     reset!(cur_rates)
     num_majumps = get_num_majumps(ma_jumps)
-    num_species = length(@view u[:,1]) #NOTE assumes u is a matrix with ith column being the ith site
+    num_species = size(u,1) #NOTE assumes u is a matrix with ith column being the ith site
     num_sites = DiffEqJump.num_sites(spatial_system)
-
-    @assert cur_rates.rx_rates_sum == zeros(typeof(cur_rates.rx_rates_sum[1]),num_sites)
-    @assert cur_rates.hop_rates_sum == zeros(typeof(cur_rates.hop_rates_sum[1]),num_sites)
 
     pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites
@@ -129,7 +126,6 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
         pqdata[site] = t + randexp(aggregation.rng) / get_site_rate(cur_rates, site)
     end
 
-    aggregation.cur_rates = cur_rates
     aggregation.pq = MutableBinaryMinHeap(pqdata)
     nothing
 end
@@ -144,13 +140,13 @@ function update_dependent_rates_and_firing_times!(p, u, t)
     if is_diffusion(p, jump)
         source_site = jump.src
         target_site = jump.dst
-        update_rates_after_diffusion!(p, u, t, source_site, target_site, jump.jidx)
+        update_rates_after_diffusion!(p, u, source_site, target_site, jump.jidx)
         for site in [source_site, target_site]
             update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
         end
     else
         site = jump.src
-        update_rates_after_reaction!(p, u, t, site, reaction_id_from_jump(p,jump))
+        update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))
         update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
     end
 end
@@ -165,16 +161,17 @@ function update_site_time!(pq, rng, cur_rates, site, t)
 end
 
 ######################## helper routines for all spatial SSAs ########################
-function update_rates_after_reaction!(p, u, t, site, reaction_id)
+function update_rates_after_reaction!(p, u, site, reaction_id)
     update_reaction_rates!(p.cur_rates, p.dep_gr[reaction_id], u, p.ma_jumps, site)
     update_diffusion_rates!(p.cur_rates, p.jumptovars_map[reaction_id], p.diffusion_constants, u, site, p.spatial_system)
 end
 
-function update_rates_after_diffusion!(p, u, t, source_site, target_site, species)
-    for site in [source_site, target_site]
-        update_reaction_rates!(p.cur_rates, p.vartojumps_map[species], u, p.ma_jumps, site)
-        update_diffusion_rates!(p.cur_rates, [species], p.diffusion_constants, u, site, p.spatial_system)
-    end
+function update_rates_after_diffusion!(p, u, source_site, target_site, species)
+    update_reaction_rates!(p.cur_rates, p.vartojumps_map[species], u, p.ma_jumps, source_site)
+    update_diffusion_rates!(p.cur_rates, species, p.diffusion_constants, u, source_site, p.spatial_system)
+    
+    update_reaction_rates!(p.cur_rates, p.vartojumps_map[species], u, p.ma_jumps, target_site)
+    update_diffusion_rates!(p.cur_rates, species, p.diffusion_constants, u, target_site, p.spatial_system)
 end
 
 """
@@ -189,10 +186,16 @@ end
 """
 update rates of all specs in list species at site
 """
-function update_diffusion_rates!(cur_rates, species, diffusion_constants, u, site, spatial_system)
+function update_diffusion_rates!(cur_rates, species::AbstractArray, diffusion_constants, u, site, spatial_system)
     for spec in species
         set_site_diffusion_rate!(cur_rates, site, spec, evaldiffrate(diffusion_constants, u, spec, site, spatial_system))
     end
+end
+"""
+update rates of species at site
+"""
+function update_diffusion_rates!(cur_rates, species, diffusion_constants, u, site, spatial_system)
+    set_site_diffusion_rate!(cur_rates, site, species, evaldiffrate(diffusion_constants, u, species, site, spatial_system))
 end
 
 """

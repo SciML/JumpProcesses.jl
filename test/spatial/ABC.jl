@@ -43,6 +43,8 @@ end
 # dobenchmark = false
 # doanimation = false
 
+# TODO compare performance of CartesianGrid vs grid in LightGraph: https://juliagraphs.org/LightGraphs.jl/v1.3/generators/#LightGraphs.SimpleGraphs.grid-Union{Tuple{AbstractArray{T,1}},%20Tuple{T}}%20where%20T%3C:Integer
+
 dim = 1
 linear_size = 5
 u0 = [500,500,0]

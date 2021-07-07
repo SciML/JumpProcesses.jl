@@ -93,30 +93,26 @@ num_neighbors(grid::CartesianGrid, site) = length(neighbors(grid, site))
 
 abstract type AbstractSpatialRates end
 
-#TODO refactor names of functions?
-
-#return rate of site
-function get_site_rate(spatial_rates_struct, site_id)
-    get_site_reactions_rate(spatial_rates_struct,site_id)+get_site_diffusions_rate(spatial_rates_struct,site_id)
+#return total rate of site
+function total_site_rate(spatial_rates_struct, site_id)
+    total_site_rx_rate(spatial_rates_struct,site_id)+total_site_hop_rate(spatial_rates_struct,site_id)
 end
 
-#return rate of reactions at site
-function get_site_reactions_rate end
+# return total reaction rate of the site
+function total_site_rx_rate end
 
-#return rate of diffusions at site
-function get_site_diffusions_rate end
+# return total hopping rate of the site
+function total_site_hop_rate end
 
-#returns an iterator over the pairs (rx_id,rx_rate) of a site
-function get_site_reactions_iterator end
+function rx_rates_at_site end
 
-#returns an iterator over the pairs (species_id, diffusion_rate) of a site
-function get_site_diffusions_iterator end
+function hop_rates_at_site end
 
 #sets the rate of reaction at site
-function set_site_reaction_rate! end
+function set_rx_rate_at_site!! end
 
 #sets the rate of diffusion at site
-function set_site_diffusion_rate! end
+function set_hop_rate_at_site end
 
 #################### SpatialRates <: AbstractSpatialRates ######################
 
@@ -165,37 +161,37 @@ function reset!(spatial_rates)
     nothing
 end
 """
-return rate of reactions at site
+return total reaction rate at site
 """
-function get_site_reactions_rate(spatial_rates, site_id)
+function total_site_rx_rate(spatial_rates, site_id)
     spatial_rates.rx_rates_sum[site_id]
 end
 
 """
-return rate of diffusions at site
+return total hopping rate out of site
 """
-function get_site_diffusions_rate(spatial_rates, site_id)
+function total_site_hop_rate(spatial_rates, site_id)
     spatial_rates.hop_rates_sum[site_id]
 end
 
 """
-returns an iterator over reaction rates of a site
+returns reaction rates of a site
 """
-function get_site_reactions_iterator(spatial_rates, site_id)
+function rx_rates_at_site(spatial_rates, site_id)
     @view spatial_rates.rx_rates[:,site_id]
 end
 
 """
-returns an iterator over diffusion rates of a site
+returns diffusion rates of a site
 """
-function get_site_diffusions_iterator(spatial_rates, site_id)
+function hop_rates_at_site(spatial_rates, site_id)
     @view spatial_rates.hop_rates[:,site_id]
 end
 
 """
 set the rate of reaction at site. Return the old rate
 """
-function set_site_reaction_rate!(spatial_rates, site_id, reaction_id, rate)
+function set_rx_rate_at_site!(spatial_rates, site_id, reaction_id, rate)
     old_rate = spatial_rates.rx_rates[reaction_id, site_id]
     spatial_rates.rx_rates[reaction_id, site_id] = rate
     spatial_rates.rx_rates_sum[site_id] += rate - old_rate
@@ -205,35 +201,9 @@ end
 """
 sets the rate of diffusion at site. Return the old rate
 """
-function set_site_diffusion_rate!(spatial_rates, site_id, species_id, rate)
+function set_hop_rate_at_site!(spatial_rates, site_id, species_id, rate)
     old_rate = spatial_rates.hop_rates[species_id, site_id]
     spatial_rates.hop_rates[species_id, site_id] = rate
     spatial_rates.hop_rates_sum[site_id] += rate - old_rate
     old_rate
 end
-
-
-# Tests for CartesianGrid
-# using Test
-# grid = CartesianGrid([4,3,2])
-# for site in 1:length(num_sites(grid))
-#     @test from_coordinates(grid,to_coordinates(grid,site)) == site
-# end
-# @test neighbors(grid,1) == [2,5,13]
-# @test neighbors(grid,4) == [3,8,16]
-# @test neighbors(grid,17) == [5,13,18,21]
-# @test neighbors(grid,21) == [9,17,22]
-# @test num_neighbors(grid, 1) == 3
-
-# Tests for SpatialRates
-# using Test
-# num_jumps = 2
-# num_species = 3
-# # numb_sites = 5
-# spatial_rates = DiffEqJump.SpatialRates(num_jumps, num_species, 5)
-
-# set_site_reaction_rate!(spatial_rates, 1, 1, 10.0)
-# set_site_reaction_rate!(spatial_rates, 1, 1, 20.0)
-# set_site_diffusion_rate!(spatial_rates, 1, 1, 30.0)
-# @test get_site_reactions_rate(spatial_rates, 1) == 20.0
-# @test get_site_diffusions_rate(spatial_rates, 1) == 30.0

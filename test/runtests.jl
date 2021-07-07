@@ -21,7 +21,7 @@ using DiffEqJump, DiffEqBase, SafeTestsets
   @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
   @time @safetestset "Remake tests" begin include("remake_test.jl") end
   @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
-  @time @safetestset "Spatial Spatial utilities" begin include("spatial/utils_test.jl") end
+  @time @safetestset "Spatial utilities" begin include("spatial/utils_test.jl") end
   @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
   @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
 end

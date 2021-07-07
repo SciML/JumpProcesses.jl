@@ -1,4 +1,5 @@
 # Tests for CartesianGrid
+using DiffEqJump
 using Test
 grid = DiffEqJump.CartesianGrid([4,3,2])
 for site in 1:length(DiffEqJump.num_sites(grid))

@@ -55,7 +55,7 @@ analytic_solution(t) = Q*diagm(ℯ.^(D*t*lambdas))*Qt * reshape(prob.u0, num_nod
 rel_tol = 0.01
 
 for (i,t) in enumerate(0.0:tf/num_time_points:tf)
-    diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
+    local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
     center = Int(linear_size/2)
     @test abs(sum(diff[1:center])/sum(analytic_solution(t)[1:center])) < rel_tol
 end

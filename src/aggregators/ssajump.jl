@@ -178,7 +178,7 @@ Execute `p.next_jump`.
         @inbounds p.affects![idx](integrator)
     end
 
-    # save jump that was just exectued 
+    # save jump that was just executed
     p.prev_jump = next_jump
     return integrator.u
 end
@@ -198,27 +198,29 @@ Check if the total rate is zero, and if it is, make the next jump time Inf.
 end
 
 """
-    linear_search(array, r)
+    linear_search(iterator, r)
 
-Perform linear search for `r` over array. Output index j s.t. sum(array[1:j-1])
-< r <= sum(array[1:j]).
+Perform linear search for `r` over iterator. Output index j s.t. sum(array[1:j-1])
+< r <= sum(array[1:j]), where array=collect(iterator)
 
 Notes:
+- The iterator must have all positive numbers
 - Returns index zero if the search is unsuccessful. Assumes this corresponds to
   the case of an infinite next reaction time and so the jump index does not
   matter.
 """
-@inline function linear_search(array, r)
+@inline function linear_search(iterator, r)
     jidx = 0
-    @inbounds parsum = r
-    @inbounds for idx = 1:length(array)
-        parsum -= array[idx]
+    parsum = r
+    idx = 1
+    for element in iterator
+        parsum -= element
         if parsum < zero(parsum)
             jidx = idx
             break
         end
+        idx += 1
     end
-
     return jidx
 end
 

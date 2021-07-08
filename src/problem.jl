@@ -201,11 +201,12 @@ end
 
 
 ### Displays
+num_constant_rate_jumps(aggregator::AbstractSSAJumpAggregator) = length(aggregator.rates)
 
 Base.summary(io::IO, prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
   println(io,summary(A))
-  println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation === nothing ? 0 : length(A.discrete_jump_aggregation.rates))
+  println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation === nothing ? 0 : num_constant_rate_jumps(A.discrete_jump_aggregation))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
   if A.regular_jump !== nothing
     println(io,"Have a regular jump")

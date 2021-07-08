@@ -6,10 +6,12 @@ using Reexport
 using Compat, RandomNumbers, TreeViews, LinearAlgebra
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
+using LightGraphs
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, show
 import DataStructures: update!
+import LightGraphs: neighbors
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
@@ -40,6 +42,9 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 
+include("spatial/utils.jl")
+include("spatial/nsm.jl")
+
 include("aggregators/aggregated_api.jl")
 
 include("extended_jump_array.jl")
@@ -61,6 +66,7 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
+export NSM
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
@@ -69,5 +75,8 @@ export init, solve, solve!
 export reset_aggregated_jumps!
 
 export ExtendedJumpArray
+
+# spatial structs and functions
+export CartesianGrid
 
 end # module

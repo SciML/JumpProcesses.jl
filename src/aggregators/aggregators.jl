@@ -79,6 +79,12 @@ systems with many species and many channels, Journal of Physical Chemistry A,
 """
 struct NRM <: AbstractAggregatorAlgorithm end
 
+"""
+Elf, Johan and Ehrenberg, M, Spontaneous separation of bi-stable biochemical 
+systems into spatial domains of opposite phases,Systems Biology, 2004 vol. 1(2) 
+pp. 230-236. doi:10.1049/sb:20045021
+"""
+struct NSM <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
 

@@ -31,10 +31,10 @@ starting_state[:,center_node] = copy(u0)
 prob = DiscreteProblem(starting_state,(0.0,tf), rates)
 
 hopping_rate = diffusivity * (linear_size/domain_size)^2
-diffusion_constants = [hopping_rate for i in starting_state]
+hopping_constants = [hopping_rate for i in starting_state]
 
 alg = NSM()
-spatial_jump_prob = JumpProblem(prob, alg, majumps, diffusion_constants=diffusion_constants, spatial_system=grid, save_positions=(false,false))
+spatial_jump_prob = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=grid, save_positions=(false,false))
 
 num_time_points = 10
 Nsims = 1000

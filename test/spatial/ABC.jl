@@ -20,10 +20,10 @@ function ABC_setup(spatial_system, starting_site, u0, diffusivity, end_time)
     starting_state[:,starting_site] = copy(u0)
     prob = DiscreteProblem(starting_state,(0.0,end_time), rates)
     
-    diffusion_constants = [hopping_rate for i in starting_state]
+    hopping_constants = [hopping_rate for i in starting_state]
     
     alg = NSM()
-    return JumpProblem(prob, alg, majumps, diffusion_constants=diffusion_constants, spatial_system = spatial_system, save_positions=(false,false))
+    return JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = spatial_system, save_positions=(false,false))
 end
 
 function get_mean_end_state(jump_prob, Nsims)

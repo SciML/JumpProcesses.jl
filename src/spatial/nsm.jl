@@ -5,14 +5,14 @@
 # NOTE make 0 a sink state for absorbing boundary condition
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
-#NOTE diffusion_constants is a matrix. diffusion_constants[i,j] is species i, site j
+#NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
 mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS} <: AbstractSSAJumpAggregator
-    next_jump::SpatialJump{J} #some structure to identify the next event: reaction or diffusion
-    prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or diffusion
+    next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
+    prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
     end_time::T
     cur_rates::R #some structure to store current rates
-    diffusion_constants::C #matrix with ith column being diffusion constants for site i
+    hopping_constants::C #matrix with ith column being hop constants for site i
     ma_jumps::S #massaction jumps
     # rates::F1 #rates for constant-rate jumps
     # affects!::F2 #affects! function determines the effect of constant-rate jumps
@@ -25,7 +25,7 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMA
     spatial_system::SS
 end
 
-function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion_constants::C,
+function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, hopping_constants::C,
                                       maj::S, sps::Tuple{Bool,Bool},
                                       rng::RNG, spatial_system::SS; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,S,R,C,RNG,SS}
 
@@ -53,12 +53,12 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, diffusion
 
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{J,T,R,C,S,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq),SS}(nj, nj, njt, et, crs, diffusion_constants, maj, sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system)
+    NSMJumpAggregation{J,T,R,C,S,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq),SS}(nj, nj, njt, et, crs, hopping_constants, maj, sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system)
 end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; diffusion_constants, spatial_system, kwargs...)
+function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; hopping_constants, spatial_system, kwargs...)
     num_species = size(starting_state,1)
     majumps = ma_jumps
     if majumps === nothing
@@ -69,7 +69,7 @@ function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jum
     next_jump_time = typemax(typeof(end_time))
     current_rates = SpatialRates(get_num_majumps(majumps), num_species, num_sites(spatial_system))
 
-    NSMJumpAggregation(next_jump, next_jump_time, end_time, current_rates, diffusion_constants, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
+    NSMJumpAggregation(next_jump, next_jump_time, end_time, current_rates, hopping_constants, majumps, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -86,7 +86,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*total_site_rate(cur_rates, site) < total_site_rx_rate(cur_rates, site)
         rx = linear_search(rx_rates_at_site(cur_rates, site), rand(rng) * total_site_rx_rate(cur_rates, site))
-        p.next_jump = SpatialJump(site, rx+size(p.diffusion_constants, 1), site)
+        p.next_jump = SpatialJump(site, rx+size(p.hopping_constants, 1), site)
     else
         species_to_diffuse = linear_search(hop_rates_at_site(cur_rates, site), rand(rng) * total_site_hop_rate(cur_rates, site))
         nbs = neighbors(p.spatial_system, site)
@@ -110,7 +110,7 @@ end
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
-    @unpack ma_jumps, diffusion_constants, spatial_system, cur_rates = aggregation
+    @unpack ma_jumps, hopping_constants, spatial_system, cur_rates = aggregation
 
     reset!(cur_rates)
     num_majumps = get_num_majumps(ma_jumps)
@@ -120,7 +120,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
     pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites
         update_reaction_rates!(cur_rates, 1:num_majumps, u, ma_jumps, site)
-        update_diffusion_rates!(cur_rates, 1:num_species, diffusion_constants, u, site, spatial_system)
+        update_hop_rates!(cur_rates, 1:num_species, hopping_constants, u, site, spatial_system)
         pqdata[site] = t + randexp(aggregation.rng) / total_site_rate(cur_rates, site)
     end
 
@@ -135,10 +135,10 @@ recalculate jump rates for jumps that depend on the just executed jump (p.prev_j
 """
 function update_dependent_rates_and_firing_times!(p, u, t)
     jump = p.prev_jump
-    if is_diffusion(p, jump)
+    if is_hop(p, jump)
         source_site = jump.src
         target_site = jump.dst
-        update_rates_after_diffusion!(p, u, source_site, target_site, jump.jidx)
+        update_rates_after_hop!(p, u, source_site, target_site, jump.jidx)
         for site in [source_site, target_site]
             update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
         end
@@ -161,15 +161,15 @@ end
 ######################## helper routines for all spatial SSAs ########################
 function update_rates_after_reaction!(p, u, site, reaction_id)
     update_reaction_rates!(p.cur_rates, p.dep_gr[reaction_id], u, p.ma_jumps, site)
-    update_diffusion_rates!(p.cur_rates, p.jumptovars_map[reaction_id], p.diffusion_constants, u, site, p.spatial_system)
+    update_hop_rates!(p.cur_rates, p.jumptovars_map[reaction_id], p.hopping_constants, u, site, p.spatial_system)
 end
 
-function update_rates_after_diffusion!(p, u, source_site, target_site, species)
+function update_rates_after_hop!(p, u, source_site, target_site, species)
     update_reaction_rates!(p.cur_rates, p.vartojumps_map[species], u, p.ma_jumps, source_site)
-    update_diffusion_rates!(p.cur_rates, species, p.diffusion_constants, u, source_site, p.spatial_system)
+    update_hop_rates!(p.cur_rates, species, p.hopping_constants, u, source_site, p.spatial_system)
     
     update_reaction_rates!(p.cur_rates, p.vartojumps_map[species], u, p.ma_jumps, target_site)
-    update_diffusion_rates!(p.cur_rates, species, p.diffusion_constants, u, target_site, p.spatial_system)
+    update_hop_rates!(p.cur_rates, species, p.hopping_constants, u, target_site, p.spatial_system)
 end
 
 """
@@ -184,16 +184,16 @@ end
 """
 update rates of all specs in list species at site
 """
-function update_diffusion_rates!(cur_rates, species::AbstractArray, diffusion_constants, u, site, spatial_system)
+function update_hop_rates!(cur_rates, species::AbstractArray, hopping_constants, u, site, spatial_system)
     for spec in species
-        set_hop_rate_at_site!(cur_rates, site, spec, evaldiffrate(diffusion_constants, u, spec, site, spatial_system))
+        set_hop_rate_at_site!(cur_rates, site, spec, evalhoppingrate(hopping_constants, u, spec, site, spatial_system))
     end
 end
 """
 update rates of species at site
 """
-function update_diffusion_rates!(cur_rates, species, diffusion_constants, u, site, spatial_system)
-    set_hop_rate_at_site!(cur_rates, site, species, evaldiffrate(diffusion_constants, u, species, site, spatial_system))
+function update_hop_rates!(cur_rates, species, hopping_constants, u, site, spatial_system)
+    set_hop_rate_at_site!(cur_rates, site, species, evalhoppingrate(hopping_constants, u, species, site, spatial_system))
 end
 
 """
@@ -203,8 +203,8 @@ updates state based on p.next_jump
 """
 function update_state!(p, integrator)
     jump = p.next_jump
-    if is_diffusion(p, jump)
-        execute_diffusion!(integrator, jump.src, jump.dst, jump.jidx)
+    if is_hop(p, jump)
+        execute_hop!(integrator, jump.src, jump.dst, jump.jidx)
     else
         rx_index = reaction_id_from_jump(p,jump)
         executerx!((@view integrator.u[:,jump.src]), rx_index, p.ma_jumps)
@@ -215,20 +215,20 @@ function update_state!(p, integrator)
 end
 
 """
-    is_diffusion(p, jump)
+    is_hop(p, jump)
 
-true if jump is a diffusion
+true if jump is a hop
 """
-function is_diffusion(p, jump)
-    jump.jidx <= size(p.diffusion_constants,1)
+function is_hop(p, jump)
+    jump.jidx <= size(p.hopping_constants,1)
 end
 
 """
-    execute_diffusion!(integrator, jump)
+    execute_hop!(integrator, jump)
 
 documentation
 """
-function execute_diffusion!(integrator, source_site, target_site, species)
+function execute_hop!(integrator, source_site, target_site, species)
     integrator.u[species,source_site] -= 1
     integrator.u[species,target_site] += 1
 end
@@ -236,19 +236,19 @@ end
 """
     reaction_id_from_jump(p,jump)
 
-return reaction id by subtracting the number of diffusive hops
+return reaction id by subtracting the number of hops
 """
 function reaction_id_from_jump(p,jump)
-    jump.jidx - size(p.diffusion_constants,1)
+    jump.jidx - size(p.hopping_constants,1)
 end
 
 """
-    evaldiffrate(args)
+    evalhoppingrate(args)
 
 documentation
 """
-function evaldiffrate(diffusion_constants, u, species, site, spatial_system)
-    u[species,site]*diffusion_constants[species,site]*num_neighbors(spatial_system, site)
+function evalhoppingrate(hopping_constants, u, species, site, spatial_system)
+    u[species,site]*hopping_constants[species,site]*num_neighbors(spatial_system, site)
 end
 
 """

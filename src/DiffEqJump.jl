@@ -8,6 +8,7 @@ using LightGraphs
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
 import Base: size, getindex, setindex!, length, similar, show
 import DataStructures: update!
+import LightGraphs: neighbors
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads

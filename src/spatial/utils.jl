@@ -24,7 +24,7 @@ abstract type AbstractSpatialSystem end
 
 ################### LightGraph ########################
 num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
-neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
+# neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
 num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 
 ################### CartesianGrid <: AbstractSpatialSystem ########################

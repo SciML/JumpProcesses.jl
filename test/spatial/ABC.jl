@@ -52,7 +52,7 @@ spatial_jump_prob = ABC_setup(grid, starting_site, u0, diffusivity, end_time)
 solution = solve(spatial_jump_prob, SSAStepper())
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 diff =  sum(mean_end_state, dims = 2) - non_spatial_mean
-println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
+# println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
 for (i,d) in enumerate(diff)
     @test abs(d) < reltol*non_spatial_mean[i]
 end
@@ -65,7 +65,7 @@ lsolution = solve(lspatial_jump_prob, SSAStepper())
 lmean_end_state = get_mean_end_state(lspatial_jump_prob, Nsims)
 
 diff =  sum(lmean_end_state, dims = 2) - non_spatial_mean
-println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
+# println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
 for (i,d) in enumerate(diff)
     @test abs(d) < reltol*non_spatial_mean[i]
 end

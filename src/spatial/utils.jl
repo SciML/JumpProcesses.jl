@@ -1,4 +1,3 @@
-using LightGraphs
 """
 A file with types, structs and functions for spatial simulations
 """

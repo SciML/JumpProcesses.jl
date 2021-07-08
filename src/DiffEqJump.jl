@@ -71,4 +71,7 @@ export reset_aggregated_jumps!
 
 export ExtendedJumpArray
 
+# spatial structs and functions
+export CartesianGrid
+
 end # module

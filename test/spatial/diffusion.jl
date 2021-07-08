@@ -14,11 +14,11 @@ reactstoch = []
 netstoch = []
 rates = []
 majumps = MassActionJump(rates, reactstoch, netstoch)
-tf = 5.0
+tf = 0.5
 u0 = [100]
 
 domain_size = 1.0 #μ-meter
-linear_size = 32
+linear_size = 33
 diffusivity = 0.1
 dim = 1
 grid = DiffEqJump.CartesianGrid(dim, linear_size)
@@ -56,6 +56,5 @@ rel_tol = 0.01
 
 for (i,t) in enumerate(0.0:tf/num_time_points:tf)
     local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
-    center = Int(linear_size/2)
-    @test abs(sum(diff[1:center])/sum(analytic_solution(t)[1:center])) < rel_tol
+    @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
 end

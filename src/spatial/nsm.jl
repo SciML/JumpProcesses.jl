@@ -6,7 +6,7 @@
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE diffusion_constants is a matrix. diffusion_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS<:AbstractSpatialSystem} <: AbstractSSAJumpAggregator
+mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS} <: AbstractSSAJumpAggregator
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or diffusion
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or diffusion
     next_jump_time::T
@@ -90,7 +90,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     else
         species_to_diffuse = linear_search(hop_rates_at_site(cur_rates, site), rand(rng) * total_site_hop_rate(cur_rates, site))
         nbs = neighbors(p.spatial_system, site)
-        target_site = nbs[rand(rng,1:length(nbs))] # random neighbor
+        target_site = nbs[rand(rng,1:num_neighbors(p.spatial_system, site))] # random neighbor
         p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
     end
 end

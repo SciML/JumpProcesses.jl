@@ -1,9 +1,8 @@
 using DiffEqJump, DiffEqBase
 # using BenchmarkTools
-using Test
+using Test, LightGraphs
 
-function ABC_setup(dim, linear_size, u0, diffusivity, end_time)
-    grid = DiffEqJump.CartesianGrid(dim, linear_size)
+function ABC_setup(spatial_system, starting_site, u0, diffusivity, end_time)
     domain_size = 1.0 #μ-meter
     mesh_size = domain_size/linear_size
     # ABC model A + B <--> C
@@ -14,18 +13,17 @@ function ABC_setup(dim, linear_size, u0, diffusivity, end_time)
     
     # spatial system setup
     hopping_rate = diffusivity * (linear_size/domain_size)^2
-    num_nodes = DiffEqJump.num_sites(grid)
+    num_nodes = DiffEqJump.num_sites(spatial_system)
     
     # Starting state setup
     starting_state = zeros(Int, length(u0), num_nodes)
-    center_node = trunc(Int,(num_nodes+1)/2)
-    starting_state[:,center_node] = copy(u0)
+    starting_state[:,starting_site] = copy(u0)
     prob = DiscreteProblem(starting_state,(0.0,end_time), rates)
     
     diffusion_constants = [hopping_rate for i in starting_state]
     
     alg = NSM()
-    return JumpProblem(prob, alg, majumps, diffusion_constants=diffusion_constants, spatial_system = grid, save_positions=(false,false))
+    return JumpProblem(prob, alg, majumps, diffusion_constants=diffusion_constants, spatial_system = spatial_system, save_positions=(false,false))
 end
 
 function get_mean_end_state(jump_prob, Nsims)
@@ -37,42 +35,42 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
-
-# dospatialtest = true
-# doplot = false
-# dobenchmark = false
-# doanimation = false
-
-# TODO compare performance of CartesianGrid vs grid in LightGraph: https://juliagraphs.org/LightGraphs.jl/v1.3/generators/#LightGraphs.SimpleGraphs.grid-Union{Tuple{AbstractArray{T,1}},%20Tuple{T}}%20where%20T%3C:Integer
+Nsims        = 100
+reltol       = 0.05
+non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
 
 dim = 1
 linear_size = 5
+starting_site = trunc(Int,(linear_size^dim + 1)/2)
 u0 = [500,500,0]
-
 end_time = 10.0
 diffusivity = 1.0
 
-spatial_jump_prob = ABC_setup(dim, linear_size, u0, diffusivity, end_time)
+# testing on CartesianGrid
+grid = CartesianGrid(dim, linear_size)
+spatial_jump_prob = ABC_setup(grid, starting_site, u0, diffusivity, end_time)
 solution = solve(spatial_jump_prob, SSAStepper())
-
-Nsims        = 100
-reltol       = 0.05
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+diff =  sum(mean_end_state, dims = 2) - non_spatial_mean
+println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
+for (i,d) in enumerate(diff)
+    @test abs(d) < reltol*non_spatial_mean[i]
+end
 
-# analytic solution based on 'McQuarrie 1967'
-# NOTE this is incorrect
-# K = .1/1
-# function analyticmean(u, K)
-#     α = u[1]; β = u[2]; γ = u[3]
-#     @assert β ≥ α "A(0) must not exceed B(0)"
-#     K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
-# end
-# analytic_mean = analyticmean(u0, K)
-# analytic_A = analytic_B = analyticmean(u0, K)
-# analytic_C = ((u0[1]+u0[2]+2*u0[3]) - (analytic_A + analytic_B))/2
-# equilibrium_state = reshape(vcat([[analytic_A/num_nodes, analytic_B/num_nodes, analytic_C/num_nodes] for node in 1:num_nodes]...),length(u0), num_nodes)
+# testing on LightGraphs
+lgrid = LightGraphs.grid([linear_size])
+lspatial_jump_prob = ABC_setup(lgrid, starting_site, u0, diffusivity, end_time)
+lsolution = solve(lspatial_jump_prob, SSAStepper())
 
-# NOTE can get analytic solution by taking expectation of a_∞ using Pₐ(∞) from equation (29) in https://server.math.umanitoba.ca/~jarino/courses/math8410_MathBio/private/Laurenzi%20%282000%29%20Analytical%20solution%20of%20master%20equation.pdf.
+lmean_end_state = get_mean_end_state(lspatial_jump_prob, Nsims)
+
+diff =  sum(lmean_end_state, dims = 2) - non_spatial_mean
+println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
+for (i,d) in enumerate(diff)
+    @test abs(d) < reltol*non_spatial_mean[i]
+end
+
+
 
 #using non-spatial SSAs to get the mean
 # non_spatial_rates = [0.1,1.0]
@@ -82,116 +80,3 @@ mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
 # non_spatial_prob = DiscreteProblem(u0,(0.0,end_time), non_spatial_rates)
 # jump_prob = JumpProblem(non_spatial_prob, Direct(), majumps)
 # non_spatial_mean = get_mean_end_state(jump_prob, 10000)
-
-non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
-
-diff =  [sum(mean_end_state[i,:]) for i in 1:length(u0)] - non_spatial_mean
-println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
-for (i,d) in enumerate(diff)
-    @test abs(d) < reltol*non_spatial_mean[i]
-end
-
-# end
-
-
-
-# PLotting and benchmarking
-# function plot_solution(sol, nodes)
-#     println("Plotting")
-#     labels = vcat([["A $i", "B $i", "C $i"] for i in 1:num_nodes]...)
-#     trajectories = [hcat(sol.u...)[i,:] for i in 1:length(spatial_jump_prob.prob.u0)]
-#     p = plot()
-#     for node in nodes
-#         for species in 1:3
-#             plot!(p, sol.t, trajectories[3*(node-1)+species], label = labels[3*(node-1)+species])
-#         end
-#     end
-#     title!("A + B <--> C RDME")
-#     xaxis!("time")
-#     yaxis!("number")
-#     p
-# end
-
-# function benchmark_n_times(jump_prob, n)
-#     solve(jump_prob, SSAStepper())
-#     times = zeros(n)
-#     for i in 1:n
-#         times[i] = @elapsed solve(jump_prob, SSAStepper())
-#     end
-#     times
-# end
-
-# if doplot
-#     # Solving
-#     alg = WellMixedSpatial(RSSACR())
-#     println("Solving with $alg")
-#     spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
-#     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/50)
-#     # Plotting
-#     nodes = [1,8]
-#     plt = plot_solution(sol, nodes)
-#     display(plt)
-# end
-
-
-# if dobenchmark
-#     rates = [0.1, 1.]
-#     majumps = MassActionJump(rates, reactstoch, netstoch)
-#     u0 = [500,500,0]
-#     tf = 0.1
-#     prob = DiscreteProblem(u0,(0.0,tf), rates)
-#     dimension = 3
-#     hopping_rate = 1. # NOTE: using constant hopping rate not prevent diffusions from skyrocketing as number of sites per edge increases
-#     println("Using constant hopping rate not prevent diffusions from skyrocketing as number of sites per edge increases")
-#     println("rates: $rates, hopping rate: $hopping_rate, dimension: $dimension, starting position: $u0, final time: $tf")
-#     nums_sites_per_edge = [8, 16, 32]
-#     for (i, linear_size) in enumerate(nums_sites_per_edge)
-#         num_nodes = linear_size^3
-#         num_species = length(prob.u0)
-#         num_rxs = num_species*6*num_nodes + num_nodes * get_num_majumps(majumps)
-#         println("Have $linear_size sites per edge, $num_nodes nodes and $num_rxs reactions")
-#
-#         connectivity_list = connectivity_list_from_box(linear_size, dimension)
-#
-#         # Starting state setup (place all in the center)
-#         starting_state = zeros(Int, num_nodes*length(prob.u0))
-#         center_node = coordinates_to_node(trunc(Int,linear_size/2),trunc(Int,linear_size/2),linear_size)
-#         center_node_first_species_index = to_spatial_spec(center_node, 1, length(prob.u0))
-#         starting_state[center_node_first_species_index : center_node_first_species_index + length(prob.u0) - 1] = copy(prob.u0)
-#
-#         for alg in [RSSACR(), DirectCR(), NRM()]
-#             short_label = "$alg"[1:end-2]
-#             spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state, save_positions=(false,false))
-#             println("Solving with $(spatial_jump_prob.aggregator)")
-#             solve(spatial_jump_prob, SSAStepper())
-#             # times = benchmark_n_times(spatial_jump_prob, 5)
-#             # median_time = median(times)
-#             # println("Solving the problem took $median_time seconds.")
-#             @btime solve($spatial_jump_prob, $(SSAStepper()))
-#         end
-#     end
-# end
-
-# quick benchmark:
-# algs = [RSSA(), RSSACR(), NRM(), SortingDirect(), RDirect(), Direct()]
-# using BenchmarkTools
-# for alg in algs
-#     spatial_jump_prob = JumpProblem(prob, WellMixedSpatial(alg), majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
-#     println("Solving with $(spatial_jump_prob.aggregator)")
-#     solve(spatial_jump_prob, SSAStepper())
-#     @time solve(spatial_jump_prob, SSAStepper())
-# end
-
-# Make animation
-# if doanimation
-#     alg = RSSACR()
-#     println("Setting up...")
-#     spatial_jump_prob = JumpProblem(prob, alg, majumps; connectivity_list = connectivity_list, diff_rates = hopping_rate, starting_state = starting_state)
-#     println("Solving...")
-#     sol = solve(spatial_jump_prob, SSAStepper(), saveat = prob.tspan[2]/200)
-#     println("Animating...")
-#     anim=animate_2d(sol, linear_size, species_labels = ["A", "B", "C"], title = "A + B <--> C", verbose = true)
-#     fps = 15
-#     path = joinpath(@__DIR__, "test", "spatial", "ABC_anim_$(length(sol.u))frames_$(fps)fps.gif")
-#     gif(anim, path, fps = fps)
-# end

@@ -84,11 +84,11 @@ struct MassActionJump{T,S,U,V} <: AbstractJump
 
 end
 MassActionJump(usr::T, rs::S, ns::U, pidxs::V; scale_rates = true, useiszero = true, nocopy=false) where {T,S,U,V} = MassActionJump{T,S,U,V}(usr, rs, ns, pidxs, scale_rates, useiszero, nocopy)
-MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: AbstractVector,S,U} = MassActionJump(usr, rs, ns, Int[], scale_rates, useiszero, nocopy)
-MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: Number,S,U} = MassActionJump(usr, rs, ns, 0, scale_rates, useiszero, nocopy)
+MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: AbstractVector,S,U} = MassActionJump(usr, rs, ns, Int[]; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
+MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: Number,S,U} = MassActionJump(usr, rs, ns, 0; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
 
 # with parameter indices 
-MassActionJump(rs, ns; param_idxs, p, kwargs...) = MassActionJump(p[param_idxs], rs, ns, param_idxs; kwargs...)
+MassActionJump(rs, ns; param_idxs, params, kwargs...) = MassActionJump(params[param_idxs], rs, ns, param_idxs; kwargs...)
 
 @inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
 @inline get_num_majumps(maj::Nothing) = 0
@@ -158,7 +158,8 @@ end
 
 # if just given the data for one jump (and not in a container) wrap in a vector
 function setup_majump_to_merge(sr::T, rs::S, ns::U, pidx::V) where {T <: Number, S <: AbstractArray, U <: AbstractArray, V <: Int}
-  MassActionJump([sr], [rs], [ns], [pidx]; scale_rates=false)
+  pidxs = (pidx == 0) ? Int[] : [pidx]
+  MassActionJump([sr], [rs], [ns], pidxs; scale_rates=false)
 end
 
 # when given a collection of reactions to add to maj
@@ -166,7 +167,7 @@ function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::U, rs::V, ns::W, pidxs:
   append!(maj.scaled_rates, sr)
   append!(maj.reactant_stoch, rs)
   append!(maj.net_stoch, ns)
-  append!(maj.param_idxs, pidxs)
+  (!isempty(maj.param_idxs)) && append!(maj.param_idxs, pidxs)
   maj
 end
 
@@ -175,14 +176,15 @@ function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::T, rs::S1, ns::S2, pidx
   push!(maj.scaled_rates, sr)
   push!(maj.reactant_stoch, rs)
   push!(maj.net_stoch, ns)
-  push!(maj.param_idxs, pidx)
+  (!isempty(maj.param_idxs)) && push!(maj.param_idxs, pidx)
   maj
 end
 
 # when maj only stores a single jump's worth of data (and not in a collection)
 # create a new jump with the merged data stored in vectors
-function majump_merge!(maj::MassActionJump{T,S,U,V}, sr::T, rs::S, ns::U, pidxs::V) where {T <: Number, S <: AbstractArray, U <: AbstractArray, V <: Int}
-  MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns], [maj.param_idxs, pidxs]; scale_rates=false)
+function majump_merge!(maj::MassActionJump{T,S,U,V}, sr::T, rs::S, ns::U, pidx::V) where {T <: Number, S <: AbstractArray, U <: AbstractArray, V <: Int}
+  pidxs = (maj.param_idxs == 0) ? Int[] : [maj.param_idxs, pidx]
+  MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns], pidxs; scale_rates=false)
 end
 
 massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1

@@ -1,7 +1,7 @@
 name = "DiffEqJump"
 uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "6.15"
+version = "6.15.0"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
@@ -46,4 +46,4 @@ StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["LinearAlgebra","OrdinaryDiffEq", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test"]
+test = ["LinearAlgebra", "OrdinaryDiffEq", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test"]

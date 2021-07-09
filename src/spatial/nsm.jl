@@ -139,9 +139,8 @@ function update_dependent_rates_and_firing_times!(p, u, t)
         source_site = jump.src
         target_site = jump.dst
         update_rates_after_hop!(p, u, source_site, target_site, jump.jidx)
-        for site in [source_site, target_site]
-            update_site_time!(p.pq, p.rng, p.cur_rates, site, t)
-        end
+        update_site_time!(p.pq, p.rng, p.cur_rates, source_site, t)
+        update_site_time!(p.pq, p.rng, p.cur_rates, target_site, t)
     else
         site = jump.src
         update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))

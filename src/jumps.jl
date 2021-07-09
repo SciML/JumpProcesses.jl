@@ -100,19 +100,24 @@ end
 
 using_params(maj::MassActionJump{U,V,W,Vector{Int}}) where {U,V,W} = !isempty(maj.param_idxs)
 using_params(maj::MassActionJump{U,V,W,Int}) where {U,V,W} = (maj.param_idxs > 0)
+using_params(maj::Nothing) = false
+
 @inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
 @inline get_num_majumps(maj::Nothing) = 0
 
 """
-  update!(maj::MassActionJump{T,S,U,V}, newparams; scale_rates=true)
+  update_parameters!(maj::MassActionJump, newparams; scale_rates=true)
 
 Updates the passed in MassActionJump with the parameter values in `newparams`.
 
 Notes:
   - Requires the jump to have been constructed with a user-passed `param_idxs`.
+  - `scale_rates=true` will scale the parameter representing the jump rate by an
+    appropriate combinatoric factor. i.e for 3A --> B at rate k it will scale
+    k --> k/3!.
 """
-function update!(maj::MassActionJump{T,S,U,V}, newparams; scale_rates=true, kwargs...) where {T <: AbstractVector, S, U, V}    
-  ((maj.param_idxs isa AbstractArray) && (!isempty(maj.param_idxs))) || error("The passed in MassActionJump's param_idxs field is either empty or not an AbstractArray.")
+function update_parameters!(maj::MassActionJump{T,S,U,V}, newparams; scale_rates=true, kwargs...) where {T <: AbstractVector, S, U, V}    
+  ((maj.param_idxs isa AbstractArray) && using_params(maj)) || error("The passed in MassActionJump's param_idxs field is either empty or not an AbstractArray.")
   for i in 1:get_num_majumps(maj)
     maj.scaled_rates[i] = newparams[maj.param_idxs[i]]
     scale_rates && scalerate(maj.scaled_rates[i], maj.reactant_stoch[i])

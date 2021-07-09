@@ -1,7 +1,7 @@
 """
     reset_aggregated_jumps!(integrator,uprev = nothing)
 
-Reset the state of jump processes and associated solvers following a changed
+Reset the state of jump processes and associated solvers following a change
 in parameters or such.
 """
 

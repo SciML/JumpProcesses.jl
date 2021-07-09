@@ -44,7 +44,7 @@ function reset_aggregated_jumps!(integrator,uprev,cb::DiscreteCallback; update_j
     if typeof(cb.condition) <: AbstractSSAJumpAggregator
         maj = cb.condition.ma_jumps
         update_jump_params && using_params(maj) && update_parameters!(cb.condition.ma_jumps,integrator.p; kwargs...)
-        cb.condition(cb,integrator.u,integrator.t,integrator; kwargs...)
+        cb.condition(cb,integrator.u,integrator.t,integrator)
     end
     nothing
 end

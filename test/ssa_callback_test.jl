@@ -48,3 +48,22 @@ for tstop in random_tstops
   @test tstop ∈ sol.t
 end
 @test finalizer_called == 1
+
+
+# test for updating MassActionJump parameters
+rs = [[1 => 1],[2=>1]]
+ns = [[1 => -1, 2 => 1],[1=>1,2=>-1]]
+p  = [1.0,0.0]
+maj = MassActionJump(rs, ns; param_idxs=[1,2], params=p)
+u₀ = [100,0]
+tspan = (0.0,2000.0)
+dprob = DiscreteProblem(u₀,tspan,p)
+jprob = JumpProblem(dprob,Direct(),maj, save_positions=(false,false), rng=rng)
+pcondit(u,t,integrator) = t==1000.0
+function paffect!(integrator)
+  integrator.p[1] = 0.0
+  integrator.p[2] = 1.0
+  reset_aggregated_jumps!(integrator)
+end
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test sol[1,end] == 100

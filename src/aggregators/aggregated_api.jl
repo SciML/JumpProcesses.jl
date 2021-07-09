@@ -1,3 +1,10 @@
+"""
+    reset_aggregated_jumps!(integrator,uprev = nothing)
+
+Reset the state of jump processes and associated solvers following a changed
+in parameters or such.
+"""
+
 function reset_aggregated_jumps!(integrator,uprev = nothing)
      reset_aggregated_jumps!(integrator,uprev,integrator.opts.callback)
      nothing

@@ -88,10 +88,36 @@ MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=fals
 MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: Number,S,U} = MassActionJump(usr, rs, ns, 0; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
 
 # with parameter indices 
-MassActionJump(rs, ns; param_idxs, params, kwargs...) = MassActionJump(params[param_idxs], rs, ns, param_idxs; kwargs...)
+function MassActionJump(rs::AbstractVector{S}, ns; param_idxs, params, kwargs...) where {S <: AbstractArray}
+  param_idxs isa AbstractArray || error("When creating a MassActionJump representing multiple jumps, param_idxs must be a vector.")  
+  MassActionJump([params[pidx] for pidx in param_idxs], rs, ns, param_idxs; kwargs...)
+end
 
+function MassActionJump(rs::AbstractVector{S}, ns; param_idxs, params, kwargs...) where {S <: Pair}
+  (param_idxs isa Int) || error("When using a MassActionJump representing one jump, param_idxs must be an integer.")
+  MassActionJump(params[param_idxs], rs, ns, param_idxs; kwargs...)
+end
+
+using_params(maj::MassActionJump{U,V,W,Vector{Int}}) where {U,V,W} = !isempty(maj.param_idxs)
+using_params(maj::MassActionJump{U,V,W,Int}) where {U,V,W} = (maj.param_idxs > 0)
 @inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
 @inline get_num_majumps(maj::Nothing) = 0
+
+"""
+  update!(maj::MassActionJump{T,S,U,V}, newparams; scale_rates=true)
+
+Updates the passed in MassActionJump with the parameter values in `newparams`.
+
+Notes:
+  - Requires the jump to have been constructed with a user-passed `param_idxs`.
+"""
+function update!(maj::MassActionJump{T,S,U,V}, newparams; scale_rates=true, kwargs...) where {T <: AbstractVector, S, U, V}    
+  ((maj.param_idxs isa AbstractArray) && (!isempty(maj.param_idxs))) || error("The passed in MassActionJump's param_idxs field is either empty or not an AbstractArray.")
+  for i in 1:get_num_majumps(maj)
+    maj.scaled_rates[i] = newparams[maj.param_idxs[i]]
+    scale_rates && scalerate(maj.scaled_rates[i], maj.reactant_stoch[i])
+  end
+end
 
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump
   variable_jumps::T1

@@ -6,7 +6,7 @@
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS} <: AbstractSSAJumpAggregator
+mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS,I} <: AbstractSSAJumpAggregator
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -23,6 +23,7 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMA
     jumptovars_map::JVMAP #jumptovars_map is same for each site
     pq::PQ
     spatial_system::SS
+    numspecies::I #number of species
 end
 
 function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, hopping_constants::C,
@@ -52,8 +53,9 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, crs::R, hopping_c
     end
 
     pq = MutableBinaryMinHeap{T}()
+    numspecies = size(hopping_constants, 1)
 
-    NSMJumpAggregation{J,T,R,C,S,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq),SS}(nj, nj, njt, et, crs, hopping_constants, maj, sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system)
+    NSMJumpAggregation{J,T,R,C,S,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq),SS, typeof(numspecies)}(nj, nj, njt, et, crs, hopping_constants, maj, sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system, numspecies)
 end
 
 ############################# Required Functions ##############################
@@ -86,7 +88,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     if rand(rng)*total_site_rate(cur_rates, site) < total_site_rx_rate(cur_rates, site)
         rx = linear_search(rx_rates_at_site(cur_rates, site), rand(rng) * total_site_rx_rate(cur_rates, site))
-        p.next_jump = SpatialJump(site, rx+size(p.hopping_constants, 1), site)
+        p.next_jump = SpatialJump(site, rx+p.numspecies, site)
     else
         species_to_diffuse = linear_search(hop_rates_at_site(cur_rates, site), rand(rng) * total_site_hop_rate(cur_rates, site))
         nbs = neighbors(p.spatial_system, site)
@@ -219,7 +221,7 @@ end
 true if jump is a hop
 """
 function is_hop(p, jump)
-    jump.jidx <= size(p.hopping_constants,1)
+    jump.jidx <= p.numspecies
 end
 
 """
@@ -238,7 +240,7 @@ end
 return reaction id by subtracting the number of hops
 """
 function reaction_id_from_jump(p,jump)
-    jump.jidx - size(p.hopping_constants,1)
+    jump.jidx - p.numspecies
 end
 
 """

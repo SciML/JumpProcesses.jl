@@ -90,6 +90,7 @@ MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=fals
 # with parameter indices 
 function MassActionJump(rs::AbstractVector{S}, ns; param_idxs, params, kwargs...) where {S <: AbstractArray}
   param_idxs isa AbstractArray || error("When creating a MassActionJump representing multiple jumps, param_idxs must be a vector.")  
+  length(param_idxs) == length(rs) || error("For each jump within a MassActionJump there must be a corresponding index in param_idxs.")
   MassActionJump([params[pidx] for pidx in param_idxs], rs, ns, param_idxs; kwargs...)
 end
 

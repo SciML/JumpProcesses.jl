@@ -39,7 +39,7 @@ function CartesianGrid(linear_sizes::Vector)
     CartesianGrid{length(linear_sizes)}(linear_sizes)
 end
 
-function CartesianGrid(dimension, linear_size)
+function CartesianGrid(dimension, linear_size::Integer)
     CartesianGrid{dimension}([linear_size for i in 1:dimension])
 end
 

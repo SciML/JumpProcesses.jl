@@ -119,3 +119,19 @@ if doplot
     display(plothand)
     display(plothand2)
 end
+
+# check MassActionJump with parameters merge together correctly
+rs1 = [1 => 1]
+rs2 = [2=>1]
+ns1 = [1 => -1, 2 => 1]
+ns2 = [1=>1,2=>-1]
+p  = [1.0,0.0]
+maj1 = MassActionJump(rs1, ns1; param_idxs=1, params=p)
+maj2 = MassActionJump(rs2, ns2; param_idxs=2, params=p)
+js   = JumpSet(maj1,maj2)
+maj  = MassActionJump([rs1,rs2],[ns1,ns2]; param_idxs=[1,2], params=p)
+@test all(getfield(maj,fn) == getfield(js.massaction_jump,fn) for fn in fieldnames(typeof(maj)))
+maj1 = MassActionJump([rs1], [ns1]; param_idxs=[1], params=p)
+maj2 = MassActionJump([rs2], [ns2]; param_idxs=[2], params=p)
+js   = JumpSet(maj1,maj2)
+@test all(getfield(maj,fn) == getfield(js.massaction_jump,fn) for fn in fieldnames(typeof(maj)))

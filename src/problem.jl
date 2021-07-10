@@ -33,9 +33,19 @@ function DiffEqBase.remake(thing::JumpProblem; kwargs...)
 
   if :prob ∉ keys(kwargs)
     dprob = DiffEqBase.remake(thing.prob; kwargs...)
+
+    # if the parameters were changed we must remake the MassActionJump too
+    if (:p ∈ keys(kwargs)) && using_params(thing.massaction_jump)
+      update_parameters!(thing.massaction_jump, dprob.p; kwargs...)
+    end 
   else
     any(k -> k in keys(kwargs), (:u0,:p,:tspan)) && error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
     dprob = kwargs[:prob]
+
+    # we can't know if p was changed, so we must remake the MassActionJump
+    if using_params(thing.massaction_jump)
+      update_parameters!(thing.massaction_jump, dprob.p; kwargs...)
+    end 
   end
 
   T(dprob, thing.aggregator, thing.discrete_jump_aggregation, thing.jump_callback,
@@ -201,11 +211,12 @@ end
 
 
 ### Displays
+num_constant_rate_jumps(aggregator::AbstractSSAJumpAggregator) = length(aggregator.rates)
 
 Base.summary(io::IO, prob::JumpProblem) = string(DiffEqBase.parameterless_type(prob)," with problem ",DiffEqBase.parameterless_type(prob.prob)," and aggregator ",typeof(prob.aggregator))
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
   println(io,summary(A))
-  println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation === nothing ? 0 : length(A.discrete_jump_aggregation.rates))
+  println(io,"Number of constant rate jumps: ",A.discrete_jump_aggregation === nothing ? 0 : num_constant_rate_jumps(A.discrete_jump_aggregation))
   println(io,"Number of variable rate jumps: ",length(A.variable_jumps))
   if A.regular_jump !== nothing
     println(io,"Have a regular jump")

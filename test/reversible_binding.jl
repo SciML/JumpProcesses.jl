@@ -1,5 +1,5 @@
 using DiffEqJump, DiffEqBase
-using Test, HypergeometricFunctions
+using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -17,7 +17,7 @@ netstoch = [
 rates = [0.1, 1.]
 u0 = [500,500,0]
 tspan = (0.0,5.0)
-prob = DiscreteProblem([500,500,0],(0.0,2.0), rates)
+prob = DiscreteProblem(u0, tspan, rates)
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 function getmean(jprob,Nsims)
@@ -30,13 +30,18 @@ function getmean(jprob,Nsims)
     Amean
 end
 
-K = 1/.1
-function analyticmean(u, K)
+function mastereqmean(u, rates)
     α = u[1]; β = u[2]; γ = u[3]
-    @assert β ≥ α "A(0) must not exceed B(0)"
-    K * (α+γ)/(β-α+1) * pFq([-α-γ+1], [β-α+2], -K) / pFq([-α-γ], [β-α+1], -K)
+    d₊ = [rates[1]*(a+1)*(β-α+a+1) for a in 0:(α-1)]
+    d₋ = [rates[2]*(γ+α-a+1) for a in 1:α]
+    d  = [-rates[1]*a*(β-α+a) - rates[2]*(γ+α-a) for a in 0:α]
+    L  = diagm(-1=>d₋,0=>d,1=>d₊)
+    P_a = nullspace(L)
+    P_a ./= sum(P_a)
+    P_a .= abs.(P_a)
+    sum((a-1)*p for (a,p) in enumerate(P_a))
 end
-analytic_mean = analyticmean(u0, K)
+mastereq_mean = mastereqmean(u0, rates)
 
 
 algs = DiffEqJump.JUMP_AGGREGATORS
@@ -44,5 +49,5 @@ relative_tolerance = 0.01
 for alg in algs
     local jprob = JumpProblem(prob,alg,majumps,save_positions=(false,false), rng=rng)
     local Amean = getmean(jprob, Nsims)
-    @test abs(Amean - analytic_mean)/analytic_mean < relative_tolerance
+    @test abs(Amean - mastereq_mean)/mastereq_mean < relative_tolerance    
 end

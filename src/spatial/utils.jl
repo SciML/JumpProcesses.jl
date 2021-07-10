@@ -11,13 +11,8 @@ struct SpatialJump{J}
     dst::J    # destination location
 end
 
-############ abstract spatial system struct ##################
-"""
-Contains all info about the topology of the system
-"""
-abstract type AbstractSpatialSystem end
+############ spatial system interface ##################
 
-# Interface:
 # num_sites(spatial_system) = total number of sites
 # neighbors(spatial_system, site) = an iterator over the neighbors of site
 # num_neighbors(spatial_system, site) = number of neighbors of site
@@ -27,57 +22,84 @@ num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
 num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 
-################### CartesianGrid <: AbstractSpatialSystem ########################
+################### CartesianGrid ########################
 """
 Cartesian Grid of dimension D
 """
-struct CartesianGrid{D} <: AbstractSpatialSystem
+struct CartesianGrid{D}
     linear_sizes::Vector{Int} #side lengths of the grid
+    nums_neighbors::Vector{Int}
 end
 
 function CartesianGrid(linear_sizes::Vector)
-    CartesianGrid{length(linear_sizes)}(linear_sizes)
+    I = LinearIndices(Tuple(linear_sizes))
+    nums_neighbors = zeros(Int, last(I))
+    for site in I
+        nums_neighbors[site] = length(neighbors(linear_sizes, site))
+    end
+    CartesianGrid{length(linear_sizes)}(linear_sizes, nums_neighbors)
 end
 
 function CartesianGrid(dimension, linear_size::Integer)
-    CartesianGrid{dimension}([linear_size for i in 1:dimension])
+    CartesianGrid([linear_size for i in 1:dimension])
 end
 
 dimension(grid::CartesianGrid{D}) where D = D
 num_sites(grid::CartesianGrid) = prod(grid.linear_sizes)
 
-to_coordinates(grid::CartesianGrid{1}, site) = site
-to_coordinates(grid::CartesianGrid{2}, site) = (mod1(site, grid.linear_sizes[1]),fld1(site, grid.linear_sizes[1]))
-function to_coordinates(grid::CartesianGrid{3}, site)
-    temp = mod1(site,grid.linear_sizes[1]*grid.linear_sizes[2])
-    (mod1(temp, grid.linear_sizes[1]),fld1(temp, grid.linear_sizes[1]), fld1(site, grid.linear_sizes[1]*grid.linear_sizes[2]))
-end
+# to_coordinates(grid::CartesianGrid{1}, site) = site
+# to_coordinates(grid::CartesianGrid{2}, site) = (mod1(site, grid.linear_sizes[1]),fld1(site, grid.linear_sizes[1]))
+# function to_coordinates(grid::CartesianGrid{3}, site)
+#     temp = mod1(site,grid.linear_sizes[1]*grid.linear_sizes[2])
+#     (mod1(temp, grid.linear_sizes[1]),fld1(temp, grid.linear_sizes[1]), fld1(site, grid.linear_sizes[1]*grid.linear_sizes[2]))
+# end
 
-from_coordinates(grid::CartesianGrid{1}, x) = x
-from_coordinates(grid::CartesianGrid{2}, (x,y)) = (y-1) * grid.linear_sizes[1] + x
-from_coordinates(grid::CartesianGrid{3}, (x,y,z)) = (y-1) * grid.linear_sizes[1] + x + (z-1)*grid.linear_sizes[1]*grid.linear_sizes[2]
+# from_coordinates(grid::CartesianGrid{1}, x) = x
+# from_coordinates(grid::CartesianGrid{2}, (x,y)) = (y-1) * grid.linear_sizes[1] + x
+# from_coordinates(grid::CartesianGrid{3}, (x,y,z)) = (y-1) * grid.linear_sizes[1] + x + (z-1)*grid.linear_sizes[1]*grid.linear_sizes[2]
 
-issite(grid,site_id::Int) = site_id >= 1 && site_id <= num_sites(grid)
-function issite(grid,site_coordinates::Tuple)
-    length(site_coordinates) == dimension(grid) || return false
-    for (i,c) in enumerate(site_coordinates)
-        1 <= c && c <= grid.linear_sizes[i] || return false
+# issite(grid,site_id::Int) = site_id >= 1 && site_id <= num_sites(grid)
+function issite(linear_sizes,ci::CartesianIndex)
+    length(ci) == length(linear_sizes) || return false
+    for (i,c) in enumerate(Tuple(ci))
+        1 <= c && c <= linear_sizes[i] || return false
     end
     return true
 end
 
-potential_neighbors(grid::CartesianGrid{1}, x) = [x-1,x+1]
-potential_neighbors(grid::CartesianGrid{2}, (x,y)) = [(x,y-1),(x-1,y),(x+1,y),(x,y+1)]
-potential_neighbors(grid::CartesianGrid{3}, (x,y,z)) = [(x,y,z-1),(x,y-1,z),(x-1,y,z),(x+1,y,z),(x,y+1,z),(x,y,z+1)]
+# potential_neighbors(grid::CartesianGrid{1}, x) = [x-1,x+1]
+# potential_neighbors(grid::CartesianGrid{2}, (x,y)) = [(x,y-1),(x-1,y),(x+1,y),(x,y+1)]
+# potential_neighbors(grid::CartesianGrid{3}, (x,y,z)) = [(x,y,z-1),(x,y-1,z),(x-1,y,z),(x+1,y,z),(x,y+1,z),(x,y,z+1)]
 
+potential_offsets(grid::CartesianGrid{1}) = [-1,1]
+potential_offsets(grid::CartesianGrid{2}) = [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
+potential_offsets(grid::CartesianGrid{3}) = [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
+function potential_offsets(dimension::Int)
+    if dimension==1
+        return [CartesianIndex(-1),CartesianIndex(1)]
+    elseif dimension==2
+        return [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
+    elseif dimension==3
+        return [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
+    end
+    return []
+end
 """
 return neighbors of site in CartesianGrid
 """
-function neighbors(grid::CartesianGrid, site::Int)
-    [from_coordinates(grid, nb) for nb in potential_neighbors(grid,to_coordinates(grid,site)) if issite(grid, nb)]
+function neighbors(linear_sizes, site)
+    I = LinearIndices(Tuple(linear_sizes))
+    J = CartesianIndices(Tuple(linear_sizes))
+    ci_site = J[site]
+    return [I[offset + ci_site] for offset in potential_offsets(length(linear_sizes)) if issite(linear_sizes,offset + ci_site)]
 end
+neighbors(grid::CartesianGrid, site) = neighbors(grid.linear_sizes, site)
 
-num_neighbors(grid::CartesianGrid, site) = length(neighbors(grid, site))
+"""
+number of neighbors of site
+"""
+num_neighbors(grid::CartesianGrid, site) = grid.nums_neighbors[site]
+
 
 
 ################### abstract spatial rates struct ###############
@@ -151,7 +173,7 @@ end
 """
 initializes SpatialRates with zero rates
 """
-function SpatialRates(ma_jumps, num_species, spatial_system::AbstractSpatialSystem)
+function SpatialRates(ma_jumps, num_species, spatial_system)
     num_sites = num_sites(spatial_system)
     num_jumps = get_num_majumps(ma_jumps)
     SpatialRates(num_jumps,num_species,num_sites)

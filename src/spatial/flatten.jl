@@ -178,7 +178,7 @@ function get_rx_stoichiometries(node, rx, massaction_jump, num_species)
 end
 
 "get the stoichiometries for diffusion of species (non-spatial index) from source to target"
-function get_diff_stoichiometries(source, target, species, connectivity_list, num_species)
+function get_diff_stoichiometries(source, target, species, num_species)
     [Pair(to_spatial_spec(source, species, num_species), 1)],
     [Pair(to_spatial_spec(source, species, num_species),-1), Pair(to_spatial_spec(target, species, num_species),1)]
 end
@@ -223,7 +223,7 @@ function fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net
     # fill stoichiometries for diffusions
     for (i, ((source, target_index), species)) in enumerate(Iterators.product(source_target_index_pairs, 1:num_species))
         rx_rates[i+num_spacial_majumps] = diff_rates[source][target_index][species]
-        reaction_stoichiometries[i+num_spacial_majumps], net_stoichiometries[i+num_spacial_majumps] = get_diff_stoichiometries(source, connectivity_list[source][target_index], species, connectivity_list, num_species)
+        reaction_stoichiometries[i+num_spacial_majumps], net_stoichiometries[i+num_spacial_majumps] = get_diff_stoichiometries(source, connectivity_list[source][target_index], species, num_species)
     end
     nothing
 end

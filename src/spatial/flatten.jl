@@ -1,6 +1,7 @@
 using DiffEqJump, DiffEqBase, Parameters
 
-# NOTE: save_positions = (false, false) for DiscreteProblem by default
+#TODO change from connectivity_list to CartesianGrid or LightGraph.
+
 """
 Construct a jump problem, where diffusions are represented as reactions.
 Given:
@@ -96,7 +97,7 @@ diffusions of species i = diffusions from node 1, diffusions from node 2, ... <-
 """
 function get_spatial_rates_and_massaction_jumps(connectivity_list, diff_rates, massaction_jump :: MassActionJump, prob :: DiscreteProblem, alg; save_positions = (false, false), get_rate = (rx, _, _, rates) -> rates[rx], assign_products = nothing)
 
-    neighbors_react = (assign_products != nothing)
+    neighbors_react = (assign_products !== nothing)
 
     spatial_constants = Spatial_Constants(connectivity_list, diff_rates, massaction_jump :: MassActionJump, prob :: DiscreteProblem, neighbors_react)
 
@@ -126,7 +127,7 @@ function get_spatial_majumps(spatial_constants :: Spatial_Constants, get_rate = 
     # rates and stoichiometries for within-node reactions and diffusions
     fill_rates_and_stoichiometries!(rx_rates, reaction_stoichiometries, net_stoichiometries, spatial_constants)
 
-    if get_rate != nothing && assign_products != nothing
+    if get_rate !== nothing && assign_products !== nothing
         # rates and stoichiometries for across-nodes bimolecular reactions
         fill_rates_and_stoichiometries_neighbors_reacting!(rx_rates, reaction_stoichiometries, net_stoichiometries, spatial_constants, get_rate, assign_products)
     end
@@ -301,4 +302,11 @@ function Spatial_Constants(connectivity_list, diff_rates, massaction_jump :: Mas
      bimolecular_rxs_with_different_reactants, num_bimolecular_rxs_with_same_reactants, num_bimolecular_rxs_with_different_reactants, rxs_reactants,
       full_net_stoichiometries, neighboring_pairs, num_spacial_majumps, num_spatial_species, source_target_index_pairs, num_spatial_rxs, connectivity_list,
        massaction_jump, diff_rates, neighbors_react, unscaled_rates)
+end
+
+"""
+get the spatial index of the species in node
+"""
+function to_spatial_spec(node, ind, num_species)
+    return (node-1)*num_species + ind
 end

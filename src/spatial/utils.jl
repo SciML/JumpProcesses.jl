@@ -27,53 +27,32 @@ num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 Cartesian Grid of dimension D
 """
 struct CartesianGrid{D}
-    linear_sizes::Vector{Int} #side lengths of the grid
+    linear_sizes::Tuple #side lengths of the grid
     nums_neighbors::Vector{Int}
+    CI::CartesianIndices
+    LI::LinearIndices
+    offsets::Vector
 end
 
-function CartesianGrid(linear_sizes::Vector)
-    I = LinearIndices(Tuple(linear_sizes))
-    nums_neighbors = zeros(Int, last(I))
-    for site in I
-        nums_neighbors[site] = length(neighbors(linear_sizes, site))
+function CartesianGrid(linear_sizes::Tuple)
+    CI = CartesianIndices(linear_sizes)
+    LI = LinearIndices(linear_sizes)
+    offsets = potential_offsets(length(linear_sizes))
+    nums_neighbors = zeros(Int, last(LI))
+    grid = CartesianGrid{length(linear_sizes)}(linear_sizes, nums_neighbors, CI, LI, offsets)
+    for site in LI
+        nums_neighbors[site] = length(neighbors(grid, site))
     end
-    CartesianGrid{length(linear_sizes)}(linear_sizes, nums_neighbors)
+    grid
 end
 
-function CartesianGrid(dimension, linear_size::Integer)
-    CartesianGrid([linear_size for i in 1:dimension])
-end
+CartesianGrid(linear_sizes) = CartesianGrid(Tuple(linear_sizes))
+CartesianGrid(dimension, linear_size::Integer) = CartesianGrid([linear_size for i in 1:dimension])
 
 dimension(grid::CartesianGrid{D}) where D = D
 num_sites(grid::CartesianGrid) = prod(grid.linear_sizes)
+num_neighbors(grid::CartesianGrid, site) = grid.nums_neighbors[site]
 
-# to_coordinates(grid::CartesianGrid{1}, site) = site
-# to_coordinates(grid::CartesianGrid{2}, site) = (mod1(site, grid.linear_sizes[1]),fld1(site, grid.linear_sizes[1]))
-# function to_coordinates(grid::CartesianGrid{3}, site)
-#     temp = mod1(site,grid.linear_sizes[1]*grid.linear_sizes[2])
-#     (mod1(temp, grid.linear_sizes[1]),fld1(temp, grid.linear_sizes[1]), fld1(site, grid.linear_sizes[1]*grid.linear_sizes[2]))
-# end
-
-# from_coordinates(grid::CartesianGrid{1}, x) = x
-# from_coordinates(grid::CartesianGrid{2}, (x,y)) = (y-1) * grid.linear_sizes[1] + x
-# from_coordinates(grid::CartesianGrid{3}, (x,y,z)) = (y-1) * grid.linear_sizes[1] + x + (z-1)*grid.linear_sizes[1]*grid.linear_sizes[2]
-
-# issite(grid,site_id::Int) = site_id >= 1 && site_id <= num_sites(grid)
-function issite(linear_sizes,ci::CartesianIndex)
-    length(ci) == length(linear_sizes) || return false
-    for (i,c) in enumerate(Tuple(ci))
-        1 <= c && c <= linear_sizes[i] || return false
-    end
-    return true
-end
-
-# potential_neighbors(grid::CartesianGrid{1}, x) = [x-1,x+1]
-# potential_neighbors(grid::CartesianGrid{2}, (x,y)) = [(x,y-1),(x-1,y),(x+1,y),(x,y+1)]
-# potential_neighbors(grid::CartesianGrid{3}, (x,y,z)) = [(x,y,z-1),(x,y-1,z),(x-1,y,z),(x+1,y,z),(x,y+1,z),(x,y,z+1)]
-
-potential_offsets(grid::CartesianGrid{1}) = [-1,1]
-potential_offsets(grid::CartesianGrid{2}) = [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
-potential_offsets(grid::CartesianGrid{3}) = [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
 function potential_offsets(dimension::Int)
     if dimension==1
         return [CartesianIndex(-1),CartesianIndex(1)]
@@ -84,23 +63,40 @@ function potential_offsets(dimension::Int)
     end
     return []
 end
+
+# QUESTION how can this be the fastest function???
+function neighbors(linear_sizes::Tuple, site)
+    J = CartesianIndices(linear_sizes)
+    I = LinearIndices(linear_sizes)
+    I[filter(x -> (x in J), potential_offsets(length(linear_sizes)) .+ Ref(J[site]))]
+end
 """
 return neighbors of site in CartesianGrid
 """
-function neighbors(linear_sizes, site)
-    I = LinearIndices(Tuple(linear_sizes))
-    J = CartesianIndices(Tuple(linear_sizes))
-    ci_site = J[site]
-    return [I[offset + ci_site] for offset in potential_offsets(length(linear_sizes)) if issite(linear_sizes,offset + ci_site)]
+function neighbors(grid::CartesianGrid, site::Int)
+    grid.LI[neighbors(grid, grid.CI[site])]
 end
-neighbors(grid::CartesianGrid, site) = neighbors(grid.linear_sizes, site)
 
-"""
-number of neighbors of site
-"""
-num_neighbors(grid::CartesianGrid, site) = grid.nums_neighbors[site]
+function neighbors(grid::CartesianGrid, I::CartesianIndex)
+    CI = grid.CI
+    filter(x -> (x in CI), grid.offsets .+ Ref(I))
+end
 
+function nbs(dims::Tuple, site)
+    R = CartesianIndices(dims)
+    LI = LinearIndices(dims)
+    I = R[site]
+    Ifirst, Ilast = first(R), last(R)
+    I1 = oneunit(Ifirst)
+    LI[filter(J -> sum(abs.(Tuple(J-I)))==1, max(Ifirst, I-I1):min(Ilast, I+I1))]
+end
 
+function nbs(grid::CartesianGrid, I::CartesianIndex) 
+    CI = grid.CI
+    Ifirst, Ilast = first(CI), last(CI)
+    I1 = oneunit(Ifirst)
+    filter(J -> sum(abs.(Tuple(J-I)))==1, max(Ifirst, I-I1):min(Ilast, I+I1))
+end
 
 ################### abstract spatial rates struct ###############
 

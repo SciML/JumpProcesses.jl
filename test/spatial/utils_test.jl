@@ -2,9 +2,9 @@
 using DiffEqJump
 using Test
 grid = CartesianGrid([4,3,2])
-for site in 1:length(DiffEqJump.num_sites(grid))
-    @test DiffEqJump.from_coordinates(grid,DiffEqJump.to_coordinates(grid,site)) == site
-end
+# for site in 1:length(DiffEqJump.num_sites(grid))
+#     @test DiffEqJump.from_coordinates(grid,DiffEqJump.to_coordinates(grid,site)) == site
+# end
 @test DiffEqJump.neighbors(grid,1) == [2,5,13]
 @test DiffEqJump.neighbors(grid,4) == [3,8,16]
 @test DiffEqJump.neighbors(grid,17) == [5,13,18,21]
@@ -12,7 +12,6 @@ end
 @test DiffEqJump.num_neighbors(grid, 1) == 3
 
 # Tests for SpatialRates
-using Test
 num_jumps = 2
 num_species = 3
 # num_sites = 5

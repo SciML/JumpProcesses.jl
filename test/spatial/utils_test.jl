@@ -51,7 +51,7 @@ DiffEqJump.set_hop_rate_at_site!(spatial_rates, 1, 1, 30.0)
 # @test neighbors1(grid, site) == neighbors(linear_sizes, site)
 # @test neighbors(linear_sizes, site) == neighbors3(grid, site)
 
-# @btime neighbors0($grid, $site)
+# @btime NbsIter($grid, $site)
 # @btime neighbors1($grid, $site)
 # @btime neighbors($grid.linear_sizes, $I)
 # @btime neighbors2($grid, $site)

@@ -77,9 +77,10 @@ end
 NbsIter(grid::CartesianGrid, site::Int) = NbsIter(grid, grid.CI[site])
 function Base.iterate(iter::NbsIter, state = 1) #state is the index of the current neighbor in the offsets vector
     grid, site = iter.grid, iter.site
-    CI = grid.CI
-    for (i,off) in enumerate(@view grid.offsets[state:end])
-        off + site in CI && return (grid.LI[off + site], i+state)
+    CI, offsets = grid.CI, grid.offsets
+    for i in state:length(offsets)
+        off = offsets[i]
+        off + site in CI && return (grid.LI[off + site], i+1)
     end
     nothing
 end
@@ -93,6 +94,17 @@ function rand(iter::NbsIter)
         r == i && return elt
     end
 end
+
+# function rand(iter::Base.Generator)
+#     r = rand(1:length(iter))
+#     for (i,elt) in enumerate(iter)
+#         r == i && return elt
+#     end
+# end
+
+# another approach, allocates more
+nbs_iter2(grid,site) = Iterators.map(x -> grid.LI[x], Iterators.filter(x -> x in grid.CI, grid.offsets .+ Ref(grid.CI[site])))
+
 ################################
 
 function neighbors1(grid::CartesianGrid, site::Int)

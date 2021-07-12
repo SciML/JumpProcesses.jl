@@ -32,16 +32,23 @@ struct CartesianGrid{D}
     CI::CartesianIndices
     LI::LinearIndices
     offsets::Vector
+    nbs::Vector{Int}
 end
 
+const offsets_1D = [CartesianIndex(-1),CartesianIndex(1)]
+const offsets_2D = [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
+const offsets_3D = [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
+
 function CartesianGrid(linear_sizes::Tuple)
+    dim = length(linear_sizes)
     CI = CartesianIndices(linear_sizes)
     LI = LinearIndices(linear_sizes)
     offsets = potential_offsets(length(linear_sizes))
     nums_neighbors = zeros(Int, last(LI))
-    grid = CartesianGrid{length(linear_sizes)}(linear_sizes, nums_neighbors, CI, LI, offsets)
+    nbs = zeros(Int, 2*dim)
+    grid = CartesianGrid{length(linear_sizes)}(linear_sizes, nums_neighbors, CI, LI, offsets, nbs)
     for site in LI
-        nums_neighbors[site] = length(neighbors(grid, site))
+        nums_neighbors[site] = length(neighbors(linear_sizes, site))
     end
     grid
 end
@@ -49,19 +56,52 @@ end
 CartesianGrid(linear_sizes) = CartesianGrid(Tuple(linear_sizes))
 CartesianGrid(dimension, linear_size::Integer) = CartesianGrid([linear_size for i in 1:dimension])
 
-dimension(grid::CartesianGrid{D}) where D = D
 num_sites(grid::CartesianGrid) = prod(grid.linear_sizes)
 num_neighbors(grid::CartesianGrid, site) = grid.nums_neighbors[site]
 
 function potential_offsets(dimension::Int)
     if dimension==1
-        return [CartesianIndex(-1),CartesianIndex(1)]
+        return offsets_1D
     elseif dimension==2
-        return [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
-    elseif dimension==3
-        return [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
+        return offsets_2D
+    else # else dimension == 3
+        return offsets_3D
     end
-    return []
+end
+
+struct NbsIter
+    grid::CartesianGrid
+    site::CartesianIndex
+end
+NbsIter(grid::CartesianGrid, site::Int) = NbsIter(grid, grid.CI[site])
+
+function Base.iterate(iter::NbsIter, state = 1) #state is the index of the current neighbor in the offsets vector
+    grid, site = iter.grid, iter.site
+    CI = grid.CI
+    for (i,off) in enumerate(@view grid.offsets[state:end])
+        off + site in CI && return (grid.LI[off + site], i+state)
+    end
+    nothing
+end
+
+Base.eltype(::Type{NbsIter}) = Int
+Base.length(iter::NbsIter) = num_neighbors(iter.grid, grid.LI[iter.site])
+
+function neighbors0(grid::CartesianGrid, site)
+    collect(NbsIter(grid, site))
+end
+
+function neighbors1(grid::CartesianGrid, site::Int)
+    CI, LI, nbs = grid.CI, grid.LI, grid.nbs
+    I = CI[site]
+    j = 1
+    for off in grid.offsets
+        if off + I in CI
+            nbs[j] = LI[off+I]
+            j += 1
+        end
+    end
+    @view nbs[1:num_neighbors(grid,site)]
 end
 
 # QUESTION how can this be the fastest function???
@@ -70,32 +110,14 @@ function neighbors(linear_sizes::Tuple, site)
     I = LinearIndices(linear_sizes)
     I[filter(x -> (x in J), potential_offsets(length(linear_sizes)) .+ Ref(J[site]))]
 end
-"""
-return neighbors of site in CartesianGrid
-"""
-function neighbors(grid::CartesianGrid, site::Int)
-    grid.LI[neighbors(grid, grid.CI[site])]
-end
+neighbors(grid::CartesianGrid, site) = neighbors(grid.linear_sizes, site)
 
-function neighbors(grid::CartesianGrid, I::CartesianIndex)
+function neighbors3(grid::CartesianGrid, site::Int)
     CI = grid.CI
-    filter(x -> (x in CI), grid.offsets .+ Ref(I))
-end
-
-function nbs(dims::Tuple, site)
-    R = CartesianIndices(dims)
-    LI = LinearIndices(dims)
-    I = R[site]
-    Ifirst, Ilast = first(R), last(R)
-    I1 = oneunit(Ifirst)
-    LI[filter(J -> sum(abs.(Tuple(J-I)))==1, max(Ifirst, I-I1):min(Ilast, I+I1))]
-end
-
-function nbs(grid::CartesianGrid, I::CartesianIndex) 
-    CI = grid.CI
+    I = CI[site] 
     Ifirst, Ilast = first(CI), last(CI)
     I1 = oneunit(Ifirst)
-    filter(J -> sum(abs.(Tuple(J-I)))==1, max(Ifirst, I-I1):min(Ilast, I+I1))
+    grid.LI[filter(J -> sum(abs.(Tuple(J-I)))==1, max(Ifirst, I-I1):min(Ilast, I+I1))]
 end
 
 ################### abstract spatial rates struct ###############

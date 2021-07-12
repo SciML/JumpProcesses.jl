@@ -38,15 +38,20 @@ DiffEqJump.set_hop_rate_at_site!(spatial_rates, 1, 1, 30.0)
 
 
 
-# Test for neighbors and nbs
+# Tests and benchmarks for various neighbor functions
 # using BenchmarkTools
+# using Test
 # linear_sizes = (4,3,2)
+# @test neighbors(linear_sizes,1) == [2,5,13]
+# @test neighbors(linear_sizes,4) == [3,8,16]
 # grid = CartesianGrid(linear_sizes)
 # site = 3
-# I = grid.CI[site]
 
-# @btime DiffEqJump.neighbors($linear_sizes, $site)
-# @btime DiffEqJump.neighbors($grid, $site)
-# @btime DiffEqJump.neighbors($grid, $I)
-# @btime DiffEqJump.nbs($linear_sizes, $site)
-# @btime DiffEqJump.nbs($grid, $I)
+# @test neighbors0(grid,site) == neighbors1(grid,site)
+# @test neighbors1(grid, site) == neighbors(linear_sizes, site)
+# @test neighbors(linear_sizes, site) == neighbors3(grid, site)
+
+# @btime neighbors0($grid, $site)
+# @btime neighbors1($grid, $site)
+# @btime neighbors($grid.linear_sizes, $I)
+# @btime neighbors2($grid, $site)

@@ -69,12 +69,12 @@ function potential_offsets(dimension::Int)
     end
 end
 
+######## iterator ###########
 struct NbsIter
     grid::CartesianGrid
     site::CartesianIndex
 end
 NbsIter(grid::CartesianGrid, site::Int) = NbsIter(grid, grid.CI[site])
-
 function Base.iterate(iter::NbsIter, state = 1) #state is the index of the current neighbor in the offsets vector
     grid, site = iter.grid, iter.site
     CI = grid.CI
@@ -83,13 +83,17 @@ function Base.iterate(iter::NbsIter, state = 1) #state is the index of the curre
     end
     nothing
 end
-
 Base.eltype(::Type{NbsIter}) = Int
 Base.length(iter::NbsIter) = num_neighbors(iter.grid, grid.LI[iter.site])
 
-function neighbors0(grid::CartesianGrid, site)
-    collect(NbsIter(grid, site))
+import Base.rand
+function rand(iter::NbsIter)
+    r = rand(1:length(iter))
+    for (i,elt) in enumerate(iter)
+        r == i && return elt
+    end
 end
+################################
 
 function neighbors1(grid::CartesianGrid, site::Int)
     CI, LI, nbs = grid.CI, grid.LI, grid.nbs

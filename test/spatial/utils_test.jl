@@ -42,16 +42,48 @@ DiffEqJump.set_hop_rate_at_site!(spatial_rates, 1, 1, 30.0)
 # using BenchmarkTools
 # using Test
 # linear_sizes = (4,3,2)
-# @test neighbors(linear_sizes,1) == [2,5,13]
-# @test neighbors(linear_sizes,4) == [3,8,16]
 # grid = CartesianGrid(linear_sizes)
+# @test neighbors(grid,1) == [2,5,13]
+# @test neighbors(grid,4) == [3,8,16]
+
+# sites = rand(1:num_sites(grid), 100)
+# for site in sites
+#     @test collect(NbsIter(grid,site)) == neighbors1(grid,site)
+#     @test neighbors1(grid, site) == neighbors(linear_sizes, site)
+#     @test neighbors(linear_sizes, site) == neighbors3(grid, site)
+# end
+
+# function benchmark_init(func, grid, sites)
+#     res = 0.0
+#     for site in sites
+#         res += @elapsed func(grid, site)
+#     end
+#     res
+# end
+
+# function benchmark_sample(func, grid, sites)
+#     res = 0.0
+#     for site in sites
+#         res += @elapsed rand(func(grid, site))
+#     end
+#     res
+# end
+
+# sites = rand(1:num_sites(grid), 10^6)
+# benchmark_init(NbsIter, grid, sites)
+# benchmark_init(neighbors1, grid, sites)
+# benchmark_init(neighbors, grid, sites)
+# benchmark_init(neighbors3, grid, sites)
+
+# sites = rand(1:num_sites(grid), 10^5)
+# benchmark_sample(NbsIter, grid, sites)
+# benchmark_sample(neighbors1, grid, sites)
+# benchmark_sample(neighbors, grid, sites)
+# benchmark_sample(neighbors3, grid, sites)
+
+
+
 # site = 3
-
-# @test neighbors0(grid,site) == neighbors1(grid,site)
-# @test neighbors1(grid, site) == neighbors(linear_sizes, site)
-# @test neighbors(linear_sizes, site) == neighbors3(grid, site)
-
-# @btime NbsIter($grid, $site)
 # @btime neighbors1($grid, $site)
 # @btime neighbors($grid.linear_sizes, $I)
 # @btime neighbors2($grid, $site)

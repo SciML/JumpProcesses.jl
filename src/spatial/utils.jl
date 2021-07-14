@@ -23,6 +23,12 @@ num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 
 ################### CartesianGrid ########################
+
+#TODO write different CartesianGrid structs for each sampling method, write rand_nbr(grid, site) for each
+
+
+#TODO use NTuple{N,T} instead of Tuple for linear_sizes. use N instead of length(linear_sizes)
+#TODO make all types concrete
 """
 Cartesian Grid of dimension D
 """
@@ -54,7 +60,7 @@ function CartesianGrid(linear_sizes::Tuple)
 end
 
 CartesianGrid(linear_sizes) = CartesianGrid(Tuple(linear_sizes))
-CartesianGrid(dimension, linear_size::Integer) = CartesianGrid([linear_size for i in 1:dimension])
+CartesianGrid(dimension, linear_size::Int) = CartesianGrid([linear_size for i in 1:dimension])
 
 num_sites(grid::CartesianGrid) = prod(grid.linear_sizes)
 num_neighbors(grid::CartesianGrid, site) = grid.nums_neighbors[site]
@@ -69,7 +75,27 @@ function potential_offsets(dimension::Int)
     end
 end
 
+# just fill grid.nbs with potential neihbors
+function neighbors2(grid::CartesianGrid, site::Int)
+    LI, nbs = grid.LI, grid.nbs
+    I = grid.CI[site]
+    for (j,off) in enumerate(grid.offsets)
+        nbs[j] = LI[off+I]
+    end
+    nbs
+end
+
+function rejection_rand(nbs, grid)
+    CI = grid.CI
+    while true
+        nb = rand(nbs)
+        nb in CI && return nb
+    end
+end
+
 ######## iterator ###########
+
+#TODO pre-allocate a mutable NbsIter struct in CartesianGrid
 struct NbsIter
     grid::CartesianGrid
     site::CartesianIndex
@@ -103,10 +129,12 @@ end
 # end
 
 # another approach, allocates more
-nbs_iter2(grid,site) = Iterators.map(x -> grid.LI[x], Iterators.filter(x -> x in grid.CI, grid.offsets .+ Ref(grid.CI[site])))
+# TODO can pre-allocate function x -> grid.LI[x]
+nbs_iter2(grid,site) = Iterators.map(x -> grid.LI[x], Iterators.filter(x -> x+grid.CI[site] in grid.CI, grid.offsets))
 
 ################################
 
+# use the pre-allocated array nbs in grid
 function neighbors1(grid::CartesianGrid, site::Int)
     CI, LI, nbs = grid.CI, grid.LI, grid.nbs
     I = CI[site]
@@ -198,7 +226,7 @@ end
 """
 initializes SpatialRates with zero rates
 """
-function SpatialRates(numrxjumps::Integer,num_species::Integer,num_sites::Integer)
+function SpatialRates(numrxjumps::Int,num_species::Int,num_sites::Int)
     reaction_rates = zeros(Float64, numrxjumps, num_sites)
     hopping_rates = zeros(Float64, num_species, num_sites)
     SpatialRates(reaction_rates,hopping_rates)

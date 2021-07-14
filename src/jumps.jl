@@ -57,9 +57,9 @@ struct MassActionJump{T,S,U,V} <: AbstractJump
   scaled_rates::T
   reactant_stoch::S
   net_stoch::U
-  param_idxs::V
+  param_mapper::V
 
-  function MassActionJump{T,S,U,V}(rates::T, rs_in::S, ns::U, pidxs::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {T <: AbstractVector, S, U, V <: Vector{Int}}
+  function MassActionJump{T,S,U,V}(rates::T, rs_in::S, ns::U, pmapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {T <: AbstractVector, S, U, V}
     sr  = nocopy ? rates : copy(rates)
     rs = nocopy ? rs_in : copy(rs_in)
     for i in eachindex(rs)
@@ -71,40 +71,67 @@ struct MassActionJump{T,S,U,V} <: AbstractJump
     if scale_rates && !isempty(sr)
       scalerates!(sr, rs)
     end
-    new(sr, rs, ns, pidxs)
+    new(sr, rs, ns, pmapper)
   end
-  function MassActionJump{T,S,U,V}(rate::T, rs_in::S, ns::U, pidx::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {T <: Number, S, U, V <: Int}
+  function MassActionJump{T,S,U,V}(rate::T, rs_in::S, ns::U, pmapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {T <: Number, S, U, V}
     rs = rs_in
     if useiszero && (length(rs) == 1) && iszero(rs[1][1])
       rs = typeof(rs)()
     end
     sr = scale_rates ? scalerate(rate, rs) : rate
-    new(sr, rs, ns, pidx)
+    new(sr, rs, ns, pmapper)
   end
 
 end
-MassActionJump(usr::T, rs::S, ns::U, pidxs::V; scale_rates = true, useiszero = true, nocopy=false) where {T,S,U,V} = MassActionJump{T,S,U,V}(usr, rs, ns, pidxs, scale_rates, useiszero, nocopy)
-MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: AbstractVector,S,U} = MassActionJump(usr, rs, ns, Int[]; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
-MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: Number,S,U} = MassActionJump(usr, rs, ns, 0; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
+MassActionJump(usr::T, rs::S, ns::U, pmapper::V; scale_rates = true, useiszero = true, nocopy=false) where {T,S,U,V} = MassActionJump{T,S,U,V}(usr, rs, ns, pmapper, scale_rates, useiszero, nocopy)
+MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: AbstractVector,S,U} = MassActionJump(usr, rs, ns, nothing; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
+MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: Number,S,U} = MassActionJump(usr, rs, ns, nothing; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
 
-# with parameter indices 
-function MassActionJump(rs::AbstractVector{S}, ns; param_idxs, params, kwargs...) where {S <: AbstractArray}
-  param_idxs isa AbstractArray || error("When creating a MassActionJump representing multiple jumps, param_idxs must be a vector.")  
-  length(param_idxs) == length(rs) || error("For each jump within a MassActionJump there must be a corresponding index in param_idxs.")
-  MassActionJump([params[pidx] for pidx in param_idxs], rs, ns, param_idxs; kwargs...)
+# with parameter indices or mapping
+function MassActionJump(rs, ns; param_idxs=nothing, params, param_mapper=nothing, nocopy=false, kwargs...) 
+  if param_mapper === nothing 
+    (param_idxs === nothing) && error("If no parameter indices are given via param_idxs, an explicit parameter mapping must be passed in via param_mapper.")
+    pmapper = MassActionJumpParamMapper(param_idxs)
+  else
+    (param_idxs !== nothing) && error("Only one of param_idxs and param_mapper should be passed.")
+    pmapper = param_mapper
+  end
+  rates = param_mapper(params)    
+  MassActionJump(rates, nocopy ? rs : copy(rs), ns, param_mapper; nocopy=true, kwargs...)
 end
 
-function MassActionJump(rs::AbstractVector{S}, ns; param_idxs, params, kwargs...) where {S <: Pair}
-  (param_idxs isa Int) || error("When using a MassActionJump representing one jump, param_idxs must be an integer.")
-  MassActionJump(params[param_idxs], rs, ns, param_idxs; kwargs...)
-end
-
-using_params(maj::MassActionJump{U,V,W,Vector{Int}}) where {U,V,W} = !isempty(maj.param_idxs)
-using_params(maj::MassActionJump{U,V,W,Int}) where {U,V,W} = (maj.param_idxs > 0)
+using_params(maj::MassActionJump) = (maj.param_mapper !== nothing)
 using_params(maj::Nothing) = false
-
 @inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
 @inline get_num_majumps(maj::Nothing) = 0
+
+struct MassActionJumpParamMapper{U}
+  param_idxs::U
+end
+
+# create the initial parameter vector for use in a MassActionJump
+function (ratemap::MassActionJumpParamMapper{U})(params) where {U <: AbstractArray}
+  [params[pidx] for pidx in ratemap.param_idxs]
+end
+
+function (ratemap::MassActionJumpParamMapper{U})(params) where {U <: Int}
+  params[ratemap.param_idxs]
+end
+
+# update a maj with parameter vectors
+function (ratemap::MassActionJumpParamMapper{U})(maj::MassActionJump, newparams; scale_rates, kwargs...) where {U <: AbstractArray}
+  for i in 1:get_num_majumps(maj)
+    maj.scaled_rates[i] = newparams[ratemap.param_idxs[i]]    
+  end
+  scale_rates && scalerates!(maj.scaled_rates, maj.reactant_stoch)
+  nothing
+end
+
+# update a maj with scalar parameter
+function (ratemap::MassActionJumpParamMapper{U})(maj::MassActionJump, newparams; scale_rates, kwargs...) where {U <: Int}
+  maj.scaled_rates = scale_rates ? scalerate(newparams[ratemap.param_idxs], maj.reactant_stoch[i]) : newparams[ratemap.param_idxs]
+  nothing
+end
 
 """
   update_parameters!(maj::MassActionJump, newparams; scale_rates=true)
@@ -112,17 +139,13 @@ using_params(maj::Nothing) = false
 Updates the passed in MassActionJump with the parameter values in `newparams`.
 
 Notes:
-  - Requires the jump to have been constructed with a user-passed `param_idxs`.
+  - Requires the jump to have been constructed with a user-passed `param_idxs` or `param_mapper`.
   - `scale_rates=true` will scale the parameter representing the jump rate by an
     appropriate combinatoric factor. i.e for 3A --> B at rate k it will scale
     k --> k/3!.
 """
-function update_parameters!(maj::MassActionJump{T,S,U,V}, newparams; scale_rates=true, kwargs...) where {T <: AbstractVector, S, U, V}    
-  ((maj.param_idxs isa AbstractArray) && using_params(maj)) || error("The passed in MassActionJump's param_idxs field is either empty or not an AbstractArray.")
-  for i in 1:get_num_majumps(maj)
-    maj.scaled_rates[i] = newparams[maj.param_idxs[i]]
-    scale_rates && scalerate(maj.scaled_rates[i], maj.reactant_stoch[i])
-  end
+function update_parameters!(maj::MassActionJump, newparams; scale_rates=true, kwargs...) 
+  maj.param_mapper(maj, newparams; scale_rates, kwargs)
 end
 
 struct JumpSet{T1,T2,T3,T4} <: AbstractJump

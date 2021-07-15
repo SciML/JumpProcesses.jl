@@ -69,10 +69,10 @@ CartesianGrid1(dims) = CartesianGrid1(Tuple(dims))
 CartesianGrid1(dimension, linear_size::Int) = CartesianGrid1([linear_size for i in 1:dimension])
 function rand_nbr(grid::CartesianGrid1, site::Int)
     CI = grid.CI; offsets = grid.offsets
-    I = CI[site]
+    @inbounds I = CI[site]
     while true
-        nb = rand(offsets) + I
-        nb in CI && return grid.LI[nb]
+        @inbounds nb = rand(offsets) + I
+        @inbounds nb in CI && return grid.LI[nb]
     end
 end
 
@@ -97,12 +97,12 @@ CartesianGrid2(dimension, linear_size::Int) = CartesianGrid2([linear_size for i 
 function rand_nbr(grid::CartesianGrid2, site::Int)
     r = rand(1:num_neighbors(grid,site))
     CI = grid.CI; offsets = grid.offsets
-    I = CI[site]
-    for off in offsets
+    @inbounds I = CI[site]
+    @inbounds for off in offsets
         nb = I + off
         if nb in CI
             r -= 1
-            r == 0 && return grid.LI[nb]
+            @inbounds r == 0 && return grid.LI[nb]
         end
     end
 end
@@ -129,13 +129,13 @@ CartesianGrid3(dims) = CartesianGrid3(Tuple(dims))
 CartesianGrid3(dimension, linear_size::Int) = CartesianGrid3([linear_size for i in 1:dimension])
 function rand_nbr(grid::CartesianGrid3, site::Int)
     CI = grid.CI; offsets = grid.offsets; nbs = grid.nbs
-    I = CI[site]
+    @inbounds I = CI[site]
     j = 0
-    for off in offsets
+    @inbounds for off in offsets
         nb = I + off
-        nb in CI && (j += 1; nbs[j] = nb)
+        @inbounds nb in CI && (j += 1; nbs[j] = nb)
     end
-    grid.LI[nbs[rand(1:j)]]
+    @inbounds grid.LI[nbs[rand(1:j)]]
 end
 
 ################### abstract spatial rates struct ###############

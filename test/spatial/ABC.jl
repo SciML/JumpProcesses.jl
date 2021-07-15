@@ -47,7 +47,7 @@ end_time = 10.0
 diffusivity = 1.0
 
 # testing on CartesianGrid
-grid = CartesianGrid(dim, linear_size)
+grid = DiffEqJump.CartesianGrid1(dim, linear_size)
 spatial_jump_prob = ABC_setup(grid, starting_site, u0, diffusivity, end_time)
 solution = solve(spatial_jump_prob, SSAStepper())
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)

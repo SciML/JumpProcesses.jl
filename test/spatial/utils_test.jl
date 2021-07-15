@@ -1,15 +1,32 @@
 # Tests for CartesianGrid
 using DiffEqJump
 using Test
-grid = CartesianGrid([4,3,2])
-# for site in 1:length(DiffEqJump.num_sites(grid))
-#     @test DiffEqJump.from_coordinates(grid,DiffEqJump.to_coordinates(grid,site)) == site
-# end
-@test DiffEqJump.neighbors(grid,1) == [2,5,13]
-@test DiffEqJump.neighbors(grid,4) == [3,8,16]
-@test DiffEqJump.neighbors(grid,17) == [5,13,18,21]
-@test DiffEqJump.neighbors(grid,21) == [9,17,22]
-@test DiffEqJump.num_neighbors(grid, 1) == 3
+
+dims = (4,3,2)
+sites = rand(1:prod(dims), 10)
+num_samples = 10^5
+rel_tol = 0.01
+grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims)]
+for grid in grids
+    @test DiffEqJump.num_sites(grid) == prod(dims)
+    @test DiffEqJump.num_neighbors(grid, 1) == 3
+    @test DiffEqJump.num_neighbors(grid, 4) == 3
+    @test DiffEqJump.num_neighbors(grid, 17) == 4
+    @test DiffEqJump.num_neighbors(grid, 21) == 3
+    @test DiffEqJump.num_neighbors(grid, 6) == 5
+    for site in sites
+        d = Dict{Int,Int}()
+        for i in 1:num_samples
+            nb = DiffEqJump.rand_nbr(grid, site)
+            nb in keys(d) ? d[nb] += 1 : d[nb] = 1
+        end
+        for val in values(d)
+            if abs(val/num_samples - 1/DiffEqJump.num_neighbors(grid,site)) > rel_tol
+                @show typeof(grid), site, d
+            end
+        end
+    end
+end
 
 # Tests for SpatialRates
 num_jumps = 2

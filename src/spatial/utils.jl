@@ -21,50 +21,15 @@ end
 num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
 num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
+rand_nbr(graph::AbstractGraph, site) = rand(neighbors(graph, site))
 
 ################### CartesianGrid ########################
-
-#TODO write different CartesianGrid structs for each sampling method, write rand_nbr(grid, site) for each
-
-
-#TODO use NTuple{N,T} instead of Tuple for linear_sizes. use N instead of length(linear_sizes)
-#TODO make all types concrete
-"""
-Cartesian Grid of dimension D
-"""
-struct CartesianGrid{D}
-    linear_sizes::Tuple #side lengths of the grid
-    nums_neighbors::Vector{Int}
-    CI::CartesianIndices
-    LI::LinearIndices
-    offsets::Vector
-    nbs::Vector{Int}
-end
-
 const offsets_1D = [CartesianIndex(-1),CartesianIndex(1)]
 const offsets_2D = [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
 const offsets_3D = [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
-
-function CartesianGrid(linear_sizes::Tuple)
-    dim = length(linear_sizes)
-    CI = CartesianIndices(linear_sizes)
-    LI = LinearIndices(linear_sizes)
-    offsets = potential_offsets(length(linear_sizes))
-    nums_neighbors = zeros(Int, last(LI))
-    nbs = zeros(Int, 2*dim)
-    grid = CartesianGrid{length(linear_sizes)}(linear_sizes, nums_neighbors, CI, LI, offsets, nbs)
-    for site in LI
-        nums_neighbors[site] = length(neighbors(linear_sizes, site))
-    end
-    grid
-end
-
-CartesianGrid(linear_sizes) = CartesianGrid(Tuple(linear_sizes))
-CartesianGrid(dimension, linear_size::Int) = CartesianGrid([linear_size for i in 1:dimension])
-
-num_sites(grid::CartesianGrid) = prod(grid.linear_sizes)
-num_neighbors(grid::CartesianGrid, site) = grid.nums_neighbors[site]
-
+"""
+dimension is assumed to be 1, 2, or 3
+"""
 function potential_offsets(dimension::Int)
     if dimension==1
         return offsets_1D
@@ -75,93 +40,102 @@ function potential_offsets(dimension::Int)
     end
 end
 
-# just fill grid.nbs with potential neihbors
-function neighbors2(grid::CartesianGrid, site::Int)
-    LI, nbs = grid.LI, grid.nbs
-    I = grid.CI[site]
-    for (j,off) in enumerate(grid.offsets)
-        nbs[j] = LI[off+I]
-    end
-    nbs
+num_sites(grid) = prod(grid.dims)
+num_neighbors(grid, site) = grid.nums_neighbors[site]
+
+
+# possible rand_nbr functions:
+# 1. Rejection-based: pick a neighbor, check it's valid; if not, repeat
+# 2. Iterator-based: draw a random number from 1 to num_neighbors and iterate to that neighbor
+# 3. Array-based: using a pre-allocated array in grid
+
+# rejection-based
+struct CartesianGrid1{N,T}
+    dims::NTuple{N, Int} #side lengths of the grid
+    nums_neighbors::Vector{Int}
+    CI::CartesianIndices{N, T}
+    LI::LinearIndices{N, T}
+    offsets::Vector{CartesianIndex{N}}
 end
-
-function rejection_rand(nbs, grid)
-    CI = grid.CI
-    while true
-        nb = rand(nbs)
-        nb in CI && return nb
-    end
+function CartesianGrid1(dims::Tuple)
+    dim = length(dims)
+    CI = CartesianIndices(dims)
+    LI = LinearIndices(dims)
+    offsets = potential_offsets(dim)
+    nums_neighbors = [count(x -> x+CI[site] in CI, offsets) for site in 1:prod(dims)]
+    CartesianGrid1(dims, nums_neighbors, CI, LI, offsets)
 end
-
-######## iterator ###########
-
-#TODO pre-allocate a mutable NbsIter struct in CartesianGrid
-struct NbsIter
-    grid::CartesianGrid
-    site::CartesianIndex
-end
-NbsIter(grid::CartesianGrid, site::Int) = NbsIter(grid, grid.CI[site])
-function Base.iterate(iter::NbsIter, state = 1) #state is the index of the current neighbor in the offsets vector
-    grid, site = iter.grid, iter.site
-    CI, offsets = grid.CI, grid.offsets
-    for i in state:length(offsets)
-        off = offsets[i]
-        off + site in CI && return (grid.LI[off + site], i+1)
-    end
-    nothing
-end
-Base.eltype(::Type{NbsIter}) = Int
-Base.length(iter::NbsIter) = num_neighbors(iter.grid, grid.LI[iter.site])
-
-import Base.rand
-function rand(iter::NbsIter)
-    r = rand(1:length(iter))
-    for (i,elt) in enumerate(iter)
-        r == i && return elt
-    end
-end
-
-# function rand(iter::Base.Generator)
-#     r = rand(1:length(iter))
-#     for (i,elt) in enumerate(iter)
-#         r == i && return elt
-#     end
-# end
-
-# another approach, allocates more
-# TODO can pre-allocate function x -> grid.LI[x]
-nbs_iter2(grid,site) = Iterators.map(x -> grid.LI[x], Iterators.filter(x -> x+grid.CI[site] in grid.CI, grid.offsets))
-
-################################
-
-# use the pre-allocated array nbs in grid
-function neighbors1(grid::CartesianGrid, site::Int)
-    CI, LI, nbs = grid.CI, grid.LI, grid.nbs
+CartesianGrid1(dims) = CartesianGrid1(Tuple(dims))
+CartesianGrid1(dimension, linear_size::Int) = CartesianGrid1([linear_size for i in 1:dimension])
+function rand_nbr(grid::CartesianGrid1, site::Int)
+    CI = grid.CI; offsets = grid.offsets
     I = CI[site]
-    j = 1
-    for off in grid.offsets
-        if off + I in CI
-            nbs[j] = LI[off+I]
-            j += 1
+    while true
+        nb = rand(offsets) + I
+        nb in CI && return grid.LI[nb]
+    end
+end
+
+# custom iterator-based
+struct CartesianGrid2{N,T}
+    dims::NTuple{N, Int} #side lengths of the grid
+    nums_neighbors::Vector{Int}
+    CI::CartesianIndices{N, T}
+    LI::LinearIndices{N, T}
+    offsets::Vector{CartesianIndex{N}}
+end
+function CartesianGrid2(dims::Tuple)
+    dim = length(dims)
+    CI = CartesianIndices(dims)
+    LI = LinearIndices(dims)
+    offsets = potential_offsets(dim)
+    nums_neighbors = [count(x -> x+CI[site] in CI, offsets) for site in 1:prod(dims)]
+    CartesianGrid2(dims, nums_neighbors, CI, LI, offsets)
+end
+CartesianGrid2(dims) = CartesianGrid2(Tuple(dims))
+CartesianGrid2(dimension, linear_size::Int) = CartesianGrid2([linear_size for i in 1:dimension])
+function rand_nbr(grid::CartesianGrid2, site::Int)
+    r = rand(1:num_neighbors(grid,site))
+    CI = grid.CI; offsets = grid.offsets
+    I = CI[site]
+    for off in offsets
+        nb = I + off
+        if nb in CI
+            r -= 1
+            r == 0 && return grid.LI[nb]
         end
     end
-    @view nbs[1:num_neighbors(grid,site)]
 end
 
-# QUESTION how can this be the fastest function???
-function neighbors(linear_sizes::Tuple, site)
-    J = CartesianIndices(linear_sizes)
-    I = LinearIndices(linear_sizes)
-    I[filter(x -> (x in J), potential_offsets(length(linear_sizes)) .+ Ref(J[site]))]
+# array-based
+struct CartesianGrid3{N,T}
+    dims::NTuple{N, Int} #side lengths of the grid
+    nums_neighbors::Vector{Int}
+    CI::CartesianIndices{N, T}
+    LI::LinearIndices{N, T}
+    offsets::Vector{CartesianIndex{N}}
+    nbs::Vector{CartesianIndex{N}}
 end
-neighbors(grid::CartesianGrid, site) = neighbors(grid.linear_sizes, site)
-
-function neighbors3(grid::CartesianGrid, site::Int)
-    CI = grid.CI
-    I = CI[site] 
-    Ifirst, Ilast = first(CI), last(CI)
-    I1 = oneunit(Ifirst)
-    grid.LI[filter(J -> sum(abs.(Tuple(J-I)))==1, max(Ifirst, I-I1):min(Ilast, I+I1))]
+function CartesianGrid3(dims::Tuple)
+    dim = length(dims)
+    CI = CartesianIndices(dims)
+    LI = LinearIndices(dims)
+    offsets = potential_offsets(dim)
+    nums_neighbors = [count(x -> x+CI[site] in CI, offsets) for site in 1:prod(dims)]
+    nbs = zeros(CartesianIndex{3}, 2*dim)
+    CartesianGrid3(dims, nums_neighbors, CI, LI, offsets, nbs)
+end
+CartesianGrid3(dims) = CartesianGrid3(Tuple(dims))
+CartesianGrid3(dimension, linear_size::Int) = CartesianGrid3([linear_size for i in 1:dimension])
+function rand_nbr(grid::CartesianGrid3, site::Int)
+    CI = grid.CI; offsets = grid.offsets; nbs = grid.nbs
+    I = CI[site]
+    j = 0
+    for off in offsets
+        nb = I + off
+        nb in CI && (j += 1; nbs[j] = nb)
+    end
+    grid.LI[nbs[rand(1:j)]]
 end
 
 ################### abstract spatial rates struct ###############

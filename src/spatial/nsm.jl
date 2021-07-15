@@ -91,8 +91,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
         p.next_jump = SpatialJump(site, rx+p.numspecies, site)
     else
         species_to_diffuse = linear_search(hop_rates_at_site(cur_rates, site), rand(rng) * total_site_hop_rate(cur_rates, site))
-        nbs = neighbors(p.spatial_system, site)
-        target_site = nbs[rand(rng,1:num_neighbors(p.spatial_system, site))] # random neighbor
+        target_site = rand_nbr(p.spatial_system, site)
         p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
     end
 end

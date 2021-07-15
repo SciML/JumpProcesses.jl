@@ -41,33 +41,23 @@ non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
 
 dim = 1
 linear_size = 5
+dims = Tuple(5)
 starting_site = trunc(Int,(linear_size^dim + 1)/2)
 u0 = [500,500,0]
 end_time = 10.0
 diffusivity = 1.0
 
 # testing on CartesianGrid
-grid = DiffEqJump.CartesianGrid1(dim, linear_size)
-spatial_jump_prob = ABC_setup(grid, starting_site, u0, diffusivity, end_time)
-solution = solve(spatial_jump_prob, SSAStepper())
-mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-diff =  sum(mean_end_state, dims = 2) - non_spatial_mean
-# println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
-for (i,d) in enumerate(diff)
-    @test abs(d) < reltol*non_spatial_mean[i]
-end
-
-# testing on LightGraphs
-lgrid = LightGraphs.grid([linear_size])
-lspatial_jump_prob = ABC_setup(lgrid, starting_site, u0, diffusivity, end_time)
-lsolution = solve(lspatial_jump_prob, SSAStepper())
-
-lmean_end_state = get_mean_end_state(lspatial_jump_prob, Nsims)
-
-diff =  sum(lmean_end_state, dims = 2) - non_spatial_mean
-# println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
-for (i,d) in enumerate(diff)
-    @test abs(d) < reltol*non_spatial_mean[i]
+grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
+for grid in grids
+    spatial_jump_prob = ABC_setup(grid, starting_site, u0, diffusivity, end_time)
+    solution = solve(spatial_jump_prob, SSAStepper())
+    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+    diff =  sum(mean_end_state, dims = 2) - non_spatial_mean
+    # println("max relative error: $(maximum(abs.(diff./non_spatial_mean)))")
+    for (i,d) in enumerate(diff)
+        @test abs(d) < reltol*non_spatial_mean[i]
+    end
 end
 
 

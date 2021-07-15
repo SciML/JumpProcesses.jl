@@ -122,7 +122,7 @@ function CartesianGrid3(dims::Tuple)
     LI = LinearIndices(dims)
     offsets = potential_offsets(dim)
     nums_neighbors = [count(x -> x+CI[site] in CI, offsets) for site in 1:prod(dims)]
-    nbs = zeros(CartesianIndex{3}, 2*dim)
+    nbs = zeros(CartesianIndex{dim}, 2*dim)
     CartesianGrid3(dims, nums_neighbors, CI, LI, offsets, nbs)
 end
 CartesianGrid3(dims) = CartesianGrid3(Tuple(dims))

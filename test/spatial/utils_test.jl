@@ -1,12 +1,12 @@
 # Tests for CartesianGrid
-using DiffEqJump
+using DiffEqJump, LightGraphs
 using Test
 
 dims = (4,3,2)
 sites = rand(1:prod(dims), 10)
 num_samples = 10^5
 rel_tol = 0.01
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims)]
+grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
 for grid in grids
     @test DiffEqJump.num_sites(grid) == prod(dims)
     @test DiffEqJump.num_neighbors(grid, 1) == 3

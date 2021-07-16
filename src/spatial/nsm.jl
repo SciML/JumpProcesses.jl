@@ -1,9 +1,7 @@
-# Implementation of the Next Subvolume Method on a grid
+# Implementation of the Next Subvolume Method
 
 
 ############################ NSM ###################################
-# NOTE make 0 a sink state for absorbing boundary condition
-
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
 mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMAP,JVMAP,PQ,SS,I} <: AbstractSSAJumpAggregator
@@ -12,7 +10,7 @@ mutable struct NSMJumpAggregation{J,T,R<:AbstractSpatialRates,C,S,RNG,DEPGR,VJMA
     next_jump_time::T
     end_time::T
     cur_rates::R #some structure to store current rates
-    hopping_constants::C #matrix with ith column being hop constants for site i
+    hopping_constants::C #matrix with (i,j) being the hop constant of species i at site j
     ma_jumps::S #massaction jumps
     # rates::F1 #rates for constant-rate jumps
     # affects!::F2 #affects! function determines the effect of constant-rate jumps
@@ -243,9 +241,9 @@ function reaction_id_from_jump(p,jump)
 end
 
 """
-    evalhoppingrate(args)
+    evalhoppingrate(hopping_constants, u, species, site, spatial_system)
 
-documentation
+evaluate hopping rate of species at site
 """
 function evalhoppingrate(hopping_constants, u, species, site, spatial_system)
     u[species,site]*hopping_constants[species,site]*num_neighbors(spatial_system, site)

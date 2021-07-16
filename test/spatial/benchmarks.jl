@@ -26,7 +26,7 @@ function ABC_setup(spatial_system, linear_size, starting_site, u0, diffusivity, 
 end
 
 # Benchmarking sampling
-dims = (4,3,2)
+dims = (256,256,256)
 sites = 1:prod(dims)
 grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
 sample_benchmarks = Vector{BenchmarkTools.Trial}(undef, length(grids))

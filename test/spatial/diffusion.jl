@@ -21,7 +21,7 @@ function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
             laplacian[site, nb] = 1
         end
     end
-    laplacian*hopping_rate # is this part of laplacian?
+    laplacian*hopping_rate
 end
 
 # problem setup

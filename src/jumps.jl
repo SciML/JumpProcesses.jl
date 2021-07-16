@@ -134,15 +134,15 @@ function (ratemap::MassActionJumpParamMapper{U})(maj::MassActionJump, newparams;
   nothing
 end
 
-function vectorize(ratemap::MassActionJumpParamMapper{Int})
+function to_collection(ratemap::MassActionJumpParamMapper{Int})
   MassActionJumpParamMapper([ratemap.param_idxs])
 end
 
-function Base.append!(pmap1::MassActionJumpParamMapper{U}, pmap2::MassActionJumpParamMapper{U}) where {U <: AbstractArray}
+function Base.merge!(pmap1::MassActionJumpParamMapper{U}, pmap2::MassActionJumpParamMapper{U}) where {U <: AbstractVector}
   append!(pmap1.param_idxs, pmap2.param_idxs)
 end
 
-function Base.push!(pmap1::MassActionJumpParamMapper{U}, pmap2::MassActionJumpParamMapper{V}) where {U <: AbstractArray, V <: Int}
+function Base.merge!(pmap1::MassActionJumpParamMapper{U}, pmap2::MassActionJumpParamMapper{V}) where {U <: AbstractVector, V <: Int}
   push!(pmap1.param_idxs, pmap2.param_idxs)
 end
 
@@ -231,7 +231,7 @@ check_majump_type(maj::MassActionJump{S,T,U,V}) where {S <: Number,T,U,V} = setu
 
 # if just given the data for one jump (and not in a container) wrap in a vector
 function setup_majump_to_merge(sr::S, rs::T, ns::U, pmapper::V) where {S <: Number, T <: AbstractArray, U <: AbstractArray, V}  
-  MassActionJump([sr], [rs], [ns], (pmapper === nothing) ? pmapper : vectorize(pmapper); scale_rates=false)
+  MassActionJump([sr], [rs], [ns], (pmapper === nothing) ? pmapper : to_collection(pmapper); scale_rates=false)
 end
 
 # when given a collection of reactions to add to maj
@@ -242,7 +242,7 @@ function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::U, rs::V, ns::W, param_
   if maj.param_mapper === nothing
     (param_mapper === nothing) || error("Error, trying to merge a MassActionJump with a parameter mapping to one without a parameter mapping.")    
   else
-    append!(maj.param_mapper, param_mapper)
+    merge!(maj.param_mapper, param_mapper)
   end
   maj
 end
@@ -255,7 +255,7 @@ function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::T, rs::S1, ns::S2, para
   if maj.param_mapper === nothing
     (param_mapper === nothing) || error("Error, trying to merge a MassActionJump with a parameter mapping to one without a parameter mapping.")    
   else
-    push!(maj.param_mapper, param_mapper)
+    merge!(maj.param_mapper, param_mapper)
   end
     
   maj

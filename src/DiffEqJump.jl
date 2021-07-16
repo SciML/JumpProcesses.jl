@@ -9,7 +9,7 @@ using FunctionWrappers, UnPack
 using LightGraphs
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
-import Base: size, getindex, setindex!, length, similar, show
+import Base: size, getindex, setindex!, length, similar, show, append!, push!, merge
 import DataStructures: update!
 import LightGraphs: neighbors
 

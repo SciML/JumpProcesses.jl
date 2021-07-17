@@ -25,33 +25,6 @@ function ABC_setup(spatial_system, linear_size, starting_site, u0, diffusivity, 
     return JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = spatial_system, save_positions=(false,false))
 end
 
-# Benchmarking sampling
-dims = (256,256,256)
-sites = 1:prod(dims)
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
-sample_benchmarks = Vector{BenchmarkTools.Trial}(undef, length(grids))
-for (i,grid) in enumerate(grids)
-    sample_benchmarks[i] = @benchmark DiffEqJump.rand_nbr($grid, site) setup = (site = rand(sites))
-end
-
-# Benchmarking solving A+B <-> C
-lin_size = 4
-dims = Tuple((lin_size,lin_size,lin_size))
-starting_site = trunc(Int,(prod(dims) + 1)/2)
-u0 = [500,500,0]
-end_time = 10.0
-diffusivity = 1.0
-
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
-solve_ABC_benchmarks = Vector{BenchmarkTools.Trial}(undef, length(grids))
-
-for (i,grid) in enumerate(grids)
-    spatial_jump_prob = ABC_setup(grid, lin_size, starting_site, u0, diffusivity, end_time)
-    solve(spatial_jump_prob, SSAStepper())
-    solve_ABC_benchmarks[i] = @benchmark solve($spatial_jump_prob, SSAStepper())
-end
-
-
 # benchmark solving pure diffusion
 diffusivity = 0.1
 linear_size = 64
@@ -80,5 +53,31 @@ solve_diffusion_benchmarks = Vector{BenchmarkTools.Trial}(undef, length(grids))
 for (i,grid) in enumerate(grids)
     spatial_jump_prob = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=grid, save_positions=(false,false))
     b = @benchmarkable solve($spatial_jump_prob, SSAStepper())
-    solve_diffusion_benchmarks[i] = run(b, samples = 5, seconds = 300)
+    solve_diffusion_benchmarks[i] = run(b, samples = 15, seconds = 300)
+end
+
+# Benchmarking sampling
+dims = (256,256,256)
+sites = 1:prod(dims)
+grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
+sample_benchmarks = Vector{BenchmarkTools.Trial}(undef, length(grids))
+for (i,grid) in enumerate(grids)
+    sample_benchmarks[i] = @benchmark DiffEqJump.rand_nbr($grid, site) setup = (site = rand(sites))
+end
+
+# Benchmarking solving A+B <-> C
+lin_size = 4
+dims = Tuple((lin_size,lin_size,lin_size))
+starting_site = trunc(Int,(prod(dims) + 1)/2)
+u0 = [500,500,0]
+end_time = 10.0
+diffusivity = 1.0
+
+grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
+solve_ABC_benchmarks = Vector{BenchmarkTools.Trial}(undef, length(grids))
+
+for (i,grid) in enumerate(grids)
+    spatial_jump_prob = ABC_setup(grid, lin_size, starting_site, u0, diffusivity, end_time)
+    solve(spatial_jump_prob, SSAStepper())
+    solve_ABC_benchmarks[i] = @benchmark solve($spatial_jump_prob, SSAStepper())
 end

@@ -31,11 +31,15 @@ end
 # Tests for SpatialRates
 num_jumps = 2
 num_species = 3
-# num_sites = 5
-spatial_rates = DiffEqJump.SpatialRates(num_jumps, num_species, 5)
+num_nodes = 5
+hopping_constants = ones(num_species, num_nodes)
+ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 
-DiffEqJump.set_rx_rate_at_site!(spatial_rates, 1, 1, 10.0)
-DiffEqJump.set_rx_rate_at_site!(spatial_rates, 1, 1, 20.0)
-DiffEqJump.set_hop_rate_at_site!(spatial_rates, 1, 1, 30.0)
-@test DiffEqJump.total_site_rx_rate(spatial_rates, 1) == 20.0
-@test DiffEqJump.total_site_hop_rate(spatial_rates, 1) == 30.0
+rx_rates = DiffEqJump.RxRates(num_nodes, ma_jumps)
+hop_rates = DiffEqJump.HopRates(hopping_constants)
+
+DiffEqJump.set_rx_rate_at_site!(rx_rates, 1, 1, 10.0)
+DiffEqJump.set_rx_rate_at_site!(rx_rates, 1, 1, 20.0)
+DiffEqJump.set_hop_rate_at_site!(hop_rates, 1, 1, 30.0)
+@test DiffEqJump.total_site_rx_rate(rx_rates, 1) == 20.0
+@test DiffEqJump.total_site_hop_rate(hop_rates, 1) == 30.0

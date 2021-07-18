@@ -106,20 +106,19 @@ end
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
-    @unpack spatial_system, rx_rates, hop_rates = aggregation
+    @unpack spatial_system, rx_rates, hop_rates, rng, numspecies = aggregation
 
     reset!(rx_rates)
     reset!(hop_rates)
 
-    num_majumps = get_num_majumps(rx_rates.ma_jumps)
-    num_species = size(u,1) #NOTE assumes u is a matrix with ith column being the ith site
-    num_sites = DiffEqJump.num_sites(spatial_system)
+    num_rxs = num_rxs(rx_rates)
+    num_sites = num_sites(spatial_system)
 
     pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites
-        update_reaction_rates!(rx_rates, 1:num_majumps, u, site)
-        update_hop_rates!(hop_rates, 1:num_species, u, site, spatial_system)
-        pqdata[site] = t + randexp(aggregation.rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
+        update_reaction_rates!(rx_rates, 1:num_rxs, u, site)
+        update_hop_rates!(hop_rates, numspecies, u, site, spatial_system)
+        pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
     end
 
     aggregation.pq = MutableBinaryMinHeap(pqdata)

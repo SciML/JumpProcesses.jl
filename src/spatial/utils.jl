@@ -145,6 +145,7 @@ struct RxRates{F,M}
     ma_jumps::M # MassActionJump
 end
 
+# functions to implement:
 """
 initializes RxRates with zero rates
 """
@@ -153,6 +154,8 @@ function RxRates(num_sites::Int, ma_jumps::M) where {M}
     rates = zeros(Float64, numrxjumps, num_sites)
     RxRates{Float64,M}(rates, [sum(@view rates[:,i]) for i in 1:num_sites], ma_jumps)
 end
+
+num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
 
 """
 make all rates zero
@@ -171,23 +174,6 @@ function total_site_rx_rate(rx_rates::RxRates, site)
 end
 
 """
-returns reaction rates of a site
-"""
-function rx_rates_at_site(rx_rates::RxRates, site)
-    @view rx_rates.rates[:,site]
-end
-
-"""
-set the rate of reaction at site. Return the old rate
-"""
-function set_rx_rate_at_site!(rx_rates, site, rx, rate)
-    old_rate = rx_rates.rates[rx, site]
-    rx_rates.rates[rx, site] = rate
-    rx_rates.sum_rates[site] += rate - old_rate
-    old_rate
-end
-
-"""
 update rates of all reactions in rxs at site
 """
 function update_reaction_rates!(rx_rates, rxs, u, site)
@@ -200,8 +186,20 @@ end
 """
 sample a reaction at site, return reaction index
 """
-function sample_rx_at_site(rx_rates, site, rng)
+function sample_rx_at_site(rx_rates::RxRates, site, rng)
     linear_search(rx_rates_at_site(rx_rates, site), rand(rng) * total_site_rx_rate(rx_rates, site))
+end
+
+# helper functions
+function rx_rates_at_site(rx_rates::RxRates, site)
+    @view rx_rates.rates[:,site]
+end
+
+function set_rx_rate_at_site!(rx_rates::RxRates, site, rx, rate)
+    old_rate = rx_rates.rates[rx, site]
+    rx_rates.rates[rx, site] = rate
+    rx_rates.sum_rates[site] += rate - old_rate
+    old_rate
 end
 
 ### spatial hop rates ###
@@ -212,14 +210,7 @@ struct HopRates{R, F, C} # e.g. HopRates{Matrix{F}, F, Matrix{F}} where F <: Num
 end
 
 """
-return total hopping rate out of site
-"""
-function total_site_hop_rate(hop_rates::HopRates, site)
-    hop_rates.sum_rates[site]
-end
-
-"""
-update rates of single species at site
+update rates of all specs in species at site
 """
 function update_hop_rates!(hop_rates, species::AbstractArray, u, site, spatial_system)
     for spec in species
@@ -227,23 +218,18 @@ function update_hop_rates!(hop_rates, species::AbstractArray, u, site, spatial_s
     end
 end
 
-# functions below will work only for HopRates{Matrix{F}, F, Matrix{F}} where F <: Number
+"""
+return total hopping rate out of site
+"""
+total_site_hop_rate(hop_rates::HopRates, site) = hop_rates.sum_rates[site]
+
+############## hopping rates of form L_{s,i} ################
 """
 initializes HopRates with zero rates
 """
 function HopRates(hopping_constants::Matrix{F}) where F <: Number
     rates = zeros(eltype(hopping_constants), size(hopping_constants))
-    num_sites = size(hopping_constants, 2)
-    HopRates{typeof(rates), F, typeof(hopping_constants)}(rates, [sum(@view rates[:,i]) for i in 1:num_sites], hopping_constants)
-end
-
-"""
-    evalhoprate(hopping_constants, u, species, site, spatial_system)
-
-evaluate hopping rate of species at site
-"""
-function evalhoprate(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, u, species, site, num_nbs::Int) where F <: Number
-    u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
+    HopRates{typeof(rates), F, typeof(hopping_constants)}(rates, sum(rates, dims=1), hopping_constants)
 end
 
 """
@@ -253,23 +239,6 @@ function reset!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}) where F <: Number
     fill!(hop_rates.rates, zero(eltype(hop_rates.rates)))
     fill!(hop_rates.sum_rates, zero(eltype(hop_rates.rates)))
     nothing
-end
-
-"""
-returns hopping rates of a site
-"""
-function hop_rates_at_site(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site) where F <: Number
-    @view hop_rates.rates[:,site]
-end
-
-"""
-sets the rate of hopping at site. Return the old rate
-"""
-function set_hop_rate_at_site!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site, species, rate) where F <: Number
-    old_rate = hop_rates.rates[species, site]
-    hop_rates.rates[species, site] = rate
-    hop_rates.sum_rates[site] += rate - old_rate
-    old_rate
 end
 
 """
@@ -287,3 +256,60 @@ update rates of single species at site
 function update_hop_rate!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, species::Int, u, site, spatial_system) where F <: Number
     set_hop_rate_at_site!(hop_rates, site, species, evalhoprate(hop_rates, u, species, site, num_neighbors(spatial_system, site)))
 end
+
+# helper functions
+"""
+returns hopping rates of a site
+"""
+function hop_rates_at_site(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site) where F <: Number
+    @view hop_rates.rates[:,site]
+end
+
+"""
+sets the rate of hopping at site. Return the old rate
+"""
+function set_hop_rate_at_site!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site, species, rate) where F <: Number
+    old_rate = hop_rates.rates[species, site]
+    hop_rates.rates[species, site] = rate
+    hop_rates.sum_rates[site] += rate - old_rate
+    old_rate
+end
+
+function evalhoprate(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, u, species, site, num_nbs::Int) where F <: Number
+    u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
+end
+
+############## hopping rates of form L_{s,i,j} ################
+# """
+# initializes HopRates with zero rates
+# """
+# function HopRates(hopping_constants::Matrix{Vector{F}}) where F <: Number
+#     rates = copy(hopping_constants)
+#     # TODO
+#     hop_rates = HopRates{typeof(rates), F, typeof(hopping_constants)}(rates, sum(sum.(x),dims=1), hopping_constants)
+#     reset!(hop_rates)
+# end
+
+# """
+# make all rates zero
+# """
+# function reset!(hop_rates)
+#     # TODO
+#     nothing
+# end
+
+# """
+# sample a reaction at site, return (species, target_site)
+# """
+# function sample_hop_at_site(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site, rng, spatial_system) where F <: Number
+#     species = linear_search(hop_rates_at_site(hop_rates, site), rand(rng) * total_site_hop_rate(hop_rates, site))
+#     target_site = rand_nbr(spatial_system, site)
+#     return species, target_site
+# end
+
+# """
+# update rates of single species at site
+# """
+# function update_hop_rate!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, species::Int, u, site, spatial_system) where F <: Number
+#     set_hop_rate_at_site!(hop_rates, site, species, evalhoprate(hop_rates, u, species, site, num_neighbors(spatial_system, site)))
+# end

@@ -33,6 +33,9 @@ num_jumps = 2
 num_species = 3
 num_nodes = 5
 hopping_constants = ones(num_species, num_nodes)
+reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
+netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
+rates = [0.1, 1.]
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 
 rx_rates = DiffEqJump.RxRates(num_nodes, ma_jumps)
@@ -40,6 +43,7 @@ hop_rates = DiffEqJump.HopRates(hopping_constants)
 
 DiffEqJump.set_rx_rate_at_site!(rx_rates, 1, 1, 10.0)
 DiffEqJump.set_rx_rate_at_site!(rx_rates, 1, 1, 20.0)
+DiffEqJump.set_hop_rate_at_site!(hop_rates, 1, 1, 20.0)
 DiffEqJump.set_hop_rate_at_site!(hop_rates, 1, 1, 30.0)
 @test DiffEqJump.total_site_rx_rate(rx_rates, 1) == 20.0
 @test DiffEqJump.total_site_hop_rate(hop_rates, 1) == 30.0

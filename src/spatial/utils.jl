@@ -2,6 +2,7 @@
 A file with types, structs and functions for spatial simulations
 """
 
+using LightGraphs
 """
 stores info for a spatial jump
 """
@@ -22,6 +23,7 @@ num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
 num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 rand_nbr(graph::AbstractGraph, site) = rand(neighbors(graph, site))
+nth_nbr(graph::AbstractGraph, site, n) = neighbors(graph, site)[n]
 
 ################### CartesianGrid ########################
 const offsets_1D = [CartesianIndex(-1),CartesianIndex(1)]
@@ -42,7 +44,17 @@ end
 
 num_sites(grid) = prod(grid.dims)
 num_neighbors(grid, site) = grid.nums_neighbors[site]
-
+function nth_nbr(grid, site, n)
+    CI = grid.CI; offsets = grid.offsets
+    @inbounds I = CI[site]
+    @inbounds for off in offsets
+        nb = I + off
+        if nb in CI
+            n -= 1
+            @inbounds n == 0 && return grid.LI[nb]
+        end
+    end
+end
 
 # possible rand_nbr functions:
 # 1. Rejection-based: pick a neighbor, check it's valid; if not, repeat
@@ -95,16 +107,7 @@ end
 CartesianGrid2(dims) = CartesianGrid2(Tuple(dims))
 CartesianGrid2(dimension, linear_size::Int) = CartesianGrid2([linear_size for i in 1:dimension])
 function rand_nbr(grid::CartesianGrid2, site::Int)
-    r = rand(1:num_neighbors(grid,site))
-    CI = grid.CI; offsets = grid.offsets
-    @inbounds I = CI[site]
-    @inbounds for off in offsets
-        nb = I + off
-        if nb in CI
-            r -= 1
-            @inbounds r == 0 && return grid.LI[nb]
-        end
-    end
+    nth_nbr(grid, site, rand(1:num_neighbors(grid,site)))
 end
 
 # array-based
@@ -129,8 +132,8 @@ CartesianGrid3(dims) = CartesianGrid3(Tuple(dims))
 CartesianGrid3(dimension, linear_size::Int) = CartesianGrid3([linear_size for i in 1:dimension])
 function rand_nbr(grid::CartesianGrid3, site::Int)
     CI = grid.CI; offsets = grid.offsets; nbs = grid.nbs
-    @inbounds I = CI[site]
     j = 0
+    @inbounds I = CI[site]
     @inbounds for off in offsets
         nb = I + off
         @inbounds nb in CI && (j += 1; nbs[j] = nb)
@@ -176,7 +179,7 @@ end
 """
 update rates of all reactions in rxs at site
 """
-function update_reaction_rates!(rx_rates, rxs, u, site)
+function update_rx_rates!(rx_rates, rxs, u, site)
     ma_jumps = rx_rates.ma_jumps
     for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps))
@@ -203,16 +206,12 @@ function set_rx_rate_at_site!(rx_rates::RxRates, site, rx, rate)
 end
 
 ### spatial hop rates ###
-struct HopRates{R, F, C} # e.g. HopRates{Matrix{F}, F, Matrix{F}} where F <: Number
-    rates::R # rates[i,j] is rate of reaction i at site j
-    sum_rates::Vector{F} # sum_rates[j] is the sum of reaction rates at site j
-    hopping_constants::C # hopping_constants[i,j] is the hop constant of species i at site j
-end
-
+abstract type AbstractHopRates end
+# TODO implement CartesianGrid and HopRates with rejection sampling: do not store num_nbs in CartesianGrid, use 2*dimension for num_nbs, if sampled non-site as a neighbor, do not execute
 """
 update rates of all specs in species at site
 """
-function update_hop_rates!(hop_rates, species::AbstractArray, u, site, spatial_system)
+function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site, spatial_system)
     for spec in species
         update_hop_rate!(hop_rates, spec, u, site, spatial_system)
     end
@@ -221,21 +220,31 @@ end
 """
 return total hopping rate out of site
 """
-total_site_hop_rate(hop_rates::HopRates, site) = hop_rates.sum_rates[site]
+total_site_hop_rate(hop_rates::AbstractHopRates, site) = hop_rates.sum_rates[site]
 
 ############## hopping rates of form L_{s,i} ################
+
+HopRates(hopping_constants::Matrix{F}) where F <: Number = HopRates1(hopping_constants)
+HopRates(hopping_constants::Vector{Matrix{F}}) where F <: Number = HopRates2(hopping_constants)
+
+struct HopRates1{F} <: AbstractHopRates
+    hopping_constants::Matrix{F} # hopping_constants[i,j] is the hop constant of species i at site j
+    rates::Matrix{F} # rates[i,j] is rate of reaction i at site j
+    sum_rates::Vector{F} # sum_rates[j] is the sum of reaction rates at site j
+end
+
 """
-initializes HopRates with zero rates
+initializes HopRates1 with zero rates
 """
-function HopRates(hopping_constants::Matrix{F}) where F <: Number
+function HopRates1(hopping_constants::Matrix{F}) where F <: Number
     rates = zeros(eltype(hopping_constants), size(hopping_constants))
-    HopRates{typeof(rates), F, typeof(hopping_constants)}(rates, sum(rates, dims=1), hopping_constants)
+    HopRates1{F}(hopping_constants, rates, vec(sum(rates, dims=1)))
 end
 
 """
 make all rates zero
 """
-function reset!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}) where F <: Number
+function reset!(hop_rates::HopRates1)
     fill!(hop_rates.rates, zero(eltype(hop_rates.rates)))
     fill!(hop_rates.sum_rates, zero(eltype(hop_rates.rates)))
     nothing
@@ -244,7 +253,7 @@ end
 """
 sample a reaction at site, return (species, target_site)
 """
-function sample_hop_at_site(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site, rng, spatial_system) where F <: Number
+function sample_hop_at_site(hop_rates::HopRates1, site, rng, spatial_system) 
     species = linear_search(hop_rates_at_site(hop_rates, site), rand(rng) * total_site_hop_rate(hop_rates, site))
     target_site = rand_nbr(spatial_system, site)
     return species, target_site
@@ -253,7 +262,7 @@ end
 """
 update rates of single species at site
 """
-function update_hop_rate!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, species::Int, u, site, spatial_system) where F <: Number
+function update_hop_rate!(hop_rates::HopRates1, species::Int, u, site, spatial_system) 
     set_hop_rate_at_site!(hop_rates, site, species, evalhoprate(hop_rates, u, species, site, num_neighbors(spatial_system, site)))
 end
 
@@ -261,55 +270,66 @@ end
 """
 returns hopping rates of a site
 """
-function hop_rates_at_site(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site) where F <: Number
+function hop_rates_at_site(hop_rates::HopRates1, site) 
     @view hop_rates.rates[:,site]
 end
 
 """
 sets the rate of hopping at site. Return the old rate
 """
-function set_hop_rate_at_site!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site, species, rate) where F <: Number
+function set_hop_rate_at_site!(hop_rates::HopRates1, site, species, rate) 
     old_rate = hop_rates.rates[species, site]
     hop_rates.rates[species, site] = rate
     hop_rates.sum_rates[site] += rate - old_rate
     old_rate
 end
 
-function evalhoprate(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, u, species, site, num_nbs::Int) where F <: Number
+function evalhoprate(hop_rates::HopRates1, u, species, site, num_nbs::Int) 
     u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
 end
 
 ############## hopping rates of form L_{s,i,j} ################
-# """
-# initializes HopRates with zero rates
-# """
-# function HopRates(hopping_constants::Matrix{Vector{F}}) where F <: Number
-#     rates = copy(hopping_constants)
-#     # TODO
-#     hop_rates = HopRates{typeof(rates), F, typeof(hopping_constants)}(rates, sum(sum.(x),dims=1), hopping_constants)
-#     reset!(hop_rates)
-# end
+struct HopRates2{F} <: AbstractHopRates
+    hopping_constants::Vector{Matrix{F}} # hopping_constants[i][s,j] is the hopping constant at site i of species s to jth neighbor
+    rates::Vector{Matrix{F}} # rates[i][s,j] is the hopping rate at site i of species s to jth neighbor
+    sum_rates::Vector{F} # sum_rates[i] is the total hopping rate out of site i
+end
 
-# """
-# make all rates zero
-# """
-# function reset!(hop_rates)
-#     # TODO
-#     nothing
-# end
+"""
+initializes HopRates with zero rates
+"""
+function HopRates2(hopping_constants::Vector{Matrix{F}}) where F <: Number
+    rates = deepcopy(hopping_constants)
+    map(r -> fill!(r, zero(F)), rates)
+    sum_rates = zeros(F, length(rates))
+    HopRates2{F}(hopping_constants, rates, sum_rates)
+end
 
-# """
-# sample a reaction at site, return (species, target_site)
-# """
-# function sample_hop_at_site(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, site, rng, spatial_system) where F <: Number
-#     species = linear_search(hop_rates_at_site(hop_rates, site), rand(rng) * total_site_hop_rate(hop_rates, site))
-#     target_site = rand_nbr(spatial_system, site)
-#     return species, target_site
-# end
+"""
+make all rates zero
+"""
+function reset!(hop_rates::HopRates2{F}) where F <: Number
+    map(r -> fill!(r, zero(F)), hop_rates.rates)
+    fill!(hop_rates.sum_rates, zero(F))
+    nothing
+end
 
-# """
-# update rates of single species at site
-# """
-# function update_hop_rate!(hop_rates::HopRates{Matrix{F}, F, Matrix{F}}, species::Int, u, site, spatial_system) where F <: Number
-#     set_hop_rate_at_site!(hop_rates, site, species, evalhoprate(hop_rates, u, species, site, num_neighbors(spatial_system, site)))
-# end
+"""
+sample a reaction at site, return (species, target_site)
+"""
+function sample_hop_at_site(hop_rates::HopRates2, site, rng, spatial_system) 
+    rates_at_site = hop_rates.rates[site]
+    r = rand(rng) * total_site_hop_rate(hop_rates, site)
+    species, n = Tuple(CartesianIndices(rates_at_site)[linear_search(rates_at_site, r)])
+    return species, nth_nbr(spatial_system, site, n)
+end
+
+"""
+update rates of single species at site
+"""
+function update_hop_rate!(hop_rates::HopRates2, species::Int, u, site, spatial_system)
+    rates_at_site = hop_rates.rates[site]
+    old_rate = sum(@view rates_at_site[species,:])
+    rates_at_site[species,:] = (@view hop_rates.hopping_constants[site][species,:]) * u[species,site]
+    hop_rates.sum_rates[site] += sum(@view rates_at_site[species,:]) - old_rate
+end

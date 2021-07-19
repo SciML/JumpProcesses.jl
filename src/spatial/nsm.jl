@@ -111,13 +111,13 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
     reset!(rx_rates)
     reset!(hop_rates)
 
-    num_rxs = num_rxs(rx_rates)
-    num_sites = num_sites(spatial_system)
+    num_rxs = DiffEqJump.num_rxs(rx_rates)
+    num_sites = DiffEqJump.num_sites(spatial_system)
 
     pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites
-        update_reaction_rates!(rx_rates, 1:num_rxs, u, site)
-        update_hop_rates!(hop_rates, numspecies, u, site, spatial_system)
+        update_rx_rates!(rx_rates, 1:num_rxs, u, site)
+        update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
         pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
     end
 
@@ -157,15 +157,15 @@ end
 
 ######################## helper routines for all spatial SSAs ########################
 function update_rates_after_reaction!(p, u, site, reaction_id)
-    update_reaction_rates!(p.rx_rates, p.dep_gr[reaction_id], u, site)
+    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], u, site)
     update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
 end
 
 function update_rates_after_hop!(p, u, source_site, target_site, species)
-    update_reaction_rates!(p.rx_rates, p.vartojumps_map[species], u, source_site)
+    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, source_site)
     update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
     
-    update_reaction_rates!(p.rx_rates, p.vartojumps_map[species], u, target_site)
+    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, target_site)
     update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
 end
 

@@ -1,6 +1,6 @@
 # Tests for CartesianGrid
 using DiffEqJump, LightGraphs
-using Test
+using Test, Random
 
 dims = (4,3,2)
 sites = rand(1:prod(dims), 10)
@@ -21,29 +21,80 @@ for grid in grids
             nb in keys(d) ? d[nb] += 1 : d[nb] = 1
         end
         for val in values(d)
-            if abs(val/num_samples - 1/DiffEqJump.num_neighbors(grid,site)) > rel_tol
-                @show typeof(grid), site, d
-            end
+            @test abs(val/num_samples - 1/DiffEqJump.num_neighbors(grid,site)) < rel_tol
         end
     end
 end
 
-# Tests for SpatialRates
-num_jumps = 2
+# setup
+rel_tol = 0.05
+num_samples = 10^4
+dims = (3,3)
+g = grid(dims)
+num_nodes = DiffEqJump.num_sites(g)
 num_species = 3
-num_nodes = 5
-hopping_constants = ones(num_species, num_nodes)
 reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
 netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
 rates = [0.1, 1.]
+num_rxs = length(rates)
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
+u = ones(Int, num_species, num_nodes)
+rng = MersenneTwister()
 
+# Tests for RxRates
 rx_rates = DiffEqJump.RxRates(num_nodes, ma_jumps)
-hop_rates = DiffEqJump.HopRates(hopping_constants)
+for site in 1:num_nodes
+    DiffEqJump.update_rx_rates!(rx_rates, 1:num_rxs, u, site)
+    rx_props = [DiffEqJump.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
+    rx_probs = rx_props/sum(rx_props)
+    d = Dict{Int,Int}()
+    for i in 1:num_samples
+        rx = DiffEqJump.sample_rx_at_site(rx_rates, site, rng)
+        rx in keys(d) ? d[rx] += 1 : d[rx] = 1
+    end
+    for (k,v) in d
+        @test abs(v/num_samples - rx_probs[k]) < rel_tol
+    end
+end
 
-DiffEqJump.set_rx_rate_at_site!(rx_rates, 1, 1, 10.0)
-DiffEqJump.set_rx_rate_at_site!(rx_rates, 1, 1, 20.0)
-DiffEqJump.set_hop_rate_at_site!(hop_rates, 1, 1, 20.0)
-DiffEqJump.set_hop_rate_at_site!(hop_rates, 1, 1, 30.0)
-@test DiffEqJump.total_site_rx_rate(rx_rates, 1) == 20.0
-@test DiffEqJump.total_site_hop_rate(hop_rates, 1) == 30.0
+# Tests for HopRates1
+hopping_constants = ones(num_species, num_nodes)
+hop_rates = DiffEqJump.HopRates1(hopping_constants)
+spec_probs = ones(num_species)/num_species
+
+for site in 1:num_nodes
+    DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
+    num_nbs = DiffEqJump.num_neighbors(g, site)
+    target_probs = ones(num_nbs)/num_nbs
+    d1 = Dict{Int,Int}()
+    d2 = Dict{Int,Int}()
+    for i in 1:num_samples
+        spec, target = DiffEqJump.sample_hop_at_site(hop_rates, site, rng, g)
+        d1[spec] = get(d1, spec, 0) + 1
+        d2[target] = get(d2, target, 0) + 1
+    end
+    @test maximum(abs.(collect(values(d1))/num_samples - spec_probs)) < rel_tol
+    @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
+end
+
+# Tests for HopRates2
+hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    hopping_constants[site] = ones(num_species, num_neighbors(g, site))
+end
+spec_probs = ones(num_species)/num_species
+hop_rates = DiffEqJump.HopRates2(hopping_constants)
+for site in 1:num_nodes
+    DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
+    num_nbs = DiffEqJump.num_neighbors(g, site)
+    target_probs = ones(num_nbs)/num_nbs
+    d1 = Dict{Int,Int}()
+    d2 = Dict{Int,Int}()
+    for i in 1:num_samples
+        spec, target = DiffEqJump.sample_hop_at_site(hop_rates, site, rng, g)
+        d1[spec] = get(d1, spec, 0) + 1
+        d2[target] = get(d2, target, 0) + 1
+    end
+    @test maximum(abs.(collect(values(d1))/num_samples - spec_probs)) < rel_tol
+    @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
+end

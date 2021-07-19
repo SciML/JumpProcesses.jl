@@ -212,11 +212,10 @@ Notes:
 """
 @inline function linear_search(iterator, r)
     jidx = 0
-    parsum = r
     idx = 1
     for element in iterator
-        parsum -= element
-        if parsum < zero(parsum)
+        r -= element
+        if r < zero(r)
             jidx = idx
             break
         end

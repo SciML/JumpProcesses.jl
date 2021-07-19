@@ -72,3 +72,18 @@ for grid in grids
         @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
     end
 end
+
+# test hop rates of form L_{s,i,j}
+g = grids[1]
+num_species = length(u0)
+hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(g, site))
+end
+spatial_jump_prob = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=g, save_positions=(false,false))
+solution = solve(spatial_jump_prob, SSAStepper(), saveat = tf/num_time_points).u
+mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
+for (i,t) in enumerate(times)
+    local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
+    @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
+end

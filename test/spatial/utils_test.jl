@@ -80,7 +80,7 @@ end
 # Tests for HopRates2
 hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    hopping_constants[site] = ones(num_species, num_neighbors(g, site))
+    hopping_constants[site] = ones(num_species, DiffEqJump.num_neighbors(g, site))
 end
 spec_probs = ones(num_species)/num_species
 hop_rates = DiffEqJump.HopRates2(hopping_constants)

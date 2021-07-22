@@ -318,7 +318,7 @@ end
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRates2, site, rng, spatial_system) 
-    rates_at_site = hop_rates.rates[site]
+    rates_at_site = hop_rates.rates[site] # Question: Does this allocate?
     r = rand(rng) * total_site_hop_rate(hop_rates, site)
     species, n = Tuple(CartesianIndices(rates_at_site)[linear_search(rates_at_site, r)])
     return species, nth_nbr(spatial_system, site, n)

@@ -31,6 +31,7 @@ rates = []
 majumps = MassActionJump(rates, reactstoch, netstoch)
 tf = 0.5
 u0 = [100]
+num_species = 1
 
 domain_size = 1.0 #μ-meter
 linear_size = 5
@@ -43,7 +44,8 @@ num_nodes = prod(dims)
 starting_state = zeros(Int, length(u0), num_nodes)
 center_node = trunc(Int,(num_nodes+1)/2)
 starting_state[:,center_node] = copy(u0)
-prob = DiscreteProblem(starting_state,(0.0,tf), rates)
+tspan = (0.0, tf)
+prob = DiscreteProblem(starting_state,tspan, rates)
 
 hopping_rate = diffusivity * (linear_size/domain_size)^2
 hopping_constants = [hopping_rate for i in starting_state]
@@ -61,9 +63,17 @@ rel_tol = 0.01
 times = 0.0:tf/num_time_points:tf
 
 grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
-for grid in grids
-    spatial_jump_prob = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=grid, save_positions=(false,false))
-
+jump_problems = JumpProblem[JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+# setup flattenned jump prob
+graph = LightGraphs.grid(dims)
+hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
+end
+push!(jump_problems, DiffEqJump.flatten(netstoch, reactstoch, rates, graph, starting_state, tspan, NRM(), hopping_constants, save_positions=(false,false)))
+# testing hop rates of form L_{s,i,j}
+push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=graph, save_positions=(false,false)))
+for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper(), saveat = tf/num_time_points).u
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
 
@@ -71,19 +81,4 @@ for grid in grids
         local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
         @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
     end
-end
-
-# test hop rates of form L_{s,i,j}
-g = grids[1]
-num_species = length(u0)
-hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
-for site in 1:num_nodes
-    hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(g, site))
-end
-spatial_jump_prob = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=g, save_positions=(false,false))
-solution = solve(spatial_jump_prob, SSAStepper(), saveat = tf/num_time_points).u
-mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
-for (i,t) in enumerate(times)
-    local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
-    @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
 end

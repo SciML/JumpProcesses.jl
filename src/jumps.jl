@@ -128,13 +128,7 @@ function (ratemap::MassActionJumpParamMapper{U})(maj::MassActionJump, newparams;
   nothing
 end
 
-# update a maj with scalar parameter
-function (ratemap::MassActionJumpParamMapper{U})(maj::MassActionJump, newparams; scale_rates, kwargs...) where {U <: Int}
-  maj.scaled_rates = scale_rates ? scalerate(newparams[ratemap.param_idxs], maj.reactant_stoch) : newparams[ratemap.param_idxs]
-  nothing
-end
-
-function to_collection(ratemap::MassActionJumpParamMapper{Int})
+function to_collection(ratemap::MassActionJumpParamMapper{Int})  
   MassActionJumpParamMapper([ratemap.param_idxs])
 end
 
@@ -146,7 +140,7 @@ function Base.merge!(pmap1::MassActionJumpParamMapper{U}, pmap2::MassActionJumpP
   push!(pmap1.param_idxs, pmap2.param_idxs)
 end
 
-function Base.merge(pmap1::MassActionJumpParamMapper{Int}, pmap2::MassActionJumpParamMapper{Int})
+function Base.merge(pmap1::MassActionJumpParamMapper{Int}, pmap2::MassActionJumpParamMapper{Int})  
   MassActionJumpParamMapper([pmap1.param_idxs, pmap2.param_idxs])
 end
 
@@ -172,7 +166,7 @@ struct JumpSet{T1,T2,T3,T4} <: AbstractJump
   regular_jump::T3
   massaction_jump::T4
 end
-JumpSet(vj, cj, rj, maj::MassActionJump{S,T,U}) where {S <: Number, T, U} = JumpSet(vj, cj, rj, check_majump_type(maj))
+JumpSet(vj, cj, rj, maj::MassActionJump{S,T,U,V}) where {S <: Number,T,U,V} = JumpSet(vj, cj, rj, check_majump_type(maj))
 
 JumpSet(jump::ConstantRateJump) = JumpSet((),(jump,),nothing,nothing)
 JumpSet(jump::VariableRateJump) = JumpSet((jump,),(),nothing,nothing)
@@ -221,7 +215,6 @@ regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regula
 
 
 # functionality to merge two mass action jumps together
-check_majump_type(maj::MassActionJump) = maj
 check_majump_type(maj::MassActionJump{S,T,U,V}) where {S <: Number,T,U,V} = setup_majump_to_merge(maj.scaled_rates, maj.reactant_stoch, maj.net_stoch, maj.param_mapper)
 
 # if given containers of rates and stoichiometry directly create a jump

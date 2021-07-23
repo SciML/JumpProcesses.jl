@@ -67,3 +67,20 @@ function paffect!(integrator)
 end
 sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
 @test sol[1,end] == 100
+
+maj1 = MassActionJump([1 => 1],[1 => -1, 2 => 1]; param_idxs=1, params=p)
+maj2 = MassActionJump([2 => 1],[1 => 1, 2 => -1]; param_idxs=2, params=p)
+jprob = JumpProblem(dprob, Direct(), maj1, maj2, save_positions=(false,false), rng=rng)
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test sol[1,end] == 100
+
+p = [p[1], p[2], 0.0]
+maj3 = MassActionJump([1 => 1],[1 => -1, 2 => 1]; param_idxs=3, params=p)
+dprob = DiscreteProblem(u₀,tspan,p)
+jprob = JumpProblem(dprob, Direct(), maj1, maj2, maj3, save_positions=(false,false), rng=rng)
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test sol[1,end] == 100
+
+jprob = JumpProblem(dprob, Direct(), JumpSet(; massaction_jumps=[maj1, maj2, maj3]), save_positions=(false,false), rng=rng)
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test sol[1,end] == 100

@@ -17,6 +17,7 @@ diffusivity = 1.0
 domain_size = 1.0 #μ-meter
 mesh_size = domain_size/linear_size
 # ABC model A + B <--> C
+num_species = 3
 reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
 netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
 rates = [0.1/mesh_size, 1.]

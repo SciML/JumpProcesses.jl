@@ -25,6 +25,8 @@ function ABC_setup(spatial_system, linear_size, starting_site, u0, diffusivity, 
     return JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = spatial_system, save_positions=(false,false))
 end
 
+# TODO benchmark flattening
+
 # benchmark solving pure diffusion
 diffusivity = 0.1
 linear_size = 64

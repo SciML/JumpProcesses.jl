@@ -66,21 +66,50 @@ function paffect!(integrator)
   reset_aggregated_jumps!(integrator)
 end
 sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p .== [0.0,1.0])
 @test sol[1,end] == 100
 
+p   .= [1.0,0.0]
 maj1 = MassActionJump([1 => 1],[1 => -1, 2 => 1]; param_idxs=1, params=p)
 maj2 = MassActionJump([2 => 1],[1 => 1, 2 => -1]; param_idxs=2, params=p)
 jprob = JumpProblem(dprob, Direct(), maj1, maj2, save_positions=(false,false), rng=rng)
 sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p .== [0.0,1.0])
 @test sol[1,end] == 100
 
-p = [p[1], p[2], 0.0]
-maj3 = MassActionJump([1 => 1],[1 => -1, 2 => 1]; param_idxs=3, params=p)
-dprob = DiscreteProblem(u₀,tspan,p)
+p   .= [1.0,0.0]
+maj1 = MassActionJump([1 => 1],[1 => -1, 2 => 1]; param_idxs=1)
+maj2 = MassActionJump([2 => 1],[1 => 1, 2 => -1]; param_idxs=2)
+jprob = JumpProblem(dprob, Direct(), maj1, maj2, save_positions=(false,false), rng=rng)
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p .== [0.0,1.0])
+@test sol[1,end] == 100
+
+p2    = [1.0, 0.0, 0.0]
+maj3  = MassActionJump([1 => 1],[1 => -1, 2 => 1]; param_idxs=3)
+dprob = DiscreteProblem(u₀,tspan,p2)
 jprob = JumpProblem(dprob, Direct(), maj1, maj2, maj3, save_positions=(false,false), rng=rng)
 sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p2 .== [0.0,1.0,0.0])
 @test sol[1,end] == 100
 
+p2    .= [1.0, 0.0, 0.0]
 jprob = JumpProblem(dprob, Direct(), JumpSet(; massaction_jumps=[maj1, maj2, maj3]), save_positions=(false,false), rng=rng)
 sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p2 .== [0.0,1.0,0.0])
+@test sol[1,end] == 100
+
+p   .= [1.0,0.0]
+dprob = DiscreteProblem(u₀,tspan,p)
+maj4 = MassActionJump([[1 => 1],[2 => 1]],[[1 => -1, 2 => 1],[1 => 1, 2 => -1]]; param_idxs=[1,2], params=p)
+jprob = JumpProblem(dprob, Direct(), maj4, save_positions=(false,false), rng=rng)
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p .== [0.0,1.0])
+@test sol[1,end] == 100
+
+p   .= [1.0,0.0]
+maj5 = MassActionJump([[1 => 1],[2 => 1]],[[1 => -1, 2 => 1],[1 => 1, 2 => -1]]; param_idxs=[1,2])
+jprob = JumpProblem(dprob, Direct(), maj5, save_positions=(false,false), rng=rng)
+sol = solve(jprob, SSAStepper(), tstops=[1000.0], callback=DiscreteCallback(pcondit,paffect!))
+@test all(p .== [0.0,1.0])
 @test sol[1,end] == 100

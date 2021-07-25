@@ -93,6 +93,11 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     variable_jump_callback = build_variable_callback(CallbackSet(),0,jumps.variable_jumps...)
   end
   callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
+
+  # initialize the MassActionJump rate constants with the user parameters
+  maj = jumps.massaction_jump
+  (maj !== nothing) && using_params(maj) && update_parameters!(maj, prob.p; kwargs...)
+
   JumpProblem{iip,typeof(new_prob),typeof(aggregator),typeof(callbacks),
               typeof(disc),typeof(jumps.variable_jumps),
               typeof(jumps.regular_jump),typeof(jumps.massaction_jump)}(

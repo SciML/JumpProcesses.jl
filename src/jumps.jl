@@ -73,6 +73,15 @@ struct MassActionJump{T,S,U,V} <: AbstractJump
     end
     new(sr, rs, ns, pmapper)
   end
+  function MassActionJump{Nothing,Vector{S},Vector{U},V}(::Nothing, rs_in::Vector{S}, ns::Vector{U}, pmapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {S<:AbstractVector, U<:AbstractVector, V}
+    rs = nocopy ? rs_in : copy(rs_in)
+    for i in eachindex(rs)
+      if useiszero && (length(rs[i]) == 1) && iszero(rs[i][1][1])
+        rs[i] = typeof(rs[i])()
+      end
+    end
+    new(nothing, rs, ns, pmapper)
+  end
   function MassActionJump{T,S,U,V}(rate::T, rs_in::S, ns::U, pmapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {T <: Number, S, U, V}
     rs = rs_in
     if useiszero && (length(rs) == 1) && iszero(rs[1][1])
@@ -81,38 +90,31 @@ struct MassActionJump{T,S,U,V} <: AbstractJump
     sr = scale_rates ? scalerate(rate, rs) : rate
     new(sr, rs, ns, pmapper)
   end
+  function MassActionJump{Nothing,S,U,V}(::Nothing, rs_in::S, ns::U, pmapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {S, U, V}
+    rs = rs_in
+    if useiszero && (length(rs) == 1) && iszero(rs[1][1])
+      rs = typeof(rs)()
+    end
+    new(nothing, rs, ns, pmapper)
+  end
 
 end
 MassActionJump(usr::T, rs::S, ns::U, pmapper::V; scale_rates = true, useiszero = true, nocopy=false) where {T,S,U,V} = MassActionJump{T,S,U,V}(usr, rs, ns, pmapper, scale_rates, useiszero, nocopy)
 MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: AbstractVector,S,U} = MassActionJump(usr, rs, ns, nothing; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
 MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true, nocopy=false) where {T <: Number,S,U} = MassActionJump(usr, rs, ns, nothing; scale_rates=scale_rates, useiszero=useiszero, nocopy=nocopy)
 
-function genpmapper(param_mapper, param_idxs)
+# with parameter indices or mapping, multiple jump case
+function MassActionJump(rs, ns; param_idxs=nothing, param_mapper=nothing, nocopy=false, kwargs...)
   if param_mapper === nothing 
     (param_idxs === nothing) && error("If no parameter indices are given via param_idxs, an explicit parameter mapping must be passed in via param_mapper.")
-    return MassActionJumpParamMapper(param_idxs)
+    pmapper = MassActionJumpParamMapper(param_idxs)
   else
     (param_idxs !== nothing) && error("Only one of param_idxs and param_mapper should be passed.")
-    return param_mapper
+    pmapper = param_mapper
   end
+                      
+  MassActionJump(nothing, nocopy ? rs : copy(rs), ns, pmapper; nocopy=true, kwargs...)
 end
-
-# with parameter indices or mapping, multiple jump case
-function MassActionJump(rs::AbstractVector{U}, ns::AbstractVector{V}; param_idxs=nothing, params=nothing, 
-                        param_mapper=nothing, paramtype=Float64, nocopy=false, kwargs...) where {U <: AbstractArray, V <: AbstractArray}
-  pmapper = genpmapper(param_mapper, param_idxs)
-  rates   = (params === nothing) ? zeros(paramtype,length(rs)) : pmapper(params)    
-  MassActionJump(rates, nocopy ? rs : copy(rs), ns, pmapper; nocopy=true, kwargs...)
-end
-
-# with parameter indices or mapping, single jump case
-function MassActionJump(rs, ns; param_idxs=nothing, params=nothing, param_mapper=nothing, 
-                        paramtype=Float64, nocopy=false, kwargs...) 
-  pmapper = genpmapper(param_mapper, param_idxs)
-  rates   = (params === nothing) ? zero(paramtype) : pmapper(params)    
-  MassActionJump(rates, nocopy ? rs : copy(rs), ns, pmapper; nocopy=true, kwargs...)
-end
-
 
 using_params(maj::MassActionJump{T,S,U,Nothing}) where {T,S,U} = false
 using_params(maj::MassActionJump) = true
@@ -125,10 +127,12 @@ struct MassActionJumpParamMapper{U}
 end
 
 # create the initial parameter vector for use in a MassActionJump
+# Note these are unscaled
 function (ratemap::MassActionJumpParamMapper{U})(params) where {U <: AbstractArray}
   [params[pidx] for pidx in ratemap.param_idxs]
 end
 
+# Note this is unscaled
 function (ratemap::MassActionJumpParamMapper{U})(params) where {U <: Int}
   params[ratemap.param_idxs]
 end
@@ -170,7 +174,7 @@ Notes:
     k --> k/3!.
 """
 function update_parameters!(maj::MassActionJump, newparams; scale_rates=true, kwargs...) 
-  (maj.param_mapper === nothing) && error("MassActionJumps must be constructed to param_idxs or a param_mapper to be updateable.")
+  (maj.param_mapper === nothing) && error("MassActionJumps must be constructed with param_idxs or a param_mapper to be updateable.")
   maj.param_mapper(maj, newparams; scale_rates, kwargs)
 end
 
@@ -230,6 +234,7 @@ regular_jump_combine(rj1::RegularJump,rj2::RegularJump) = error("Only one regula
 
 # functionality to merge two mass action jumps together
 check_majump_type(maj::MassActionJump{S,T,U,V}) where {S <: Number,T,U,V} = setup_majump_to_merge(maj.scaled_rates, maj.reactant_stoch, maj.net_stoch, maj.param_mapper)
+check_majump_type(maj::MassActionJump{Nothing,T,U,V}) where {T,U,V} = setup_majump_to_merge(maj.scaled_rates, maj.reactant_stoch, maj.net_stoch, maj.param_mapper)
 
 # if given containers of rates and stoichiometry directly create a jump
 function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{U}, pmapper) where {T <: AbstractVector, S <: AbstractArray, U <: AbstractArray}
@@ -239,6 +244,11 @@ end
 # if just given the data for one jump (and not in a container) wrap in a vector
 function setup_majump_to_merge(sr::S, rs::T, ns::U, pmapper) where {S <: Number, T <: AbstractArray, U <: AbstractArray}  
   MassActionJump([sr], [rs], [ns], (pmapper === nothing) ? pmapper : to_collection(pmapper); scale_rates=false)
+end
+
+# if no rate field setup yet
+function setup_majump_to_merge(::Nothing, rs::T, ns::U, pmapper) where {T <: AbstractArray, U <: AbstractArray}  
+  MassActionJump(nothing, [rs], [ns], (pmapper === nothing) ? pmapper : to_collection(pmapper); scale_rates=false)
 end
 
 # when given a collection of reactions to add to maj
@@ -255,8 +265,8 @@ function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::U, rs::V, ns::W, param_
 end
 
 # when given a single jump's worth of data to add to maj
-function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::T, rs::S1, ns::S2, param_mapper) where {T <: Number, S1 <: AbstractArray, S2 <: AbstractArray, U <: AbstractVector{T}, V <: AbstractVector{S1}, W <: AbstractVector{S2}, X}
-  push!(maj.scaled_rates, sr)
+function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::T, rs::S1, ns::S2, param_mapper) where {T <: Union{Number,Nothing}, S1 <: AbstractArray, S2 <: AbstractArray, U <: Union{AbstractVector{T},Nothing}, V <: AbstractVector{S1}, W <: AbstractVector{S2}, X}
+  (T <: Number) && push!(maj.scaled_rates, sr)
   push!(maj.reactant_stoch, rs)
   push!(maj.net_stoch, ns)
   if maj.param_mapper === nothing
@@ -270,12 +280,13 @@ end
 
 # when maj only stores a single jump's worth of data (and not in a collection)
 # create a new jump with the merged data stored in vectors
-function majump_merge!(maj::MassActionJump{T,S,U,V}, sr::T, rs::S, ns::U, param_mapper::V) where {T <: Number, S <: AbstractArray, U <: AbstractArray, V}
+function majump_merge!(maj::MassActionJump{T,S,U,V}, sr::T, rs::S, ns::U, param_mapper::V) where {T <: Union{Number,Nothing}, S <: AbstractArray, U <: AbstractArray, V}
+  rates = (T <: Nothing) ? nothing : [maj.scaled_rates, sr]
   if maj.param_mapper === nothing
     (param_mapper === nothing) || error("Error, trying to merge a MassActionJump with a parameter mapping to one without a parameter mapping.")    
-    return MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns], param_mapper; scale_rates=false)
+    return MassActionJump(rates, [maj.reactant_stoch, rs], [maj.net_stoch, ns], param_mapper; scale_rates=false)
   else
-    return MassActionJump([maj.scaled_rates, sr], [maj.reactant_stoch, rs], [maj.net_stoch, ns], merge(maj.param_mapper,param_mapper); scale_rates=false)
+    return MassActionJump(rates, [maj.reactant_stoch, rs], [maj.net_stoch, ns], merge(maj.param_mapper,param_mapper); scale_rates=false)
   end
 end
 

@@ -126,14 +126,14 @@ rs2 = [2=>1]
 ns1 = [1 => -1, 2 => 1]
 ns2 = [1=>1,2=>-1]
 p  = [1.0,0.0]
-maj1 = MassActionJump(rs1, ns1; param_idxs=1, params=p)
-maj2 = MassActionJump(rs2, ns2; param_idxs=2, params=p)
+maj1 = MassActionJump(rs1, ns1; param_idxs=1)
+maj2 = MassActionJump(rs2, ns2; param_idxs=2)
 js   = JumpSet(maj1,maj2)
-maj  = MassActionJump([rs1,rs2],[ns1,ns2]; param_idxs=[1,2], params=p)
+maj  = MassActionJump([rs1,rs2],[ns1,ns2]; param_idxs=[1,2])
 @test all(getfield(maj,fn) == getfield(js.massaction_jump,fn) for fn in [:scaled_rates,:reactant_stoch,:net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)
-maj1 = MassActionJump([rs1], [ns1]; param_idxs=[1], params=p)
-maj2 = MassActionJump([rs2], [ns2]; param_idxs=[2], params=p)
+maj1 = MassActionJump([rs1], [ns1]; param_idxs=[1])
+maj2 = MassActionJump([rs2], [ns2]; param_idxs=[2])
 js   = JumpSet(maj1,maj2)
 @test all(getfield(maj,fn) == getfield(js.massaction_jump,fn) for fn in [:scaled_rates,:reactant_stoch,:net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)

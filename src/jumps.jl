@@ -252,8 +252,8 @@ function setup_majump_to_merge(::Nothing, rs::T, ns::U, pmapper) where {T <: Abs
 end
 
 # when given a collection of reactions to add to maj
-function majump_merge!(maj::MassActionJump{U,V,W,X}, sr::U, rs::V, ns::W, param_mapper) where {U <: AbstractVector, V <: AbstractVector, W <: AbstractVector, X}
-  append!(maj.scaled_rates, sr)
+function majump_merge!(maj::MassActionJump{U,<:AbstractVector{V},<:AbstractVector{W},X}, sr::U, rs::AbstractVector{V}, ns::AbstractVector{W}, param_mapper) where {U <: Union{AbstractVector,Nothing}, V <: AbstractVector, W <: AbstractVector, X}
+  (U <: AbstractVector) && append!(maj.scaled_rates, sr)
   append!(maj.reactant_stoch, rs)
   append!(maj.net_stoch, ns)
   if maj.param_mapper === nothing
@@ -280,7 +280,7 @@ end
 
 # when maj only stores a single jump's worth of data (and not in a collection)
 # create a new jump with the merged data stored in vectors
-function majump_merge!(maj::MassActionJump{T,S,U,V}, sr::T, rs::S, ns::U, param_mapper::V) where {T <: Union{Number,Nothing}, S <: AbstractArray, U <: AbstractArray, V}
+function majump_merge!(maj::MassActionJump{T,S,U,V}, sr::T, rs::S, ns::U, param_mapper::V) where {T <: Union{Number,Nothing}, S <: AbstractArray{<:Pair}, U <: AbstractArray{<:Pair}, V}
   rates = (T <: Nothing) ? nothing : [maj.scaled_rates, sr]
   if maj.param_mapper === nothing
     (param_mapper === nothing) || error("Error, trying to merge a MassActionJump with a parameter mapping to one without a parameter mapping.")    

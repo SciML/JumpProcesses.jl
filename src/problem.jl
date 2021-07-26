@@ -73,10 +73,12 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                      rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
 
   # initialize the MassActionJump rate constants with the user parameters
-  maj = jumps.massaction_jump
   if using_params(jumps.massaction_jump) 
-    rates = maj.param_mapper(prob.p)
-    maj   = MassActionJump(rates, maj.reactant_stoch, maj.net_stoch, maj.param_mapper; nocopy=true, kwargs...)
+    rates = jumps.massaction_jump.param_mapper(prob.p)
+    maj = MassActionJump(rates, jumps.massaction_jump.reactant_stoch, jumps.massaction_jump.net_stoch, 
+                         jumps.massaction_jump.param_mapper; nocopy=true, kwargs...)
+  else
+    maj = jumps.massaction_jump
   end
 
   ## Constant Rate Handling

@@ -228,7 +228,7 @@ end
 
 function reset!(pt::PriorityTable{F,S,T,U}) where {F,S,T,U}
     @unpack groups, gsums, pidtogroup = pt
-    pt.gsum       = zero(F)
+    pt.gsum = zero(F)
     fill!(gsums, zero(F))
     fill!(pidtogroup, (zero(T),zero(T)))
     for group in groups

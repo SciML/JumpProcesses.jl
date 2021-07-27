@@ -56,11 +56,8 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     minrate = 2.0^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
 
-    # construct an empty initial priority table -- we'll overwrite this in init anyways...
-    rt = PriorityTable{T,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate,
-                                                        Vector{PriorityGroup{T,Vector{Int}}}(),
-                                                        Vector{T}(), zero(T),
-                                                        Vector{Tuple{Int,Int}}(), ratetogroup)
+    # construct an empty initial priority table -- we'll reset this in init
+    rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2*minrate)
 
     DirectCRJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(rt),typeof(ratetogroup)}(
                                             nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
@@ -87,11 +84,11 @@ function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
     # initialize rates
     fill_rates_and_sum!(p, u, params, t)
 
-    # if no maxrate was set, use largest initial rate (pad by 2 for an extra group)
-    isinf(p.maxrate) && (p.maxrate = 2*maximum(p.cur_rates))
-
     # setup PriorityTable
-    p.rt   = PriorityTable(p.ratetogroup, p.cur_rates, p.minrate, p.maxrate)
+    reset!(p.rt)
+    for (pid,priority) in enumerate(p.cur_rates)
+        insert!(p.rt, pid, priority)
+    end
 
     generate_jumps!(p, integrator, u, params, t)
     nothing

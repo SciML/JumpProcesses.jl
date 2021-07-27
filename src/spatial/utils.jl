@@ -182,7 +182,7 @@ end
 return total reaction rate at site
 """
 function total_site_rx_rate(rx_rates::RxRates, site)
-    rx_rates.sum_rates[site]
+    @inbounds rx_rates.sum_rates[site]
 end
 
 """
@@ -190,7 +190,7 @@ update rates of all reactions in rxs at site
 """
 function update_rx_rates!(rx_rates, rxs, u, site)
     ma_jumps = rx_rates.ma_jumps
-    for rx in rxs
+    @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps))
     end
 end
@@ -208,9 +208,9 @@ function rx_rates_at_site(rx_rates::RxRates, site)
 end
 
 function set_rx_rate_at_site!(rx_rates::RxRates, site, rx, rate)
-    old_rate = rx_rates.rates[rx, site]
-    rx_rates.rates[rx, site] = rate
-    rx_rates.sum_rates[site] += rate - old_rate
+    @inbounds old_rate = rx_rates.rates[rx, site]
+    @inbounds rx_rates.rates[rx, site] = rate
+    @inbounds rx_rates.sum_rates[site] += rate - old_rate
     old_rate
 end
 
@@ -220,7 +220,7 @@ abstract type AbstractHopRates end
 update rates of all specs in species at site
 """
 function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site, spatial_system)
-    for spec in species
+    @inbounds for spec in species
         update_hop_rate!(hop_rates, spec, u, site, spatial_system)
     end
 end
@@ -228,7 +228,7 @@ end
 """
 return total hopping rate out of site
 """
-total_site_hop_rate(hop_rates::AbstractHopRates, site) = hop_rates.sum_rates[site]
+total_site_hop_rate(hop_rates::AbstractHopRates, site) = @inbounds hop_rates.sum_rates[site]
 
 ############## hopping rates of form L_{s,i} ################
 
@@ -286,14 +286,14 @@ end
 sets the rate of hopping at site. Return the old rate
 """
 function set_hop_rate_at_site!(hop_rates::HopRates1, site, species, rate) 
-    old_rate = hop_rates.rates[species, site]
-    hop_rates.rates[species, site] = rate
-    hop_rates.sum_rates[site] += rate - old_rate
+    @inbounds old_rate = hop_rates.rates[species, site]
+    @inbounds hop_rates.rates[species, site] = rate
+    @inbounds hop_rates.sum_rates[site] += rate - old_rate
     old_rate
 end
 
 function evalhoprate(hop_rates::HopRates1, u, species, site, num_nbs::Int) 
-    u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
+    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
 end
 
 ############## hopping rates of form L_{s,i,j} ################
@@ -326,7 +326,7 @@ end
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRates2, site, rng, spatial_system) 
-    rates_at_site = hop_rates.rates[site]
+    @inbounds rates_at_site = hop_rates.rates[site]
     r = rand(rng) * total_site_hop_rate(hop_rates, site)
     species, n = Tuple(CartesianIndices(rates_at_site)[linear_search(rates_at_site, r)])
     return species, nth_nbr(spatial_system, site, n)
@@ -337,9 +337,9 @@ update rates of single species at site
 """
 function update_hop_rate!(hop_rates::HopRates2, species::Int, u, site, spatial_system)
     rates_at_site = hop_rates.rates[site]
-    old_rate = sum(@view rates_at_site[species,:])
-    rates_at_site[species,:] = (@view hop_rates.hopping_constants[site][species,:]) * u[species,site]
-    hop_rates.sum_rates[site] += sum(@view rates_at_site[species,:]) - old_rate
+    @inbounds old_rate = sum(@view rates_at_site[species,:])
+    @inbounds rates_at_site[species,:] = (@view hop_rates.hopping_constants[site][species,:]) * u[species,site]
+    @inbounds hop_rates.sum_rates[site] += sum(@view rates_at_site[species,:]) - old_rate
 end
 
 
@@ -368,7 +368,7 @@ function update_state!(p, integrator)
         execute_hop!(integrator, jump.src, jump.dst, jump.jidx)
     else
         rx_index = reaction_id_from_jump(p,jump)
-        executerx!((@view integrator.u[:,jump.src]), rx_index, p.rx_rates.ma_jumps)
+        @inbounds executerx!((@view integrator.u[:,jump.src]), rx_index, p.rx_rates.ma_jumps)
     end
     # save jump that was just exectued
     p.prev_jump = jump
@@ -390,8 +390,8 @@ end
 documentation
 """
 function execute_hop!(integrator, source_site, target_site, species)
-    integrator.u[species,source_site] -= 1
-    integrator.u[species,target_site] += 1
+    @inbounds integrator.u[species,source_site] -= 1
+    @inbounds integrator.u[species,target_site] += 1
 end
 
 """

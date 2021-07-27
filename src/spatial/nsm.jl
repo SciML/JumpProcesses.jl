@@ -115,7 +115,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
     num_sites = DiffEqJump.num_sites(spatial_system)
 
     pqdata = Vector{typeof(t)}(undef, num_sites)
-    for site in 1:num_sites
+    @inbounds for site in 1:num_sites
         update_rx_rates!(rx_rates, 1:num_rxs, u, site)
         update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
         pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))

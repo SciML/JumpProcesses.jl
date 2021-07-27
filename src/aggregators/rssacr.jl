@@ -77,7 +77,7 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
 
     # construct an empty initial priority table -- we'll reset this in init
     num_jumps = length(crs)
-    rt = PriorityTable(ratetogroup, zeros(T, num_jumps), minrate, 2*minrate)
+    rt = PriorityTable(ratetogroup, zeros(F, num_jumps), minrate, 2*minrate)
 
     RSSACRJumpAggregation{typeof(njt),eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(
                             nj, nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, 

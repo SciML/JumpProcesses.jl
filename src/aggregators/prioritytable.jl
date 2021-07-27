@@ -159,7 +159,6 @@ end
 # i.e. pid = length(pidtogroup) + 1
 function insert!(pt::PriorityTable, pid, priority)
     @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
-    pidtype = typeof(pid)
 
     # find group for new priority
     gid = priortogid(priority)
@@ -225,6 +224,16 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
         end
     end
     nothing
+end
+
+function reset!(pt::PriorityTable{F,S,T,U}) where {F,S,T,U}
+    @unpack groups, gsums, pidtogroup = pt
+    pt.gsum       = zero(F)
+    fill!(gsums, zero(F))
+    fill!(pidtogroup, (zero(T),zero(T)))
+    for group in groups
+        group.numpids = zero(T)
+    end
 end
 
 function Base.show(io::IO, pt::PriorityTable)

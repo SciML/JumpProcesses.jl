@@ -75,9 +75,9 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     minrate = 2.0^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
 
-    # construct an empty initial priority table -- we'll overwrite this in init anyways...
-    rt = PriorityTable{F,Int,Int,typeof(ratetogroup)}(minrate, 2*minrate, Vector{PriorityGroup{F,Vector{Int}}}(), 
-                                                      Vector{F}(), zero(F), Vector{Tuple{Int,Int}}(), ratetogroup)
+    # construct an empty initial priority table -- we'll reset this in init
+    num_jumps = length(crs)
+    rt = PriorityTable(ratetogroup, zeros(F, num_jumps), minrate, 2*minrate)
 
     RSSACRJumpAggregation{typeof(njt),eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(
                             nj, nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, 
@@ -101,11 +101,11 @@ end
 function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
     set_bracketing!(p,u,params,t)
 
-    # if no maxrate was set, use largest initial rate (pad by 2 for an extra group)
-    isinf(p.maxrate) && (p.maxrate = 2*maximum(p.cur_rate_high))
-
     # setup PriorityTable
-    p.rt = PriorityTable(p.ratetogroup, p.cur_rate_high, p.minrate, p.maxrate)
+    reset!(p.rt)
+    for (pid,priority) in enumerate(p.cur_rate_high)
+        insert!(p.rt, pid, priority)
+    end
 
     generate_jumps!(p, integrator, u, params, t)
     nothing

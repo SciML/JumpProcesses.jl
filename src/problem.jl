@@ -76,7 +76,8 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
   if using_params(jumps.massaction_jump) 
     rates = jumps.massaction_jump.param_mapper(prob.p)
     maj = MassActionJump(rates, jumps.massaction_jump.reactant_stoch, jumps.massaction_jump.net_stoch, 
-                         jumps.massaction_jump.param_mapper; scale_rates, useiszero, nocopy=true)
+                         jumps.massaction_jump.param_mapper; scale_rates=scale_rates, useiszero=useiszero, 
+                         nocopy=true)
   else
     maj = jumps.massaction_jump
   end

@@ -67,7 +67,7 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::M
     total_netstoch = vcat(hop_netstoch, rx_netstoch)
     total_reacstoch = vcat(hop_reacstoch, rx_reactstoch)
     total_rates = vcat(hop_rates, vec(rx_rates))
-    ma_jump = MassActionJump(total_rates, total_reacstoch, total_netstoch; scale_rates = scale_rates)
+    ma_jump = MassActionJump(total_rates, total_reacstoch, total_netstoch; nocopy = true, scale_rates = scale_rates)
 
     flattened_u0 = vec(u0)
     prob = DiscreteProblem(flattened_u0, tspan, total_rates)

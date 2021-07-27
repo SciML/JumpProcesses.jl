@@ -83,3 +83,24 @@ for spatial_jump_prob in jump_problems
         @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
     end
 end
+
+# testing non-uniform hopping rates
+dims = (2,2)
+num_nodes = prod(dims)
+grid = LightGraphs.grid(dims)
+hopping_constants = Vector{Matrix{Float64}}(undef, prod(dims))
+for site in 1:prod(dims)
+    hopping_constants[site] = ones(1, DiffEqJump.num_neighbors(grid, site))
+end
+fill!(hopping_constants[1], 0.0)
+hopping_constants[2][2] = 0.0
+hopping_constants[3][2] = 0.0
+
+starting_state = 25*ones(Int, length(u0), num_nodes)
+tspan = (0.0, 10.0)
+prob = DiscreteProblem(starting_state,tspan, rates)
+
+jp=JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
+sol = solve(jp, SSAStepper())
+
+@test sol.u[end][1,1] == sum(sol.u[end])

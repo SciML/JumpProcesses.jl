@@ -7,10 +7,10 @@ prob.p must be unscaled rates, either an array or a matrix with prob.p[i,j] bein
 function flatten(ma_jump::MassActionJump, prob::DiscreteProblem, spatial_system, hopping_constants; kwargs...)
     netstoch = ma_jump.net_stoch
     reactstoch = ma_jump.reactant_stoch
-    rx_rates = prob.p
+    rx_rates = ma_jump.scaled_rates
     tspan = prob.tspan
     u0 = prob.u0
-    flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hopping_constants; kwargs...)
+    flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hopping_constants; scale_rates = false, kwargs...)
 end
 
 """
@@ -23,9 +23,9 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::V
 end
 
 """
-"flatten" the spatial jump problem. Return flattened DiscreteProblem and MassActionJump
+"flatten" the spatial jump problem. Return flattened DiscreteProblem and MassActionJump.
 """
-function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Matrix, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Vector{Matrix{F}}; kwargs...) where F <: Number
+function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Matrix, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Vector{Matrix{F}}; scale_rates = true, kwargs...) where F <: Number
     num_species = size(u0, 1)
     num_nodes = num_sites(spatial_system)
     @assert size(u0, 2) == num_nodes
@@ -67,7 +67,7 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::M
     total_netstoch = convert(Vector{Vector{Pair{Int, Int}}}, vcat(hop_netstoch, rx_netstoch))
     total_reacstoch = convert(Vector{Vector{Pair{Int, Int}}}, vcat(hop_reacstoch, rx_reactstoch))
     total_rates = convert(Vector{F}, vcat(hop_rates, vec(rx_rates)))
-    ma_jump = MassActionJump(total_rates, total_reacstoch, total_netstoch)
+    ma_jump = MassActionJump(total_rates, total_reacstoch, total_netstoch; scale_rates = scale_rates)
 
     flattened_u0 = vec(u0)
     prob = DiscreteProblem(flattened_u0, tspan, total_rates)

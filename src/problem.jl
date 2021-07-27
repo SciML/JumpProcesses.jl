@@ -70,13 +70,13 @@ JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),j
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
                      save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
-                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
+                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), scale_rates = true, useiszero = true, kwargs...)
 
   # initialize the MassActionJump rate constants with the user parameters
   if using_params(jumps.massaction_jump) 
     rates = jumps.massaction_jump.param_mapper(prob.p)
     maj = MassActionJump(rates, jumps.massaction_jump.reactant_stoch, jumps.massaction_jump.net_stoch, 
-                         jumps.massaction_jump.param_mapper; nocopy=true, kwargs...)
+                         jumps.massaction_jump.param_mapper; scale_rates, useiszero, nocopy=true)
   else
     maj = jumps.massaction_jump
   end

@@ -29,7 +29,7 @@ num_nodes = 5
 
 # Starting state setup
 starting_state = zeros(Int, length(u0), num_nodes)
-starting_state[:,starting_site] = copy(u0)
+starting_state[:,starting_site] .= u0
 
 tspan = (0.0, end_time)
 prob = DiscreteProblem(starting_state, tspan, rates)
@@ -40,7 +40,7 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(size(jump_prob.prob.u0))
     for i in 1:Nsims
         sol = solve(jump_prob, SSAStepper())
-        end_state += sol.u[end]
+        end_state .+= sol.u[end]
     end
     end_state/Nsims
 end
@@ -54,7 +54,7 @@ hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
 end
-push!(jump_problems, DiffEqJump.flatten(netstoch, reactstoch, rates, graph, starting_state, tspan, NRM(), hopping_constants))
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

@@ -14,14 +14,15 @@ end
 # assume sites are labeled from 1 to num_sites(spatial_system)
 function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
     sites = 1:DiffEqJump.num_sites(spatial_system)
-    laplacian = zeros(Int, length(sites), length(sites))
+    laplacian = zeros(length(sites), length(sites))
     for site in sites
         laplacian[site,site] = -DiffEqJump.num_neighbors(spatial_system, site)
         for nb in DiffEqJump.neighbors(spatial_system, site)
             laplacian[site, nb] = 1
         end
     end
-    laplacian*hopping_rate
+    laplacian .*= hopping_rate
+    laplacian
 end
 
 # problem setup
@@ -70,8 +71,8 @@ hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
 end
-push!(jump_problems, DiffEqJump.flatten(netstoch, reactstoch, rates, graph, starting_state, tspan, NRM(), hopping_constants, save_positions=(false,false)))
-# testing hop rates of form L_{s,i,j}
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+# hop rates of form L_{s,i,j}
 push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=graph, save_positions=(false,false)))
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper(), saveat = tf/num_time_points).u

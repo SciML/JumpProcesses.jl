@@ -155,66 +155,6 @@ function update_site_time!(p, site, t)
     end
 end
 
-######################## helper routines for all spatial SSAs ########################
-function update_rates_after_reaction!(p, u, site, reaction_id)
-    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], u, site)
-    update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
-end
-
-function update_rates_after_hop!(p, u, source_site, target_site, species)
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, source_site)
-    update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
-    
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, target_site)
-    update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
-end
-
-"""
-update_state!(p, integrator)
-
-updates state based on p.next_jump
-"""
-function update_state!(p, integrator)
-    jump = p.next_jump
-    if is_hop(p, jump)
-        execute_hop!(integrator, jump.src, jump.dst, jump.jidx)
-    else
-        rx_index = reaction_id_from_jump(p,jump)
-        executerx!((@view integrator.u[:,jump.src]), rx_index, p.rx_rates.ma_jumps)
-    end
-    # save jump that was just exectued
-    p.prev_jump = jump
-    nothing
-end
-
-"""
-    is_hop(p, jump)
-
-true if jump is a hop
-"""
-function is_hop(p, jump)
-    jump.jidx <= p.numspecies
-end
-
-"""
-    execute_hop!(integrator, jump)
-
-documentation
-"""
-function execute_hop!(integrator, source_site, target_site, species)
-    integrator.u[species,source_site] -= 1
-    integrator.u[species,target_site] += 1
-end
-
-"""
-    reaction_id_from_jump(p,jump)
-
-return reaction id by subtracting the number of hops
-"""
-function reaction_id_from_jump(p,jump)
-    jump.jidx - p.numspecies
-end
-
 """
 number of constant rate jumps
 """

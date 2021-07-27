@@ -55,6 +55,15 @@ function nth_nbr(grid, site, n)
         end
     end
 end
+"""
+return neighbors of site in increasing order
+"""
+function neighbors(grid, site)
+    CI = grid.CI
+    LI = grid.LI
+    I = CI[site]
+    Iterators.map(off -> LI[off+I], Iterators.filter(off -> off+I in CI, grid.offsets))
+end
 
 # possible rand_nbr functions:
 # 1. Rejection-based: pick a neighbor, check it's valid; if not, repeat
@@ -207,7 +216,6 @@ end
 
 ### spatial hop rates ###
 abstract type AbstractHopRates end
-# TODO implement CartesianGrid and HopRates with rejection sampling: do not store num_nbs in CartesianGrid, use 2*dimension for num_nbs, if sampled non-site as a neighbor, do not execute
 """
 update rates of all specs in species at site
 """
@@ -318,7 +326,7 @@ end
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRates2, site, rng, spatial_system) 
-    rates_at_site = hop_rates.rates[site] # Question: Does this allocate?
+    rates_at_site = hop_rates.rates[site]
     r = rand(rng) * total_site_hop_rate(hop_rates, site)
     species, n = Tuple(CartesianIndices(rates_at_site)[linear_search(rates_at_site, r)])
     return species, nth_nbr(spatial_system, site, n)
@@ -332,4 +340,65 @@ function update_hop_rate!(hop_rates::HopRates2, species::Int, u, site, spatial_s
     old_rate = sum(@view rates_at_site[species,:])
     rates_at_site[species,:] = (@view hop_rates.hopping_constants[site][species,:]) * u[species,site]
     hop_rates.sum_rates[site] += sum(@view rates_at_site[species,:]) - old_rate
+end
+
+
+######################## helper routines for all spatial SSAs ########################
+function update_rates_after_reaction!(p, u, site, reaction_id)
+    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], u, site)
+    update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
+end
+
+function update_rates_after_hop!(p, u, source_site, target_site, species)
+    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, source_site)
+    update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
+    
+    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, target_site)
+    update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
+end
+
+"""
+update_state!(p, integrator)
+
+updates state based on p.next_jump
+"""
+function update_state!(p, integrator)
+    jump = p.next_jump
+    if is_hop(p, jump)
+        execute_hop!(integrator, jump.src, jump.dst, jump.jidx)
+    else
+        rx_index = reaction_id_from_jump(p,jump)
+        executerx!((@view integrator.u[:,jump.src]), rx_index, p.rx_rates.ma_jumps)
+    end
+    # save jump that was just exectued
+    p.prev_jump = jump
+    nothing
+end
+
+"""
+    is_hop(p, jump)
+
+true if jump is a hop
+"""
+function is_hop(p, jump)
+    jump.jidx <= p.numspecies
+end
+
+"""
+    execute_hop!(integrator, jump)
+
+documentation
+"""
+function execute_hop!(integrator, source_site, target_site, species)
+    integrator.u[species,source_site] -= 1
+    integrator.u[species,target_site] += 1
+end
+
+"""
+    reaction_id_from_jump(p,jump)
+
+return reaction id by subtracting the number of hops
+"""
+function reaction_id_from_jump(p,jump)
+    jump.jidx - p.numspecies
 end

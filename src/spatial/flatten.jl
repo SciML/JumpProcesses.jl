@@ -64,9 +64,9 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::M
         end
     end
 
-    total_netstoch = convert(Vector{Vector{Pair{Int, Int}}}, vcat(hop_netstoch, rx_netstoch))
-    total_reacstoch = convert(Vector{Vector{Pair{Int, Int}}}, vcat(hop_reacstoch, rx_reactstoch))
-    total_rates = convert(Vector{F}, vcat(hop_rates, vec(rx_rates)))
+    total_netstoch = vcat(hop_netstoch, rx_netstoch)
+    total_reacstoch = vcat(hop_reacstoch, rx_reactstoch)
+    total_rates = vcat(hop_rates, vec(rx_rates))
     ma_jump = MassActionJump(total_rates, total_reacstoch, total_netstoch; scale_rates = scale_rates)
 
     flattened_u0 = vec(u0)

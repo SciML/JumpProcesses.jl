@@ -104,3 +104,6 @@ needs_depgraph(aggregator::RDirect) = true
 needs_vartojumps_map(aggregator::AbstractAggregatorAlgorithm) = false
 needs_vartojumps_map(aggregator::RSSA) = true
 needs_vartojumps_map(aggregator::RSSACR) = true
+
+is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
+is_spatial(aggregator::NSM) = true

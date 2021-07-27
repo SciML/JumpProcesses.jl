@@ -70,15 +70,20 @@ JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),j
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
                      save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
-                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), kwargs...)
+                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), spatial_system=nothing, hopping_constants=nothing, kwargs...)
 
+  ## Spatial jumps handling
+  massaction_jump = jumps.massaction_jump
+  if spatial_system !== nothing && hopping_constants !== nothing && !is_spatial(aggregator)
+    prob, massaction_jump = flatten(massaction_jump, prob, spatial_system, hopping_constants; kwargs...)
+  end
   ## Constant Rate Handling
   t,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0
-  if (typeof(jumps.constant_jumps) <: Tuple{}) && (jumps.massaction_jump === nothing)
+  if (typeof(jumps.constant_jumps) <: Tuple{}) && (massaction_jump === nothing)
     disc = nothing
     constant_jump_callback = CallbackSet()
   else
-    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,jumps.massaction_jump,save_positions,rng;kwargs...)
+    disc = aggregate(aggregator,u,prob.p,t,end_time,jumps.constant_jumps,massaction_jump,save_positions,rng; spatial_system = spatial_system, hopping_constants = hopping_constants, kwargs...)
     constant_jump_callback = DiscreteCallback(disc)
   end
 
@@ -95,11 +100,11 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
   callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
   JumpProblem{iip,typeof(new_prob),typeof(aggregator),typeof(callbacks),
               typeof(disc),typeof(jumps.variable_jumps),
-              typeof(jumps.regular_jump),typeof(jumps.massaction_jump)}(
+              typeof(jumps.regular_jump),typeof(massaction_jump)}(
                         new_prob,aggregator,disc,
                         callbacks,
                         jumps.variable_jumps,
-                        jumps.regular_jump, jumps.massaction_jump)
+                        jumps.regular_jump, massaction_jump)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem,jumps)

@@ -20,13 +20,13 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::V
     num_nodes = num_sites(spatial_system)
     num_specs = size(u0, 1)
     @assert size(hopping_constants) == size(u0) # hopping_constants[i,j] is species i, site j
-    hop_constants = Vector{F}(undef, size(hopping_constants, 2))
+    hop_constants = Vector{Matrix{F}}(undef, size(hopping_constants, 2))
     for site in 1:num_nodes
         num_nbs = num_neighbors(spatial_system, site)
-        hop_constants[site] = reshape(repeat(hopping_constants[:,site], num_nbs), num_specs, num_nodes)
+        hop_constants[site] = reshape(repeat(hopping_constants[:,site], num_nbs), num_specs, num_nbs)
     end
     
-    flatten(netstoch, reactstoch, rates, spatial_system, u0, tspan, hop_constants; kwargs...)
+    flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants; kwargs...)
 end
 
 """

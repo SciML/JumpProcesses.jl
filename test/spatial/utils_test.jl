@@ -6,7 +6,7 @@ dims = (4,3,2)
 sites = rand(1:prod(dims), 10)
 num_samples = 10^5
 rel_tol = 0.01
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
+grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 for grid in grids
     @test DiffEqJump.num_sites(grid) == prod(dims)
     @test DiffEqJump.num_neighbors(grid, 1) == 3
@@ -57,9 +57,9 @@ for site in 1:num_nodes
     end
 end
 
-# Tests for HopRates1
+# Tests for HopRatesUnifNbr
 hopping_constants = ones(num_species, num_nodes)
-hop_rates = DiffEqJump.HopRates1(hopping_constants)
+hop_rates = DiffEqJump.HopRatesUnifNbr(hopping_constants)
 spec_probs = ones(num_species)/num_species
 
 for site in 1:num_nodes
@@ -77,13 +77,14 @@ for site in 1:num_nodes
     @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
 end
 
-# Tests for HopRates2
+# Tests for HopRatesGeneral
 hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     hopping_constants[site] = ones(num_species, DiffEqJump.num_neighbors(g, site))
 end
 spec_probs = ones(num_species)/num_species
-hop_rates = DiffEqJump.HopRates2(hopping_constants)
+hop_rates = DiffEqJump.HopRatesGeneral(hopping_constants)
+
 for site in 1:num_nodes
     DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
     num_nbs = DiffEqJump.num_neighbors(g, site)

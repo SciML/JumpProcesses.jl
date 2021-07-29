@@ -26,10 +26,7 @@ function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
 end
 
 # problem setup
-reactstoch = []
-netstoch = []
-rates = []
-majumps = MassActionJump(rates, reactstoch, netstoch)
+majumps = JumpSet(nothing)
 tf = 0.5
 u0 = [100]
 num_species = 1
@@ -46,7 +43,7 @@ starting_state = zeros(Int, length(u0), num_nodes)
 center_node = trunc(Int,(num_nodes+1)/2)
 starting_state[:,center_node] = copy(u0)
 tspan = (0.0, tf)
-prob = DiscreteProblem(starting_state,tspan, rates)
+prob = DiscreteProblem(starting_state,tspan, [])
 
 hopping_rate = diffusivity * (linear_size/domain_size)^2
 hopping_constants = [hopping_rate for i in starting_state]
@@ -98,7 +95,7 @@ hopping_constants[3][2] = 0.0
 
 starting_state = 25*ones(Int, length(u0), num_nodes)
 tspan = (0.0, 10.0)
-prob = DiscreteProblem(starting_state,tspan, rates)
+prob = DiscreteProblem(starting_state,tspan, [])
 
 jp=JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
 sol = solve(jp, SSAStepper())

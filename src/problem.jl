@@ -83,12 +83,12 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
   end
 
   ## Spatial jumps handling
-  if spatial_system !== nothing && hopping_constants !== nothing && !is_spatial(aggregator)
+  if spatial_system !== nothing && hopping_constants !== nothing && !is_spatial(aggregator) # check if need to flatten
     prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
   end
   ## Constant Rate Handling
   t,end_time,u = prob.tspan[1],prob.tspan[2],prob.u0
-  if (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing)
+  if (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) && !is_spatial(aggregator) # check if there are no jumps
     disc = nothing
     constant_jump_callback = CallbackSet()
   else

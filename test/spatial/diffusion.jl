@@ -64,15 +64,14 @@ grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), 
 jump_problems = JumpProblem[JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 # setup flattenned jump prob
 graph = LightGraphs.grid(dims)
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+# hop rates of form L_{s,i,j}
 hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
 end
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
-# hop rates of form L_{s,i,j}
 push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=graph, save_positions=(false,false)))
 for spatial_jump_prob in jump_problems
-    solution = solve(spatial_jump_prob, SSAStepper(), saveat = tf/num_time_points).u
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
 
     for (i,t) in enumerate(times)

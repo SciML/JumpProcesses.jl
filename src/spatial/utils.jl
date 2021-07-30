@@ -2,7 +2,6 @@
 A file with types, structs and functions for spatial simulations
 """
 
-using LightGraphs
 """
 stores info for a spatial jump
 """
@@ -207,7 +206,7 @@ HopRates(hopping_constants::Vector{Matrix{F}}) where F <: Number = HopRatesGener
 struct HopRatesUnifNbr{F} <: AbstractHopRates
     hopping_constants::Matrix{F} # hopping_constants[i,j] is the hop constant of species i at site j
     rates::Matrix{F} # rates[i,j] is total hopping rate of species i at site j
-    sum_rates::Vector{F} # sum_rates[j] is the sum of reaction rates at site j
+    sum_rates::Vector{F} # sum_rates[j] is the sum of hopping rates at site j
 end
 
 """

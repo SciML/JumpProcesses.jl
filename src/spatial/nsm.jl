@@ -145,6 +145,7 @@ function update_dependent_rates_and_firing_times!(p, u, t)
         update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))
         update_site_time!(p, site, t)
     end
+    nothing
 end
 
 function update_site_time!(p, site, t)
@@ -155,6 +156,7 @@ function update_site_time!(p, site, t)
     else
         update!(pq, site, typemax(t))
     end
+    nothing
 end
 
 """

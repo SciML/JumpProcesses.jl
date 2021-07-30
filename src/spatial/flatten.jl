@@ -20,14 +20,14 @@ end
 """
 if hopping_constants is a matrix, assume hopping_constants[i,j] is species i, site j
 """
-function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Matrix{F}; kwargs...) where F <: Number
+function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::AbstractArray, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Matrix{F}; kwargs...) where F <: Number
     num_nodes = num_sites(spatial_system)
     num_specs = size(u0, 1)
     @assert size(hopping_constants) == size(u0) # hopping_constants[i,j] is species i, site j
     hop_constants = Vector{Matrix{F}}(undef, size(hopping_constants, 2))
     for site in 1:num_nodes
         num_nbs = num_neighbors(spatial_system, site)
-        hop_constants[site] = reshape(repeat(hopping_constants[:,site], num_nbs), num_specs, num_nbs)
+        hop_constants[site] = reshape(repeat((@view hopping_constants[:,site]), num_nbs), num_specs, num_nbs)
     end
     
     flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants; kwargs...)
@@ -55,7 +55,7 @@ function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}
     spec_LI = LinearIndices((num_species, num_nodes))
 
     sum_outdegrees = sum(num_neighbors(spatial_system, site) for site in 1:num_nodes)
-    num_jumps = num_species*(sum_outdegrees + num_rxs)
+    num_jumps = num_species*sum_outdegrees + num_nodes*num_rxs
     total_netstoch = R[]; sizehint!(total_netstoch, num_jumps)
     total_reactstoch = R[]; sizehint!(total_reactstoch, num_jumps)
     total_rates = F[]; sizehint!(total_rates, num_jumps)
@@ -77,8 +77,12 @@ function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}
 
     #reactions
     for site in 1:num_nodes
-        append!(total_netstoch, map(rx_stoch -> map(p -> Pair(spec_LI[spec_CI[p[1],site]], p[2]), rx_stoch), netstoch))
-        append!(total_reactstoch, map(rx_stoch -> map(p -> Pair(spec_LI[spec_CI[p[1],site]], p[2]), rx_stoch), reactstoch))
+        for rx in 1:num_rxs
+            nstoch = map(p -> Pair(spec_LI[spec_CI[p[1],site]], p[2]), netstoch[rx]) # transform into new indices
+            rstoch = map(p -> Pair(spec_LI[spec_CI[p[1],site]], p[2]), reactstoch[rx])
+            push!(total_netstoch, nstoch)
+            push!(total_reactstoch, rstoch)
+        end
     end
     append!(total_rates, vec(rx_rates)) # assuming rx_rates isa Matrix where rx_rates[rx, site] is the rate of rx at site
 

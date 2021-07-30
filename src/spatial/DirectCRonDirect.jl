@@ -93,17 +93,18 @@ function generate_jumps!(p::DirectCRonDirectJumpAggregation, integrator, params,
     @unpack rx_rates, hop_rates, rng, rt = p
 
     p.next_jump_time  = t + randexp(rng) / rt.gsum
+    
     if p.next_jump_time < p.end_time
-        p.next_jump = sample(p.rt, p.cur_rates, p.rng) # how to sample a site?
+        site = sample(p.rt, p.site_rates, p.rng)
+        if rand(rng)*(total_site_rate(rx_rates, hop_rates, site)) < total_site_rx_rate(rx_rates, site)
+            rx = sample_rx_at_site(rx_rates, site, rng)
+            p.next_jump = SpatialJump(site, rx+p.numspecies, site)
+        else
+            species_to_diffuse, target_site = sample_hop_at_site(hop_rates, site, rng, p.spatial_system)
+            p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
+        end
     end    
-
-    if rand(rng)*(total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site)) < total_site_rx_rate(rx_rates, site)
-        rx = sample_rx_at_site(rx_rates, site, rng)
-        p.next_jump = SpatialJump(site, rx+p.numspecies, site)
-    else
-        species_to_diffuse, target_site = sample_hop_at_site(hop_rates, site, rng, p.spatial_system)
-        p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
-    end
+    nothing
 end
 
 # execute one jump, changing the system state
@@ -121,7 +122,7 @@ end
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::DirectCRonDirectJumpAggregation, u, t)
-    @unpack spatial_system, rx_rates, hop_rates, rng, numspecies = aggregation
+    @unpack spatial_system, rx_rates, hop_rates, site_rates, rng, numspecies = aggregation
 
     reset!(rx_rates)
     reset!(hop_rates)
@@ -130,14 +131,16 @@ function fill_rates_and_get_times!(aggregation::DirectCRonDirectJumpAggregation,
     num_rxs = DiffEqJump.num_rxs(rx_rates)
     num_sites = DiffEqJump.num_sites(spatial_system)
 
-    pqdata = Vector{typeof(t)}(undef, num_sites)
     for site in 1:num_sites
         update_rx_rates!(rx_rates, 1:num_rxs, u, site)
         update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
-        pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site)) # TODO
+        site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
     end
-
-    aggregation.pq = MutableBinaryMinHeap(pqdata)
+    # setup PriorityTable
+    reset!(p.rt)
+    for (pid,priority) in enumerate(p.site_rates)
+        insert!(p.rt, pid, priority)
+    end
     nothing
 end
 
@@ -152,22 +155,12 @@ function update_dependent_rates_and_firing_times!(p, u, t)
         source_site = jump.src
         target_site = jump.dst
         update_rates_after_hop!(p, u, source_site, target_site, jump.jidx)
-        update_site_time!(p, source_site, t)
-        update_site_time!(p, target_site, t)
+        p.site_rates[source_site] = total_site_rate(rx_rates, hop_rates, source_site)
+        p.site_rates[target_site] = total_site_rate(rx_rates, hop_rates, target_site)
     else
         site = jump.src
         update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))
-        update_site_time!(p, site, t)
-    end
-end
-
-function update_site_time!(p, site, t)
-    @unpack rx_rates, hop_rates, rng, pq = p
-    site_rate = (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
-    if site_rate > zero(typeof(site_rate))
-        update!(pq, site, t + randexp(rng) / site_rate)
-    else
-        update!(pq, site, typemax(t))
+        site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
     end
 end
 

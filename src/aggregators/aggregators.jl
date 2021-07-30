@@ -86,6 +86,11 @@ pp. 230-236. doi:10.1049/sb:20045021
 """
 struct NSM <: AbstractAggregatorAlgorithm end
 
+"""
+TODO citation
+"""
+struct DirectCRonDirect <: AbstractAggregatorAlgorithm end
+
 const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
 
 # For JumpProblem construction without an aggregator
@@ -107,3 +112,4 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
+is_spatial(aggregator::DirectCRonDirect) = true

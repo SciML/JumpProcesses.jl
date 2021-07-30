@@ -12,6 +12,7 @@ mutable struct DirectCRonDirectJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,
     end_time::T
     rx_rates::RX
     hop_rates::HOP
+    site_rates::Vector{T}
     # rates::F1 #rates for constant-rate jumps
     # affects!::F2 #affects! function determines the effect of constant-rate jumps
     save_positions::Tuple{Bool,Bool}
@@ -25,7 +26,7 @@ mutable struct DirectCRonDirectJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,
     ratetogroup::W
 end
 
-function DirectCRonDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP, sps::Tuple{Bool,Bool}, rng::RNG, spatial_system::SS; num_specs, minrate=convert(T,MINJUMPRATE), vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,RX,HOP,RNG,SS}
+function DirectCRonDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP, site_rates::Vector{T}, sps::Tuple{Bool,Bool}, rng::RNG, spatial_system::SS; num_specs, minrate=convert(T,MINJUMPRATE), vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,RX,HOP,RNG,SS}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -59,7 +60,7 @@ function DirectCRonDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_r
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, num_sites(spatial_system)), minrate, 2*minrate)
 
-    DirectCRonDirectJumpAggregation{J,T,RX,HOP,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),SS,typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates, sps, rng, dg, vtoj_map, jtov_map, spatial_system, num_specs, rt, ratetogroup)
+    DirectCRonDirectJumpAggregation{J,T,RX,HOP,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),SS,typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates, site_rates, sps, rng, dg, vtoj_map, jtov_map, spatial_system, num_specs, rt, ratetogroup)
 end
 
 ############################# Required Functions ##############################
@@ -75,8 +76,9 @@ function aggregate(aggregator::DirectCRonDirect, starting_state, p, t, end_time,
     next_jump_time = typemax(typeof(end_time))
     rx_rates = RxRates(num_sites(spatial_system), majumps)
     hop_rates = HopRates(hopping_constants)
+    site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 
-    DirectCRonDirectJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
+    DirectCRonDirectJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates, site_rates, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -123,6 +125,7 @@ function fill_rates_and_get_times!(aggregation::DirectCRonDirectJumpAggregation,
 
     reset!(rx_rates)
     reset!(hop_rates)
+    site_rates .= zero(typeof(t))
 
     num_rxs = DiffEqJump.num_rxs(rx_rates)
     num_sites = DiffEqJump.num_sites(spatial_system)
@@ -131,7 +134,7 @@ function fill_rates_and_get_times!(aggregation::DirectCRonDirectJumpAggregation,
     for site in 1:num_sites
         update_rx_rates!(rx_rates, 1:num_rxs, u, site)
         update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
-        pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
+        pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site)) # TODO
     end
 
     aggregation.pq = MutableBinaryMinHeap(pqdata)

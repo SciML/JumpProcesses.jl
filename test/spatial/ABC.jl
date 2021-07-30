@@ -46,15 +46,10 @@ function get_mean_end_state(jump_prob, Nsims)
 end
 
 # testing on CartesianGrid
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
+grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 # setup flattenned jump prob
-graph = LightGraphs.grid(dims)
-hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
-for site in 1:num_nodes
-    hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
-end
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[end], save_positions=(false,false)))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

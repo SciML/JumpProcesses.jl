@@ -26,10 +26,7 @@ function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
 end
 
 # problem setup
-reactstoch = []
-netstoch = []
-rates = []
-majumps = MassActionJump(rates, reactstoch, netstoch)
+majumps = JumpSet(nothing)
 tf = 0.5
 u0 = [100]
 num_species = 1
@@ -46,7 +43,7 @@ starting_state = zeros(Int, length(u0), num_nodes)
 center_node = trunc(Int,(num_nodes+1)/2)
 starting_state[:,center_node] = copy(u0)
 tspan = (0.0, tf)
-prob = DiscreteProblem(starting_state,tspan, rates)
+prob = DiscreteProblem(starting_state,tspan, [])
 
 hopping_rate = diffusivity * (linear_size/domain_size)^2
 hopping_constants = [hopping_rate for i in starting_state]
@@ -63,19 +60,18 @@ Nsims = 10000
 rel_tol = 0.01
 times = 0.0:tf/num_time_points:tf
 
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
+grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 # setup flattenned jump prob
 graph = LightGraphs.grid(dims)
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+# hop rates of form L_{s,i,j}
 hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
 end
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
-# hop rates of form L_{s,i,j}
 push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system=graph, save_positions=(false,false)))
 for spatial_jump_prob in jump_problems
-    solution = solve(spatial_jump_prob, SSAStepper(), saveat = tf/num_time_points).u
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
 
     for (i,t) in enumerate(times)
@@ -83,3 +79,24 @@ for spatial_jump_prob in jump_problems
         @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
     end
 end
+
+# testing non-uniform hopping rates
+dims = (2,2)
+num_nodes = prod(dims)
+grid = LightGraphs.grid(dims)
+hopping_constants = Vector{Matrix{Float64}}(undef, prod(dims))
+for site in 1:prod(dims)
+    hopping_constants[site] = ones(1, DiffEqJump.num_neighbors(grid, site))
+end
+fill!(hopping_constants[1], 0.0)
+hopping_constants[2][2] = 0.0
+hopping_constants[3][2] = 0.0
+
+starting_state = 25*ones(Int, length(u0), num_nodes)
+tspan = (0.0, 10.0)
+prob = DiscreteProblem(starting_state,tspan, [])
+
+jp=JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
+sol = solve(jp, SSAStepper())
+
+@test sol.u[end][1,1] == sum(sol.u[end])

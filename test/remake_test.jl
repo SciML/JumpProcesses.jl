@@ -43,8 +43,8 @@ rng = StableRNG(12345)
 rs = [[2=>1],[1 => 1, 2 => 1]]
 ns = [[2 => -1, 3 => 1],[1 => -1, 2 => 1]]
 pidxs = [2,1]
-maj   = MassActionJump(rs, ns; param_idxs=pidxs, params=p)
-dprob = DiscreteProblem(u0,tspan,p[pidxs])
+maj   = MassActionJump(rs, ns; param_idxs=pidxs)
+dprob = DiscreteProblem(u0,tspan,p)
 jprob = JumpProblem(dprob, Direct(), maj, save_positions=(false,false), rng=rng)
 sol   = solve(jprob, SSAStepper())
 @test sol[3,end] == 1000

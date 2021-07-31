@@ -266,8 +266,9 @@ end
 
 ############## hopping rates of form L_{s,i,j} ################
 struct HopRatesGeneral{F} <: AbstractHopRates
+    hop_const_cumulative_sums::Vector{Matrix{F}} # hop_const_cumulative_sums[i][j,s] is the cumulative sum of 
     hopping_constants::Vector{Matrix{F}} # hopping_constants[i][j,s] is the hopping constant at site i of species s to jth neighbor
-    rates::Vector{Matrix{F}} # rates[i][j,s] is the hopping rate at site i of species s to jth neighbor
+    rates::Matrix{F} # rates[s,i] is the hopping rate of species s at site i
     sum_rates::Vector{F} # sum_rates[i] is the total hopping rate out of site i
 end
 
@@ -297,7 +298,7 @@ end
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system) 
-    @inbounds rates_at_site = hop_rates.rates[site]
+    @inbounds rates_at_site = hop_rates.rates[:,site]
     r = rand(rng) * total_site_hop_rate(hop_rates, site)
     n, species = Tuple(CartesianIndices(rates_at_site)[linear_search(rates_at_site, r)])
     return species, nth_nbr(spatial_system, site, n)

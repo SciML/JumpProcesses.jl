@@ -132,7 +132,7 @@ end
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates_and_firing_times!(p, u, t)
+function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, u, t)
     jump = p.prev_jump
     if is_hop(p, jump)
         source_site = jump.src
@@ -148,7 +148,7 @@ function update_dependent_rates_and_firing_times!(p, u, t)
     nothing
 end
 
-function update_site_time!(p, site, t)
+function update_site_time!(p::NSMJumpAggregation, site, t)
     @unpack rx_rates, hop_rates, rng, pq = p
     site_rate = (total_site_rate(rx_rates, hop_rates, site))
     if site_rate > zero(typeof(site_rate))

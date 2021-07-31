@@ -122,7 +122,7 @@ end
 reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::DirectCRonDirectJumpAggregation, u, t)
-    @unpack spatial_system, rx_rates, hop_rates, site_rates, rng, numspecies = aggregation
+    @unpack spatial_system, rx_rates, hop_rates, site_rates, rt, numspecies = aggregation
 
     reset!(rx_rates)
     reset!(hop_rates)
@@ -137,9 +137,9 @@ function fill_rates_and_get_times!(aggregation::DirectCRonDirectJumpAggregation,
         site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
     end
     # setup PriorityTable
-    reset!(p.rt)
-    for (pid,priority) in enumerate(p.site_rates)
-        insert!(p.rt, pid, priority)
+    reset!(rt)
+    for (pid,priority) in enumerate(site_rates)
+        insert!(rt, pid, priority)
     end
     nothing
 end
@@ -149,18 +149,30 @@ end
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates_and_firing_times!(p, u, t)
+function update_dependent_rates_and_firing_times!(p::DirectCRonDirectJumpAggregation, u, t)
+    site_rates = p.site_rates
     jump = p.prev_jump
     if is_hop(p, jump)
         source_site = jump.src
         target_site = jump.dst
         update_rates_after_hop!(p, u, source_site, target_site, jump.jidx)
-        p.site_rates[source_site] = total_site_rate(rx_rates, hop_rates, source_site)
-        p.site_rates[target_site] = total_site_rate(rx_rates, hop_rates, target_site)
+        
+        # update site rates
+        oldrate = site_rates[source_site]
+        site_rates[source_site] = total_site_rate(p.rx_rates, p.hop_rates, source_site)
+        update!(p.rt, source_site, oldrate, site_rates[source_site])
+        
+        oldrate = site_rates[target_site]
+        p.site_rates[target_site] = total_site_rate(p.rx_rates, p.hop_rates, target_site)
+        update!(p.rt, target_site, oldrate, site_rates[target_site])
     else
         site = jump.src
         update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))
-        site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
+
+        # update site rates
+        oldrate = site_rates[site]
+        site_rates[site] = total_site_rate(p.rx_rates, p.hop_rates, site)
+        update!(p.rt, site, oldrate, site_rates[site])
     end
 end
 

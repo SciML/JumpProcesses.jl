@@ -8,7 +8,8 @@ non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
 
 dim = 1
 linear_size = 5
-dims = Tuple(5)
+dims = Tuple(repeat([linear_size], dim))
+num_nodes = prod(dims)
 starting_site = trunc(Int,(linear_size^dim + 1)/2)
 u0 = [500,500,0]
 end_time = 10.0
@@ -25,7 +26,6 @@ majumps = MassActionJump(rates, reactstoch, netstoch)
 
 # spatial system setup
 hopping_rate = diffusivity * (linear_size/domain_size)^2
-num_nodes = 5
 
 # Starting state setup
 starting_state = zeros(Int, length(u0), num_nodes)

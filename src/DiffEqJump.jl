@@ -44,6 +44,7 @@ include("aggregators/rdirect.jl")
 
 include("spatial/utils.jl")
 include("spatial/nsm.jl")
+include("spatial/flatten.jl")
 
 include("aggregators/aggregated_api.jl")
 

@@ -18,25 +18,22 @@ function flatten(ma_jump, prob::DiscreteProblem, spatial_system, hopping_constan
 end
 
 """
-if hopping_constants is a matrix, assume hopping_constants[i,j] is species i, site j
+if hopping_constants is a matrix, assume hopping_constants[i,j] is the hopping constant of species i from site j to any neighbor
 """
 function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::AbstractArray, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Matrix{F}; kwargs...) where F <: Number
-    num_nodes = num_sites(spatial_system)
-    num_specs = size(u0, 1)
-    @assert size(hopping_constants) == size(u0) # hopping_constants[i,j] is species i, site j
-    hop_constants = Vector{Matrix{F}}(undef, size(hopping_constants, 2))
-    for site in 1:num_nodes
-        num_nbs = num_neighbors(spatial_system, site)
-        hop_constants[site] = reshape(repeat((@view hopping_constants[:,site]), num_nbs), num_specs, num_nbs)
+    @assert size(hopping_constants) == size(u0)
+    hop_constants = Matrix{Vector{F}}(undef, size(hopping_constants))
+    for ci in CartesianIndices(hop_constants)
+        (species, site) = Tuple(ci)
+        hop_constants[ci] = hopping_constants[species, site] * ones(num_neighbors(spatial_system, site))
     end
-    
     flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants; kwargs...)
 end
 
 """
 if reaction rates is a vector, assume reaction rates are equal across sites
 """
-function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Vector{Matrix{F}}; kwargs...) where F <: Number
+function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Matrix{Vector{F}}; kwargs...) where F <: Number
     num_nodes = num_sites(spatial_system)
     rates = reshape(repeat(rx_rates, num_nodes), length(rx_rates), num_nodes)
     flatten(netstoch, reactstoch, rates, spatial_system, u0, tspan, hopping_constants; kwargs...)
@@ -45,11 +42,12 @@ end
 """
 "flatten" the spatial jump problem. Return flattened DiscreteProblem and MassActionJump.
 """
-function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Vector{Matrix{F}}; scale_rates = true, kwargs...) where {R, F <: Number}
+function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Matrix{Vector{F}}; scale_rates = true, kwargs...) where {R, F <: Number}
     num_species = size(u0, 1)
     num_nodes = num_sites(spatial_system)
     num_rxs = length(reactstoch)
-    @assert length(hopping_constants) == size(u0, 2) == size(rx_rates, 2) == num_nodes
+    @assert size(hopping_constants) == size(u0)
+    @assert size(u0, 2) == size(rx_rates, 2) == num_nodes
     @assert length(netstoch) == length(reactstoch) == size(rx_rates, 1) == num_rxs
     spec_CI = CartesianIndices((num_species, num_nodes))
     spec_LI = LinearIndices((num_species, num_nodes))
@@ -61,16 +59,16 @@ function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}
     total_rates = F[]; sizehint!(total_rates, num_jumps)
 
     #hops
-    # assuming hopping_constants isa Vector{Matrix} where hopping_constants[src][species, index] is the hop const of species from src to neighbor at index in neighbors(spatial_system, src)
+    # assuming hopping_constants isa Matrix{Vector} where hopping_constants[species, src][index] is the hop const of species from src to neighbor at index in neighbors(spatial_system, src)
     for src in 1:num_nodes
-        hopping_constants_at_src = hopping_constants[src]
-        for (i,dst) in enumerate(neighbors(spatial_system, src))
-            for species in 1:num_species
+        for species in 1:num_species
+        hopping_const = hopping_constants[species, src]
+            for (i,dst) in enumerate(neighbors(spatial_system, src))
                 dst_idx = spec_LI[spec_CI[species,dst]]
                 src_idx = spec_LI[spec_CI[species,src]]
                 push!(total_netstoch, [dst_idx => 1, src_idx => -1])
                 push!(total_reactstoch, [src_idx => 1])
-                push!(total_rates, hopping_constants_at_src[species, i])
+                push!(total_rates, hopping_const[i])
             end
         end
     end

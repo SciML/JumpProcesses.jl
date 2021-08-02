@@ -33,7 +33,7 @@ end
 """
 if reaction rates is a vector, assume reaction rates are equal across sites
 """
-function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Vector{Matrix{F}}; kwargs...) where F <: Number
+function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector, spatial_system, u0::Matrix{Int}, tspan, hopping_constants::Matrix{Vector{F}}; kwargs...) where F <: Number
     num_nodes = num_sites(spatial_system)
     rates = reshape(repeat(rx_rates, num_nodes), length(rx_rates), num_nodes)
     flatten(netstoch, reactstoch, rates, spatial_system, u0, tspan, hopping_constants; kwargs...)

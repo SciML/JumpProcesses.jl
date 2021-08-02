@@ -48,7 +48,7 @@ end
 # testing on CartesianGrid
 grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-# setup flattenned jump prob
+# add flattenned jump prob
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[end], save_positions=(false,false)))
 # test
 for spatial_jump_prob in jump_problems

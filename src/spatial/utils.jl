@@ -201,7 +201,7 @@ total_site_hop_rate(hop_rates::AbstractHopRates, site) = @inbounds hop_rates.sum
 ############## hopping rates of form L_{s,i} ################
 
 HopRates(hopping_constants::Matrix{F}) where F <: Number = HopRatesUnifNbr(hopping_constants)
-HopRates(hopping_constants::Vector{Matrix{F}}) where F <: Number = HopRatesGeneral(hopping_constants)
+HopRates(hopping_constants::AbstractArray) where F <: Number = HopRatesGeneral(hopping_constants)
 
 struct HopRatesUnifNbr{F} <: AbstractHopRates
     hopping_constants::Matrix{F} # hopping_constants[i,j] is the hop constant of species i at site j
@@ -285,7 +285,7 @@ end
 make all rates zero
 """
 function reset!(hop_rates::HopRatesGeneral{F}) where F <: Number
-    foreach(r -> fill!(r, zero(F)), hop_rates.rates)
+    hop_rates.rates .= zero(F)
     hop_rates.sum_rates .= zero(F)
     nothing
 end
@@ -295,7 +295,7 @@ sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system) 
     species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
-    cumulative_hop_constants = hop_const_cumulative_sums[species, site]
+    cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
     n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
     return species, nth_nbr(spatial_system, site, n)
 end

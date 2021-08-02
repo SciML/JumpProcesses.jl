@@ -294,9 +294,9 @@ end
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system) 
-    species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
-    cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
-    n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
+    @inbounds species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
+    @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
+    @inbounds n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
     return species, nth_nbr(spatial_system, site, n)
 end
 
@@ -306,7 +306,7 @@ update rates of single species at site
 function update_hop_rate!(hop_rates::HopRatesGeneral, species, u, site, spatial_system)
     rates = hop_rates.rates
     @inbounds old_rate = rates[species, site]
-    rates[species, site] = u[species, site] * hop_rates.hop_const_cumulative_sums[species, site][end]
+    @inbounds rates[species, site] = u[species, site] * hop_rates.hop_const_cumulative_sums[species, site][end]
     @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
     old_rate
 end

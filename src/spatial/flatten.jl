@@ -25,7 +25,7 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::A
     hop_constants = Matrix{Vector{F}}(undef, size(hopping_constants))
     for ci in CartesianIndices(hop_constants)
         (species, site) = Tuple(ci)
-        hop_constants[ci] = repeat([hopping_constants[species, site]], num_neighbors(spatial_system, site))
+        hop_constants[ci] = hopping_constants[species, site] * ones(num_neighbors(spatial_system, site))
     end
     flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants; kwargs...)
 end

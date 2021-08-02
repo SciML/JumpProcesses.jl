@@ -118,6 +118,10 @@ function rand_nbr(grid::CartesianGridIter, site::Int)
     nth_nbr(grid, site, rand(1:num_neighbors(grid,site)))
 end
 
+function Base.show(io::IO, grid::Union{CartesianGridRej, CartesianGridIter})
+    println(io, "A Cartesian grid with dimensions $(grid.dims)")
+end
+
 ### spatial rx rates ###
 struct RxRates{F,M}
     rates::Matrix{F} # rx_rates[i,j] is rate of reaction i at site j

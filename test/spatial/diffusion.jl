@@ -63,10 +63,17 @@ grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), 
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+graph = LightGraphs.grid(dims)
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+# hop rates of form L_{s,i,j}
+hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))
+for ci in CartesianIndices(hop_constants)
+    (species, site) = Tuple(ci)
+    hop_constants[ci] = repeat([hopping_constants[species, site]], DiffEqJump.num_neighbors(graph, site))
+end
+push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=graph, save_positions=(false,false)))
 for spatial_jump_prob in jump_problems
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
-
     for (i,t) in enumerate(times)
         local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
         @test abs(sum(diff[1:center_node])/sum(analytic_solution(t)[1:center_node])) < rel_tol
@@ -77,14 +84,16 @@ end
 dims = (2,2)
 num_nodes = prod(dims)
 grid = LightGraphs.grid(dims)
-hopping_constants = Vector{Matrix{Float64}}(undef, prod(dims))
-for site in 1:prod(dims)
-    hopping_constants[site] = ones(1, DiffEqJump.num_neighbors(grid, site))
+hopping_constants = Matrix{Vector{Float64}}(undef, 1, num_nodes)
+for ci in CartesianIndices(hopping_constants)
+    (species, site) = Tuple(ci)
+    hopping_constants[species, site] = zeros(DiffEqJump.num_neighbors(grid, site))
+    for (n, nb) in enumerate(DiffEqJump.neighbors(grid, site))
+        if nb < site
+            hopping_constants[species, site][n] = 1.0
+        end
+    end
 end
-fill!(hopping_constants[1], 0.0)
-hopping_constants[2][2] = 0.0
-hopping_constants[3][2] = 0.0
-
 starting_state = 25*ones(Int, length(u0), num_nodes)
 tspan = (0.0, 10.0)
 prob = DiscreteProblem(starting_state,tspan, [])

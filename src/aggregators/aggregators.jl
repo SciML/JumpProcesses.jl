@@ -87,9 +87,11 @@ pp. 230-236. doi:10.1049/sb:20045021
 struct NSM <: AbstractAggregatorAlgorithm end
 
 """
-TODO citation
+Constant-complexity stochastic simulation algorithm with optimal binning, 
+Kevin R. Sanft and Hans G. Othmer, Journal of Chemical Physics 143, 074108 (2015); 
+doi: 10.1063/1.4928635
 """
-struct DirectCRonDirect <: AbstractAggregatorAlgorithm end
+struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
 
@@ -112,4 +114,4 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
-is_spatial(aggregator::DirectCRonDirect) = true
+is_spatial(aggregator::DirectCRDirect) = true

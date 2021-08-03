@@ -79,17 +79,9 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
-    @unpack rx_rates, hop_rates, rng = p
-
     p.next_jump_time, site = top_with_handle(p.pq)
     p.next_jump_time >= p.end_time && return nothing
-    if rand(rng)*(total_site_rate(rx_rates, hop_rates, site)) < total_site_rx_rate(rx_rates, site)
-        rx = sample_rx_at_site(rx_rates, site, rng)
-        p.next_jump = SpatialJump(site, rx+p.numspecies, site)
-    else
-        species_to_diffuse, target_site = sample_hop_at_site(hop_rates, site, rng, p.spatial_system)
-        p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
-    end
+    p.next_jump = sample_jump_direct(p, site)
     nothing
 end
 

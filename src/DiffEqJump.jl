@@ -44,7 +44,7 @@ include("aggregators/rdirect.jl")
 
 include("spatial/utils.jl")
 include("spatial/nsm.jl")
-include("spatial/DirectCRonDirect.jl")
+include("spatial/DirectCRDirect.jl")
 include("spatial/flatten.jl")
 
 include("aggregators/aggregated_api.jl")
@@ -68,7 +68,7 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
-export NSM, DirectCRonDirect
+export NSM, DirectCRDirect
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

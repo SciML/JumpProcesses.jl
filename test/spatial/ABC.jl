@@ -34,7 +34,7 @@ starting_state[:,starting_site] .= u0
 tspan = (0.0, end_time)
 prob = DiscreteProblem(starting_state, tspan, rates)
 hopping_constants = [hopping_rate for i in starting_state]
-# algs = [NSM(), DirectCRonDirect()]
+# algs = [NSM(), DirectCRDirect()]
 
 function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(size(jump_prob.prob.u0))
@@ -48,7 +48,7 @@ end
 # testing
 grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-push!(jump_problems, JumpProblem(prob, DirectCRonDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # test

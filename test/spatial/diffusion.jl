@@ -71,7 +71,7 @@ for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
     hop_constants[ci] = repeat([hopping_constants[species, site]], DiffEqJump.num_neighbors(graph, site))
 end
-push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=graph, save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, NSM(), majumps, hopping_constants=hop_constants, spatial_system=graph, save_positions=(false,false)))
 for spatial_jump_prob in jump_problems
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
     for (i,t) in enumerate(times)

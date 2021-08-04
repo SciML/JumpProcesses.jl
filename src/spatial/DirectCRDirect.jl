@@ -90,7 +90,7 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRDirectJumpAggregation, integrator, params, u, t)
-    p.next_jump_time  = t + randexp(rng) / p.rt.gsum
+    p.next_jump_time  = t + randexp(p.rng) / p.rt.gsum
     p.next_jump_time >= p.end_time && return nothing
     site = sample(p.rt, p.site_rates, p.rng)
     p.next_jump = sample_jump_direct(p, site)
@@ -118,11 +118,10 @@ function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, u
     reset!(hop_rates)
     site_rates .= zero(typeof(t))
 
-    num_rxs = num_rxs(rx_rates)
-    num_sites = num_sites(spatial_system)
+    num_reactions = num_rxs(rx_rates)
 
-    for site in 1:num_sites
-        update_rx_rates!(rx_rates, 1:num_rxs, u, site)
+    for site in 1:num_sites(spatial_system)
+        update_rx_rates!(rx_rates, 1:num_reactions, u, site)
         update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
         site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
     end

@@ -75,14 +75,12 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                          alias_jump = Threads.threadid() == 1,
                          saveat = nothing,
                          callback = nothing,
+                         tstops = eltype(jump_prob.prob.tspan)[]
                          numsteps_hint=100)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
-
-    tstops = typeof(jump_prob.prob.tspan[1])[] #make sure tstops is type-stable
-
     if alias_jump
       cb = jump_prob.jump_callback.discrete_callbacks[end]
       if seed !== nothing

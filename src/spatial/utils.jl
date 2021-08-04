@@ -313,6 +313,16 @@ end
 
 
 ######################## helper routines for all spatial SSAs ########################
+function sample_jump_direct(p, site)
+    if rand(p.rng)*(total_site_rate(p.rx_rates, p.hop_rates, site)) < total_site_rx_rate(p.rx_rates, site)
+        rx = sample_rx_at_site(p.rx_rates, site, p.rng)
+        return SpatialJump(site, rx+p.numspecies, site)
+    else
+        species_to_diffuse, target_site = sample_hop_at_site(p.hop_rates, site, p.rng, p.spatial_system)
+        return SpatialJump(site, species_to_diffuse, target_site)
+    end
+end
+
 total_site_rate(rx_rates::RxRates, hop_rates::AbstractHopRates, site) = total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)
 
 function update_rates_after_reaction!(p, u, site, reaction_id)

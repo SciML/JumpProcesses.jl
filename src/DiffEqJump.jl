@@ -8,7 +8,7 @@ using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using LightGraphs
 
-import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
+import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
 import LightGraphs: neighbors
@@ -42,9 +42,16 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 
-include("spatial/utils.jl")
-include("spatial/nsm.jl")
+# spatial:
 include("spatial/flatten.jl")
+include("spatial/hop_rates.jl")
+include("spatial/reaction_rates.jl")
+include("spatial/topology.jl")
+include("spatial/utils.jl")
+
+include("spatial/nsm.jl")
+include("spatial/DirectCRDirect.jl")
+
 
 include("aggregators/aggregated_api.jl")
 
@@ -67,7 +74,6 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
-export NSM
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
@@ -78,6 +84,8 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # spatial structs and functions
-export CartesianGrid
+export CartesianGridRej, CartesianGridIter
+export num_neighbors, num_sites, neighbors
+export NSM, DirectCRDirect
 
 end # module

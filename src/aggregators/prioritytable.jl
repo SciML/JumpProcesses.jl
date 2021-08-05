@@ -58,10 +58,10 @@ end
 end
 
 function Base.show(io::IO, pg::PriorityGroup)
-    println("  ", summary(pg))
-    println("  maxpriority = ", pg.maxpriority)
-    println("  numpids = ", pg.numpids)
-    println("  pids = ", pg.pids[1:pg.numpids])
+    println(io, "  ", summary(pg))
+    println(io, "  maxpriority = ", pg.maxpriority)
+    println(io, "  numpids = ", pg.numpids)
+    println(io, "  pids = ", pg.pids[1:pg.numpids])
 end
 
 
@@ -159,7 +159,6 @@ end
 # i.e. pid = length(pidtogroup) + 1
 function insert!(pt::PriorityTable, pid, priority)
     @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
-    pidtype = typeof(pid)
 
     # find group for new priority
     gid = priortogid(priority)
@@ -227,15 +226,25 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     nothing
 end
 
+function reset!(pt::PriorityTable{F,S,T,U}) where {F,S,T,U}
+    @unpack groups, gsums, pidtogroup = pt
+    pt.gsum = zero(F)
+    fill!(gsums, zero(F))
+    fill!(pidtogroup, (zero(T),zero(T)))
+    for group in groups
+        group.numpids = zero(T)
+    end
+end
+
 function Base.show(io::IO, pt::PriorityTable)
-    println(summary(pt))
-    println("(minpriority,maxpriority) = ", (pt.minpriority, pt.maxpriority))
-    println("sum of priorities = ", pt.gsum)
-    println("num of groups = ", length(pt.groups))
-    println("pidtogroup = ", pt.pidtogroup)
+    println(io, summary(pt))
+    println(io, "(minpriority,maxpriority) = ", (pt.minpriority, pt.maxpriority))
+    println(io, "sum of priorities = ", pt.gsum)
+    println(io, "num of groups = ", length(pt.groups))
+    println(io, "pidtogroup = ", pt.pidtogroup)
     for (i,group) in enumerate(pt.groups)
         if group.numpids > 0
-            println("group = ",i,", group sum = ", pt.gsums[i])
+            println(io, "group = ",i,", group sum = ", pt.gsums[i])
             Base.show(io,group)
         end
     end

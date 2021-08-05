@@ -8,7 +8,7 @@ using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using LightGraphs
 
-import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
+import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
 import LightGraphs: neighbors
@@ -44,6 +44,7 @@ include("aggregators/rdirect.jl")
 
 include("spatial/utils.jl")
 include("spatial/nsm.jl")
+include("spatial/DirectCRDirect.jl")
 include("spatial/flatten.jl")
 
 include("aggregators/aggregated_api.jl")
@@ -67,7 +68,7 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
-export NSM
+export NSM, DirectCRDirect
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

@@ -8,7 +8,7 @@ using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using LightGraphs
 
-import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices
+import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
 import LightGraphs: neighbors

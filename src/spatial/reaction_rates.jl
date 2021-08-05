@@ -1,12 +1,22 @@
+"""
+A file with structs and functions for sampling reactions and updating reaction rates in spatial SSAs
+"""
+
 ### spatial rx rates ###
 struct RxRates{F,M}
-    rates::Matrix{F} # rx_rates[i,j] is rate of reaction i at site j
-    sum_rates::Vector{F} # rx_rates_sum[j] is sum of reaction rates at site j
-    ma_jumps::M # MassActionJump
+    "rx_rates[i,j] is rate of reaction i at site j"
+    rates::Matrix{F} 
+
+    "rx_rates_sum[j] is sum of reaction rates at site j"
+    sum_rates::Vector{F} 
+    
+    "MassActionJump"
+    ma_jumps::M
 end
 
-# functions to implement:
 """
+    RxRates(num_sites::Int, ma_jumps::M) where {M}
+
 initializes RxRates with zero rates
 """
 function RxRates(num_sites::Int, ma_jumps::M) where {M}
@@ -18,6 +28,8 @@ end
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
 
 """
+    reset!(rx_rates::RxRates)
+
 make all rates zero
 """
 function reset!(rx_rates::RxRates)
@@ -27,6 +39,8 @@ function reset!(rx_rates::RxRates)
 end
 
 """
+    total_site_rx_rate(rx_rates::RxRates, site)
+
 return total reaction rate at site
 """
 function total_site_rx_rate(rx_rates::RxRates, site)
@@ -34,6 +48,8 @@ function total_site_rx_rate(rx_rates::RxRates, site)
 end
 
 """
+    update_rx_rates!(rx_rates, rxs, u, site)
+
 update rates of all reactions in rxs at site
 """
 function update_rx_rates!(rx_rates, rxs, u, site)
@@ -44,20 +60,23 @@ function update_rx_rates!(rx_rates, rxs, u, site)
 end
 
 """
+    sample_rx_at_site(rx_rates::RxRates, site, rng)
+
 sample a reaction at site, return reaction index
 """
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
-    linear_search(rx_rates_at_site(rx_rates, site), rand(rng) * total_site_rx_rate(rx_rates, site))
+    linear_search((@view rx_rates.rates[:,site]), rand(rng) * total_site_rx_rate(rx_rates, site))
 end
 
 # helper functions
-function rx_rates_at_site(rx_rates::RxRates, site)
-    @view rx_rates.rates[:,site]
-end
-
 function set_rx_rate_at_site!(rx_rates::RxRates, site, rx, rate)
     @inbounds old_rate = rx_rates.rates[rx, site]
     @inbounds rx_rates.rates[rx, site] = rate
     @inbounds rx_rates.sum_rates[site] += rate - old_rate
     old_rate
+end
+
+function Base.show(io::IO, rx_rates::RxRates)
+    num_rxs, num_sites = size(rx_rates.rates)
+    println(io, "RxRates with $num_rxs reactions and $num_sites sites")
 end

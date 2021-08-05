@@ -97,7 +97,9 @@ end
 
 ######################## SSA specific helper routines ########################
 """
-reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
+    fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
+
+reset all stucts, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
     @unpack spatial_system, rx_rates, hop_rates, rng, numspecies = aggregation
@@ -140,18 +142,24 @@ function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, u, t)
     nothing
 end
 
+"""
+    update_site_time!(p::NSMJumpAggregation, site, t)
+
+update the time of site in the priority queue
+"""
 function update_site_time!(p::NSMJumpAggregation, site, t)
-    @unpack rx_rates, hop_rates, rng, pq = p
-    site_rate = (total_site_rate(rx_rates, hop_rates, site))
+    site_rate = (total_site_rate(p.rx_rates, p.hop_rates, site))
     if site_rate > zero(typeof(site_rate))
-        update!(pq, site, t + randexp(rng) / site_rate)
+        update!(p.pq, site, t + randexp(p.rng) / site_rate)
     else
-        update!(pq, site, typemax(t))
+        update!(p.pq, site, typemax(t))
     end
     nothing
 end
 
 """
+    num_constant_rate_jumps(aggregator::NSMJumpAggregation)
+
 number of constant rate jumps
 """
 num_constant_rate_jumps(aggregator::NSMJumpAggregation) = 0

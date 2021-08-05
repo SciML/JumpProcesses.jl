@@ -1,8 +1,6 @@
-############ spatial system interface ##################
-
-# num_sites(spatial_system) = total number of sites
-# neighbors(spatial_system, site) = an iterator over the neighbors of site
-# num_neighbors(spatial_system, site) = number of neighbors of site
+"""
+A file with structs and functions for setting up and using the topology of the spatial system (e.g. a graph or a Cartesian grid)
+"""
 
 ################### LightGraph ########################
 num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
@@ -15,8 +13,11 @@ nth_nbr(graph::AbstractGraph, site, n) = neighbors(graph, site)[n]
 const offsets_1D = [CartesianIndex(-1),CartesianIndex(1)]
 const offsets_2D = [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
 const offsets_3D = [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
+
 """
-dimension is assumed to be 1, 2, or 3
+    potential_offsets(dimension::Int)
+
+NOTE: dimension is assumed to be 1, 2, or 3
 """
 function potential_offsets(dimension::Int)
     if dimension==1
@@ -30,6 +31,12 @@ end
 
 num_sites(grid) = prod(grid.dims)
 num_neighbors(grid, site) = grid.nums_neighbors[site]
+
+"""
+    nth_nbr(grid, site, n)
+
+return the nth neighbor of site in grid, in ascending order
+"""
 function nth_nbr(grid, site, n)
     CI = grid.CI; offsets = grid.offsets
     @inbounds I = CI[site]
@@ -41,8 +48,11 @@ function nth_nbr(grid, site, n)
         end
     end
 end
+
 """
-return neighbors of site in increasing order
+    neighbors(grid, site)
+
+return neighbors of site in ascending order
 """
 function neighbors(grid, site)
     CI = grid.CI
@@ -51,19 +61,25 @@ function neighbors(grid, site)
     Iterators.map(off -> LI[off+I], Iterators.filter(off -> off+I in CI, grid.offsets))
 end
 
-# possible rand_nbr functions:
-# 1. Rejection-based: pick a neighbor, check it's valid; if not, repeat
-# 2. Iterator-based: draw a random number from 1 to num_neighbors and iterate to that neighbor
-# 3. Array-based: using a pre-allocated array in grid
-
-# rejection-based
+# neighbor sampling is rejection-based
 struct CartesianGridRej{N,T}
-    dims::NTuple{N, Int} #side lengths of the grid
+    "dimensions (side lengths) of the grid"
+    dims::NTuple{N, Int}
+
+    "number of neighbor for each site"
     nums_neighbors::Vector{Int}
     CI::CartesianIndices{N, T}
     LI::LinearIndices{N, T}
+
+    "offsets, e.g. [-1, 1] for 1D"
     offsets::Vector{CartesianIndex{N}}
 end
+
+"""
+    CartesianGridRej(dims::Tuple)
+
+initialze CartesianGridRej
+"""
 function CartesianGridRej(dims::Tuple)
     dim = length(dims)
     CI = CartesianIndices(dims)
@@ -83,9 +99,9 @@ function rand_nbr(grid::CartesianGridRej, site::Int)
     end
 end
 
-# iterator-based
+# neighbor sampling is iterator-based
 struct CartesianGridIter{N,T}
-    dims::NTuple{N, Int} #side lengths of the grid
+    dims::NTuple{N, Int}
     nums_neighbors::Vector{Int}
     CI::CartesianIndices{N, T}
     LI::LinearIndices{N, T}

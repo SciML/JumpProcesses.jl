@@ -1,6 +1,12 @@
+"""
+A file with structs and functions for sampling hops and updating hopping rates
+"""
+
 ### spatial hop rates ###
 abstract type AbstractHopRates end
 """
+    update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site, spatial_system)
+
 update rates of all specs in species at site
 """
 function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site, spatial_system)
@@ -10,6 +16,8 @@ function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, 
 end
 
 """
+    total_site_hop_rate(hop_rates::AbstractHopRates, site)
+    
 return total hopping rate out of site
 """
 total_site_hop_rate(hop_rates::AbstractHopRates, site) = @inbounds hop_rates.sum_rates[site]
@@ -20,12 +28,24 @@ HopRates(hopping_constants::Matrix{F}) where F <: Number = HopRatesUnifNbr(hoppi
 HopRates(hopping_constants::AbstractArray) where F <: Number = HopRatesGeneral(hopping_constants)
 
 struct HopRatesUnifNbr{F} <: AbstractHopRates
-    hopping_constants::Matrix{F} # hopping_constants[i,j] is the hop constant of species i at site j
-    rates::Matrix{F} # rates[i,j] is total hopping rate of species i at site j
-    sum_rates::Vector{F} # sum_rates[j] is the sum of hopping rates at site j
+    "hopping_constants[i,j] is the hop constant of species i at site j"
+    hopping_constants::Matrix{F} 
+
+    "rates[i,j] is total hopping rate of species i at site j"
+    rates::Matrix{F}
+
+    "sum_rates[j] is the sum of hopping rates at site j"
+    sum_rates::Vector{F}
+end
+
+function Base.show(io::IO, hop_rates::HopRatesUnifNbr)
+    num_specs, num_sites = size(hop_rates.rates)
+    println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form L_{s,i} where s is species, and i is source.")
 end
 
 """
+    HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
+
 initializes HopRatesUnifNbr with zero rates
 """
 function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
@@ -34,6 +54,8 @@ function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
 end
 
 """
+    reset!(hop_rates::HopRatesUnifNbr)
+
 make all rates zero
 """
 function reset!(hop_rates::HopRatesUnifNbr)
@@ -43,6 +65,8 @@ function reset!(hop_rates::HopRatesUnifNbr)
 end
 
 """
+    sample_hop_at_site(hop_rates::HopRatesUnifNbr, site, rng, spatial_system) 
+
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRatesUnifNbr, site, rng, spatial_system) 
@@ -52,6 +76,8 @@ function sample_hop_at_site(hop_rates::HopRatesUnifNbr, site, rng, spatial_syste
 end
 
 """
+    update_hop_rate!(hop_rates::HopRatesUnifNbr, species::Int, u, site, spatial_system) 
+
 update rates of single species at site
 """
 function update_hop_rate!(hop_rates::HopRatesUnifNbr, species::Int, u, site, spatial_system) 
@@ -75,19 +101,33 @@ function set_hop_rate_at_site!(hop_rates::HopRatesUnifNbr, site, species, rate)
     @inbounds hop_rates.sum_rates[site] += rate - old_rate
     old_rate
 end
-
+"""
+return hopping rate of species at site
+"""
 function evalhoprate(hop_rates::HopRatesUnifNbr, u, species, site, num_nbs::Int) 
     @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
 end
 
 ############## hopping rates of form L_{s,i,j} ################
 struct HopRatesGeneral{F} <: AbstractHopRates
-    hop_const_cumulative_sums::Matrix{Vector{F}} # hop_const_cumulative_sums[s,i] is the vector of cumulative sums of hopping constants of species s at site i
-    rates::Matrix{F} # rates[s,i] is the total hopping rate of species s at site i
-    sum_rates::Vector{F} # sum_rates[i] is the total hopping rate out of site i
+    "hop_const_cumulative_sums[s,i] is the vector of cumulative sums of hopping constants of species s at site i"
+    hop_const_cumulative_sums::Matrix{Vector{F}} 
+
+    "rates[s,i] is the total hopping rate of species s at site i"
+    rates::Matrix{F}
+
+    "sum_rates[i] is the total hopping rate out of site i"
+    sum_rates::Vector{F}
+end
+
+function Base.show(io::IO, hop_rates::HopRatesGeneral)
+    num_specs, num_sites = size(hop_rates.rates)
+    println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form L_{s,i,j} where s is species, i is source and j is destination.")
 end
 
 """
+    HopRatesGeneral(hopping_constants::Matrix{Vector{F}}) where F <: Number
+
 initializes HopRates with zero rates
 """
 function HopRatesGeneral(hopping_constants::Matrix{Vector{F}}) where F <: Number
@@ -98,6 +138,8 @@ function HopRatesGeneral(hopping_constants::Matrix{Vector{F}}) where F <: Number
 end
 
 """
+    reset!(hop_rates::HopRatesGeneral{F})
+
 make all rates zero
 """
 function reset!(hop_rates::HopRatesGeneral{F}) where F <: Number
@@ -107,6 +149,8 @@ function reset!(hop_rates::HopRatesGeneral{F}) where F <: Number
 end
 
 """
+    sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system) 
+
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system) 
@@ -117,6 +161,8 @@ function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_syste
 end
 
 """
+    update_hop_rate!(hop_rates::HopRatesGeneral, species, u, site, spatial_system)
+
 update rates of single species at site
 """
 function update_hop_rate!(hop_rates::HopRatesGeneral, species, u, site, spatial_system)

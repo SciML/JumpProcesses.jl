@@ -1,44 +1,19 @@
 """
-A file with types, structs and functions for spatial simulations
+A file with helper functions for spatial simulations
 """
 
 """
 stores info for a spatial jump
 """
 struct SpatialJump{J}
-    src::J    # source location
-    jidx::Int # index of jump as a hop or reaction
-    dst::J    # destination location
-end
+    "source location"
+    src::J
 
-############ spatial system interface ##################
+    "index of jump as a hop or reaction"
+    jidx::Int
 
-# num_sites(spatial_system) = total number of sites
-# neighbors(spatial_system, site) = an iterator over the neighbors of site
-# num_neighbors(spatial_system, site) = number of neighbors of site
-
-################### LightGraph ########################
-num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
-# neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
-num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
-rand_nbr(graph::AbstractGraph, site) = rand(neighbors(graph, site))
-nth_nbr(graph::AbstractGraph, site, n) = neighbors(graph, site)[n]
-
-################### CartesianGrid ########################
-const offsets_1D = [CartesianIndex(-1),CartesianIndex(1)]
-const offsets_2D = [CartesianIndex(0,-1),CartesianIndex(-1,0),CartesianIndex(1,0),CartesianIndex(0,1)]
-const offsets_3D = [CartesianIndex(0,0,-1), CartesianIndex(0,-1,0),CartesianIndex(-1,0,0),CartesianIndex(1,0,0),CartesianIndex(0,1,0),CartesianIndex(0,0,1)]
-"""
-dimension is assumed to be 1, 2, or 3
-"""
-function potential_offsets(dimension::Int)
-    if dimension==1
-        return offsets_1D
-    elseif dimension==2
-        return offsets_2D
-    else # else dimension == 3
-        return offsets_3D
-    end
+    "destination location, equal to src for within-site reactions"
+    dst::J 
 end
 
 num_sites(grid) = prod(grid.dims)
@@ -298,9 +273,9 @@ end
 sample a reaction at site, return (species, target_site)
 """
 function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system) 
-    @inbounds species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
-    @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
+    species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
+    cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
+    n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
     return species, nth_nbr(spatial_system, site, n)
 end
 
@@ -310,7 +285,7 @@ update rates of single species at site
 function update_hop_rate!(hop_rates::HopRatesGeneral, species, u, site, spatial_system)
     rates = hop_rates.rates
     @inbounds old_rate = rates[species, site]
-    @inbounds rates[species, site] = u[species, site] * hop_rates.hop_const_cumulative_sums[species, site][end]
+    rates[species, site] = u[species, site] * hop_rates.hop_const_cumulative_sums[species, site][end]
     @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
     old_rate
 end
@@ -343,7 +318,7 @@ function update_rates_after_hop!(p, u, source_site, target_site, species)
 end
 
 """
-update_state!(p, integrator)
+    update_state!(p, integrator)
 
 updates state based on p.next_jump
 """

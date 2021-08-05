@@ -38,7 +38,7 @@ struct HopRatesUnifNbr{F} <: AbstractHopRates
     sum_rates::Vector{F}
 end
 
-function Base.show(io::IO, hop_rates::HopRatesUnifNbr)
+function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesUnifNbr)
     num_specs, num_sites = size(hop_rates.rates)
     println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form L_{s,i} where s is species, and i is source.")
 end
@@ -120,7 +120,7 @@ struct HopRatesGeneral{F} <: AbstractHopRates
     sum_rates::Vector{F}
 end
 
-function Base.show(io::IO, hop_rates::HopRatesGeneral)
+function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGeneral)
     num_specs, num_sites = size(hop_rates.rates)
     println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form L_{s,i,j} where s is species, i is source and j is destination.")
 end

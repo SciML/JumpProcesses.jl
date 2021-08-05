@@ -76,7 +76,7 @@ function set_rx_rate_at_site!(rx_rates::RxRates, site, rx, rate)
     old_rate
 end
 
-function Base.show(io::IO, rx_rates::RxRates)
+function Base.show(io::IO, ::MIME"text/plain", rx_rates::RxRates)
     num_rxs, num_sites = size(rx_rates.rates)
     println(io, "RxRates with $num_rxs reactions and $num_sites sites")
 end

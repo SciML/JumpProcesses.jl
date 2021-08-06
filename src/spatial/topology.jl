@@ -87,6 +87,8 @@ function pad_hop_vec(grid, site, hop_vec::Vector{F}) where F <: Number
     new_hop_vec
 end
 
+CartesianGrid(dims) = CartesianGridRej(dims) # use CartesianGridRej by default
+
 # neighbor sampling is rejection-based
 struct CartesianGridRej{N,T}
     "dimensions (side lengths) of the grid"

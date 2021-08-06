@@ -7,7 +7,7 @@ num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
 num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 rand_nbr(graph::AbstractGraph, site, rng) = rand(rng, neighbors(graph, site))
-nth_nbr(graph::AbstractGraph, site, n) = neighbors(graph, site)[n]
+nth_nbr(graph::AbstractGraph, site, n) = @inbounds neighbors(graph, site)[n]
 
 ################### CartesianGrid ########################
 const offsets_1D = [CartesianIndex(-1),CartesianIndex(1)]

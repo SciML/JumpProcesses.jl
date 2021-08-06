@@ -59,20 +59,30 @@ Nsims = 10000
 rel_tol = 0.01
 times = 0.0:tf/num_time_points:tf
 
+algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
-jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+jump_problems = JumpProblem[JumpProblem(prob, rand(algs), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 # setup flattenned jump prob
-graph = grids[1]
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # hop rates of form L_{s,i,j}
 hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))
 for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
-    hop_constants[ci] = repeat([hopping_constants[species, site]], num_neighbors(graph, site))
+    hop_constants[ci] = repeat([hopping_constants[species, site]], num_neighbors(grids[1], site))
 end
-push!(jump_problems, JumpProblem(prob, NSM(), majumps, hopping_constants=hop_constants, spatial_system=graph, save_positions=(false,false)))
-for spatial_jump_prob in jump_problems
+push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
+# hop rates of form D_s * L_{i,j}
+species_hop_constants = ones(1)
+site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(grids[1], site))
+end
+push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+
+# testing
+for (j,spatial_jump_prob) in enumerate(jump_problems)
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
     for (i,t) in enumerate(times)
         local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)

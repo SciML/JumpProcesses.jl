@@ -2,6 +2,7 @@
 using DiffEqJump, LightGraphs
 using Test, Random
 
+rng = MersenneTwister()
 dims = (4,3,2)
 sites = rand(1:prod(dims), 10)
 num_samples = 10^5
@@ -17,7 +18,7 @@ for grid in grids
     for site in sites
         d = Dict{Int,Int}()
         for i in 1:num_samples
-            nb = DiffEqJump.rand_nbr(grid, site)
+            nb = DiffEqJump.rand_nbr(grid, site, rng)
             nb in keys(d) ? d[nb] += 1 : d[nb] = 1
         end
         for val in values(d)
@@ -85,6 +86,32 @@ for ci in CartesianIndices(hop_constants)
 end
 spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesGeneral(hop_constants), DiffEqJump.HopRatesGeneralGrid(hop_constants, g)]
+
+for hop_rates in hop_rates_structs
+    for site in 1:num_nodes
+        DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
+        num_nbs = DiffEqJump.num_neighbors(g, site)
+        target_probs = ones(num_nbs)/num_nbs
+        d1 = Dict{Int,Int}()
+        d2 = Dict{Int,Int}()
+        for i in 1:num_samples
+            spec, target = DiffEqJump.sample_hop_at_site(hop_rates, site, rng, g)
+            d1[spec] = get(d1, spec, 0) + 1
+            d2[target] = get(d2, target, 0) + 1
+        end
+        @test maximum(abs.(collect(values(d1))/num_samples - spec_probs)) < rel_tol
+        @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
+    end
+end
+
+# Tests for HopRatesMult
+species_hop_constants = ones(num_species)
+site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(g, site))
+end
+spec_probs = ones(num_species)/num_species
+hop_rates_structs = [DiffEqJump.HopRatesMult(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGrid(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
     for site in 1:num_nodes

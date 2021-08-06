@@ -7,8 +7,12 @@ abstract type AbstractHopRates end
 
 HopRates(hopping_constants::Matrix{F}, spatial_system) where F <: Number = HopRatesUnifNbr(hopping_constants)
 HopRates(hopping_constants::Matrix{F}, grid::Union{CartesianGridRej, CartesianGridIter}) where F <: Number = HopRatesUnifNbr(hopping_constants)
-HopRates(hopping_constants::AbstractArray, spatial_system) = HopRatesGeneral(hopping_constants)
-HopRates(hopping_constants::AbstractArray, grid::Union{CartesianGridRej, CartesianGridIter}) = HopRatesGeneralGrid(hopping_constants, grid)
+
+HopRates(hopping_constants::Matrix{Vector{F}}, spatial_system) where F <: Number = HopRatesGeneral(hopping_constants)
+HopRates(hopping_constants::Matrix{Vector{F}}, grid::Union{CartesianGridRej, CartesianGridIter}) where F <: Number = HopRatesGeneralGrid(hopping_constants, grid)
+
+HopRates(p::Pair{A, B}, spatial_system) where {A <: Vector{F}, B <: Vector{Vector{F}}} where F <: Number = HopRatesMult(p...)
+HopRates(p::Pair{A, B}, grid::Union{CartesianGridRej, CartesianGridIter}) where {A <: Vector{F}, B <: Vector{Vector{F}}} where F <: Number = HopRatesMultGrid(p..., grid)
 
 """
     update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site, spatial_system)
@@ -19,6 +23,19 @@ function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, 
     @inbounds for spec in species
         update_hop_rate!(hop_rates, spec, u, site, spatial_system)
     end
+end
+
+"""
+    update_hop_rate!(hop_rates::HopRatesUnifNbr, species, u, site, spatial_system)
+
+update rates of single species at site
+"""
+function update_hop_rate!(hop_rates::AbstractHopRates, species, u, site, spatial_system)
+    rates = hop_rates.rates
+    @inbounds old_rate = rates[species, site]
+    @inbounds rates[species, site] = evalhoprate(hop_rates, u, species, site, spatial_system)
+    @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
+    old_rate
 end
 
 """
@@ -39,9 +56,25 @@ function reset!(hop_rates::AbstractHopRates)
     nothing
 end
 
+"""
+    sample_species(hop_rates::AbstractHopRates, site, rng)
+
+sample species to hop from site
+"""
+sample_species(hop_rates::AbstractHopRates, site, rng) = @inbounds linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
+
+"""
+    sample_hop_at_site(hop_rates::AbstractHopRates, site, rng, spatial_system)
+
+sample a reaction at site, return (species, target_site)
+"""
+function sample_hop_at_site(hop_rates::AbstractHopRates, site, rng, spatial_system) 
+    species = sample_species(hop_rates, site, rng)
+    return species, sample_target(hop_rates, site, species, rng, spatial_system)
+end
+
+
 ############## hopping rates of form L_{s,i} ################
-
-
 struct HopRatesUnifNbr{F} <: AbstractHopRates
     "hopping_constants[i,j] is the hop constant of species i at site j"
     hopping_constants::Matrix{F}
@@ -68,48 +101,13 @@ function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
     HopRatesUnifNbr{F}(hopping_constants, rates, vec(sum(rates, dims=1)))
 end
 
-"""
-    sample_hop_at_site(hop_rates::HopRatesUnifNbr, site, rng, spatial_system)
+sample_target(hop_rates::HopRatesUnifNbr, site, species, rng, spatial_system) = rand_nbr(spatial_system, site, rng)
 
-sample a reaction at site, return (species, target_site)
-"""
-function sample_hop_at_site(hop_rates::HopRatesUnifNbr, site, rng, spatial_system)
-    species = linear_search(hop_rates_at_site(hop_rates, site), rand(rng) * total_site_hop_rate(hop_rates, site))
-    target_site = rand_nbr(spatial_system, site)
-    return species, target_site
-end
-
-"""
-    update_hop_rate!(hop_rates::HopRatesUnifNbr, species::Int, u, site, spatial_system)
-
-update rates of single species at site
-"""
-function update_hop_rate!(hop_rates::HopRatesUnifNbr, species::Int, u, site, spatial_system)
-    set_hop_rate_at_site!(hop_rates, site, species, evalhoprate(hop_rates, u, species, site, num_neighbors(spatial_system, site)))
-end
-
-# helper functions
-"""
-returns hopping rates of a site
-"""
-function hop_rates_at_site(hop_rates::HopRatesUnifNbr, site)
-    @view hop_rates.rates[:,site]
-end
-
-"""
-sets the rate of hopping at site. Return the old rate
-"""
-function set_hop_rate_at_site!(hop_rates::HopRatesUnifNbr, site, species, rate)
-    @inbounds old_rate = hop_rates.rates[species, site]
-    @inbounds hop_rates.rates[species, site] = rate
-    @inbounds hop_rates.sum_rates[site] += rate - old_rate
-    old_rate
-end
 """
 return hopping rate of species at site
 """
-function evalhoprate(hop_rates::HopRatesUnifNbr, u, species, site, num_nbs::Int)
-    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*num_nbs
+function evalhoprate(hop_rates::HopRatesUnifNbr, u, species, site, spatial_system)
+    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*num_neighbors(spatial_system, site)
 end
 
 ############## hopping rates of form L_{s,i,j} ################
@@ -141,34 +139,19 @@ function HopRatesGeneral(hopping_constants::Matrix{Vector{F}}) where F <: Number
     HopRatesGeneral{F}(hop_const_cumulative_sums, rates, sum_rates)
 end
 
-"""
-    sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system)
-
-sample a reaction at site, return (species, target_site)
-"""
-function sample_hop_at_site(hop_rates::HopRatesGeneral, site, rng, spatial_system)
-    @inbounds species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
+function sample_target(hop_rates::HopRatesGeneral, site, species, rng, spatial_system)
     @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
     @inbounds n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
-    return species, nth_nbr(spatial_system, site, n)
+    return nth_nbr(spatial_system, site, n)
 end
 
-"""
-    update_hop_rate!(hop_rates::HopRatesGeneral, species, u, site, spatial_system)
-
-update rates of single species at site
-"""
-function update_hop_rate!(hop_rates::HopRatesGeneral, species, u, site, spatial_system)
-    rates = hop_rates.rates
-    @inbounds old_rate = rates[species, site]
-    @inbounds rates[species, site] = u[species, site] * hop_rates.hop_const_cumulative_sums[species, site][end]
-    @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
-    old_rate
+function evalhoprate(hop_rates::HopRatesGeneral, u, species, site, spatial_system)
+    @inbounds u[species, site] * hop_rates.hop_const_cumulative_sums[species, site][end]
 end
 
-#################  HopRatesGeneralGrid  ######################
+#################  hopping rates of form L_{s,i,j} optimized for cartesian grid  ######################
 """
-Analogue of HopRatesGeneral but for CartesianGrid
+Analogue of HopRatesGeneral, optimized for CartesianGrid
 """
 struct HopRatesGeneralGrid{F} <: AbstractHopRates
     "hop_const_cumulative_sums[:,s,i] is the vector of cumulative sums of hopping constants of species s at site i"
@@ -207,89 +190,100 @@ function HopRatesGeneralGrid(hopping_constants::Matrix{Vector{F}}, grid) where F
     HopRatesGeneralGrid(new_hopping_constants)
 end
 
-"""
-    sample_hop_at_site(hop_rates::HopRatesGeneralGrid, site, rng, spatial_system)
-
-sample a reaction at site, return (species, target_site)
-"""
-function sample_hop_at_site(hop_rates::HopRatesGeneralGrid, site, rng, grid::Union{CartesianGridRej, CartesianGridIter})
-    @inbounds species = linear_search((@view hop_rates.rates[:,site]), rand(rng) * total_site_hop_rate(hop_rates, site))
+function sample_target(hop_rates::HopRatesGeneralGrid, site, species, rng, grid)
     @inbounds cumulative_hop_constants = @view hop_rates.hop_const_cumulative_sums[:,species, site]
     @inbounds n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
-    return species, nth_potential_nbr(grid, site, n)
+    return nth_potential_nbr(grid, site, n)
 end
 
-"""
-    update_hop_rate!(hop_rates::HopRatesGeneralGrid, species, u, site, spatial_system)
-
-update rates of single species at site
-"""
-function update_hop_rate!(hop_rates::HopRatesGeneralGrid, species, u, site, spatial_system)
-    rates = hop_rates.rates
-    @inbounds old_rate = rates[species, site]
-    @inbounds rates[species, site] = u[species, site] * hop_rates.hop_const_cumulative_sums[end, species, site]
-    @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
-    old_rate
+function evalhoprate(hop_rates::HopRatesGeneralGrid, u, species, site, spatial_system)
+    @inbounds u[species, site] * hop_rates.hop_const_cumulative_sums[end, species, site][end]
 end
 
 ############## hopping rates of form D_s * L_{i,j} ################
-# struct HopRatesMult{F} <: AbstractHopRates
-#     "cumulative sums of diffusion constants of species"
-#     species_cumulative::Vector{F}
+struct HopRatesMult{F} <: AbstractHopRates
+    "hopping constants of species -- D_s"
+    species_hop_constants::Vector{F}
 
-#     "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
-#     nbs_cumulative::Vector{Vector{F}}
+    "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
+    hop_const_cumulative_sums::Vector{Vector{F}}
 
-#     "sum_rates[i] is the total hopping rate out of site i"
-#     sum_rates::Vector{F}
-# end
+    "rates[s,i] is the total hopping rate of species s at site i"
+    rates::Matrix{F}
 
-# function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesMult)
-#     num_specs, num_sites = length(species_cumulative), length(nbs_cumulative)
-#     println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
-# end
+    "sum_rates[i] is the total hopping rate out of site i"
+    sum_rates::Vector{F}
+end
 
-# """
-# HopRatesMult(hopping_constants::Matrix{Vector{F}}) where F <: Number
+function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesMult)
+    num_specs, num_sites = length(hop_rates.species_hop_constants), length(hop_rates.hop_const_cumulative_sums)
+    println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
+end
 
-# initializes HopRates with zero rates
-# """
-# function HopRatesMult(hopping_constants::Matrix{Vector{F}}) where F <: Number
-#     hop_const_cumulative_sums = map(cumsum, hopping_constants)
-#     rates = zeros(F, size(hopping_constants))
-#     sum_rates = vec(sum(rates, dims=1))
-#     HopRatesMult{F}(hop_const_cumulative_sums, rates, sum_rates)
-# end
+"""
+    HopRatesMult(hopping_constants::Matrix{Vector{F}}) where F <: Number
 
-# function reset!(hop_rates::HopRatesMult{F}) where F <: Number
-#     hop_rates.sum_rates .= zero(F)
-#     nothing
-# end
+initializes HopRates with zero rates
+"""
+function HopRatesMult(species_hop_constants::Vector{F}, site_hop_constants::Vector{Vector{F}}) where F <: Number
+    hop_const_cumulative_sums = map(cumsum, site_hop_constants)
+    rates = zeros(F, length(species_hop_constants), length(site_hop_constants))
+    sum_rates = vec(sum(rates, dims=1))
+    HopRatesMult{F}(species_hop_constants, hop_const_cumulative_sums, rates, sum_rates)
+end
 
-# """
-#     sample_hop_at_site(hop_rates::HopRatesMult, site, rng, spatial_system)
+function sample_target(hop_rates::HopRatesMult, site, species, rng, spatial_system)
+    @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[site]
+    @inbounds n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
+    return nth_nbr(spatial_system, site, n)
+end
 
-# sample a reaction at site, return (species, target_site)
-# """
-# function sample_hop_at_site(hop_rates::HopRatesMult, site, rng, spatial_system)
-#     species = searchsortedfirst(hop_rates.species_cumulative, rand(rng) * hop_rates.species_first_cumulative[end])
-#     cumulative_at_site = hop_rates.nbs_cumulative[site]
-#     n = searchsortedfirst(cumulative_at_site, rand(rng) * cumulative_at_site[end])
-#     return species, nth_nbr(spatial_system, site, n)
-# end
+function evalhoprate(hop_rates::HopRatesMult, u, species, site, spatial_system)
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species] * hop_rates.hop_const_cumulative_sums[site][end]
+end
 
-# update_hop_rates!(hop_rates::HopRatesMult, species, u, site, spatial_system) = update_hop_rate!(hop_rates, species, u, site, spatial_system)
+############## hopping rates of form D_s * L_{i,j} optimized for caresian grid ################
+struct HopRatesMultGrid{F} <: AbstractHopRates
+    "hopping constants of species -- D_s"
+    species_hop_constants::Vector{F}
 
-# """
-#     update_hop_rate!(hop_rates::HopRatesMult, species, u, site, spatial_system)
+    "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
+    hop_const_cumulative_sums::Matrix{F}
 
-# update rate of site
-# """
-# function update_hop_rate!(hop_rates::HopRatesMult, species, u, site, spatial_system)
-#     old_rate = u[species, site] * hop_rates.nbs_cumulative[site][end]
+    "rates[s,i] is the total hopping rate of species s at site i"
+    rates::Matrix{F}
 
+    "sum_rates[i] is the total hopping rate out of site i"
+    sum_rates::Vector{F}
+end
 
-#     rates[species, site] = u[species, site] * hop_rates.nbs_cumulative[site][end]
-#     @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
-#     old_rate
-# end
+function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesMultGrid)
+    num_specs, num_sites = length(hop_rates.species_hop_constants), size(hop_rates.hop_const_cumulative_sums, 2)
+    println(io, "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
+end
+
+function HopRatesMultGrid(species_hop_constants::Vector{F}, site_hop_constants::Matrix{F}) where F <: Number
+    hop_const_cumulative_sums = mapslices(cumsum, site_hop_constants, dims = 1)
+    rates = zeros(F, length(species_hop_constants), size(site_hop_constants, 2))
+    sum_rates = vec(sum(rates, dims=1))
+    HopRatesMultGrid{F}(species_hop_constants, hop_const_cumulative_sums, rates, sum_rates)
+end
+
+function HopRatesMultGrid(species_hop_constants::Vector{F}, site_hop_constants::Vector{Vector{F}}, grid) where F <: Number
+    new_hopping_constants = Matrix{F}(undef, 2*dimension(grid), length(site_hop_constants))
+    for site in 1:length(site_hop_constants)
+        new_hopping_constants[:, site] = pad_hop_vec(grid, site, site_hop_constants[site])
+    end
+    HopRatesMultGrid(species_hop_constants, new_hopping_constants)
+end
+
+function sample_target(hop_rates::HopRatesMultGrid, site, species, rng, grid)
+    @inbounds cumulative_hop_constants = @view hop_rates.hop_const_cumulative_sums[:, site]
+    @inbounds n = searchsortedfirst(cumulative_hop_constants, rand(rng) * cumulative_hop_constants[end])
+    return nth_potential_nbr(grid, site, n)
+end
+
+function evalhoprate(hop_rates::HopRatesMultGrid, u, species, site, grid)
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species] * hop_rates.hop_const_cumulative_sums[end, site]
+end
+

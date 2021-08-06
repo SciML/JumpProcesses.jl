@@ -73,7 +73,7 @@ end
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
 # hop rates of form D_s * L_{i,j}
-species_hop_constants = ones(1)
+species_hop_constants = [hopping_rate]
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(grids[1], site))

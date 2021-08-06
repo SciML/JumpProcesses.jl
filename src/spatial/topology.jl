@@ -29,8 +29,16 @@ function potential_offsets(dimension::Int)
     end
 end
 
+dimension(grid) = length(grid.dims)
 num_sites(grid) = prod(grid.dims)
 num_neighbors(grid, site) = grid.nums_neighbors[site]
+
+"""
+    nth_potential_nbr(grid, site, n)
+
+return nth potential neighbor (it might be out of bounds)
+"""
+nth_potential_nbr(grid, site, n) = grid.LI[grid.offsets[n]+grid.CI[site]]
 
 """
     nth_nbr(grid, site, n)
@@ -52,13 +60,31 @@ end
 """
     neighbors(grid, site)
 
-return neighbors of site in ascending order
+return an iterator over neighbors of site in ascending order. Do not use in hot loops
 """
 function neighbors(grid, site)
     CI = grid.CI
     LI = grid.LI
     I = CI[site]
     Iterators.map(off -> LI[off+I], Iterators.filter(off -> off+I in CI, grid.offsets))
+end
+
+"""
+given a vector of hopping constants of length num_nbs(grid, site), return a vector of size 2*(dimension of grid) with zeros at indices where the neighbor is out of bounds
+"""
+function pad_hop_vec(grid, site, hop_vec::Vector{F}) where F <: Number
+    length(hop_vec) == 2*dimension(grid) && return hop_vec
+    new_hop_vec = zeros(2*dimension(grid))
+    CI = grid.CI; offsets = grid.offsets
+    @inbounds I = CI[site]
+    nbr_counter = 1
+    for (i,off) in enumerate(grid.offsets)
+        if I + off in CI
+            new_hop_vec[i] = hop_vec[nbr_counter]
+            nbr_counter += 1
+        end
+    end
+    new_hop_vec
 end
 
 # neighbor sampling is rejection-based

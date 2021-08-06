@@ -75,7 +75,7 @@ function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time, c
     next_jump = SpatialJump{Int}(typemax(Int),typemax(Int),typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
     rx_rates = RxRates(num_sites(spatial_system), majumps)
-    hop_rates = HopRates(hopping_constants)
+    hop_rates = HopRates(hopping_constants, spatial_system)
     site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 
     DirectCRDirectJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates, site_rates, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)

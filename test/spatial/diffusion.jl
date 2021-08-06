@@ -63,7 +63,7 @@ grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
-graph = LightGraphs.grid(dims)
+graph = grids[1]
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
 # hop rates of form L_{s,i,j}
 hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))

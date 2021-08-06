@@ -29,8 +29,8 @@ end
 # setup
 rel_tol = 0.05
 num_samples = 10^4
-dims = (3,3)
-g = grid(dims)
+dims = (3,3,3)
+g = CartesianGridRej(dims)
 num_nodes = DiffEqJump.num_sites(g)
 num_species = 3
 reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
@@ -84,19 +84,21 @@ for ci in CartesianIndices(hop_constants)
     hop_constants[ci] = repeat([1.0], DiffEqJump.num_neighbors(g, site))
 end
 spec_probs = ones(num_species)/num_species
-hop_rates = DiffEqJump.HopRatesGeneral(hop_constants)
+hop_rates_structs = [DiffEqJump.HopRatesGeneral(hop_constants), DiffEqJump.HopRatesGeneralGrid(hop_constants, g)]
 
-for site in 1:num_nodes
-    DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-    num_nbs = DiffEqJump.num_neighbors(g, site)
-    target_probs = ones(num_nbs)/num_nbs
-    d1 = Dict{Int,Int}()
-    d2 = Dict{Int,Int}()
-    for i in 1:num_samples
-        spec, target = DiffEqJump.sample_hop_at_site(hop_rates, site, rng, g)
-        d1[spec] = get(d1, spec, 0) + 1
-        d2[target] = get(d2, target, 0) + 1
+for hop_rates in hop_rates_structs
+    for site in 1:num_nodes
+        DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
+        num_nbs = DiffEqJump.num_neighbors(g, site)
+        target_probs = ones(num_nbs)/num_nbs
+        d1 = Dict{Int,Int}()
+        d2 = Dict{Int,Int}()
+        for i in 1:num_samples
+            spec, target = DiffEqJump.sample_hop_at_site(hop_rates, site, rng, g)
+            d1[spec] = get(d1, spec, 0) + 1
+            d2[target] = get(d2, target, 0) + 1
+        end
+        @test maximum(abs.(collect(values(d1))/num_samples - spec_probs)) < rel_tol
+        @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
     end
-    @test maximum(abs.(collect(values(d1))/num_samples - spec_probs)) < rel_tol
-    @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
 end

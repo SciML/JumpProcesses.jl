@@ -5,7 +5,7 @@ A file with structs and functions for setting up and using the topology of the s
 ################### LightGraph ########################
 num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
-num_neighbors(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
+# outdegree(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
 rand_nbr(graph::AbstractGraph, site, rng) = rand(rng, neighbors(graph, site))
 nth_nbr(graph::AbstractGraph, site, n) = @inbounds neighbors(graph, site)[n]
 
@@ -31,7 +31,7 @@ end
 
 dimension(grid) = length(grid.dims)
 num_sites(grid) = prod(grid.dims)
-num_neighbors(grid, site) = grid.nums_neighbors[site]
+outdegree(grid, site) = grid.nums_neighbors[site]
 
 """
     nth_potential_nbr(grid, site, n)
@@ -146,7 +146,7 @@ end
 CartesianGridIter(dims) = CartesianGridIter(Tuple(dims))
 CartesianGridIter(dimension, linear_size::Int) = CartesianGridIter([linear_size for i in 1:dimension])
 function rand_nbr(grid::CartesianGridIter, site::Int, rng)
-    nth_nbr(grid, site, rand(rng, 1:num_neighbors(grid,site)))
+    nth_nbr(grid, site, rand(rng, 1:outdegree(grid,site)))
 end
 
 function Base.show(io::IO, ::MIME"text/plain", grid::Union{CartesianGridRej, CartesianGridIter})

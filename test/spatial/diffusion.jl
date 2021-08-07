@@ -16,7 +16,7 @@ function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
     sites = 1:num_sites(spatial_system)
     laplacian = zeros(length(sites), length(sites))
     for site in sites
-        laplacian[site,site] = -num_neighbors(spatial_system, site)
+        laplacian[site,site] = -outdegree(spatial_system, site)
         for nb in neighbors(spatial_system, site)
             laplacian[site, nb] = 1
         end
@@ -70,7 +70,7 @@ push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping
 hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))
 for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
-    hop_constants[ci] = repeat([hopping_constants[species, site]], num_neighbors(grids[1], site))
+    hop_constants[ci] = repeat([hopping_constants[species, site]], outdegree(grids[1], site))
 end
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
@@ -79,7 +79,7 @@ push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=ho
 species_hop_constants = [hopping_rate]
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(grids[1], site))
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
 end
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
@@ -88,7 +88,7 @@ push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pa
 species_hop_constants = hopping_rate * ones(1, num_nodes)
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(grids[1], site))
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
 end
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
 push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
@@ -109,7 +109,7 @@ grid = LightGraphs.grid(dims)
 hopping_constants = Matrix{Vector{Float64}}(undef, 1, num_nodes)
 for ci in CartesianIndices(hopping_constants)
     (species, site) = Tuple(ci)
-    hopping_constants[species, site] = zeros(num_neighbors(grid, site))
+    hopping_constants[species, site] = zeros(outdegree(grid, site))
     for (n, nb) in enumerate(neighbors(grid, site))
         if nb < site
             hopping_constants[species, site][n] = 1.0

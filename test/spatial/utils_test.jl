@@ -13,11 +13,11 @@ for grid in grids
     show(io, "text/plain", grid)
     @test String(take!(io)) !== nothing
     @test DiffEqJump.num_sites(grid) == prod(dims)
-    @test DiffEqJump.num_neighbors(grid, 1) == 3
-    @test DiffEqJump.num_neighbors(grid, 4) == 3
-    @test DiffEqJump.num_neighbors(grid, 17) == 4
-    @test DiffEqJump.num_neighbors(grid, 21) == 3
-    @test DiffEqJump.num_neighbors(grid, 6) == 5
+    @test DiffEqJump.outdegree(grid, 1) == 3
+    @test DiffEqJump.outdegree(grid, 4) == 3
+    @test DiffEqJump.outdegree(grid, 17) == 4
+    @test DiffEqJump.outdegree(grid, 21) == 3
+    @test DiffEqJump.outdegree(grid, 6) == 5
     for site in sites
         d = Dict{Int,Int}()
         for i in 1:num_samples
@@ -25,7 +25,7 @@ for grid in grids
             nb in keys(d) ? d[nb] += 1 : d[nb] = 1
         end
         for val in values(d)
-            @test abs(val/num_samples - 1/DiffEqJump.num_neighbors(grid,site)) < rel_tol
+            @test abs(val/num_samples - 1/DiffEqJump.outdegree(grid,site)) < rel_tol
         end
     end
 end
@@ -70,7 +70,7 @@ spec_probs = ones(num_species)/num_species
 
 for site in 1:num_nodes
     DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-    num_nbs = DiffEqJump.num_neighbors(g, site)
+    num_nbs = DiffEqJump.outdegree(g, site)
     target_probs = ones(num_nbs)/num_nbs
     d1 = Dict{Int,Int}()
     d2 = Dict{Int,Int}()
@@ -87,7 +87,7 @@ end
 hop_constants = Matrix{Vector{Float64}}(undef, num_species, num_nodes)
 for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
-    hop_constants[ci] = repeat([1.0], DiffEqJump.num_neighbors(g, site))
+    hop_constants[ci] = repeat([1.0], DiffEqJump.outdegree(g, site))
 end
 spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesGeneral(hop_constants), DiffEqJump.HopRatesGeneralGrid(hop_constants, g)]
@@ -96,7 +96,7 @@ for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-        num_nbs = DiffEqJump.num_neighbors(g, site)
+        num_nbs = DiffEqJump.outdegree(g, site)
         target_probs = ones(num_nbs)/num_nbs
         d1 = Dict{Int,Int}()
         d2 = Dict{Int,Int}()
@@ -114,7 +114,7 @@ end
 species_hop_constants = ones(num_species)
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(g, site))
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(g, site))
 end
 spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesMult(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGrid(species_hop_constants, site_hop_constants, g)]
@@ -123,7 +123,7 @@ for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-        num_nbs = DiffEqJump.num_neighbors(g, site)
+        num_nbs = DiffEqJump.outdegree(g, site)
         target_probs = ones(num_nbs)/num_nbs
         d1 = Dict{Int,Int}()
         d2 = Dict{Int,Int}()
@@ -141,7 +141,7 @@ end
 species_hop_constants = ones(num_species, num_nodes)
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], DiffEqJump.num_neighbors(g, site))
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(g, site))
 end
 spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesMultGeneral(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGeneralGrid(species_hop_constants, site_hop_constants, g)]
@@ -150,7 +150,7 @@ for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-        num_nbs = DiffEqJump.num_neighbors(g, site)
+        num_nbs = DiffEqJump.outdegree(g, site)
         target_probs = ones(num_nbs)/num_nbs
         d1 = Dict{Int,Int}()
         d2 = Dict{Int,Int}()

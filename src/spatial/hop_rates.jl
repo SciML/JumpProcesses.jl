@@ -374,5 +374,5 @@ sample_target(hop_rates::HopRatesUnifNbr, site, species, rng, spatial_system) = 
 return hopping rate of species at site
 """
 function evalhoprate(hop_rates::HopRatesUnifNbr, u, species, site, spatial_system)
-    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*num_neighbors(spatial_system, site)
+    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*outdegree(spatial_system, site)
 end

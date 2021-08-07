@@ -10,6 +10,7 @@ num_samples = 10^5
 rel_tol = 0.01
 grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 for grid in grids
+    show(io, grid)
     @test DiffEqJump.num_sites(grid) == prod(dims)
     @test DiffEqJump.num_neighbors(grid, 1) == 3
     @test DiffEqJump.num_neighbors(grid, 4) == 3

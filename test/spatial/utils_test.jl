@@ -2,6 +2,7 @@
 using DiffEqJump, LightGraphs
 using Test, Random
 
+io = IOBuffer()
 rng = MersenneTwister()
 dims = (4,3,2)
 sites = rand(1:prod(dims), 10)
@@ -44,6 +45,7 @@ rng = MersenneTwister()
 
 # Tests for RxRates
 rx_rates = DiffEqJump.RxRates(num_nodes, ma_jumps)
+show(io, rx_rates)
 for site in 1:num_nodes
     DiffEqJump.update_rx_rates!(rx_rates, 1:num_rxs, u, site)
     rx_props = [DiffEqJump.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
@@ -61,6 +63,7 @@ end
 # Tests for HopRatesUnifNbr
 hopping_constants = ones(num_species, num_nodes)
 hop_rates = DiffEqJump.HopRatesUnifNbr(hopping_constants)
+show(io, hop_rates)
 spec_probs = ones(num_species)/num_species
 
 for site in 1:num_nodes
@@ -88,6 +91,7 @@ spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesGeneral(hop_constants), DiffEqJump.HopRatesGeneralGrid(hop_constants, g)]
 
 for hop_rates in hop_rates_structs
+    show(io, hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
         num_nbs = DiffEqJump.num_neighbors(g, site)
@@ -114,6 +118,7 @@ spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesMult(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGrid(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
+    show(io, hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
         num_nbs = DiffEqJump.num_neighbors(g, site)
@@ -140,6 +145,7 @@ spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesMultGeneral(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGeneralGrid(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
+    show(io, hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
         num_nbs = DiffEqJump.num_neighbors(g, site)

@@ -273,7 +273,7 @@ struct HopRatesMultGeneral{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesMultGeneral)
-    num_specs, num_sites = size(species_hop_constants)
+    num_specs, num_sites = size(hop_rates.species_hop_constants)
     println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.")
 end
 

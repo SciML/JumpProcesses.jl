@@ -10,7 +10,8 @@ num_samples = 10^5
 rel_tol = 0.01
 grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
 for grid in grids
-    show(io, grid)
+    show(io, "text/plain", grid)
+    @test String(take!(io)) !== nothing
     @test DiffEqJump.num_sites(grid) == prod(dims)
     @test DiffEqJump.num_neighbors(grid, 1) == 3
     @test DiffEqJump.num_neighbors(grid, 4) == 3
@@ -46,7 +47,7 @@ rng = MersenneTwister()
 
 # Tests for RxRates
 rx_rates = DiffEqJump.RxRates(num_nodes, ma_jumps)
-show(io, rx_rates)
+show(io, "text/plain", rx_rates)
 for site in 1:num_nodes
     DiffEqJump.update_rx_rates!(rx_rates, 1:num_rxs, u, site)
     rx_props = [DiffEqJump.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
@@ -64,7 +65,7 @@ end
 # Tests for HopRatesUnifNbr
 hopping_constants = ones(num_species, num_nodes)
 hop_rates = DiffEqJump.HopRatesUnifNbr(hopping_constants)
-show(io, hop_rates)
+show(io, "text/plain", hop_rates)
 spec_probs = ones(num_species)/num_species
 
 for site in 1:num_nodes
@@ -92,7 +93,7 @@ spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesGeneral(hop_constants), DiffEqJump.HopRatesGeneralGrid(hop_constants, g)]
 
 for hop_rates in hop_rates_structs
-    show(io, hop_rates)
+    show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
         num_nbs = DiffEqJump.num_neighbors(g, site)
@@ -119,7 +120,7 @@ spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesMult(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGrid(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
-    show(io, hop_rates)
+    show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
         num_nbs = DiffEqJump.num_neighbors(g, site)
@@ -146,7 +147,7 @@ spec_probs = ones(num_species)/num_species
 hop_rates_structs = [DiffEqJump.HopRatesMultGeneral(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGeneralGrid(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
-    show(io, hop_rates)
+    show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
         DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
         num_nbs = DiffEqJump.num_neighbors(g, site)

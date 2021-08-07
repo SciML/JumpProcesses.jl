@@ -162,3 +162,5 @@ for hop_rates in hop_rates_structs
         @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
     end
 end
+
+@test String(take!(io)) !== nothing

@@ -53,8 +53,8 @@ end
 initializes HopRatesUnifNbr with zero rates
 """
 function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
-    rates = zeros(eltype(hopping_constants), size(hopping_constants))
-    HopRatesUnifNbr{F}(hopping_constants, rates, vec(sum(rates, dims=1)))
+    rates = zeros(F, size(hopping_constants))
+    HopRatesUnifNbr{F}(hopping_constants, rates, sum_rates = zeros(F, size(rates, 2)))
 end
 
 """
@@ -137,7 +137,7 @@ initializes HopRates with zero rates
 function HopRatesGeneral(hopping_constants::Matrix{Vector{F}}) where F <: Number
     hop_const_cumulative_sums = map(cumsum, hopping_constants)
     rates = zeros(F, size(hopping_constants))
-    sum_rates = vec(sum(rates, dims=1))
+    sum_rates = zeros(F, size(rates, 2))
     HopRatesGeneral{F}(hop_const_cumulative_sums, rates, sum_rates)
 end
 
@@ -202,20 +202,22 @@ end
 
 initializes HopRates with zero rates
 """
-function HopRatesGeneralGrid(hopping_constants::Array{F, 3}) where F <: Number
-    hop_const_cumulative_sums = mapslices(cumsum, hopping_constants, dims = 1)
+function HopRatesGeneralGrid(hopping_constants::Array{F, 3}; do_cumsum = true) where F <: Number
+    do_cumsum && hopping_constants = mapslices(cumsum, hopping_constants, dims = 1)
     rates = zeros(F, size(hopping_constants)[2:3])
-    sum_rates = vec(sum(rates, dims=1))
-    HopRatesGeneralGrid{F}(hop_const_cumulative_sums, rates, sum_rates)
+    sum_rates = zeros(F, size(rates, 2))
+    HopRatesGeneralGrid{F}(hopping_constants, rates, sum_rates)
 end
 
 function HopRatesGeneralGrid(hopping_constants::Matrix{Vector{F}}, grid) where F <: Number
     new_hopping_constants = Array{F, 3}(undef, 2*dimension(grid), size(hopping_constants)...)
     for ci in CartesianIndices(hopping_constants)
         species, site = Tuple(ci)
-        new_hopping_constants[:, species, site] = pad_hop_vec(grid, site, hopping_constants[ci])
+        nb_constants = @view new_hopping_constants[:, species, site]
+        pad_hop_vec!(nb_constants, grid, site, hopping_constants[ci])
+        cumsum!(nb_constants, nb_constants)
     end
-    HopRatesGeneralGrid(new_hopping_constants)
+    HopRatesGeneralGrid(new_hopping_constants, do_cumsum = false)
 end
 
 """

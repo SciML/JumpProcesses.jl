@@ -61,7 +61,8 @@ times = 0.0:tf/num_time_points:tf
 
 algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
-jump_problems = JumpProblem[JumpProblem(prob, rand(algs), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]; sizehint!(jump_problems, 10)
+jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+sizehint!(jump_problems, length(algs) * 3 + length(jump_problems))
 
 # flattenned jump prob
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
@@ -72,8 +73,10 @@ for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
     hop_constants[ci] = repeat([hopping_constants[species, site]], outdegree(grids[1], site))
 end
-push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
-push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
+end
 
 # hop rates of form D_s * L_{i,j}
 species_hop_constants = [hopping_rate]
@@ -81,8 +84,10 @@ site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
 end
-push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
-push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+end
 
 # hop rates of form D_{s,i} * L_{i,j}
 species_hop_constants = hopping_rate * ones(1, num_nodes)
@@ -90,8 +95,10 @@ site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
 end
-push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
-push!(jump_problems, JumpProblem(prob, rand(algs), majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+end
 
 # testing
 for (j,spatial_jump_prob) in enumerate(jump_problems)

@@ -36,7 +36,7 @@ outdegree(grid, site) = grid.nums_neighbors[site]
 """
     nth_potential_nbr(grid, site, n)
 
-return nth potential neighbor (it might be out of bounds)
+return nth Cartesian neighbor ignoring boundaries
 """
 nth_potential_nbr(grid, site, n) = grid.LI[grid.offsets[n]+grid.CI[site]]
 
@@ -70,21 +70,21 @@ function neighbors(grid, site)
 end
 
 """
-given a vector of hopping constants of length num_nbs(grid, site), return a vector of size 2*(dimension of grid) with zeros at indices where the neighbor is out of bounds
+given a vector of hopping constants of length num_neighbors(grid, site), form the vector of size 2*(dimension of grid) with zeros at indices where the neighbor is out of bounds. Store it in to_pad
 """
-function pad_hop_vec(grid, site, hop_vec::Vector{F}) where F <: Number
-    length(hop_vec) == 2*dimension(grid) && return hop_vec
-    new_hop_vec = zeros(2*dimension(grid))
-    CI = grid.CI; offsets = grid.offsets
-    @inbounds I = CI[site]
+function pad_hop_vec!(to_pad::AbstractVector{F}, grid, site, hop_vec::Vector{F}) where F <: Number
+    CI = grid.CI
+    I = CI[site]
     nbr_counter = 1
     for (i,off) in enumerate(grid.offsets)
         if I + off in CI
-            new_hop_vec[i] = hop_vec[nbr_counter]
+            to_pad[i] = hop_vec[nbr_counter]
             nbr_counter += 1
+        else
+            to_pad[i] = zero(F)
         end
     end
-    new_hop_vec
+    to_pad
 end
 
 CartesianGrid(dims) = CartesianGridRej(dims) # use CartesianGridRej by default

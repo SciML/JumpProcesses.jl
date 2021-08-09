@@ -54,7 +54,7 @@ initializes HopRatesUnifNbr with zero rates
 """
 function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
     rates = zeros(F, size(hopping_constants))
-    HopRatesUnifNbr{F}(hopping_constants, rates, sum_rates = zeros(F, size(rates, 2)))
+    HopRatesUnifNbr{F}(hopping_constants, rates, zeros(F, size(rates, 2)))
 end
 
 """
@@ -203,7 +203,7 @@ end
 initializes HopRates with zero rates
 """
 function HopRatesGeneralGrid(hopping_constants::Array{F, 3}; do_cumsum = true) where F <: Number
-    do_cumsum && hopping_constants = mapslices(cumsum, hopping_constants, dims = 1)
+    do_cumsum && (hopping_constants = mapslices(cumsum, hopping_constants, dims = 1))
     rates = zeros(F, size(hopping_constants)[2:3])
     sum_rates = zeros(F, size(rates, 2))
     HopRatesGeneralGrid{F}(hopping_constants, rates, sum_rates)

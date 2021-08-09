@@ -25,7 +25,7 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::A
     hop_constants = Matrix{Vector{F}}(undef, size(hopping_constants))
     for ci in CartesianIndices(hop_constants)
         (species, site) = Tuple(ci)
-        hop_constants[ci] = hopping_constants[species, site] * ones(num_neighbors(spatial_system, site))
+        hop_constants[ci] = hopping_constants[species, site] * ones(outdegree(spatial_system, site))
     end
     flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants; kwargs...)
 end
@@ -52,7 +52,7 @@ function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}
     spec_CI = CartesianIndices((num_species, num_nodes))
     spec_LI = LinearIndices((num_species, num_nodes))
 
-    sum_outdegrees = sum(num_neighbors(spatial_system, site) for site in 1:num_nodes)
+    sum_outdegrees = sum(outdegree(spatial_system, site) for site in 1:num_nodes)
     num_jumps = num_species*sum_outdegrees + num_nodes*num_rxs
     total_netstoch = R[]; sizehint!(total_netstoch, num_jumps)
     total_reactstoch = R[]; sizehint!(total_reactstoch, num_jumps)

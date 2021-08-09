@@ -102,18 +102,19 @@ end
 reset all stucts, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
-    @unpack spatial_system, rx_rates, hop_rates, rng, numspecies = aggregation
+    @unpack spatial_system, rx_rates, hop_rates, rng = aggregation
 
     reset!(rx_rates)
     reset!(hop_rates)
 
-    num_reactions = num_rxs(rx_rates)
+    rxs = 1:num_rxs(rx_rates)
+    species = 1:aggregation.numspecies
     num_nodes = num_sites(spatial_system)
 
     pqdata = Vector{typeof(t)}(undef, num_nodes)
     @inbounds for site in 1:num_nodes
-        update_rx_rates!(rx_rates, 1:num_reactions, u, site)
-        update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
+        update_rx_rates!(rx_rates, rxs, u, site)
+        update_hop_rates!(hop_rates, species, u, site, spatial_system)
         pqdata[site] = t + randexp(rng) / (total_site_rate(rx_rates, hop_rates, site))
     end
 

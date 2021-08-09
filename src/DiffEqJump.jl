@@ -11,7 +11,7 @@ using LightGraphs
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
-import LightGraphs: neighbors
+import LightGraphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
@@ -84,8 +84,8 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # spatial structs and functions
-export CartesianGridRej, CartesianGridIter
-export num_neighbors, num_sites, neighbors
+export CartesianGrid, CartesianGridRej, CartesianGridIter
+export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect
 
 end # module

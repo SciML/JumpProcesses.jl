@@ -16,7 +16,7 @@ function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
     sites = 1:num_sites(spatial_system)
     laplacian = zeros(length(sites), length(sites))
     for site in sites
-        laplacian[site,site] = -num_neighbors(spatial_system, site)
+        laplacian[site,site] = -outdegree(spatial_system, site)
         for nb in neighbors(spatial_system, site)
             laplacian[site, nb] = 1
         end
@@ -59,20 +59,49 @@ Nsims = 10000
 rel_tol = 0.01
 times = 0.0:tf/num_time_points:tf
 
+algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
-jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
-# setup flattenned jump prob
-graph = grids[1]
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+sizehint!(jump_problems, length(algs) * 3 + length(jump_problems))
+
+# flattenned jump prob
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+
 # hop rates of form L_{s,i,j}
 hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))
 for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
-    hop_constants[ci] = repeat([hopping_constants[species, site]], num_neighbors(graph, site))
+    hop_constants[ci] = repeat([hopping_constants[species, site]], outdegree(grids[1], site))
 end
-push!(jump_problems, JumpProblem(prob, NSM(), majumps, hopping_constants=hop_constants, spatial_system=graph, save_positions=(false,false)))
-for spatial_jump_prob in jump_problems
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
+end
+
+# hop rates of form D_s * L_{i,j}
+species_hop_constants = [hopping_rate]
+site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
+end
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+end
+
+# hop rates of form D_{s,i} * L_{i,j}
+species_hop_constants = hopping_rate * ones(1, num_nodes)
+site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
+end
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=Pair(species_hop_constants, site_hop_constants), spatial_system=grids[3], save_positions=(false,false)))
+end
+
+# testing
+for (j,spatial_jump_prob) in enumerate(jump_problems)
     mean_sol = get_mean_sol(spatial_jump_prob, Nsims, tf/num_time_points)
     for (i,t) in enumerate(times)
         local diff = analytic_solution(t) - reshape(mean_sol[i], num_nodes, 1)
@@ -87,7 +116,7 @@ grid = LightGraphs.grid(dims)
 hopping_constants = Matrix{Vector{Float64}}(undef, 1, num_nodes)
 for ci in CartesianIndices(hopping_constants)
     (species, site) = Tuple(ci)
-    hopping_constants[species, site] = zeros(num_neighbors(grid, site))
+    hopping_constants[species, site] = zeros(outdegree(grid, site))
     for (n, nb) in enumerate(neighbors(grid, site))
         if nb < site
             hopping_constants[species, site][n] = 1.0

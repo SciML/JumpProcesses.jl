@@ -114,17 +114,18 @@ end
 reset all stucts, reevaluate all rates, repopulate the priority table
 """
 function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, u, t)
-    @unpack spatial_system, rx_rates, hop_rates, site_rates, rt, numspecies = aggregation
+    @unpack spatial_system, rx_rates, hop_rates, site_rates, rt = aggregation
 
     reset!(rx_rates)
     reset!(hop_rates)
     site_rates .= zero(typeof(t))
 
-    num_reactions = num_rxs(rx_rates)
+    rxs = 1:num_rxs(rx_rates)
+    species = 1:aggregation.numspecies
 
     for site in 1:num_sites(spatial_system)
-        update_rx_rates!(rx_rates, 1:num_reactions, u, site)
-        update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
+        update_rx_rates!(rx_rates, rxs, u, site)
+        update_hop_rates!(hop_rates, species, u, site, spatial_system)
         site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
     end
     # setup PriorityTable

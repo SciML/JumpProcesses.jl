@@ -43,10 +43,10 @@ include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 
 # spatial:
-include("spatial/flatten.jl")
+include("spatial/topology.jl")
 include("spatial/hop_rates.jl")
 include("spatial/reaction_rates.jl")
-include("spatial/topology.jl")
+include("spatial/flatten.jl")
 include("spatial/utils.jl")
 
 include("spatial/nsm.jl")

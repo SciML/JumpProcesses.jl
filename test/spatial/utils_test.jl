@@ -62,9 +62,9 @@ for site in 1:num_nodes
     end
 end
 
-# Tests for HopRatesUnifNbr
+# Tests for HopRatesGraphDsi
 hopping_constants = ones(num_species, num_nodes)
-hop_rates = DiffEqJump.HopRatesUnifNbr(hopping_constants)
+hop_rates = DiffEqJump.HopRatesGraphDsi(hopping_constants)
 show(io, "text/plain", hop_rates)
 spec_probs = ones(num_species)/num_species
 
@@ -83,14 +83,14 @@ for site in 1:num_nodes
     @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
 end
 
-# Tests for HopRatesGeneral
+# Tests for HopRatesGraphDsij
 hop_constants = Matrix{Vector{Float64}}(undef, num_species, num_nodes)
 for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
     hop_constants[ci] = repeat([1.0], DiffEqJump.outdegree(g, site))
 end
 spec_probs = ones(num_species)/num_species
-hop_rates_structs = [DiffEqJump.HopRatesGeneral(hop_constants), DiffEqJump.HopRatesGeneralGrid(hop_constants, g)]
+hop_rates_structs = [DiffEqJump.HopRatesGraphDsij(hop_constants), DiffEqJump.HopRatesGridDsij(hop_constants, g)]
 
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
@@ -110,14 +110,14 @@ for hop_rates in hop_rates_structs
     end
 end
 
-# Tests for HopRatesMult
+# Tests for HopRatesGraphDsLij
 species_hop_constants = ones(num_species)
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(g, site))
 end
 spec_probs = ones(num_species)/num_species
-hop_rates_structs = [DiffEqJump.HopRatesMult(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGrid(species_hop_constants, site_hop_constants, g)]
+hop_rates_structs = [DiffEqJump.HopRatesGraphDsLij(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesGridDsLij(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
@@ -137,14 +137,14 @@ for hop_rates in hop_rates_structs
     end
 end
 
-# Tests for HopRatesMultGeneral
+# Tests for HopRatesGraphDsiLij
 species_hop_constants = ones(num_species, num_nodes)
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(g, site))
 end
 spec_probs = ones(num_species)/num_species
-hop_rates_structs = [DiffEqJump.HopRatesMultGeneral(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesMultGeneralGrid(species_hop_constants, site_hop_constants, g)]
+hop_rates_structs = [DiffEqJump.HopRatesGraphDsiLij(species_hop_constants, site_hop_constants), DiffEqJump.HopRatesGridDsiLij(species_hop_constants, site_hop_constants, g)]
 
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)

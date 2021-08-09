@@ -80,6 +80,42 @@ function sample_hop_at_site(hop_rates::AbstractHopRates, site, rng, spatial_syst
     return species, sample_target(hop_rates, site, species, rng, spatial_system)
 end
 
+############## hopping rates of form D_{s,i} ################
+struct HopRatesUnifNbr{F} <: AbstractHopRates
+    "hopping_constants[i,j] is the hop constant of species i at site j"
+    hopping_constants::Matrix{F}
+
+    "rates[i,j] is total hopping rate of species i at site j"
+    rates::Matrix{F}
+
+    "sum_rates[j] is the sum of hopping rates at site j"
+    sum_rates::Vector{F}
+end
+
+function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesUnifNbr)
+    num_specs, num_sites = size(hop_rates.rates)
+    println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} where s is species, and i is source.")
+end
+
+"""
+    HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
+
+initializes HopRatesUnifNbr with zero rates
+"""
+function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
+    rates = zeros(eltype(hopping_constants), size(hopping_constants))
+    HopRatesUnifNbr{F}(hopping_constants, rates, vec(sum(rates, dims=1)))
+end
+
+sample_target(hop_rates::HopRatesUnifNbr, site, species, rng, spatial_system) = rand_nbr(spatial_system, site, rng)
+
+"""
+return hopping rate of species at site
+"""
+function evalhoprate(hop_rates::HopRatesUnifNbr, u, species, site, spatial_system)
+    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*outdegree(spatial_system, site)
+end
+
 ############## hopping rates of form L_{s,i,j} ################
 struct HopRatesGeneral{F} <: AbstractHopRates
     "hop_const_cumulative_sums[s,i] is the vector of cumulative sums of hopping constants of species s at site i"
@@ -339,40 +375,4 @@ end
 
 function evalhoprate(hop_rates::HopRatesMultGeneralGrid, u, species, site, grid)
     @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] * hop_rates.hop_const_cumulative_sums[end, site]
-end
-
-############## hopping rates of form D_{s,i} ################
-struct HopRatesUnifNbr{F} <: AbstractHopRates
-    "hopping_constants[i,j] is the hop constant of species i at site j"
-    hopping_constants::Matrix{F}
-
-    "rates[i,j] is total hopping rate of species i at site j"
-    rates::Matrix{F}
-
-    "sum_rates[j] is the sum of hopping rates at site j"
-    sum_rates::Vector{F}
-end
-
-function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesUnifNbr)
-    num_specs, num_sites = size(hop_rates.rates)
-    println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} where s is species, and i is source.")
-end
-
-"""
-    HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
-
-initializes HopRatesUnifNbr with zero rates
-"""
-function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
-    rates = zeros(eltype(hopping_constants), size(hopping_constants))
-    HopRatesUnifNbr{F}(hopping_constants, rates, vec(sum(rates, dims=1)))
-end
-
-sample_target(hop_rates::HopRatesUnifNbr, site, species, rng, spatial_system) = rand_nbr(spatial_system, site, rng)
-
-"""
-return hopping rate of species at site
-"""
-function evalhoprate(hop_rates::HopRatesUnifNbr, u, species, site, spatial_system)
-    @inbounds u[species,site]*hop_rates.hopping_constants[species,site]*outdegree(spatial_system, site)
 end

@@ -107,7 +107,7 @@ function HopRatesUnifNbr(hopping_constants::Matrix{F}) where F <: Number
     HopRatesUnifNbr{F}(hopping_constants, rates, vec(sum(rates, dims=1)))
 end
 
-sample_target(hop_rates::HopRatesUnifNbr, site, species, rng, spatial_system) = rand_nbr(spatial_system, site, rng)
+sample_target(hop_rates::HopRatesUnifNbr, site, species, rng, spatial_system) = rand_nbr(rng, spatial_system, site)
 
 """
 return hopping rate of species at site

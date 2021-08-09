@@ -21,7 +21,7 @@ for grid in grids
     for site in sites
         d = Dict{Int,Int}()
         for i in 1:num_samples
-            nb = DiffEqJump.rand_nbr(grid, site, rng)
+            nb = DiffEqJump.rand_nbr(rng, grid, site)
             nb in keys(d) ? d[nb] += 1 : d[nb] = 1
         end
         for val in values(d)

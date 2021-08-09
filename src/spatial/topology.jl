@@ -6,7 +6,7 @@ A file with structs and functions for setting up and using the topology of the s
 num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
 # outdegree(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
-rand_nbr(graph::AbstractGraph, site, rng) = rand(rng, neighbors(graph, site))
+rand_nbr(rng, graph::AbstractGraph, site) = rand(rng, neighbors(graph, site))
 nth_nbr(graph::AbstractGraph, site, n) = @inbounds neighbors(graph, site)[n]
 
 ################### CartesianGrid ########################
@@ -118,7 +118,7 @@ function CartesianGridRej(dims::Tuple)
 end
 CartesianGridRej(dims) = CartesianGridRej(Tuple(dims))
 CartesianGridRej(dimension, linear_size::Int) = CartesianGridRej([linear_size for i in 1:dimension])
-function rand_nbr(grid::CartesianGridRej, site::Int, rng)
+function rand_nbr(rng, grid::CartesianGridRej, site::Int)
     CI = grid.CI; offsets = grid.offsets
     @inbounds I = CI[site]
     while true
@@ -145,7 +145,7 @@ function CartesianGridIter(dims::Tuple)
 end
 CartesianGridIter(dims) = CartesianGridIter(Tuple(dims))
 CartesianGridIter(dimension, linear_size::Int) = CartesianGridIter([linear_size for i in 1:dimension])
-function rand_nbr(grid::CartesianGridIter, site::Int, rng)
+function rand_nbr(rng, grid::CartesianGridIter, site::Int)
     nth_nbr(grid, site, rand(rng, 1:outdegree(grid,site)))
 end
 

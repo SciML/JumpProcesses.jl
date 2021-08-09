@@ -236,7 +236,7 @@ initializes HopRates with zero rates
 function HopRatesMult(species_hop_constants::Vector{F}, site_hop_constants::Vector{Vector{F}}) where F <: Number
     hop_const_cumulative_sums = map(cumsum, site_hop_constants)
     rates = zeros(F, length(species_hop_constants), length(site_hop_constants))
-    sum_rates = vec(sum(rates, dims=1))
+    sum_rates = zeros(size(rates, 2))
     HopRatesMult{F}(species_hop_constants, hop_const_cumulative_sums, rates, sum_rates)
 end
 
@@ -270,19 +270,21 @@ function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesMultGrid)
     println(io, "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
 end
 
-function HopRatesMultGrid(species_hop_constants::Vector{F}, site_hop_constants::Matrix{F}) where F <: Number
-    hop_const_cumulative_sums = mapslices(cumsum, site_hop_constants, dims = 1)
+function HopRatesMultGrid(species_hop_constants::Vector{F}, site_hop_constants::Matrix{F}; do_cumsum = true) where F <: Number
+    do_cumsum && (site_hop_constants = mapslices(cumsum, site_hop_constants, dims = 1))
     rates = zeros(F, length(species_hop_constants), size(site_hop_constants, 2))
-    sum_rates = vec(sum(rates, dims=1))
-    HopRatesMultGrid{F}(species_hop_constants, hop_const_cumulative_sums, rates, sum_rates)
+    sum_rates = zeros(size(rates, 2))
+    HopRatesMultGrid{F}(species_hop_constants, site_hop_constants, rates, sum_rates)
 end
 
 function HopRatesMultGrid(species_hop_constants::Vector{F}, site_hop_constants::Vector{Vector{F}}, grid) where F <: Number
     new_hopping_constants = Matrix{F}(undef, 2*dimension(grid), length(site_hop_constants))
     for site in 1:length(site_hop_constants)
-        new_hopping_constants[:, site] = pad_hop_vec(grid, site, site_hop_constants[site])
+        nb_constants = @view new_hopping_constants[:, site]
+        pad_hop_vec!(nb_constants, grid, site, site_hop_constants[site])
+        cumsum!(nb_constants, nb_constants)
     end
-    HopRatesMultGrid(species_hop_constants, new_hopping_constants)
+    HopRatesMultGrid(species_hop_constants, new_hopping_constants, do_cumsum = false)
 end
 
 function sample_target(hop_rates::HopRatesMultGrid, site, species, rng, grid)
@@ -319,7 +321,7 @@ function HopRatesMultGeneral(species_hop_constants::Matrix{F}, site_hop_constant
     @assert size(species_hop_constants, 2) == length(site_hop_constants)
     hop_const_cumulative_sums = map(cumsum, site_hop_constants)
     rates = zeros(F, length(species_hop_constants), length(site_hop_constants))
-    sum_rates = vec(sum(rates, dims=1))
+    sum_rates = zeros(size(rates, 2))
     HopRatesMultGeneral{F}(species_hop_constants, hop_const_cumulative_sums, rates, sum_rates)
 end
 
@@ -353,20 +355,22 @@ function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesMultGeneralGri
     println(io, "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.")
 end
 
-function HopRatesMultGeneralGrid(species_hop_constants::Matrix{F}, site_hop_constants::Matrix{F}) where F <: Number
+function HopRatesMultGeneralGrid(species_hop_constants::Matrix{F}, site_hop_constants::Matrix{F}; do_cumsum = true) where F <: Number
     @assert size(species_hop_constants, 2) == size(site_hop_constants, 2)
-    hop_const_cumulative_sums = mapslices(cumsum, site_hop_constants, dims = 1)
+    do_cumsum && (site_hop_constants = mapslices(cumsum, site_hop_constants, dims = 1))
     rates = zeros(F, size(species_hop_constants))
-    sum_rates = vec(sum(rates, dims=1))
-    HopRatesMultGeneralGrid{F}(species_hop_constants, hop_const_cumulative_sums, rates, sum_rates)
+    sum_rates = zeros(size(rates, 2))
+    HopRatesMultGeneralGrid{F}(species_hop_constants, site_hop_constants, rates, sum_rates)
 end
 
 function HopRatesMultGeneralGrid(species_hop_constants::Matrix{F}, site_hop_constants::Vector{Vector{F}}, grid) where F <: Number
     new_hopping_constants = Matrix{F}(undef, 2*dimension(grid), length(site_hop_constants))
     for site in 1:length(site_hop_constants)
-        new_hopping_constants[:, site] = pad_hop_vec(grid, site, site_hop_constants[site])
+        nb_constants = @view new_hopping_constants[:, site]
+        pad_hop_vec!(nb_constants, grid, site, site_hop_constants[site])
+        cumsum!(nb_constants, nb_constants)
     end
-    HopRatesMultGeneralGrid(species_hop_constants, new_hopping_constants)
+    HopRatesMultGeneralGrid(species_hop_constants, new_hopping_constants, do_cumsum = false)
 end
 
 function sample_target(hop_rates::HopRatesMultGeneralGrid, site, species, rng, grid)

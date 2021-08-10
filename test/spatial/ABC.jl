@@ -8,7 +8,8 @@ non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
 
 dim = 1
 linear_size = 5
-dims = Tuple(5)
+dims = Tuple(repeat([linear_size], dim))
+num_nodes = prod(dims)
 starting_site = trunc(Int,(linear_size^dim + 1)/2)
 u0 = [500,500,0]
 end_time = 10.0
@@ -25,7 +26,6 @@ majumps = MassActionJump(rates, reactstoch, netstoch)
 
 # spatial system setup
 hopping_rate = diffusivity * (linear_size/domain_size)^2
-num_nodes = 5
 
 # Starting state setup
 starting_state = zeros(Int, length(u0), num_nodes)
@@ -34,7 +34,7 @@ starting_state[:,starting_site] .= u0
 tspan = (0.0, end_time)
 prob = DiscreteProblem(starting_state, tspan, rates)
 hopping_constants = [hopping_rate for i in starting_state]
-alg = NSM()
+# algs = [NSM(), DirectCRDirect()]
 
 function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(size(jump_prob.prob.u0))
@@ -45,16 +45,12 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
-# testing on CartesianGrid
-grids = [DiffEqJump.CartesianGrid1(dims), DiffEqJump.CartesianGrid2(dims), DiffEqJump.CartesianGrid3(dims), LightGraphs.grid(dims)]
-jump_problems = JumpProblem[JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+# testing
+grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
+jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
-graph = LightGraphs.grid(dims)
-hopping_constants = Vector{Matrix{Float64}}(undef, num_nodes)
-for site in 1:num_nodes
-    hopping_constants[site] = hopping_rate*ones(num_species, DiffEqJump.num_neighbors(graph, site))
-end
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = graph, save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

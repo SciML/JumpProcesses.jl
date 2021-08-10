@@ -28,7 +28,7 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop
 
     # a dependency graph is needed
     if dep_graph === nothing
-        dg = DiffEqJump.make_dependency_graph(num_specs, rx_rates.ma_jumps)
+        dg = make_dependency_graph(num_specs, rx_rates.ma_jumps)
     else
         dg = dep_graph
         # make sure each jump depends on itself
@@ -65,7 +65,7 @@ function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jum
     next_jump = SpatialJump{Int}(typemax(Int),typemax(Int),typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
     rx_rates = RxRates(num_sites(spatial_system), majumps)
-    hop_rates = HopRates(hopping_constants)
+    hop_rates = HopRates(hopping_constants, spatial_system)
 
     NSMJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
 end
@@ -79,17 +79,9 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
-    @unpack rx_rates, hop_rates, rng = p
-
     p.next_jump_time, site = top_with_handle(p.pq)
     p.next_jump_time >= p.end_time && return nothing
-    if rand(rng)*(total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site)) < total_site_rx_rate(rx_rates, site)
-        rx = sample_rx_at_site(rx_rates, site, rng)
-        p.next_jump = SpatialJump(site, rx+p.numspecies, site)
-    else
-        species_to_diffuse, target_site = sample_hop_at_site(hop_rates, site, rng, p.spatial_system)
-        p.next_jump = SpatialJump(site, species_to_diffuse, target_site)
-    end
+    p.next_jump = sample_jump_direct(p, site)
     nothing
 end
 
@@ -105,22 +97,25 @@ end
 
 ######################## SSA specific helper routines ########################
 """
-reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
+    fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
+
+reset all stucts, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
-    @unpack spatial_system, rx_rates, hop_rates, rng, numspecies = aggregation
+    @unpack spatial_system, rx_rates, hop_rates, rng = aggregation
 
     reset!(rx_rates)
     reset!(hop_rates)
 
-    num_rxs = DiffEqJump.num_rxs(rx_rates)
-    num_sites = DiffEqJump.num_sites(spatial_system)
+    rxs = 1:num_rxs(rx_rates)
+    species = 1:aggregation.numspecies
+    num_nodes = num_sites(spatial_system)
 
-    pqdata = Vector{typeof(t)}(undef, num_sites)
-    @inbounds for site in 1:num_sites
-        update_rx_rates!(rx_rates, 1:num_rxs, u, site)
-        update_hop_rates!(hop_rates, 1:numspecies, u, site, spatial_system)
-        pqdata[site] = t + randexp(rng) / (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
+    pqdata = Vector{typeof(t)}(undef, num_nodes)
+    @inbounds for site in 1:num_nodes
+        update_rx_rates!(rx_rates, rxs, u, site)
+        update_hop_rates!(hop_rates, species, u, site, spatial_system)
+        pqdata[site] = t + randexp(rng) / (total_site_rate(rx_rates, hop_rates, site))
     end
 
     aggregation.pq = MutableBinaryMinHeap(pqdata)
@@ -132,7 +127,7 @@ end
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates_and_firing_times!(p, u, t)
+function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, u, t)
     jump = p.prev_jump
     if is_hop(p, jump)
         source_site = jump.src
@@ -145,19 +140,27 @@ function update_dependent_rates_and_firing_times!(p, u, t)
         update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))
         update_site_time!(p, site, t)
     end
-end
-
-function update_site_time!(p, site, t)
-    @unpack rx_rates, hop_rates, rng, pq = p
-    site_rate = (total_site_rx_rate(rx_rates, site)+total_site_hop_rate(hop_rates, site))
-    if site_rate > zero(typeof(site_rate))
-        update!(pq, site, t + randexp(rng) / site_rate)
-    else
-        update!(pq, site, typemax(t))
-    end
+    nothing
 end
 
 """
+    update_site_time!(p::NSMJumpAggregation, site, t)
+
+update the time of site in the priority queue
+"""
+function update_site_time!(p::NSMJumpAggregation, site, t)
+    site_rate = (total_site_rate(p.rx_rates, p.hop_rates, site))
+    if site_rate > zero(typeof(site_rate))
+        update!(p.pq, site, t + randexp(p.rng) / site_rate)
+    else
+        update!(p.pq, site, typemax(t))
+    end
+    nothing
+end
+
+"""
+    num_constant_rate_jumps(aggregator::NSMJumpAggregation)
+
 number of constant rate jumps
 """
 num_constant_rate_jumps(aggregator::NSMJumpAggregation) = 0

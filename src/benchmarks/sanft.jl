@@ -6,11 +6,9 @@ avogadro = 6.02214076e23
 # species ordering: 1 = E_A, 2 = A, 3 = E_B, 4 = B, 5 = E_A B, 6 = E_A B_2, 7 = E_B A, 8 = E_B A_2
 num_species = 8
 
-for linear_num in [20, 30, 40, 50, 60]
-
-    @show linear_num
+function model_setup(linear_num)
+    
     # topology
-    # linear_num = 20
     domain_size = 12.0e-6 #meters
     mesh_size = domain_size/linear_num
     dims = (linear_num, linear_num, linear_num)
@@ -57,9 +55,19 @@ for linear_num in [20, 30, 40, 50, 60]
     end_time = 16.0 # ≈ 10^8 jumps
     prob = DiscreteProblem(u0, (0.0,end_time), rates)
 
+    return prob, majumps, hopping_constants, grid
+end
+
+algs = [NSM(), DirectCRDirect(), NRM(), DirectCR(), RSSACR()]
+names = ["$s"[1:end-2] for s in algs]
+
+# TODO figure out end_time for different linear_num to have ≈ 10^8 jumps. Know: 16s for 20
+for linear_num in [20, 30, 40, 50, 60]
+
+    @show linear_num
+    prob, majumps, hopping_constants, grid = model_setup(linear_num)
+
     # benchmarking
-    algs = [NSM(), DirectCRDirect(), NRM(), DirectCR(), RSSACR()]
-    names = ["$s"[1:end-2] for s in algs]
     benchmarks = Vector{BenchmarkTools.Trial}(undef, length(algs))
 
     @progress "benchmarking on $dims grid" for (i, alg) in enumerate(algs)
@@ -79,8 +87,6 @@ for linear_num in [20, 30, 40, 50, 60]
     end
     save(path, data...)
 end
-
-
 
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN

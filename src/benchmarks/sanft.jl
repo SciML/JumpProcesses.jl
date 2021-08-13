@@ -60,14 +60,16 @@ end
 algs = [NSM(), DirectCRDirect(), NRM(), DirectCR(), RSSACR()]
 names = ["$s"[1:end-2] for s in algs]
 
-end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps
-linear_nums = [20, 30, 40, 50, 60]
+end_times = [5.8, 3.9, 2.8] # for ≈ 10^8 jumps
+linear_nums = [40, 50, 60]
+# end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps
+# linear_nums = [20, 30, 40, 50, 60]
 for (end_time, linear_num) in zip(end_times, linear_nums)
 
     @show linear_num
     prob, majumps, hopping_constants, grid = model_setup(linear_num, end_time)
 
-    # benchmarking
+    # benchmarking and saving
     benchmarks = Vector{BenchmarkTools.Trial}(undef, length(algs))
 
     @progress "benchmarking on $(grid.dims) grid" for (i, alg) in enumerate(algs)
@@ -75,10 +77,11 @@ for (end_time, linear_num) in zip(end_times, linear_nums)
         println("benchmarking $name")
         jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
         solve(jp, SSAStepper())
-        b = @benchmarkable solve($jp, SSAStepper()) samples = 5 seconds = 600
+        b = @benchmarkable solve($jp, SSAStepper()) samples = 10 seconds = 1500
         benchmarks[i] = run(b)
+        save("benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16_$name.jld", name, benchmarks[i])
     end
-
+    
     path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16.jld"
     data = []; sizehint!(data, 2*length(names))
     for (i, name) in enumerate(names)

@@ -113,6 +113,7 @@ ylabel!("median time in seconds")
 xlabel!("number of sites per edge")
 title!("3D RDME")
 xticks!(linear_nums)
+savefig("benchmark_data/plot")
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN
 # alg = algs[2]

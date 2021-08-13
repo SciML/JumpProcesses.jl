@@ -50,7 +50,7 @@ include("spatial/flatten.jl")
 include("spatial/utils.jl")
 
 include("spatial/nsm.jl")
-include("spatial/DirectCRDirect.jl")
+include("spatial/directCRDirect.jl")
 
 
 include("aggregators/aggregated_api.jl")

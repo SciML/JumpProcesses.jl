@@ -77,7 +77,7 @@ for (end_time, linear_num) in zip(end_times, linear_nums)
         solve(jp, SSAStepper())
         b = @benchmarkable solve($jp, SSAStepper()) samples = 10 seconds = 1500
         benchmarks[i] = run(b)
-        save("benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16_$name.jld", name, benchmarks[i])
+        # save("benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16_$name.jld", name, benchmarks[i])
     end
     
     path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16.jld"

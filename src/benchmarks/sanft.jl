@@ -108,12 +108,20 @@ for (i,name) in enumerate(names)
     end
 end
 gr()
-plot(linear_nums, medtimes, label = reshape(names, 1, length(names)), marker = :hex, legendtitle = "SSAs")
+plt1 = plot(linear_nums, medtimes, label = reshape(names, 1, length(names)), marker = :hex, legendtitle = "SSAs")
 ylabel!("median time in seconds")
 xlabel!("number of sites per edge")
 title!("3D RDME")
 xticks!(linear_nums)
-savefig("benchmark_data/plot")
+
+plt2 = plot(linear_nums.^3, medtimes, label = reshape(names, 1, length(names)), marker = :hex, legendtitle = "SSAs")
+ylabel!("median time in seconds")
+xlabel!("total number of sites")
+title!("3D RDME")
+xticks!(linear_nums)
+
+plot(plt1, plt2, size = (1500, 500))
+savefig("benchmark_data/plot_total")
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN
 # alg = algs[2]

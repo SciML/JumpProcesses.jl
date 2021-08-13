@@ -6,7 +6,7 @@ avogadro = 6.02214076e23
 # species ordering: 1 = E_A, 2 = A, 3 = E_B, 4 = B, 5 = E_A B, 6 = E_A B_2, 7 = E_B A, 8 = E_B A_2
 num_species = 8
 
-function model_setup(linear_num)
+function model_setup(linear_num, end_time)
     
     # topology
     domain_size = 12.0e-6 #meters
@@ -52,7 +52,6 @@ function model_setup(linear_num)
     hopping_constants = hopping_rate * ones(num_species, num_nodes)
 
     # DiscreteProblem
-    end_time = 16.0 # ≈ 10^8 jumps
     prob = DiscreteProblem(u0, (0.0,end_time), rates)
 
     return prob, majumps, hopping_constants, grid
@@ -61,16 +60,17 @@ end
 algs = [NSM(), DirectCRDirect(), NRM(), DirectCR(), RSSACR()]
 names = ["$s"[1:end-2] for s in algs]
 
-# TODO figure out end_time for different linear_num to have ≈ 10^8 jumps. Know: 16s for 20
-for linear_num in [20, 30, 40, 50, 60]
+end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps
+linear_nums = [20, 30, 40, 50, 60]
+for (end_time, linear_num) in zip(end_times, linear_nums)
 
     @show linear_num
-    prob, majumps, hopping_constants, grid = model_setup(linear_num)
+    prob, majumps, hopping_constants, grid = model_setup(linear_num, end_time)
 
     # benchmarking
     benchmarks = Vector{BenchmarkTools.Trial}(undef, length(algs))
 
-    @progress "benchmarking on $dims grid" for (i, alg) in enumerate(algs)
+    @progress "benchmarking on $(grid.dims) grid" for (i, alg) in enumerate(algs)
         name = names[i]
         println("benchmarking $name")
         jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
@@ -91,16 +91,20 @@ end
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN
 # alg = algs[2]
-# end_times = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
-# # for end_time in end_times #1e8 / (hopping_rate * 2total_num)
-# #     local prob = DiscreteProblem(u0, (0.0,end_time), rates)
-# #     local jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
-# #     solve(jp, SSAStepper());
-# #     rate = jp.discrete_jump_aggregation.rt.gsum
-# #     @show end_time, rate
-# # end
-# end_time = end_times[end]
-# prob = DiscreteProblem(u0, (0.0,end_time), rates)
-# jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
-# sol = solve(jp, SSAStepper());
-# sum(sol[end], dims = 2)
+# end_times = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 4.0, 8.0]
+# weighted_avg_rates = []
+# for linear_num in [30, 40, 50, 60]
+#     rates = Float64[]
+#     @show linear_num
+#     for end_time in end_times #1e8 / (hopping_rate * 2total_num)
+#         prob, majumps, hopping_constants, grid = model_setup(linear_num, end_time)
+#         local jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
+#         solve(jp, SSAStepper());
+#         rate = jp.discrete_jump_aggregation.rt.gsum
+#         @show end_time, rate
+#         push!(rates, rate)
+#     end
+#     weighted_avg_rate = sum(rates .* end_times)/sum(end_times)
+#     @show linear_num, weighted_avg_rate
+#     push!(weighted_avg_rates, weighted_avg_rate)
+# end

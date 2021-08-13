@@ -91,6 +91,18 @@ for (end_time, linear_num) in zip(end_times, linear_nums)
     save(path, data...)
 end
 
+# plotting 
+
+using JLD
+using BenchmarkTools
+bench_data = Dict[]
+for linear_num in [20,30,40]
+    path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16.jld"
+    push!(bench_data, load(path))
+end
+
+using Plots
+plot(collect(keys(bench_data[1])), collect(median.(values(bench_data[1]))))
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN
 # alg = algs[2]

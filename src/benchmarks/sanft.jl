@@ -57,7 +57,7 @@ function model_setup(linear_num, end_time)
     return prob, majumps, hopping_constants, grid
 end
 
-algs = [NSM(), DirectCRDirect(), NRM(), DirectCR(), RSSACR()]
+algs = [NSM(), DirectCRDirect(), DirectCR(), RSSACR()]
 names = ["$s"[1:end-2] for s in algs]
 
 end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps

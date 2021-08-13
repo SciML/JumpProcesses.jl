@@ -60,10 +60,8 @@ end
 algs = [NSM(), DirectCRDirect(), NRM(), DirectCR(), RSSACR()]
 names = ["$s"[1:end-2] for s in algs]
 
-end_times = [5.8, 3.9, 2.8] # for ≈ 10^8 jumps
-linear_nums = [40, 50, 60]
-# end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps
-# linear_nums = [20, 30, 40, 50, 60]
+end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps
+linear_nums = [20, 30, 40, 50, 60]
 for (end_time, linear_num) in zip(end_times, linear_nums)
 
     @show linear_num
@@ -91,18 +89,30 @@ for (end_time, linear_num) in zip(end_times, linear_nums)
     save(path, data...)
 end
 
-# plotting 
-
+# loading data 
 using JLD
 using BenchmarkTools
+using Statistics, DataFrames, Plots
+linear_nums = [20,30,40,50,60]
 bench_data = Dict[]
-for linear_num in [20,30,40]
+for linear_num in linear_nums
     path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16.jld"
     push!(bench_data, load(path))
 end
+names = collect(keys(bench_data[1]))
 
-using Plots
-plot(collect(keys(bench_data[1])), collect(median.(values(bench_data[1]))))
+medtimes = Matrix{Float64}(undef, length(linear_nums), length(names))
+for (i,name) in enumerate(names)
+    for (j, d) in enumerate(bench_data)
+        medtimes[j,i] = median(d[name]).time/1e9
+    end
+end
+gr()
+plot(linear_nums, medtimes, label = reshape(names, 1, length(names)), marker = :hex, legendtitle = "SSAs")
+ylabel!("median time in seconds")
+xlabel!("number of sites per edge")
+title!("3D RDME")
+xticks!(linear_nums)
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN
 # alg = algs[2]

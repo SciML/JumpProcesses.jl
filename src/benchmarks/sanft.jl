@@ -118,7 +118,7 @@ plt2 = plot(linear_nums.^3, medtimes, label = reshape(names, 1, length(names)), 
 ylabel!("median time in seconds")
 xlabel!("total number of sites")
 title!("3D RDME")
-xticks!(linear_nums)
+xticks!(linear_nums.^3)
 
 plot(plt1, plt2, size = (1500, 500))
 savefig("benchmark_data/plot_total")

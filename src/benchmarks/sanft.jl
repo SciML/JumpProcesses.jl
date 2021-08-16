@@ -1,13 +1,15 @@
 using DiffEqJump, BenchmarkTools
 using ProgressLogging
 using JLD
+using Plots
 
-avogadro = 6.02214076e23
-# species ordering: 1 = E_A, 2 = A, 3 = E_B, 4 = B, 5 = E_A B, 6 = E_A B_2, 7 = E_B A, 8 = E_B A_2
-num_species = 8
 
 function model_setup(linear_num, end_time)
     
+    # species ordering: 1 = E_A, 2 = A, 3 = E_B, 4 = B, 5 = E_A B, 6 = E_A B_2, 7 = E_B A, 8 = E_B A_2
+    avogadro = 6.02214076e23
+    num_species = 8
+
     # topology
     domain_size = 12.0e-6 #meters
     mesh_size = domain_size/linear_num
@@ -57,71 +59,97 @@ function model_setup(linear_num, end_time)
     return prob, majumps, hopping_constants, grid
 end
 
-algs = [NSM(), DirectCRDirect(), DirectCR(), RSSACR()]
-names = ["$s"[1:end-2] for s in algs]
+function benchmark_and_save(end_times, linear_nums, algs)
+    @assert length(end_times) == length(linear_nums)
 
-end_times = [16.0, 9.3, 5.8, 3.9, 2.8] # for ≈ 10^8 jumps
-linear_nums = [20, 30, 40, 50, 60]
-for (end_time, linear_num) in zip(end_times, linear_nums)
+    for (end_time, linear_num) in zip(end_times, linear_nums)
+        names = ["$s"[1:end-2] for s in algs]
 
-    @show linear_num
-    prob, majumps, hopping_constants, grid = model_setup(linear_num, end_time)
+        @show linear_num
+        prob, majumps, hopping_constants, grid = model_setup(linear_num, end_time)
 
-    # benchmarking and saving
-    benchmarks = Vector{BenchmarkTools.Trial}(undef, length(algs))
+        # benchmarking and saving
+        benchmarks = Vector{BenchmarkTools.Trial}(undef, length(algs))
 
-    @progress "benchmarking on $(grid.dims) grid" for (i, alg) in enumerate(algs)
-        name = names[i]
-        println("benchmarking $name")
-        jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
-        solve(jp, SSAStepper())
-        b = @benchmarkable solve($jp, SSAStepper()) samples = 10 seconds = 1500
-        benchmarks[i] = run(b)
-        # save("benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16_$name.jld", name, benchmarks[i])
+        @progress "benchmarking on $(grid.dims) grid" for (i, alg) in enumerate(algs)
+            name = names[i]
+            println("benchmarking $name")
+            jp = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false))
+            solve(jp, SSAStepper())
+            b = @benchmarkable solve($jp, SSAStepper()) samples = 10 seconds = 1500
+            benchmarks[i] = run(b)
+            # save("benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16_$name.jld", name, benchmarks[i])
+        end
+        
+        path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num).jld"
+        data = []; sizehint!(data, 2*length(names))
+        for (i, name) in enumerate(names)
+            push!(data, name)
+            push!(data, benchmarks[i])
+        end
+        save(path, data...)
     end
-    
-    path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16.jld"
-    data = []; sizehint!(data, 2*length(names))
-    for (i, name) in enumerate(names)
-        push!(data, name)
-        push!(data, benchmarks[i])
-    end
-    save(path, data...)
 end
 
 # loading data 
-using JLD
-using BenchmarkTools
-using Statistics, DataFrames, Plots
-linear_nums = [20,30,40,50,60]
-bench_data = Dict[]
-for linear_num in linear_nums
-    path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16.jld"
-    push!(bench_data, load(path))
-end
-names = collect(keys(bench_data[1]))
-
-medtimes = Matrix{Float64}(undef, length(linear_nums), length(names))
-for (i,name) in enumerate(names)
-    for (j, d) in enumerate(bench_data)
-        medtimes[j,i] = median(d[name]).time/1e9
+function fetch_and_plot(linear_nums)
+    bench_data = Dict[]
+    for linear_num in linear_nums
+        path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num).jld"
+        push!(bench_data, load(path))
     end
+    names = collect(keys(bench_data[1]))
+
+    gr()
+    plt1 = plot()
+    plt2 = plot()
+
+    medtimes = [Float64[] for i in 1:length(names)]
+    for (i,name) in enumerate(names)
+        for d in bench_data
+            try
+                push!(medtimes[i], median(d[name]).time/1e9)
+            catch
+                break
+            end
+        end
+        len = length(medtimes[i])
+        plot!(plt1, linear_nums[1:len], medtimes[i], marker = :hex, label = name)
+        plot!(plt2, (linear_nums.^3)[1:len], medtimes[i], marker = :hex, label = name)
+    end
+
+    ylabel!(plt1, "median time in seconds")
+    xlabel!(plt1, "number of sites per edge")
+    title!(plt1, "3D RDME")
+    xticks!(plt1, linear_nums)
+
+    ylabel!(plt2, "median time in seconds")
+    xlabel!(plt2, "total number of sites")
+    title!(plt2, "3D RDME")
+    xticks!(plt2, linear_nums.^3)
+    
+    plt = plot(plt1, plt2)
+    plot!(plt, legendtitle = "SSAs")
+    savefig(plt, "benchmark_data/plot")
+    plt
 end
-gr()
-plt1 = plot(linear_nums, medtimes, label = reshape(names, 1, length(names)), marker = :hex, legendtitle = "SSAs")
-ylabel!("median time in seconds")
-xlabel!("number of sites per edge")
-title!("3D RDME")
-xticks!(linear_nums)
 
-plt2 = plot(linear_nums.^3, medtimes, label = reshape(names, 1, length(names)), marker = :hex, legendtitle = "SSAs")
-ylabel!("median time in seconds")
-xlabel!("total number of sites")
-title!("3D RDME")
-xticks!(linear_nums.^3)
+algs = [NSM(), DirectCRDirect(), DirectCR(), RSSACR()]
+# end_times = ones(2)/10000
+# linear_nums = [20,30]
+end_times = [16.0, 9.3, 5.8, 3.9] # for ≈ 10^8 jumps
+linear_nums = [20, 30, 40, 50]
+benchmark_and_save(end_times, linear_nums, algs)
 
-plot(plt1, plt2, size = (1500, 500))
-savefig("benchmark_data/plot_total")
+algs = [NSM(), DirectCRDirect()]
+# end_times = ones(1)/10000
+# linear_nums = [40]
+end_times = [2.8] # for ≈ 10^8 jumps
+linear_nums = [60]
+benchmark_and_save(end_times, linear_nums, algs)
+
+linear_nums = [20,30,40,50,60]
+plt=fetch_and_plot(linear_nums)
 
 #### FIGURING OUT HOW MANY JUMPS HAPPEN
 # alg = algs[2]

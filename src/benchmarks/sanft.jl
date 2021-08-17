@@ -1,7 +1,7 @@
 using DiffEqJump, BenchmarkTools
 using ProgressLogging
 using JLD
-using Plots
+using Plots, Plots.PlotMeasures
 
 
 function model_setup(linear_num, end_time)
@@ -126,10 +126,9 @@ function fetch_and_plot(linear_nums)
     ylabel!(plt2, "median time in seconds")
     xlabel!(plt2, "total number of sites")
     title!(plt2, "3D RDME")
-    xticks!(plt2, linear_nums.^3)
+    xticks!(plt2, (linear_nums.^3, string.(linear_nums.^3)) )
     
-    plt = plot(plt1, plt2)
-    plot!(plt, legendtitle = "SSAs")
+    plt = plot(plt1, plt2, size = (1200,800), margin = 10mm, legendtitle = "SSAs")
     savefig(plt, "benchmark_data/plot")
     plt
 end

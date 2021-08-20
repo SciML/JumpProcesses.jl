@@ -69,7 +69,7 @@ for i in 1:length(update_nums)
     # PT2 updating
     println("benchmark PT2 update")
     rates = rand(num_rates)
-    pt = DiffEqJump.PriorityTable2(minrate, rates)
+    pt = DiffEqJump.PriorityTable(minrate, rates)
     DiffEqJump.update!(pt, 1, rates[1], rates[1]) #force compilation
     elapsed_time = 0.0
     for j in 1:samples

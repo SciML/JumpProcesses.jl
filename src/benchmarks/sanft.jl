@@ -78,7 +78,6 @@ function benchmark_and_save(end_times, linear_nums, algs)
             solve(jp, SSAStepper())
             b = @benchmarkable solve($jp, SSAStepper()) samples = 10 seconds = 1500
             benchmarks[i] = run(b)
-            # save("benchmark_data/sanft_benchmarks_lin_num_$(linear_num)_end_time_16_$name.jld", name, benchmarks[i])
         end
         
         path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num).jld"
@@ -136,15 +135,15 @@ end
 algs = [NSM(), DirectCRDirect(), DirectCR(), RSSACR()]
 # end_times = ones(2)/10000
 # linear_nums = [20,30]
-end_times = [16.0, 9.3, 5.8, 3.9] # for ≈ 10^8 jumps
-linear_nums = [20, 30, 40, 50]
+end_times = [16.0, 9.3, 5.8] # for ≈ 10^8 jumps
+linear_nums = [20, 30, 40]
 benchmark_and_save(end_times, linear_nums, algs)
 
 algs = [NSM(), DirectCRDirect()]
 # end_times = ones(1)/10000
 # linear_nums = [40]
-end_times = [2.8] # for ≈ 10^8 jumps
-linear_nums = [60]
+end_times = [3.9, 2.8] # for ≈ 10^8 jumps
+linear_nums = [50, 60]
 benchmark_and_save(end_times, linear_nums, algs)
 
 linear_nums = [20,30,40,50,60]

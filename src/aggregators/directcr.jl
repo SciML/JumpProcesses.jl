@@ -10,7 +10,7 @@ by S. Mauch and M. Stalzer, ACM Trans. Comp. Biol. and Bioinf., 8, No. 1, 27-35 
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
+mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U,W<:Function} <: AbstractSSAJumpAggregator
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -57,7 +57,7 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable2(minrate)
+    rt = PriorityTable(minrate)
 
     DirectCRJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(rt),typeof(ratetogroup)}(
                                             nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,

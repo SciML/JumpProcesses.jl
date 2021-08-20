@@ -1,82 +1,25 @@
-"""
-Dynamic table data structure to store and update priorities
 
-Implementation
-Stores ids that identify the priorities. Each group stores a range of priority ids.
-The basic design assumes a lower-most group of "zero" priorities, and a second
-group storing all non-zero priorities that are < a `minpriority`. All other groups
-store priorities within consecutive ranges. The `minpriority` is taken fixed at creation,
-but the `maxpriority` will increase dynamically based on inserted / updated priorities.
-The ranges are assumed to be powers of two:
-   bin 1 = {0},
-   bin 2 = (0,`minpriority`),
-   bin 3 = [`minpriority`,`2*minpriority`)...
-   bin N = [`.5*maxpriority`,`maxpriority`)
-*Assumes* the `priortogid` function that maps priorities to groups maps the upper end of
-the interval to the next group. i.e. maxpriority -> N+1
-"""
+# groups: {0}, (0, 2^minpower], (2^minpower, 2^(minpower+1)], (2^(minpower+1), 2^(minpower+2)], etc
 
-"""
-One group (i.e. bin) of priority ids within the table
-"""
-mutable struct PriorityGroup{T,W <: AbstractVector}
-    "(strict) upper bound for priorities in this group"
-    maxpriority::T
+# """
+# return the index of the group where priority belongs
+# """
+# function priortogid(priority, minpower)
+#     (priority <= eps(typeof(priority))) && return 1
+#     gid = exponent(priority) + 1
+#     (gid <= minpower) && return 2
+#     return gid - minpower + 2
+# end
 
-    "number of priority ids"
-    numpids::Int
+mutable struct PriorityTable{F}
 
-    "priority ids associated with group"
-    pids::W
-end
-PriorityGroup{U}(maxpriority::T) where {T,U} = PriorityGroup(maxpriority, 0, Vector{U}())
+    minpower::Int # minimum power of 2
 
-@inline function insert!(pg::PriorityGroup, pid)
-    @unpack numpids, pids = pg
+    "stores reaction ids for each group"
+    gids::Vector{Vector{Int}}
 
-    if numpids == length(pids)
-        push!(pids, pid)
-    else
-        @inbounds pids[numpids+1] = pid
-    end
-
-    # return the position of insertion
-    pg.numpids += 1
-end
-
-@inline function remove!(pg::PriorityGroup, pididx)
-    @unpack numpids, pids = pg
-
-    @inbounds lastpid = pids[numpids]
-
-    # simply swap the last id with the one to remove
-    @inbounds pids[pididx] = lastpid
-    pg.numpids -= 1
-
-    # return the pid that was swapped to pididx
-    lastpid
-end
-
-function Base.show(io::IO, pg::PriorityGroup)
-    println(io, "  ", summary(pg))
-    println(io, "  maxpriority = ", pg.maxpriority)
-    println(io, "  numpids = ", pg.numpids)
-    println(io, "  pids = ", pg.pids[1:pg.numpids])
-end
-
-
-"""
-Table to store the groups.
-"""
-mutable struct PriorityTable{F,S,T,U<:Function}
-    "non-zero values below this are binned together, static"
-    minpriority::F
-
-    "values above this cause new groups to be added"
-    maxpriority::F
-
-    "bins storing priority ids within a given range"
-    groups::Vector{PriorityGroup{F,Vector{S}}}
+    "stores number of reactions in each group"
+    gnums::Vector{Int}
 
     "stores the sums of the priorities within each group"
     gsums::Vector{F}
@@ -85,115 +28,90 @@ mutable struct PriorityTable{F,S,T,U<:Function}
     gsum::F
 
     "maps priority id to group and idx within the group"
-    pidtogroup::Vector{Tuple{T,T}}
-
-    "mapping from priority value to group id that stores it"
-    priortogid::U
+    pidtogroup::Vector{Tuple{Int,Int}}
 end
 
-"""
-Setup table from a vector of priorities. The id
-of a priority is its position within this vector.
-"""
-function PriorityTable(priortogid::Function, priorities::AbstractVector, minpriority, maxpriority)
+function PriorityTable(minpriority)
+    F = typeof(minpriority)
+    minpower = exponent(minpriority)
+    gids = [Int[], Int[]] # initialize the first two groups
+    gnums = [0,0]
+    gsums = zeros(F, 2)
+    gsum = zero(F)
+    pidtogroup = Tuple{Int,Int}[]
+    PriorityTable{F}(minpower, gids, gnums, gsums, gsum, pidtogroup)
+end
 
-    numgroups  = priortogid(maxpriority)
-    numgroups -= one(typeof(numgroups))
-    pidtype    = typeof(numgroups)
-    ptype      = eltype(priorities)
-    groups     = Vector{PriorityGroup{ptype,Vector{pidtype}}}()
-    pidtogroup = Vector{Tuple{Int,Int}}(undef, length(priorities))
-    gsum       = zero(ptype)
-    gsums      = zeros(ptype, numgroups)
-
-    # create the groups, {0}, (0,minpriority), [minpriority,2*minpriority)...
-    push!(groups, PriorityGroup{pidtype}(zero(ptype)))
-    gmaxprior = minpriority
-    for i = 2:numgroups
-        push!(groups, PriorityGroup{pidtype}(gmaxprior))
-        gmaxprior *= 2
-    end
-    #@assert 2*maxpriority <= gmaxprior "gmaxprior = $gmaxprior, maxpriority=$maxpriority"
-    gmaxprior = groups[end].maxpriority
-
-    pt = PriorityTable(minpriority, gmaxprior, groups, gsums, gsum, pidtogroup, priortogid)
-
-    # insert priority ids into the groups
-    for (pid,priority) in enumerate(priorities)
+function PriorityTable(minpriority, priorities)
+    pt = PriorityTable(minpriority)
+    for (pid, priority) in enumerate(priorities)
         insert!(pt, pid, priority)
     end
-
     pt
 end
 
-########################## ACCESSORS ##########################
-@inline function numgroups(pt::PriorityTable)
-    length(pt.groups)
-end
+"sample a jump from pt"
+function sample(pt::PriorityTable{F}, priorities, rng = rng=Random.GLOBAL_RNG) where F
+    gsum = pt.gsum; gsums = pt.gsums
 
-@inline function numpriorities(pt::PriorityTable)
-    length(pt.pidtogroup)
-end
+    # return id zero if total priority is zero
+    (gsum < eps(F)) && return 0
 
-@inline function groupsum(pt::PriorityTable)
-    pt.gsum
-end
-
-"""
-Adds extra groups to the table to accomodate a new maxpriority.
-"""
-function padtable!(pt::PriorityTable, pid, priority)
-    @unpack maxpriority, groups, gsums = pt
-    pidtype = typeof(pid)
-
-    while priority >= maxpriority
-        maxpriority *= 2
-        push!(groups, PriorityGroup{pidtype}(maxpriority))
-        push!(gsums, zero(eltype(gsums)))
-    end
-    pt.maxpriority = maxpriority
-    nothing
-end
-
-# assumes pid is at most 1 greater than last priority (id) currently in table
-# i.e. pid = length(pidtogroup) + 1
-function insert!(pt::PriorityTable, pid, priority)
-    @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
-
-    # find group for new priority
-    gid = priortogid(priority)
-
-    # add new (empty) groups if priority is too big
-    if priority >= maxpriority
-        padtable!(pt, pid, priority)
-        #@assert (gid == length(groups))
+    # sample group
+    gid = 0
+    r   = rand(rng) * gsum
+    for i = length(gsums):-1:1
+        r -= gsums[i]
+        if r <= zero(r)
+            gid = i
+            break
+        end        
     end
 
-    # update table and priority's group
-    pt.gsum += priority
-    @inbounds gsums[gid] += priority
-    @inbounds pididx = insert!(groups[gid], pid)
+    # sample reaction within group
+    pids = @view pt.gids[gid][1:pt.gnums[gid]]
+    maxpriority = 2.0^(pt.minpower + gid-2)
+    while true
+        # pick a random element from pids[1:numpids]
+        pid    = rand(rng, pids)
+        # acceptance test
+        ( rand(rng)*maxpriority < priorities[pid] ) && return pid
+    end
+end
 
-    if pid <= length(pidtogroup)
-        @inbounds pidtogroup[pid] = (gid,pididx)
+"pad table to newgid"
+function padtable!(pt::PriorityTable{F}, newgid) where F
+    gids = pt.gids; gnums = pt.gnums; gsums = pt.gsums
+    num_new_groups = newgid - length(gsums) # number of groups to add
+    append!(gids, [Int[] for i in 1:num_new_groups])
+    append!(gnums, zeros(Int, num_new_groups))
+    append!(gsums, zeros(F, num_new_groups))
+end
+
+"insert pid in group gid"
+function insert!(pt::PriorityTable, pid, gid::Int)
+    # pad table if necessary
+    if gid > length(pt.gnums)
+        padtable!(pt, gid)
+    end
+
+    numpids = pt.gnums[gid]
+    pids = pt.gids[gid]
+    if numpids == length(pids)
+        push!(pids, pid)
     else
-        #@assert pid == length(pidtogroup) + 1
-        push!(pidtogroup, (gid,pididx))
+        pids[numpids+1] = pid
     end
-
-    nothing
+    # return the position of insertion
+    pt.gnums[gid] = numpids+1
 end
 
-function update!(pt::PriorityTable, pid, oldpriority, newpriority)
-    @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
+"update propensity of pid from oldpriority to newpriority"
+function update!(pt::PriorityTable{F}, pid, oldpriority, newpriority) where F
+    gsums = pt.gsums; pidtogroup = pt.pidtogroup; gnums = pt.gnums; gids = pt.gids
 
-    oldgid = priortogid(oldpriority)
-    newgid = priortogid(newpriority)
-
-    # expand the table if necessary
-    if newpriority >= maxpriority
-        padtable!(pt, pid, newpriority)
-    end
+    oldgid, pididx = pidtogroup[pid]
+    newgid = priortogid(newpriority, pt.minpower)
 
     # update the global priority sum
     pdiff    = newpriority - oldpriority
@@ -201,114 +119,76 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
 
     if oldgid == newgid
         # update the group priority too
-        @inbounds gsums[newgid] += pdiff
+        gsums[newgid] += pdiff
     else
-        @inbounds begin
-            # location in oldgid of pid to move
-            pididx = pidtogroup[pid][2]
+        # remove pid from old group by moving the last pid to its place
+        pids = gids[oldgid]
+        lastpid = pids[gnums[oldgid]]
+        pids[pididx] = lastpid
+        gnums[oldgid] -= 1
+    
+        # update position in group of the pid that swapped places with the removed one
+        pidtogroup[lastpid] = (oldgid,pididx)
 
-            # remove pid from old group
-            movedpid = remove!(groups[oldgid], pididx)
+        # insert the updated pid back and store its new position in the group
+        pididx = insert!(pt, pid, newgid)
+        pidtogroup[pid] = (newgid,pididx)
 
-            # update position in group of the pid that swapped places with the removed one
-            pidtogroup[movedpid] = (oldgid,pididx)
-
-            # insert the updated pid back and store it's new position in the group
-            pididx = insert!(groups[newgid], pid)
-            pidtogroup[pid] = (newgid,pididx)
-
-            # update sums, special case if group empty to avoid FP error in running sums
-            grpsz = groups[oldgid].numpids
-            gsums[oldgid]  = (grpsz == zero(grpsz)) ? zero(oldpriority) : gsums[oldgid] - oldpriority
-            gsums[newgid] += newpriority
-        end
+        # update sums, special case if group empty to avoid FP error in running sums
+        gsums[oldgid]  = (gnums[oldgid] == 0) ? zero(F) : gsums[oldgid] - oldpriority
+        gsums[newgid] += newpriority
     end
     nothing
 end
 
-function reset!(pt::PriorityTable{F,S,T,U}) where {F,S,T,U}
-    @unpack groups, gsums, pidtogroup = pt
-    pt.gsum = zero(F)
-    fill!(gsums, zero(F))
-    fill!(pidtogroup, (zero(T),zero(T)))
-    for group in groups
-        group.numpids = zero(T)
+function reset!(pt::PriorityTable{F}) where F
+    pt.gnums .= 0
+    pt.gsums .= zero(F)
+    pt.gsum = 0
+    fill!(pt.pidtogroup, (0,0))
+    @assert length(pt.gnums) == length(pt.gsums) == length(pt.gids)
+end
+
+"insert pid with priority in pt"
+function insert!(pt::PriorityTable, pid, priority)
+    # find group for new priority
+    gid = priortogid(priority, pt.minpower)
+
+    # update table and priority's group
+    pididx = insert!(pt, pid, gid)
+    pt.gsum += priority
+    pt.gsums[gid] += priority
+
+    if pid <= length(pt.pidtogroup)
+        pt.pidtogroup[pid] = (gid,pididx)
+    else
+        push!(pt.pidtogroup, (gid,pididx))
     end
+    nothing
 end
 
 function Base.show(io::IO, pt::PriorityTable)
     println(io, summary(pt))
-    println(io, "(minpriority,maxpriority) = ", (pt.minpriority, pt.maxpriority))
+    println(io, "minpower = ", pt.minpower)
     println(io, "sum of priorities = ", pt.gsum)
-    println(io, "num of groups = ", length(pt.groups))
+    println(io, "num of groups = ", length(pt.gsums))
     println(io, "pidtogroup = ", pt.pidtogroup)
-    for (i,group) in enumerate(pt.groups)
-        if group.numpids > 0
-            println(io, "group = ",i,", group sum = ", pt.gsums[i])
-            Base.show(io,group)
+    for (i,n) in enumerate(pt.gnums)
+        if n > 0
+            println(io, "group = $i\n  group sum = $(pt.gsums[i])\n  group num = $(pt.gnums[i])\n  group pids = $(pt.gids[i])")
         end
     end
 end
 
-#######################################################
-# routines for DirectCR
-#######################################################
-
-# map priority (i.e. jump rate) to integer
-# add two as 0. -> 1 and  priority < minpriority ==> pid -> 2
-@inline function priortogid(priority, mingid)
-    (priority <= eps(typeof(priority))) && return 1
-    gid = exponent(priority) + 1
-    (gid <= mingid) && return 2
-    return gid - mingid + 2
+function numgroups(pt::PriorityTable)
+    @assert length(pt.gids) == length(pt.gnums) == length(pt.gsums)
+    length(pt.gsums)
 end
 
-@inline function sample(pg::PriorityGroup, priorities, rng=Random.GLOBAL_RNG)
-    @unpack maxpriority, numpids, pids = pg
-
-    pididx = 0
-    pid    = zero(eltype(pids))
-
-    @inbounds while true
-
-        # pick a random element
-        r      = rand(rng) * numpids
-        pididx = trunc(Int, r)
-        pid    = pids[pididx+1]
-
-        # acceptance test
-        ( (r - pididx)*maxpriority < priorities[pid] ) && break
-    end
-
-    pid
+function numpriorities(pt::PriorityTable)
+    length(pt.pidtogroup)
 end
 
-function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
-    @unpack groups, gsum, gsums = pt
-
-    # return id zero if total priority is zero
-    (gsum < eps(typeof(gsum))) && return zero(eltype(groups[1].pids))
-
-    # sample a group, search from end (largest priorities)
-    # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
-    # gid = length(gsums)
-    # @inbounds r = rand(rng) * gsum - gsums[gid]
-    # while r > zero(r)
-    #     gid -= one(gid)
-    #     iszero(gid) && return gid   # if no result found return zero
-    #     @inbounds r -= gsums[gid]
-    # end
-    gid = 0
-    r   = rand(rng) * gsum
-    @inbounds for i = length(gsums):-1:1
-        r -= gsums[i]
-        if r <= zero(r)
-            gid = i
-            break
-        end        
-    end
-    iszero(gid) && return gid
-
-    # sample element within the group
-    @inbounds sample(groups[gid], priorities, rng)
+function groupsum(pt::PriorityTable)
+    pt.gsum
 end

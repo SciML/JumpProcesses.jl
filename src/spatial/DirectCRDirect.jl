@@ -5,7 +5,7 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct DirectCRDirectJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,SS,U<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
+mutable struct DirectCRDirectJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,SS,U,W<:Function} <: AbstractSSAJumpAggregator
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -58,7 +58,7 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable2(minrate)
+    rt = PriorityTable(minrate)
 
     DirectCRDirectJumpAggregation{J,T,RX,HOP,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),SS,typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates, site_rates, sps, rng, dg, vtoj_map, jtov_map, spatial_system, num_specs, rt, ratetogroup)
 end

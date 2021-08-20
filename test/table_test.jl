@@ -1,4 +1,4 @@
-# test PriorityTable2
+# test PriorityTable
 using DiffEqBase, DiffEqJump
 const DJ = DiffEqJump
 using Test
@@ -8,10 +8,10 @@ minpriority = 2.0^exponent(1e-12)
 priorities = [1e-13, .99*minpriority, minpriority,1.01e-4, 1e-4, 5., 0., 1e10]
 
 mingid = exponent(minpriority)   # = -40
-pt = DJ.PriorityTable2(minpriority, priorities)
+pt = DJ.PriorityTable(minpriority, priorities)
 
-display(priorities)
-display(pt)
+# display(priorities)
+# display(pt)
 
 # test insert
 grpcnt = DJ.numgroups(pt)
@@ -39,7 +39,7 @@ DJ.insert!(pt, length(priorities), priorities[end])
 push!(priorities, priorities[end-2]*2)
 DJ.insert!(pt, length(priorities), priorities[end])
 @test grpcnt == DJ.numgroups(pt)-1
-@test pt.pidtogroup[end][1] == numgroups(pt)
+@test pt.pidtogroup[end][1] == DJ.numgroups(pt)
 
 # test updating
 DJ.update!(pt, 5, priorities[5], 2*priorities[5])   # group 29
@@ -67,3 +67,9 @@ for (j,prop) in enumerate(priorities)
     end
     @test abs(cnt/Nsamps - prop/sum(priorities)) / (prop/sum(priorities)) < 0.05
 end
+
+# test reset!
+DJ.reset!(pt)
+@test pt.gsum == 0.0
+@test sum(pt.gnums) == 0
+@test pt.pidtogroup[end] == (0,0)

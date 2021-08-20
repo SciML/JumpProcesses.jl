@@ -88,7 +88,7 @@ if dotestmean
     for (i,alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions=(false,false), vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs, rng=rng)
         means[i]  = runSSAs(jump_prob)
-        relerr = abs(means[i] - expected_avg) / expected_avg
+        local relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans
             println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ", relerr)
         end

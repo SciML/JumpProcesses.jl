@@ -76,7 +76,7 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable(ratetogroup, zeros(F, 1), minrate, 2*minrate)
+    rt = PriorityTable2(minrate)
 
     RSSACRJumpAggregation{typeof(njt),eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow),typeof(rt),typeof(ratetogroup)}(
                             nj, nj, njt, et, crl_bnds, crh_bnds, sum_rate, maj, rs, affs!, sps, rng, vtoj_map, 

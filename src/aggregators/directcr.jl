@@ -57,7 +57,7 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2*minrate)
+    rt = PriorityTable2(minrate)
 
     DirectCRJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(rt),typeof(ratetogroup)}(
                                             nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,

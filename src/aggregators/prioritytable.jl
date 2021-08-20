@@ -1,15 +1,15 @@
 
 # groups: {0}, (0, 2^minpower], (2^minpower, 2^(minpower+1)], (2^(minpower+1), 2^(minpower+2)], etc
 
-# """
-# return the index of the group where priority belongs
-# """
-# function priortogid(priority, minpower)
-#     (priority <= eps(typeof(priority))) && return 1
-#     gid = exponent(priority) + 1
-#     (gid <= minpower) && return 2
-#     return gid - minpower + 2
-# end
+"""
+return the index of the group where priority belongs
+"""
+function priortogid(priority, minpower)
+    (priority <= eps(typeof(priority))) && return 1
+    gid = exponent(priority) + 1
+    (gid <= minpower) && return 2
+    return gid - minpower + 2
+end
 
 mutable struct PriorityTable{F}
 

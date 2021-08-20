@@ -92,6 +92,7 @@ end
 
 # loading data 
 function fetch_and_plot(linear_nums)
+    println("plotting")
     bench_data = Dict[]
     for linear_num in linear_nums
         path = "benchmark_data/sanft_benchmarks_lin_num_$(linear_num).jld"

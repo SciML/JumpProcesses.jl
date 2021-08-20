@@ -60,4 +60,4 @@ for i = 1:Nsamps
     global cnt; pid = DJ.sample(pt, priorities)
     (pid == 8) && (cnt += 1)
 end
-@test abs(cnt // Nsamps -  0.008968535978248484) / 0.008968535978248484 < .05
+@test abs(cnt // Nsamps -  0.008968535978248484) / 0.008968535978248484 < .05 

@@ -1,9 +1,19 @@
-
-# groups: {0}, (0, 2^minpower], (2^minpower, 2^(minpower+1)], (2^(minpower+1), 2^(minpower+2)], etc
-
 """
-return the index of the group where priority belongs
+Dynamic table data structure to store and update priorities
+Implementation
+Stores ids that identify the priorities. Each 'group' stores a range of priority ids.
+The basic design assumes a lower-most group of "zero" priorities, and a second
+group storing all non-zero priorities that are < a `minpriority`. All other groups
+store priorities within consecutive ranges. The `minpriority` is taken fixed at creation,
+and the table will be padded with more groups dynamically based on inserted / updated priorities.
+The ranges are assumed to be powers of two:
+   bin 1 = {0},
+   bin 2 = (0,`minpriority`),
+   bin 3 = [`minpriority`,`2*minpriority`)...
+   bin N = [`.5*maxpriority`,`maxpriority`)
 """
+
+"return the index of the group where priority belongs"
 function priortogid(priority, minpower)
     (priority <= eps(typeof(priority))) && return 1
     gid = exponent(priority) + 1

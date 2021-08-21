@@ -151,14 +151,6 @@ function update!(pt::PriorityTable{F}, pid, oldpriority, newpriority) where F
     nothing
 end
 
-function reset!(pt::PriorityTable{F}) where F
-    pt.gnums .= 0
-    pt.gsums .= zero(F)
-    pt.gsum = 0
-    fill!(pt.pidtogroup, (0,0))
-    @assert length(pt.gnums) == length(pt.gsums) == length(pt.gids)
-end
-
 "insert pid with priority in pt"
 function insert!(pt::PriorityTable, pid, priority)
     # find group for new priority
@@ -175,6 +167,13 @@ function insert!(pt::PriorityTable, pid, priority)
         push!(pt.pidtogroup, (gid,pididx))
     end
     nothing
+end
+
+function reset!(pt::PriorityTable{F}) where F
+    pt.gnums .= 0
+    pt.gsums .= zero(F)
+    pt.gsum = 0
+    fill!(pt.pidtogroup, (0,0))
 end
 
 function Base.show(io::IO, pt::PriorityTable)

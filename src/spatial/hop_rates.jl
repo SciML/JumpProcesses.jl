@@ -5,9 +5,13 @@ A file with structs and functions for sampling hops and updating hopping rates
 # TODO to simplify the design can do two things: 
 # 1. make an abstract type HopRatesGridOptim (grid-optimized) and dispatch on it. Or maybe dispatch on the type of hop_const_cumulative_sums instead (Array{F} vs Array{Vector{F}})
 # 2. make an abstract type HopRatesGraphDsi, which has hop rates uniform wrt neighbors, and treat things not of that type as having hop_const_cumulative_sums field
+# 3. Use traits
 
 ### spatial hop rates ###
 abstract type AbstractHopRates end
+
+HopRates(hopping_constants::Vector{F}, spatial_system) where F <: Number = HopRatesGraphDs(hopping_constants, num_sites(spatial_system))
+HopRates(hopping_constants::Vector{F}, grid::Union{CartesianGridRej, CartesianGridIter}) where F <: Number = HopRatesGraphDs(hopping_constants, num_sites(grid))
 
 HopRates(hopping_constants::Matrix{F}, spatial_system) where F <: Number = HopRatesGraphDsi(hopping_constants)
 HopRates(hopping_constants::Matrix{F}, grid::Union{CartesianGridRej, CartesianGridIter}) where F <: Number = HopRatesGraphDsi(hopping_constants)
@@ -78,6 +82,43 @@ sample a reaction at site, return (species, target_site)
 function sample_hop_at_site(hop_rates::AbstractHopRates, site, rng, spatial_system) 
     species = sample_species(hop_rates, site, rng)
     return species, sample_target_site(hop_rates, site, species, rng, spatial_system)
+end
+
+############## hopping rates of form D_s ################
+
+struct HopRatesGraphDs{F} <: AbstractHopRates
+    "hopping_constants[i] is the hop constant of species i"
+    hopping_constants::Vector{F}
+
+    "rates[i,j] is total hopping rate of species i at site j"
+    rates::Matrix{F}
+
+    "sum_rates[j] is the sum of hopping rates at site j"
+    sum_rates::Vector{F}
+end
+
+function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDs)
+    num_specs, num_sites = size(hop_rates.rates)
+    println(io, "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s} where s is species.")
+end
+
+"""
+    HopRatesGraphDs(hopping_constants::Vector{F}, num_nodes) where F <: Number
+
+initializes HopRatesGraphDs with zero rates
+"""
+function HopRatesGraphDs(hopping_constants::Vector{F}, num_nodes) where F <: Number
+    rates = zeros(F, length(hopping_constants), num_nodes)
+    HopRatesGraphDs{F}(hopping_constants, rates, zeros(F, size(rates, 2)))
+end
+
+sample_target_site(hop_rates::HopRatesGraphDs, site, species, rng, spatial_system) = rand_nbr(rng, spatial_system, site)
+
+"""
+return hopping rate of species at site
+"""
+function evalhoprate(hop_rates::HopRatesGraphDs, u, species, site, spatial_system)
+    @inbounds u[species,site]*hop_rates.hopping_constants[species]*outdegree(spatial_system, site)
 end
 
 ############## hopping rates of form D_{s,i} ################

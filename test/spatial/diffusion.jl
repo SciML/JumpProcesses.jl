@@ -62,10 +62,16 @@ times = 0.0:tf/num_time_points:tf
 algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-sizehint!(jump_problems, length(algs) * 3 + length(jump_problems))
+sizehint!(jump_problems, 15 + length(jump_problems))
 
 # flattenned jump prob
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+
+# hop rates of form D_s
+hop_constants = [hopping_rate]
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
+end
 
 # hop rates of form L_{s,i,j}
 hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))

@@ -46,11 +46,20 @@ function get_mean_end_state(jump_prob, Nsims)
 end
 
 # testing
+algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
-# setup flattenned jump prob
+
+# spatially varying rx rates
+rx_coefficients = ones(get_num_majumps(majumps), num_nodes)
+for alg in algs
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grids[1], rx_coefficients = rx_coefficients, save_positions=(false,false)))
+end
+
+# flattenned jump prob
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

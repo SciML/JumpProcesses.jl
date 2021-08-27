@@ -55,7 +55,7 @@ end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; hopping_constants, spatial_system, kwargs...)
+function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; hopping_constants, spatial_system, rx_coefficients = nothing, kwargs...)
     num_species = size(starting_state,1)
     majumps = ma_jumps
     if majumps === nothing
@@ -64,7 +64,7 @@ function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jum
 
     next_jump = SpatialJump{Int}(typemax(Int),typemax(Int),typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
-    rx_rates = RxRates(num_sites(spatial_system), majumps)
+    rx_rates = RxRates(rx_coefficients, spatial_system, majumps)
     hop_rates = HopRates(hopping_constants, spatial_system)
 
     NSMJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)

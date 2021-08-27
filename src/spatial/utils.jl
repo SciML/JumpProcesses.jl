@@ -36,7 +36,7 @@ function sample_jump_direct(p, site)
     end
 end
 
-total_site_rate(rx_rates::RxRates, hop_rates::AbstractHopRates, site) = total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)
+total_site_rate(rx_rates::AbstractRxRates, hop_rates::AbstractHopRates, site) = total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)
 
 function update_rates_after_reaction!(p, u, site, reaction_id)
     update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], u, site)

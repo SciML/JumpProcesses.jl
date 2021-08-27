@@ -45,8 +45,26 @@ ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 u = ones(Int, num_species, num_nodes)
 rng = MersenneTwister()
 
-# Tests for RxRates
-rx_rates = DiffEqJump.RxRates(num_nodes, ma_jumps)
+# Tests for RxRatesRs
+rx_rates = DiffEqJump.RxRatesRs(num_nodes, ma_jumps)
+show(io, "text/plain", rx_rates)
+for site in 1:num_nodes
+    DiffEqJump.update_rx_rates!(rx_rates, 1:num_rxs, u, site)
+    rx_props = [DiffEqJump.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
+    rx_probs = rx_props/sum(rx_props)
+    d = Dict{Int,Int}()
+    for i in 1:num_samples
+        rx = DiffEqJump.sample_rx_at_site(rx_rates, site, rng)
+        rx in keys(d) ? d[rx] += 1 : d[rx] = 1
+    end
+    for (k,v) in d
+        @test abs(v/num_samples - rx_probs[k]) < rel_tol
+    end
+end
+
+# Tests for RxRatesRsi
+rx_coefficients = ones(num_rxs, num_nodes)
+rx_rates = DiffEqJump.RxRatesRsi(rx_coefficients, ma_jumps)
 show(io, "text/plain", rx_rates)
 for site in 1:num_nodes
     DiffEqJump.update_rx_rates!(rx_rates, 1:num_rxs, u, site)

@@ -71,6 +71,7 @@ push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping
 hop_constants = [hopping_rate]
 for alg in algs
     push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[1], save_positions=(false,false)))
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants=hop_constants, spatial_system=grids[3], save_positions=(false,false)))
 end
 
 # hop rates of form L_{s,i,j}

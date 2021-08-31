@@ -62,6 +62,27 @@ for site in 1:num_nodes
     end
 end
 
+# Tests for HopRatesGraphDs
+hopping_constants = ones(num_species)
+hop_rates = DiffEqJump.HopRatesGraphDs(hopping_constants, num_nodes)
+show(io, "text/plain", hop_rates)
+spec_probs = ones(num_species)/num_species
+
+for site in 1:num_nodes
+    DiffEqJump.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
+    num_nbs = DiffEqJump.outdegree(g, site)
+    target_probs = ones(num_nbs)/num_nbs
+    d1 = Dict{Int,Int}()
+    d2 = Dict{Int,Int}()
+    for i in 1:num_samples
+        spec, target = DiffEqJump.sample_hop_at_site(hop_rates, site, rng, g)
+        d1[spec] = get(d1, spec, 0) + 1
+        d2[target] = get(d2, target, 0) + 1
+    end
+    @test maximum(abs.(collect(values(d1))/num_samples - spec_probs)) < rel_tol
+    @test maximum(abs.(collect(values(d2))/num_samples - target_probs)) < rel_tol
+end
+
 # Tests for HopRatesGraphDsi
 hopping_constants = ones(num_species, num_nodes)
 hop_rates = DiffEqJump.HopRatesGraphDsi(hopping_constants)

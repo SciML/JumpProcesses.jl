@@ -1,5 +1,5 @@
 # Tests for CartesianGrid
-using DiffEqJump, LightGraphs
+using DiffEqJump, Graphs
 using Test, Random
 
 io = IOBuffer()
@@ -8,7 +8,7 @@ dims = (4,3,2)
 sites = rand(1:prod(dims), 10)
 num_samples = 10^5
 rel_tol = 0.01
-grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), LightGraphs.grid(dims)]
+grids = [DiffEqJump.CartesianGridRej(dims), DiffEqJump.CartesianGridIter(dims), Graphs.grid(dims)]
 for grid in grids
     show(io, "text/plain", grid)
     @test String(take!(io)) !== nothing

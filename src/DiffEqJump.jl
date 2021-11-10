@@ -6,12 +6,12 @@ using Reexport
 using Compat, RandomNumbers, TreeViews, LinearAlgebra
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
-using LightGraphs
+using Graphs
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
-import LightGraphs: neighbors, outdegree
+import Graphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads

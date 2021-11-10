@@ -1,6 +1,6 @@
 using DiffEqJump, DiffEqBase
 # using BenchmarkTools
-using Test, LightGraphs
+using Test, Graphs
 
 Nsims        = 100
 reltol       = 0.05
@@ -46,7 +46,7 @@ function get_mean_end_state(jump_prob, Nsims)
 end
 
 # testing
-grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
+grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob

@@ -1,7 +1,7 @@
 using DiffEqJump, DiffEqBase
 using Test
 using LinearAlgebra
-using LightGraphs
+using Graphs
 
 function get_mean_sol(jump_prob, Nsims, saveat)
     sol = solve(jump_prob, SSAStepper(), saveat = saveat).u
@@ -49,7 +49,7 @@ hopping_rate = diffusivity * (linear_size/domain_size)^2
 hopping_constants = [hopping_rate for i in starting_state]
 
 # analytic solution
-lap = discrete_laplacian_from_spatial_system(LightGraphs.grid(dims), hopping_rate)
+lap = discrete_laplacian_from_spatial_system(Graphs.grid(dims), hopping_rate)
 evals, B = eigen(lap) # lap == B*diagm(evals)*B'
 Bt = B'
 analytic_solution(t) = B*diagm(ℯ.^(t*evals))*Bt * reshape(prob.u0, num_nodes, 1)
@@ -60,7 +60,7 @@ rel_tol = 0.01
 times = 0.0:tf/num_time_points:tf
 
 algs = [NSM(), DirectCRDirect()]
-grids = [CartesianGridRej(dims), CartesianGridIter(dims), LightGraphs.grid(dims)]
+grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 sizehint!(jump_problems, 15 + length(jump_problems))
 
@@ -119,7 +119,7 @@ end
 # testing non-uniform hopping rates
 dims = (2,2)
 num_nodes = prod(dims)
-grid = LightGraphs.grid(dims)
+grid = Graphs.grid(dims)
 hopping_constants = Matrix{Vector{Float64}}(undef, 1, num_nodes)
 for ci in CartesianIndices(hopping_constants)
     (species, site) = Tuple(ci)

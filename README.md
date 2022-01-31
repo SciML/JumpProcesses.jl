@@ -11,4 +11,7 @@ DiffEqJump.jl is a component package in the [SciML](https://sciml.ai/) ecosystem
 holds the utilities for building jump equations, like stochastic simulation algorithms (SSAs), Gillespie methods or Kinetic Monte Carlo methods; and for building jump
 diffusions. It is one of the core solver libraries included in [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl). 
 Users interested in using this functionality should see the 
-[DifferentialEquations.jl documentation](https://diffeq.sciml.ai/latest/). The documentation includes [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/), [a reference on the types of jumps and available simulation methods](https://diffeq.sciml.ai/latest/types/jump_types/), and a [FAQ](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/#FAQ) with information on changing parameters between simulations and using callbacks.
+[DifferentialEquations.jl documentation](https://diffeq.sciml.ai/latest/). The documentation includes 
+- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/), 
+- [a reference on the types of jumps and available simulation methods](https://diffeq.sciml.ai/latest/types/jump_types/), 
+- [a FAQ](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/#FAQ) with information on changing parameters between simulations and using callbacks.

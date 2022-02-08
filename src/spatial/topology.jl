@@ -2,10 +2,10 @@
 A file with structs and functions for setting up and using the topology of the spatial system (e.g. a graph or a Cartesian grid)
 """
 
-################### LightGraph ########################
-num_sites(graph::AbstractGraph) = LightGraphs.nv(graph)
-# neighbors(graph::AbstractGraph, site) = LightGraphs.neighbors(graph, site)
-# outdegree(graph::AbstractGraph, site) = LightGraphs.outdegree(graph, site)
+################### Graph ########################
+num_sites(graph::AbstractGraph) = Graphs.nv(graph)
+# neighbors(graph::AbstractGraph, site) = Graphs.neighbors(graph, site)
+# outdegree(graph::AbstractGraph, site) = Graphs.outdegree(graph, site)
 rand_nbr(rng, graph::AbstractGraph, site) = rand(rng, neighbors(graph, site))
 nth_nbr(graph::AbstractGraph, site, n) = @inbounds neighbors(graph, site)[n]
 

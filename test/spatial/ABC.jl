@@ -53,7 +53,7 @@ grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
 push!(jump_problems, JumpProblem(prob, DirectCRDirect(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
-push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, NRM(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

@@ -17,7 +17,7 @@ import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
 
 abstract type AbstractJump end
-abstract type AbstractMassActionJump end
+abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 

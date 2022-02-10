@@ -53,7 +53,7 @@ function RegularJump(rate,c,dc::AbstractMatrix; constant_c=false, mark_dist = no
   RegularJump{true}(rate,_c,size(dc,2);mark_dist=mark_dist)
 end
 
-struct MassActionJump{T,S,U,V} <: AbstractJump
+struct MassActionJump{T,S,U,V} <: AbstractMassActionJump
   scaled_rates::T
   reactant_stoch::S
   net_stoch::U
@@ -190,7 +190,7 @@ JumpSet(vj, cj, rj, maj::MassActionJump{S,T,U,V}) where {S <: Number,T,U,V} = Ju
 JumpSet(jump::ConstantRateJump) = JumpSet((),(jump,),nothing,nothing)
 JumpSet(jump::VariableRateJump) = JumpSet((jump,),(),nothing,nothing)
 JumpSet(jump::RegularJump)      = JumpSet((),(),jump,nothing)
-JumpSet(jump::MassActionJump)   = JumpSet((),(),nothing,jump)
+JumpSet(jump::AbstractMassActionJump)   = JumpSet((),(),nothing,jump)
 function JumpSet(; variable_jumps=(), constant_jumps=(), 
                    regular_jumps=nothing, massaction_jumps=nothing) 
   JumpSet(variable_jumps, constant_jumps, regular_jumps, massaction_jumps)

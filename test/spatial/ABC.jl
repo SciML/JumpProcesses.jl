@@ -24,6 +24,9 @@ netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
 rates = [0.1/mesh_size, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
+rx_coefficients = ones(get_num_majumps(majumps), num_nodes)
+spatial_majumps = SpatialMassActionJump(majumps, rx_coefficients)
+
 # spatial system setup
 hopping_rate = diffusivity * (linear_size/domain_size)^2
 
@@ -47,8 +50,8 @@ end
 
 # testing
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
-jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+jump_problems = JumpProblem[JumpProblem(prob, NSM(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+push!(jump_problems, JumpProblem(prob, DirectCRDirect(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
 push!(jump_problems, JumpProblem(prob, NRM(), majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # test

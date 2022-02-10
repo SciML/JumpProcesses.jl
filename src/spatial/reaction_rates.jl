@@ -19,7 +19,7 @@ end
 
 initializes RxRates with zero rates
 """
-function RxRates(num_sites::Int, ma_jumps::M)
+function RxRates(num_sites::Int, ma_jumps::M) where {M}
     numrxjumps = get_num_majumps(ma_jumps)
     rates = zeros(Float64, numrxjumps, num_sites)
     RxRates{Float64,M}(rates, vec(sum(rates, dims=1)), ma_jumps)
@@ -52,14 +52,14 @@ end
 
 update rates of all reactions in rxs at site
 """
-function update_rx_rates!(rx_rates::RxRates{F,MassActionJump}, rxs, u, site)
+function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F, M <: MassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps))
     end
 end
 
-function update_rx_rates!(rx_rates::RxRates{F,SpatialMassActionJump}, rxs, u, site)
+function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F, M <: SpatialMassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps, site))

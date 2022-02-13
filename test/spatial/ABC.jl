@@ -25,7 +25,12 @@ rates = [0.1/mesh_size, 1.]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 rx_coefficients = ones(get_num_majumps(majumps), num_nodes)
-spatial_majumps = SpatialMassActionJump(majumps, rx_coefficients)
+non_uniform_rates = zeros(get_num_majumps(majumps), num_nodes)
+non_uniform_rates[:,1] = rates
+uniform_spatial_majumps_1 = SpatialMassActionJump(majumps)
+uniform_spatial_majumps_2 = SpatialMassActionJump(majumps, rx_coefficients)
+non_uniform_spatial_majumps = SpatialMassActionJump(zeros(0), non_uniform_rates, reactstoch, netstoch)
+# TODO add a test for hybrid: some reactions are uniform and some aren't
 
 # spatial system setup
 hopping_rate = diffusivity * (linear_size/domain_size)^2
@@ -50,10 +55,10 @@ end
 
 # testing
 grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
-jump_problems = JumpProblem[JumpProblem(prob, NSM(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
-push!(jump_problems, JumpProblem(prob, DirectCRDirect(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+jump_problems = JumpProblem[JumpProblem(prob, NSM(), uniform_spatial_majumps_1, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for grid in grids]
+push!(jump_problems, JumpProblem(prob, DirectCRDirect(), uniform_spatial_majumps_2, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # setup flattenned jump prob
-push!(jump_problems, JumpProblem(prob, NRM(), spatial_majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
+push!(jump_problems, JumpProblem(prob, NRM(), uniform_spatial_majumps_1, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false)))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())
@@ -64,6 +69,14 @@ for spatial_jump_prob in jump_problems
         @test abs(d) < reltol*non_spatial_mean[i]
     end
 end
+
+# testing non-uniform majumps
+starting_state = zeros(Int, length(u0), num_nodes)
+starting_state[:,1] .= u0
+prob = DiscreteProblem(starting_state, tspan, rates)
+spatial_jump_prob = JumpProblem(prob, DirectCRDirect(), non_uniform_spatial_majumps, hopping_constants=hopping_constants, spatial_system = grids[1], save_positions=(false,false))
+solution = solve(spatial_jump_prob, SSAStepper())
+# TODO what statistic to test here?
 
 #using non-spatial SSAs to get the mean
 # non_spatial_rates = [0.1,1.0]

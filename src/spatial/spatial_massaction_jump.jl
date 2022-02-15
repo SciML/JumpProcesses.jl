@@ -11,7 +11,7 @@ end
 """
 uniform rates go first in ordering
 """
-function SpatialMassActionJump{F,S,U,V}(uniform_rates::Vector{F}, spatial_rates::Matrix{F}, reactant_stoch::S, net_stoch::U, param_mapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {F, S, U, V}
+function SpatialMassActionJump(uniform_rates::Vector{F}, spatial_rates::Matrix{F}, reactant_stoch::S, net_stoch::U, param_mapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {F, S, U, V}
     uniform_rates = nocopy ? uniform_rates : copy(uniform_rates)
     spatial_rates = nocopy ? spatial_rates : copy(spatial_rates)
     reactant_stoch = nocopy ? reactant_stoch : copy(reactant_stoch)
@@ -30,13 +30,13 @@ function SpatialMassActionJump{F,S,U,V}(uniform_rates::Vector{F}, spatial_rates:
     new(uniform_rates, spatial_rates, reactant_stoch, net_stoch, param_mapper)
 end
 
-SpatialMassActionJump(urates, srates, rs, ns, pmapper; scale_rates = true, useiszero = true, nocopy=false) = SpatialMassActionJump(urates, srates, rs, ns, pmapper, scale_rates, useiszero, nocopy)
+SpatialMassActionJump(urates, srates, rs, ns, pmapper=nothing; scale_rates = true, useiszero = true, nocopy=false) = SpatialMassActionJump(urates, srates, rs, ns, pmapper, scale_rates, useiszero, nocopy)
 
-SpatialMassActionJump(srates::Matrix{F}, rs, ns, pmapper; scale_rates = true, useiszero = true, nocopy=false) where {F} = SpatialMassActionJump(zeros(F, 0), srates, rs, ns, pmapper; scale_rates = scale_rates, useiszero = useiszero, nocopy=nocopy)
+SpatialMassActionJump(srates::Matrix{F}, rs, ns, pmapper=nothing; scale_rates = true, useiszero = true, nocopy=false) where {F} = SpatialMassActionJump(zeros(F, 0), srates, rs, ns, pmapper; scale_rates = scale_rates, useiszero = useiszero, nocopy=nocopy)
 
-SpatialMassActionJump(urates::Vector{F}, rs, ns, pmapper; scale_rates = true, useiszero = true, nocopy=false) where {F} = SpatialMassActionJump(urates, zeros(F, 0, 0), rs, ns, pmapper; scale_rates = scale_rates, useiszero = useiszero, nocopy=nocopy)
+SpatialMassActionJump(urates::Vector{F}, rs, ns, pmapper=nothing; scale_rates = true, useiszero = true, nocopy=false) where {F} = SpatialMassActionJump(urates, zeros(F, 0, 0), rs, ns, pmapper; scale_rates = scale_rates, useiszero = useiszero, nocopy=nocopy)
 
-SpatialMassActionJump(ma_jumps::MassActionJump{T,S,U,V}; ; scale_rates = true, useiszero = true, nocopy=false) where {T,S,U,V} = SpatialMassActionJump{eltype{ma_jumps.scaled_rates}, S, U, V}(ma_jumps.scaled_rates, ma_jumps.reactant_stoch, ma_jumps.net_stoch, ma_jumps.param_mapper; scale_rates = scale_rates, useiszero = useiszero, nocopy=nocopy)
+SpatialMassActionJump(ma_jumps::MassActionJump{T,S,U,V}; scale_rates = true, useiszero = true, nocopy=false) where {T,S,U,V} = SpatialMassActionJump{eltype{ma_jumps.scaled_rates}, S, U, V}(ma_jumps.scaled_rates, ma_jumps.reactant_stoch, ma_jumps.net_stoch, ma_jumps.param_mapper; scale_rates = scale_rates, useiszero = useiszero, nocopy=nocopy)
 
 ##############################################
 

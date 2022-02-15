@@ -2,22 +2,32 @@ using DiffEqJump, DiffEqBase
 # using BenchmarkTools
 using Test, Graphs
 
+Nsims = 8000
 dim = 1
 linear_size = 5
 dims = Tuple(repeat([linear_size], dim))
 num_nodes = prod(dims)
-starting_site = trunc(Int,(linear_size^dim + 1)/2)
-u0 = [0]
+center_site = trunc(Int,(linear_size^dim + 1)/2)
+u0 = zeros(Int, 1, num_nodes)
 end_time = 10.0
 diffusivity = 1.0
+death_rate = 0.01
 
 num_species = 1
 reactstoch = [[1 => 1]]
 netstoch = [[1 => 1],[1 => -1]]
 uniform_rates = ones(2, num_nodes)
-uniform_rates[2,:] *= 0.01
+uniform_rates[2,:] *= death_rate
 non_uniform_rates = zeros(2, num_nodes)
-non_uniform_rates[:,starting_site] = uniform_rates[:,starting_site]
+non_uniform_rates[:,center_site] = uniform_rates[:,center_site]
+
+# DiscreteProblem setup
+tspan = (0.0, end_time)
+prob = DiscreteProblem(u0, tspan, uniform_rates)
+
+# spatial system
+grid = Graphs.grid(dims)
+hopping_constants = [diffusivity for i in u0]
 
 # majumps
 uniform_majumps_1 = SpatialMassActionJump(uniform_rates[:,1], reactstoch, netstoch)
@@ -28,18 +38,19 @@ uniform_majumps = [uniform_majumps_1, uniform_majumps_2, uniform_majumps_3, unif
 
 non_uniform_majumps_1 = SpatialMassActionJump(non_uniform_rates, reactstoch, netstoch) # reactions are zero outside of starting state
 non_uniform_majumps_2 = SpatialMassActionJump([1.], reshape(non_uniform_rates[2,:], 1, num_nodes), non_uniform_rates, reactstoch,netstoch) # birth everywhere, death only at starting state
-non_uniform_majumps_3 = SpatialMassActionJump([1. 0. 0. 0. 0.; 0. 0. 0. 0. 1.], reactstoch,netstoch) # birth on the left, death on the right
+non_uniform_majumps_3 = SpatialMassActionJump([1. 0. 0. 0. 0.; 0. 0. 0. 0. death_rate], reactstoch,netstoch) # birth on the left, death on the right
 non_uniform_majumps = [non_uniform_majumps_1, non_uniform_majumps_2, non_uniform_majumps_3]
 
+# put together the JumpProblem's
+uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for majump in uniform_majumps]
+# flattenned
+append!(uniform_jump_problems, JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for majump in uniform_majumps])
 
-# DiscreteProblem setup
-starting_state = zeros(Int, length(u0), num_nodes)
-tspan = (0.0, end_time)
-prob = DiscreteProblem(starting_state, tspan, rates)
-hopping_constants = [diffusivity for i in starting_state]
+# non-uniform
+non_uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for majump in non_uniform_majumps]
 
 
-
+# testing
 function get_mean_end_state(jump_prob, Nsims)
     end_state = zeros(size(jump_prob.prob.u0))
     for i in 1:Nsims
@@ -49,26 +60,35 @@ function get_mean_end_state(jump_prob, Nsims)
     end_state/Nsims
 end
 
-# testing
-grid = Graphs.grid(dims)
-uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for majump in uniform_majumps]
-# append flattenned jump probs
-append!(uniform_jump_problems, JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for majump in uniform_majumps])
+delta(i,j) = (i==j)
+function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
+    sites = 1:num_sites(spatial_system)
+    laplacian = zeros(length(sites), length(sites))
+    for site in sites
+        laplacian[site,site] = -outdegree(spatial_system, site)
+        for nb in neighbors(spatial_system, site)
+            laplacian[site, nb] = 1
+        end
+    end
+    laplacian .*= hopping_rate
+    laplacian
+end
+L = discrete_laplacian_from_spatial_system(grid, diffusivity)
 
-# TODO write the accuracy tests
-# test
-for spatial_jump_prob in jump_problems
+# birth and death everywhere
+f(u) = L*u - diagm(death_rate)*u + uniform_rates[1,:]
+ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
+sol = solve(ode_prob)
+
+for spatial_jump_prob in uniform_jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())
     mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-    mean_end_state = reshape(mean_end_state, num_species, num_nodes)
+    mean_end_state = reshape(mean_end_state, num_nodes)
     diff =  sum(mean_end_state, dims = 2) - non_spatial_mean
     for (i,d) in enumerate(diff)
         @test abs(d) < reltol*non_spatial_mean[i]
     end
 end
-
-# non-uniform
-non_uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(false,false)) for majump in non_uniform_majumps]
 
 #using non-spatial SSAs to get the mean
 # non_spatial_rates = [0.1,1.0]

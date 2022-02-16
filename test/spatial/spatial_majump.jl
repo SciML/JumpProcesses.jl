@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, DifferentialEquations
+using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Test, Graphs, LinearAlgebra
 
 reltol       = 0.05
@@ -78,7 +78,7 @@ L = discrete_laplacian_from_spatial_system(grid, diffusivity)
 # birth and death everywhere
 f(u,p,t) = L*u - death_rate*u + uniform_rates[1,:]
 ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
-sol = solve(ode_prob)
+sol = solve(ode_prob, Tsit5())
 
 for spatial_jump_prob in uniform_jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())
@@ -93,7 +93,7 @@ end
 # birth and death zero outside of center site
 f(u,p,t) = L*u - diagm([0., 0., death_rate, 0., 0.])*u + [0., 0., 1., 0., 0.]
 ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
-sol = solve(ode_prob)
+sol = solve(ode_prob, Tsit5())
 
 solution = solve(non_uniform_jump_problems[1], SSAStepper())
 mean_end_state = get_mean_end_state(non_uniform_jump_problems[1], Nsims)
@@ -106,7 +106,7 @@ end
 # birth everywhere, death only at center site
 f(u,p,t) = L*u - diagm([0., 0., death_rate, 0., 0.])*u + ones(num_nodes)
 ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
-sol = solve(ode_prob)
+sol = solve(ode_prob, Tsit5())
 
 solution = solve(non_uniform_jump_problems[2], SSAStepper())
 mean_end_state = get_mean_end_state(non_uniform_jump_problems[2], Nsims)
@@ -119,7 +119,7 @@ end
 # birth on left end, death on right end
 f(u,p,t) = L*u - diagm([0., 0., 0., 0., death_rate])*u + [1., 0., 0., 0., 0.]
 ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
-sol = solve(ode_prob)
+sol = solve(ode_prob, Tsit5())
 
 solution = solve(non_uniform_jump_problems[3], SSAStepper())
 mean_end_state = get_mean_end_state(non_uniform_jump_problems[3], Nsims)

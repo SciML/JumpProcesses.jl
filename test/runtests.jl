@@ -23,5 +23,6 @@ using DiffEqJump, DiffEqBase, SafeTestsets
   @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
   @time @safetestset "Spatial utilities" begin include("spatial/utils_test.jl") end
   @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
+  @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
   @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
 end

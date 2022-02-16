@@ -53,6 +53,17 @@ function scalerates!(unscaled_rates::AbstractVector{U}, stochmat::AbstractVector
     nothing
 end
 
+function scalerates!(unscaled_rates::AbstractMatrix{U}, stochmat::AbstractVector{V}) where {U,S,T,W <: Pair{S,T}, V <: AbstractVector{W}}
+    @inbounds for i in size(unscaled_rates, 1)
+        coef = one(T)
+        @inbounds for specstoch in stochmat[i]
+            coef *= factorial(specstoch[2])
+        end
+        unscaled_rates[i,:] /= coef
+    end
+    nothing
+end
+
 function scalerate(unscaled_rate::U, stochmat::AbstractVector{Pair{S,T}}) where {U <: Number, S, T}
     coef = one(T)
     @inbounds for specstoch in stochmat

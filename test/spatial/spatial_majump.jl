@@ -2,14 +2,14 @@ using DiffEqJump, DiffEqBase
 # using BenchmarkTools
 using Test, Graphs
 
-Nsims = 8000
+Nsims = 5*10^4
 dim = 1
 linear_size = 5
 dims = Tuple(repeat([linear_size], dim))
 num_nodes = prod(dims)
 center_site = trunc(Int,(linear_size^dim + 1)/2)
 u0 = zeros(Int, 1, num_nodes)
-end_time = 10.0
+end_time = 1.0
 diffusivity = 1.0
 death_rate = 0.01
 

@@ -2,7 +2,7 @@ using DiffEqJump, DiffEqBase, OrdinaryDiffEq
 using Test, Graphs, LinearAlgebra
 
 reltol       = 0.05
-Nsims = 5*10^4
+Nsims = 10^4
 
 dim = 1
 linear_size = 5
@@ -10,9 +10,9 @@ dims = Tuple(repeat([linear_size], dim))
 num_nodes = prod(dims)
 center_site = trunc(Int,(linear_size^dim + 1)/2)
 u0 = zeros(Int, 1, num_nodes)
-end_time = 1.0
+end_time = 100.0
 diffusivity = 1.0
-death_rate = 0.01
+death_rate = 0.1
 
 num_species = 1
 reactstoch = [Pair{Int64, Int64}[], [1 => 1]]

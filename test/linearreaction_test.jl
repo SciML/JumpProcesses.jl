@@ -290,7 +290,7 @@ end
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens
         local jump_prob = jump_prob_gen(Nrxs, method)
-        meanval   = runSSAs(jump_prob)
+        local meanval   = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
                     ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
@@ -309,7 +309,7 @@ jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs
     for jump_prob_gen in jump_prob_gens
         local jump_prob = jump_prob_gen(Nrxs, method)
-        meanval   = runSSAs(jump_prob)
+        local meanval   = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
                     ", sample mean = ", meanval, ", actual mean = ", exactmeanval)

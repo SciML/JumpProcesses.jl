@@ -64,7 +64,7 @@ JumpProblem(prob,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,JumpSet(ju
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::ConstantRateJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::VariableRateJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::RegularJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
-JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::MassActionJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
+JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractMassActionJump;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps);kwargs...)
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps...);kwargs...)
 JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 

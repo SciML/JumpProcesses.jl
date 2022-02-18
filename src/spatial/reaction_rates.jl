@@ -10,7 +10,7 @@ struct RxRates{F,M}
     "rx_rates_sum[j] is sum of reaction rates at site j"
     sum_rates::Vector{F} 
     
-    "MassActionJump"
+    "AbstractMassActionJump"
     ma_jumps::M
 end
 
@@ -52,10 +52,17 @@ end
 
 update rates of all reactions in rxs at site
 """
-function update_rx_rates!(rx_rates, rxs, u, site)
+function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F, M <: MassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps))
+    end
+end
+
+function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F, M <: SpatialMassActionJump}
+    ma_jumps = rx_rates.ma_jumps
+    @inbounds for rx in rxs
+        set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate(u, rx, ma_jumps, site))
     end
 end
 

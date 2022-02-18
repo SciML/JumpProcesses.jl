@@ -13,7 +13,21 @@ function flatten(ma_jump, prob::DiscreteProblem, spatial_system, hopping_constan
     end
     netstoch = ma_jump.net_stoch
     reactstoch = ma_jump.reactant_stoch
-    rx_rates = ma_jump.scaled_rates
+    if isa(ma_jump, MassActionJump)
+        rx_rates = ma_jump.scaled_rates
+    elseif isa(ma_jump, SpatialMassActionJump)
+        num_nodes = num_sites(spatial_system)
+        if isnothing(ma_jump.uniform_rates) && isnothing(ma_jump.spatial_rates)
+            rx_rates = zeros(0,num_nodes)
+        elseif isnothing(ma_jump.uniform_rates)
+            rx_rates = ma_jump.spatial_rates
+        elseif isnothing(ma_jump.spatial_rates)
+            rx_rates = reshape(repeat(ma_jump.uniform_rates, num_nodes), length(ma_jump.uniform_rates), num_nodes)
+        else
+            @assert size(ma_jump.spatial_rates, 2) == num_nodes
+            rx_rates = cat(dims=1,reshape(repeat(ma_jump.uniform_rates, num_nodes), length(ma_jump.uniform_rates), num_nodes), ma_jump.spatial_rates)
+        end
+    end
     flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hopping_constants; scale_rates = false, kwargs...)
 end
 

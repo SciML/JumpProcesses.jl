@@ -19,7 +19,7 @@
 end
 
 @inline @fastmath function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
-                                      majump::MassActionJump{U,V,W,X}) where {T,S,U,V,W,X}
+                                      majump::M) where {T,S,M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
         speciesvec[specstoch[1]] += specstoch[2]
@@ -28,7 +28,7 @@ end
 end
 
 @inline @fastmath function executerx(speciesvec::SVector{T}, rxidx::S,
-                                      majump::MassActionJump{U,V,W,X}) where {T,S,U,V,W,X}
+                                      majump::M) where {T,S,M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
         speciesvec = setindex(speciesvec,speciesvec[specstoch[1]]+specstoch[2],specstoch[1])
@@ -53,6 +53,17 @@ function scalerates!(unscaled_rates::AbstractVector{U}, stochmat::AbstractVector
     nothing
 end
 
+function scalerates!(unscaled_rates::AbstractMatrix{U}, stochmat::AbstractVector{V}) where {U,S,T,W <: Pair{S,T}, V <: AbstractVector{W}}
+    @inbounds for i in size(unscaled_rates, 1)
+        coef = one(T)
+        @inbounds for specstoch in stochmat[i]
+            coef *= factorial(specstoch[2])
+        end
+        unscaled_rates[i,:] /= coef
+    end
+    nothing
+end
+
 function scalerate(unscaled_rate::U, stochmat::AbstractVector{Pair{S,T}}) where {U <: Number, S, T}
     coef = one(T)
     @inbounds for specstoch in stochmat
@@ -70,7 +81,7 @@ end
 # uses a Vector instead of a Set as the latter requires isEqual,
 # and by using an underlying Dict can be slower for small numbers
 # of dependencies
-function var_to_jumps_map(numspec, ma_jumps::MassActionJump)
+function var_to_jumps_map(numspec, ma_jumps::AbstractMassActionJump)
 
     numrxs = get_num_majumps(ma_jumps)
 
@@ -94,7 +105,7 @@ end
 
 # dependency graph is a map from a reaction to a vector of reactions
 # that should depend on species it changes
-function make_dependency_graph(numspec, ma_jumps::MassActionJump)
+function make_dependency_graph(numspec, ma_jumps::AbstractMassActionJump)
 
     numrxs          = get_num_majumps(ma_jumps)
     spec_to_dep_rxs = var_to_jumps_map(numspec, ma_jumps)

@@ -28,6 +28,12 @@ else
   seed_multiplier() = 1
 end
 
+@static if VERSION >= v"1.7.0"
+  const DEFAULT_RNG = Random.default_rng()
+else
+  const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
+end
+
 include("jumps.jl")
 include("massaction_rates.jl")
 include("aggregators/aggregators.jl")

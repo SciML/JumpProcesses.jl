@@ -68,9 +68,16 @@ JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractMassActi
 JumpProblem(prob,aggregator::AbstractAggregatorAlgorithm,jumps::AbstractJump...;kwargs...) = JumpProblem(prob,aggregator,JumpSet(jumps...);kwargs...)
 JumpProblem(prob,jumps::JumpSet;kwargs...) = JumpProblem(prob,NullAggregator(),jumps;kwargs...)
 
+
+@static if VERSION >= v"1.7.0"
+  const DEFAULT_RNG = Random.default_rng()
+else
+  const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
+end
+
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
                      save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ? (false,true) : (true,true),
-                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)), scale_rates = true, useiszero = true, spatial_system=nothing, hopping_constants=nothing, kwargs...)
+                     rng = DEFAULT_RNG, scale_rates = true, useiszero = true, spatial_system=nothing, hopping_constants=nothing, kwargs...)
 
   # initialize the MassActionJump rate constants with the user parameters
   if using_params(jumps.massaction_jump) 

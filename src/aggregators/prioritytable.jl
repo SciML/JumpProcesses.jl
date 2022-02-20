@@ -263,7 +263,7 @@ end
     return gid - mingid + 2
 end
 
-@inline function sample(pg::PriorityGroup, priorities, rng=Random.GLOBAL_RNG)
+@inline function sample(pg::PriorityGroup, priorities, rng=DEFAULT_RNG)
     @unpack maxpriority, numpids, pids = pg
 
     pididx = 0
@@ -283,7 +283,7 @@ end
     pid
 end
 
-function sample(pt::PriorityTable, priorities, rng=Random.GLOBAL_RNG)
+function sample(pt::PriorityTable, priorities, rng=DEFAULT_RNG)
     @unpack groups, gsum, gsums = pt
 
     # return id zero if total priority is zero

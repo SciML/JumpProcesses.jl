@@ -98,6 +98,7 @@ end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
+    p.end_time = integrator.sol.prob.tspan[2]    
     set_bracketing!(p,u,params,t)
 
     # setup PriorityTable

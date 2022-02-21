@@ -83,6 +83,7 @@ end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::DirectCRDirectJumpAggregation, integrator, u, params, t)
+    p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, u, t)
     generate_jumps!(p, integrator, params, u, t)
     nothing

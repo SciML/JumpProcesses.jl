@@ -78,7 +78,7 @@ end
 
 jump_switch = VariableRateJump(rate_switch,affect_switch!)
 
-prob = SDEProblem(ff,gg,ones(2),(0.0,1.0),noise_rate_prototype=zeros(2,2))
+prob = SDEProblem(ff,gg,ones(2),(0.0,1.0),0,noise_rate_prototype=zeros(2,2))
 jump_prob = JumpProblem(prob, Direct(), jump_switch; rng=rng)
 solve(jump_prob, SRA1(), dt = 1.0)
 

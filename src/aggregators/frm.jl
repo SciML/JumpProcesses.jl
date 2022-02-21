@@ -41,8 +41,9 @@ end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::FRMJumpAggregation, integrator, u, params, t)
-  generate_jumps!(p, integrator, u, params, t)
-  nothing
+    p.end_time = integrator.sol.prob.tspan[2]
+    generate_jumps!(p, integrator, u, params, t)
+    nothing
 end
 
 # execute one jump, changing the system state

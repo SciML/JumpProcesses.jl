@@ -8,12 +8,19 @@ function isinplace_jump(p,rj)
 end
 
 mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: DiffEqBase.AbstractJumpProblem{P,J}
+  """The type of problem to couple the jumps to. For a pure jump process use `DiscreteProblem`, to couple to ODEs, `ODEProblem`, etc."""
   prob::P
+  """The aggregator algorithm that determines the next jump times and types for `ConstantRateJump`s and `MassActionJump`s."""
   aggregator::A
+  """The underlying state data associated with the chosen aggregator."""
   discrete_jump_aggregation::J
+  """`CallBackSet` with the underlying `ConstantRate` and `VariableRate` jumps."""
   jump_callback::C
+  """The `VariableRateJump`s."""
   variable_jumps::J2
+  """The `RegularJump`s."""
   regular_jump::J3
+  """The `MassActionJump`s."""
   massaction_jump::J4
 end
 function JumpProblem(p::P,a::A,dj::J,jc::C,vj::J2,rj::J3,mj::J4) where {P,A,J,C,J2,J3,J4}

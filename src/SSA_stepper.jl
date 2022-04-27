@@ -1,6 +1,3 @@
-# Integrator specifically for SSA
-# Built to have 0-overhead stepping
-
 """
 $(TYPEDEF)
 

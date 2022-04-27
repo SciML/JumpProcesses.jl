@@ -1,10 +1,70 @@
+"""
+$(TYPEDEF)
+
+Defines a jump process with a rate (i.e. intensity or hazard) that does not
+*explicitly* depend on time. More precisely, one where the rate function is
+constant *between* the occurrence of jumps. For detailed examples
+and usage information see the
+- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+
+## Fields
+
+$(FIELDS)
+
+## Examples
+Suppose `u[1]` gives the amount of particles and `p[1]` the probability per time
+each particle can decay away. A corresponding `ConstantRateJump` for this jump
+process is
+```julia
+rate(u,p,t) = p[1]*u[1]
+affect!(integrator) = integrator.u[1] -= 1
+crj = ConstantRateJump(rate, affect!)
+```
+Notice, here that `rate` changes in time, but is constant between the occurrence
+of jumps (when `u[1]` will decrease).
+"""
 struct ConstantRateJump{F1,F2} <: AbstractJump
+  """Function `rate(u,p,t)` that returns the jump's current rate."""
   rate::F1
-  affect!::F2
+  """Function `affect(integrator)` that updates `integrator.u` for one occurrence of the jump."""
+  affect!::F2 
 end
 
+"""
+$(TYPEDEF)
+
+Defines a jump process with a rate (i.e. intensity or hazard) that may
+explicitly depend on time. More precisely, one where the rate function is
+allowed to change *between* the occurrence of jumps. For detailed examples
+and usage information see the
+- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+
+## Fields
+
+$(FIELDS)
+
+## Examples
+Suppose `u[1]` gives the amount of particles and `t*p[1]` the probability per time
+each particle can decay away. A corresponding `VariableRateJump` for this jump
+process is
+```julia
+rate(u,p,t) = t*p[1]*u[1]
+affect!(integrator) = integrator.u[1] -= 1
+crj = VariableRateJump(rate, affect!)
+```
+
+## Notes
+- Must be used with `ODEProblem`s or `SDEProblem`s to be correctly simulated
+  (i.e. can not currently be used with `DiscreteProblem`s).
+- Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of
+  coupled chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
+  DOI:10.1063/1.1835951 is used for calculating jump times with `VariableRateJump`s
+  within ODE/SDE integrators.
+"""
 struct VariableRateJump{R,F,I,T,T2} <: AbstractJump
+  """Function `rate(u,p,t)` that returns the jump's current rate."""
   rate::R
+  """Function `affect(integrator)` that updates `integrator.u` for one occurrence of the jump."""
   affect!::F
   idxs::I
   rootfind::Bool
@@ -14,11 +74,6 @@ struct VariableRateJump{R,F,I,T,T2} <: AbstractJump
   reltol::T2
 end
 
-"""
-Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of
-coupled chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
-DOI:10.1063/1.1835951
-"""
 VariableRateJump(rate,affect!;
                    idxs = nothing,
                    rootfind=true,
@@ -53,10 +108,80 @@ function RegularJump(rate,c,dc::AbstractMatrix; constant_c=false, mark_dist = no
   RegularJump{true}(rate,_c,size(dc,2);mark_dist=mark_dist)
 end
 
+"""
+$(TYPEDEF)
+
+Optimized representation for `ConstantRateJump`s that can be represented in mass
+action form, offering improved performance within jump algorithms compared to
+`ConstantRateJump`. For detailed examples and usage information see the
+- [Main
+  Docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
+- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+
+### Constructors
+- `MassActionJump(reactant_stoich, net_stoich; scale_rates=true,
+  param_idxs=nothing)`
+
+Here `reactant_stoich` denotes the reactant stoichiometry for each reaction and
+`net_stoich` the net stoichiometry for each reaction. 
+
+## Fields
+
+$(FIELDS)
+
+## Keyword Arguments
+- `scale_rates=true`, whether to rescale the reaction rate constants according
+  to the stoichiometry. 
+- `nocopy=false`, whether the `MassActionJump` can alias the `scaled_rates` and
+  `reactant_stoch` from the input. Note, if `scale_rates=true` this will
+  potentially modify both of these.
+- `param_idxs=nothing`, indexes in the parameter vector, `JumpProblem.prob.p`,
+  that correspond to each reaction's rate.
+
+See the tutorial and main docs for details.
+
+## Examples
+An SIR model with `S + I --> 2I` at rate β as the first reaction and `I --> R`
+at rate ν as the second reaction can be encoded by
+```julia
+p        = (β=1e-4, ν=.01)
+u0       = [999, 1, 0]       # (S,I,R)
+tspan    = (0.0, 250.0)
+rateidxs = [1, 2]           # i.e. [β,ν]
+reactant_stoich =
+[
+  [1 => 1, 2 => 1],         # 1*S and 1*I
+  [2 => 1]                  # 1*I
+]
+net_stoich =
+[
+  [1 => -1, 2 => 1],        # -1*S and 1*I
+  [2 => -1, 3 => 1]         # -1*I and 1*R
+]
+maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=rateidxs)
+prob = DiscreteProblem(u0, tspan, p)
+jprob = JumpProblem(prob, Direct(), maj)
+```
+
+## Notes
+- By default reaction rates are rescaled when constructing the `MassActionJump`
+  as explained in the [main
+  docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump).
+  Disable this with the kwarg `scale_rates=false`.
+- Also see the [main
+  docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
+  for how to specify reactions with no products or no reactants.
+  
+
+"""
 struct MassActionJump{T,S,U,V} <: AbstractMassActionJump
+  """The (scaled) reaction rate constants."""
   scaled_rates::T
+  """The reactant stoichiometry vectors."""
   reactant_stoch::S
+  """The net stoichiometry vectors."""
   net_stoch::U
+  """Parameter mapping functor to identify reaction rate constants with parameters in `p` vectors."""
   param_mapper::V
 
   function MassActionJump{T,S,U,V}(rates::T, rs_in::S, ns::U, pmapper::V, scale_rates::Bool, useiszero::Bool, nocopy::Bool) where {T <: AbstractVector, S, U, V}

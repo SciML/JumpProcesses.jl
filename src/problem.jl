@@ -189,7 +189,8 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   T = eltype(prob.u0)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp()) for i in 1:length(jumps.variable_jumps)])
+  ttype = eltype(prob.tspan)
+  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=ODEFunction{true}(jump_f),u0=u0)
 end
 
@@ -210,7 +211,8 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
   end
 
   T = eltype(prob.u0)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp()) for i in 1:length(jumps.variable_jumps)])
+  ttype = eltype(prob.tspan)
+  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=SDEFunction{true}(jump_f,jump_g),g=jump_g,u0=u0)
 end
 
@@ -220,7 +222,8 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   T = eltype(prob.u0)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp()) for i in 1:length(jumps.variable_jumps)])
+  ttype = eltype(prob.tspan)
+  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
   ramake(prob,f=DDEFunction{true}(jump_f),u0=u0)
 end
 
@@ -231,7 +234,8 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
   T = eltype(prob.u0)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp()) for i in 1:length(jumps.variable_jumps)])
+  ttype = eltype(prob.tspan)
+  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=DAEFunction{true}(jump_f),u0=u0)
 end
 
@@ -242,7 +246,7 @@ function build_variable_callback(cb,idx,jump,jumps...)
   end
   affect! = function (integrator)
     jump.affect!(integrator)
-    integrator.u.jump_u[idx] = -randexp()
+    integrator.u.jump_u[idx] = -randexp(typeof(integrator.t))
   end
   new_cb = ContinuousCallback(condition,affect!;
                       idxs = jump.idxs,
@@ -261,7 +265,7 @@ function build_variable_callback(cb,idx,jump)
   end
   affect! = function (integrator)
     jump.affect!(integrator)
-    integrator.u.jump_u[idx] = -randexp()
+    integrator.u.jump_u[idx] = -randexp(typeof(integrator.t))
   end
   new_cb = ContinuousCallback(condition,affect!;
                       idxs = jump.idxs,

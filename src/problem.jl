@@ -191,10 +191,9 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
   function jump_f(du::ExtendedJumpArray,u::ExtendedJumpArray,p,t)
     prob.f(du.u,u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
-  end
-  T = realtype(eltype(prob.u0))
+  end  
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=ODEFunction{true}(jump_f),u0=u0)
 end
 
@@ -214,9 +213,8 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
     end
   end
 
-  T = realtype(eltype(prob.u0))
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=SDEFunction{true}(jump_f,jump_g),g=jump_g,u0=u0)
 end
 
@@ -225,9 +223,8 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
     prob.f(du.u,u.u,h,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
-  T = realtype(eltype(prob.u0))
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
   ramake(prob,f=DDEFunction{true}(jump_f),u0=u0)
 end
 
@@ -237,9 +234,8 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
     prob.f(out.u,du.u,u.u,t)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
-  T = realtype(eltype(prob.u0))
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[T(-randexp(ttype)) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=DAEFunction{true}(jump_f),u0=u0)
 end
 

@@ -183,10 +183,6 @@ function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem,jumps)
   error("VariableRateJumps require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
 end
 
-realtype(::Type{Complex{T}}) where {T <: Real} = T
-realtype(::Type{T}) where {T <: Real} = T
-realtype(::Type{T}) where T = error("Can not determinte if $T is real or complex.")
-
 function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
   function jump_f(du::ExtendedJumpArray,u::ExtendedJumpArray,p,t)
     prob.f(du.u,u.u,p,t)

@@ -128,3 +128,18 @@ affect3!(integrator) = (integrator.u[1] = 0.25; integrator.u[2] = 0.5;
 jump = VariableRateJump(rate3, affect3!)
 jump_prob = JumpProblem(prob, Direct(), jump; rng=rng)
 sol = solve(jump_prob,Tsit5())
+
+# test for https://discourse.julialang.org/t/differentialequations-jl-package-variable-rate-jumps-with-complex-variables/80366/2
+function f4(dx, x,p,t)
+  dx[1] = x[1]
+end
+rate4(x,p,t) = t
+function affect4!(integrator)
+  integrator.u[1] = integrator.u[1] * 0.5
+end
+jump = VariableRateJump(rate4, affect4!)
+x₀ = 1.0 + 0.0im
+Δt = (0.0, 6.0)
+prob = ODEProblem(f4, [x₀], Δt)
+jumpProblem = JumpProblem(prob, Direct(), jump)
+sol = solve(jumpProblem, Tsit5())

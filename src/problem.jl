@@ -62,7 +62,7 @@ page](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/) in
 the DifferentialEquations.jl [docs](https://diffeq.sciml.ai/stable/) for usage
 examples and commonly asked questions.
 """
-mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4} <: DiffEqBase.AbstractJumpProblem{P,J}
+mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2,J3,J4,R} <: DiffEqBase.AbstractJumpProblem{P,J}
   """The type of problem to couple the jumps to. For a pure jump process use `DiscreteProblem`, to couple to ODEs, `ODEProblem`, etc."""
   prob::P
   """The aggregator algorithm that determines the next jump times and types for `ConstantRateJump`s and `MassActionJump`s. Examples include `Direct`."""
@@ -77,10 +77,12 @@ mutable struct JumpProblem{iip,P,A,C,J<:Union{Nothing,AbstractJumpAggregator},J2
   regular_jump::J3
   """The `MassActionJump`s."""
   massaction_jump::J4
+  """The random number generator to use."""
+  rng::R
 end
-function JumpProblem(p::P,a::A,dj::J,jc::C,vj::J2,rj::J3,mj::J4) where {P,A,J,C,J2,J3,J4}
+function JumpProblem(p::P,a::A,dj::J,jc::C,vj::J2,rj::J3,mj::J4,rng::R) where {P,A,J,C,J2,J3,J4,R}
     iip = isinplace_jump(p,rj)
-    JumpProblem{iip,P,A,C,J,J2,J3,J4}(p,a,dj,jc,vj,rj,mj)
+    JumpProblem{iip,P,A,C,J,J2,J3,J4,R}(p,a,dj,jc,vj,rj,mj,R)
 end
 
 # for remaking
@@ -165,35 +167,35 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     new_prob = prob
     variable_jump_callback = CallbackSet()
   else
-    new_prob = extend_problem(prob,jumps)
-    variable_jump_callback = build_variable_callback(CallbackSet(),0,jumps.variable_jumps...)
+    new_prob = extend_problem(prob,jumps; rng=rng)
+    variable_jump_callback = build_variable_callback(CallbackSet(),0,jumps.variable_jumps...; rng=rng)
   end
   callbacks = CallbackSet(constant_jump_callback,variable_jump_callback)
 
   JumpProblem{iip,typeof(new_prob),typeof(aggregator),typeof(callbacks),
               typeof(disc),typeof(jumps.variable_jumps),
-              typeof(jumps.regular_jump),typeof(maj)}(
+              typeof(jumps.regular_jump),typeof(maj),typeof(rng)}(
                         new_prob,aggregator,disc,
                         callbacks,
                         jumps.variable_jumps,
-                        jumps.regular_jump, maj)
+                        jumps.regular_jump, maj, rng)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng=DEFAULT_RNG)
   error("VariableRateJumps require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
 end
 
-function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractODEProblem,jumps; rng=DEFAULT_RNG)
   function jump_f(du::ExtendedJumpArray,u::ExtendedJumpArray,p,t)
     prob.f(du.u,u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end  
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(rng,ttype) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=ODEFunction{true}(jump_f),u0=u0)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps; rng=DEFAULT_RNG)
   function jump_f(du,u,p,t)
     prob.f(du.u,u.u,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
@@ -210,39 +212,39 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem,jumps)
   end
 
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(rng,ttype) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=SDEFunction{true}(jump_f,jump_g),g=jump_g,u0=u0)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractDDEProblem,jumps; rng=DEFAULT_RNG)
   jump_f = function (du,u,h,p,t)
     prob.f(du.u,u.u,h,p,t)
     update_jumps!(du,u,p,t,length(u.u),jumps.variable_jumps...)
   end
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(rng,ttype) for i in 1:length(jumps.variable_jumps)])
   ramake(prob,f=DDEFunction{true}(jump_f),u0=u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
-function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps)
+function extend_problem(prob::DiffEqBase.AbstractDAEProblem,jumps; rng=DEFAULT_RNG)
   jump_f = function (out,du,u,p,t)
     prob.f(out.u,du.u,u.u,t)
     update_jumps!(du,u,t,length(u.u),jumps.variable_jumps...)
   end
   ttype = eltype(prob.tspan)
-  u0 = ExtendedJumpArray(prob.u0,[-randexp(ttype) for i in 1:length(jumps.variable_jumps)])
+  u0 = ExtendedJumpArray(prob.u0,[-randexp(rng,ttype) for i in 1:length(jumps.variable_jumps)])
   remake(prob,f=DAEFunction{true}(jump_f),u0=u0)
 end
 
-function build_variable_callback(cb,idx,jump,jumps...)
+function build_variable_callback(cb,idx,jump,jumps...; rng=DEFAULT_RNG)
   idx += 1
   condition = function (u,t,integrator)
     u.jump_u[idx]
   end
   affect! = function (integrator)
     jump.affect!(integrator)
-    integrator.u.jump_u[idx] = -randexp(typeof(integrator.t))
+    integrator.u.jump_u[idx] = -randexp(rng,typeof(integrator.t))   
   end
   new_cb = ContinuousCallback(condition,affect!;
                       idxs = jump.idxs,
@@ -251,17 +253,17 @@ function build_variable_callback(cb,idx,jump,jumps...)
                       save_positions = jump.save_positions,
                       abstol = jump.abstol,
                       reltol = jump.reltol)
-  build_variable_callback(CallbackSet(cb,new_cb),idx,jumps...)
+  build_variable_callback(CallbackSet(cb,new_cb),idx,jumps...; rng=DEFAULT_RNG)
 end
 
-function build_variable_callback(cb,idx,jump)
+function build_variable_callback(cb,idx,jump; rng=DEFAULT_RNG)
   idx += 1
   condition = function (u,t,integrator)
     u.jump_u[idx]
   end
   affect! = function (integrator)
     jump.affect!(integrator)
-    integrator.u.jump_u[idx] = -randexp(typeof(integrator.t))
+    integrator.u.jump_u[idx] = -randexp(rng,typeof(integrator.t))
   end
   new_cb = ContinuousCallback(condition,affect!;
                       idxs = jump.idxs,

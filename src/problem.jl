@@ -283,12 +283,12 @@ end
 
 @inline function update_jumps!(du,u,p,t,idx,jump)
   idx += 1
-  du[idx] = jump.rate(u,p,t)
+  du[idx] = jump.rate(u.u,p,t)
 end
 
 @inline function update_jumps!(du,u,p,t,idx,jump,jumps...)
   idx += 1
-  du[idx] = jump.rate(u,p,t)
+  du[idx] = jump.rate(u.u,p,t)
   update_jumps!(du,u,p,t,idx,jumps...)
 end
 

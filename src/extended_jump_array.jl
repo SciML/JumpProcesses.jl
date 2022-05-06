@@ -1,5 +1,31 @@
+"""
+$(TYPEDEF)
+
+Extended state definition used within integrators when there are
+`VariableRateJump`s in a system. 
+
+## Notes
+- `VariableRateJump` `affect!` functions that wish to modify the state
+  should access `integrator.u.u` instead of the usual `integrator.u`. 
+
+## Examples
+```julia
+using DiffEqJump, OrdinaryDiffEq
+f(du,u,p,t) = du .= 0
+rate(u,p,t) = (1+t)*u[1]*u[2]
+affect!(integrator) = integrator.u.u .-= 1
+u0 = [10.0, 10.0]
+
+vrj = VariableRateJump(rate, affect!)
+oprob = ODEProblem(f, u0, (0.0,2.0))
+jprob = JumpProblem(oprob, Direct(), vrj)
+sol = solve(jprob,Tsit5())
+```
+"""
 struct ExtendedJumpArray{T3<:Number, T1, T<:AbstractArray{T3,T1},T2} <: AbstractArray{T3,1}
+  """The current state."""
   u::T
+  """The current rate/intensity/propensity value for the `VariableRateJump`s."""
   jump_u::T2
 end
 

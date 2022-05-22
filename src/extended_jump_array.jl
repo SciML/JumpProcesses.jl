@@ -88,7 +88,7 @@ LinearAlgebra.mul!(c::ExtendedJumpArray,A::AbstractVecOrMat,u::AbstractVector) =
 Base.similar(A::ExtendedJumpArray,::Type{S},axes::Tuple{Base.OneTo{Int}}) where {S} = ExtendedJumpArray(similar(A.u,S),similar(A.jump_u,S))
 
 # Stiff ODE solver
-function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
+function ArrayInterfaceCore.zeromatrix(A::ExtendedJumpArray)
   u = [vec(A.u);vec(A.jump_u)]
   u .* u' .* false
 end

@@ -1,4 +1,4 @@
-# DiffEqJump.jl: For Stochastic Simulation Algorithms, Gillespie simulation, and Continuous-Time Jump Problems
+# DiffEqJump.jl
 
 
 DiffEqJump.jl is a component package in the [SciML](https://sciml.ai/) ecosystem. It

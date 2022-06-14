@@ -1,7 +1,4 @@
-using Revise; Revise.revise()
 using Documenter, DiffEqJump
-using Plots
-gr()
 
 include("pages.jl")
 

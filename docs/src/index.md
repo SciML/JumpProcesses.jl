@@ -8,10 +8,7 @@ Users interested in using this functionality should see the
 [DifferentialEquations.jl documentation](https://diffeq.sciml.ai/latest/). The documentation includes 
 - [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/), 
 - [a reference on the types of jumps and available simulation methods](https://diffeq.sciml.ai/latest/types/jump_types/), 
-- [a FAQ](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/#FAQ) with information on changing parameters between simulations and using callbacks.LabelledArrays.jl is a package which provides arrays with labels, i.e. they are
-arrays which `map`, `broadcast`, and all of that good stuff, but their components
-are labelled. Thus for instance you can set that the second component is named
-`:second` and retrieve it with `A.second`.
+- [a FAQ](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/#FAQ) with information on changing parameters between simulations and using callbacks.
 
 ## Installation
 

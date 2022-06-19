@@ -1,6 +1,6 @@
 # FAQ
 
-#### *1. My simulation is really slow and/or using a lot of memory, what can I do?*
+## My simulation is really slow and/or using a lot of memory, what can I do?
 To reduce memory use, use `save_positions=(false,false)` in the `JumpProblem`
 constructor as described [earlier](@ref save_positions_docs) to turn off saving
 the system state before and after every jump. Combined with use of `saveat` in
@@ -12,14 +12,14 @@ frequently, other stochastic simulation algorithms may be faster. See [Constant
 Rate Jump Aggregators](@ref) and the subsequent sections there for guidance on
 choosing different SSAs (called aggregators in DiffEqJump).
 
-#### *2. When running many consecutive simulations, for example within an `EnsembleProblem` or loop, how can I update `JumpProblem`s?*
+## When running many consecutive simulations, for example within an `EnsembleProblem` or loop, how can I update `JumpProblem`s?
 
 In [Remaking `JumpProblem`s](@ref) we show how to modify parameters, the initial
 condition, and other components of a generated `JumpProblem`. This can be useful
 when trying to call `solve` many times while avoiding reallocations of the
 internal aggregators for each new parameter value or initial condition.
 
-#### *3. How do I use callbacks with `ConstantRateJump` or `MassActionJump` systems?*
+## How do I use callbacks with `ConstantRateJump` or `MassActionJump` systems?
 
 Callbacks can be used with `ConstantRateJump`s and `MassActionJump`s. When
 solving a pure jump system with `SSAStepper`, only discrete callbacks can be
@@ -55,7 +55,7 @@ of `u[1]`, giving
 
 ![callback_gillespie](assets/callback_gillespie.png)
 
-#### *4. How can I define collections of many different jumps and pass them to `JumpProblem`?*
+## How can I define collections of many different jumps and pass them to `JumpProblem`?
 
 We can use `JumpSet`s to collect jumps together, and then pass them into
 `JumpProblem`s directly. For example, using the `MassActionJump` and
@@ -82,7 +82,7 @@ jset = JumpSet(; constant_jumps=cjvec, variable_jumps=vjtuple,
                  massaction_jumps=mass_act_jump)
 ```
 
-#### *5. How can I set the random number generator used in the jump process sampling algorithms (SSAs)?*
+## How can I set the random number generator used in the jump process sampling algorithms (SSAs)?
 
 Random number generators can be passed to `JumpProblem` via the `rng` keyword
 argument. Continuing the previous example:
@@ -95,7 +95,9 @@ jprob = JumpProblem(dprob, Direct(), maj, rng=Xorshifts.Xoroshiro128Star(rand(UI
 uses the `Xoroshiro128Star` generator from
 [RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
 
-#### *6. What are these aggregators and aggregations in DiffEqJump?*
+On version 1.7 and up DiffEqJump uses Julia's builtin random number generator by default. On versions below 1.7 it uses `Xoroshiro128Star`.
+
+## What are these aggregators and aggregations in DiffEqJump?
 
 DiffEqJump provides a variety of methods for sampling the time the next
 `ConstantRateJump` or `MassActionJump` occurs, and which jump type happens at
@@ -105,7 +107,7 @@ methods. In the DiffEqJump terminology we call such methods "aggregators", and
 the cache structures that hold their basic data "aggregations". See [Constant
 Rate Jump Aggregators](@ref) for a list of the available SSA aggregators.
 
-#### *7. How should jumps be ordered in dependency graphs?*
+## How should jumps be ordered in dependency graphs?
 Internally, DiffEqJump SSAs (aggregators) order all `MassActionJump`s first,
 then all `ConstantRateJumps`. i.e. in the example
 

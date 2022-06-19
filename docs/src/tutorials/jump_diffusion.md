@@ -1,4 +1,4 @@
-# Jump Diffusion Equations
+# [Jump Diffusion Equations](@id jump_diffusion_tutorial)
 
 !!! note
 

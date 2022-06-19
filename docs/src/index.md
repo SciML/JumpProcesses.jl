@@ -10,9 +10,10 @@ and one of the core solver libraries included in
 [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
 
 The documentation includes
-- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/latest/discrete_stochastic_example/),
-- [a reference on the types of jumps and available simulation methods](https://diffeq.sciml.ai/latest/jump_types/),
-- [a FAQ](https://diffeq.sciml.ai/latest/faq.md) with information on changing parameters between simulations and using callbacks.
+- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](@ref ssa_tutorial),
+- [a tutorial on simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
+- [a reference on the types of jumps and available simulation methods](@ref jump_problem_type),
+- a [FAQ](@ref) with information on changing parameters between simulations and using callbacks.
 
 ## Installation
 There are two ways to install `DiffEqJump.jl`. First, users may install the meta

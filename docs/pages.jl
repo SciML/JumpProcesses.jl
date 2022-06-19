@@ -8,7 +8,7 @@ pages=[
     ],
     "FAQ" => "faq.md",
     "Type Documentation" => Any[
-        "Jump types and JumProblem" => "jump_types.md",
+        "Jump types and JumpProblem" => "jump_types.md",
         "Jump solvers" => "jump_solve.md"
     ],
     "API" => "api.md"

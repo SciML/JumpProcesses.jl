@@ -1,4 +1,4 @@
-# Jump Problems
+# [Jump Problems](@id jump_problem_type)
 
 ### Mathematical Specification of an problem with jumps
 
@@ -52,7 +52,7 @@ create a number of `ConstantRateJumps` to handle the non-mass action jumps.
 hybrid algorithms. `ConstantRateJump`s and `MassActionJump`s are optimized for
 SSA algorithms. `ConstantRateJump`s, `MassActionJump`s and `VariableRateJump`s
 can be added to standard DiffEq algorithms since they are simply callbacks,
-while `RegularJump`s require special algorithms. 
+while `RegularJump`s require special algorithms.
 
 #### Defining a Regular Jump
 
@@ -133,7 +133,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs=nothi
   jump = MassActionJump(reactant_stoich, net_stoich; param_idxs=[1])
   ```
 - For performance reasons, it is recommended to order species indices in
-  stoichiometry vectors from smallest to largest. That is 
+  stoichiometry vectors from smallest to largest. That is
   ```julia
   reactant_stoich = [[1 => 2, 3 => 1, 4 => 2], [2 => 2, 3 => 2]]
   ```
@@ -141,7 +141,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs=nothi
   ```julia
   reactant_stoich = [[3 => 1, 1 => 2, 4 = > 2], [3 => 2, 2 => 2]]
   ```
-  
+
 
 #### Defining a Variable Rate Jump
 
@@ -202,13 +202,13 @@ algorithms for both speed and accuracy. The current methods are:
   performance than `Direct`. (Requires dependency graph, see below.)
 - `DirectFW`: the Gillespie Direct method SSA with `FunctionWrappers`. This
   aggregator uses a different internal storage format for collections of
-  `ConstantRateJumps`. 
+  `ConstantRateJumps`.
 - `FRM`: the Gillespie first reaction method SSA. `Direct` should generally
   offer better performance and be preferred to `FRM`.
 - `FRMFW`: the Gillespie first reaction method SSA with `FunctionWrappers`.
 - *`NRM`*: The Gibson-Bruck Next Reaction Method. For some reaction network
    structures this may offer better performance than `Direct` (for example,
-   large, linear chains of reactions). (Requires dependency graph, see below.) 
+   large, linear chains of reactions). (Requires dependency graph, see below.)
 - *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al. With `RSSACR`, for
   very large reaction networks it often offers the best performance of all
   methods. (Requires dependency graph, see below.)
@@ -258,9 +258,9 @@ For systems generated from a [Catalyst](https://github.com/SciML/Catalyst.jl)
 construct and pass in these mappings.
 
 ## Recommendations for Constant Rate Jumps
-For representing and aggregating constant rate jumps 
+For representing and aggregating constant rate jumps
 - Use a `MassActionJump` to handle all jumps that can be represented as mass
-  action reactions. This will generally offer the fastest performance. 
+  action reactions. This will generally offer the fastest performance.
 - Use `ConstantRateJump`s for any remaining jumps.
 - For a small number of jumps, < ~10, `Direct` will often perform as well as the
   other aggregators.
@@ -269,7 +269,7 @@ For representing and aggregating constant rate jumps
   rates, for example continuous time random walks, `RSSACR`, `DirectCR` and then
   `NRM` often have the best performance.
 - For very large networks, with many updates per jump, `RSSA` and `RSSACR` will
-  often substantially outperform the other methods. 
+  often substantially outperform the other methods.
 
 In general, for systems with sparse dependency graphs if `Direct` is slow, one
 of `SortingDirect`, `RSSA` or `RSSACR` will usually offer substantially better
@@ -329,4 +329,3 @@ jprob2 = remake(jprob, prob=dprob2, u0=u02)
 ```
 as will trying to update either `p` or `tspan` while passing a new
 `DiscreteProblem` using the `prob` kwarg.
-

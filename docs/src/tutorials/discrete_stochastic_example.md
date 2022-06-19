@@ -1,4 +1,4 @@
-# Continuous-Time Jump Processes and Gillespie Methods
+# [Continuous-Time Jump Processes and Gillespie Methods](@id ssa_tutorial)
 
 In this tutorial we will describe how to define and simulate continuous-time
 jump processes, also known in biological fields as stochastic chemical kinetics
@@ -165,7 +165,7 @@ jump_prob = JumpProblem(sir_model, prob, Direct())
 Here `Direct()` indicates that we will determine the random times and types of
 reactions using [Gillespie's Direct stochastic simulation algorithm
 (SSA)](https://doi.org/10.1016/0021-9991(76)90041-3). See [Constant Rate Jump
-Aggregators](@ref) below for other supported SSAs.
+Aggregators](@ref) for other supported SSAs.
 
 We now have a problem that can be evolved in time using the DiffEqJump solvers.
 Since our model is a pure jump process (no continuously-varying components), we

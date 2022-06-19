@@ -20,8 +20,8 @@ and one of the core solver libraries included in
 The documentation includes
 - [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/latest/discrete_stochastic_example/),
 - [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/latest/jump_diffusion/)
-- [a reference on the types of jumps and available simulation methods](https://diffeq.sciml.ai/latest/jump_types/),
-- [a FAQ](https://diffeq.sciml.ai/latest/faq.md) with information on changing parameters between simulations and using callbacks.
+- [a reference on the types of jumps and available simulation methods](https://jump.sciml.ai/latest/jump_types/),
+- [a FAQ](https://jump.sciml.ai/latest/faq) with information on changing parameters between simulations and using callbacks.
 
 ## Installation
 There are two ways to install `DiffEqJump.jl`. First, users may install the meta

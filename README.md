@@ -4,14 +4,142 @@
 [![Build Status](https://github.com/SciML/DiffEqJump.jl/workflows/CI/badge.svg)](https://github.com/SciML/DiffEqJump.jl/actions?query=workflow%3ACI)
 [![Coverage Status](https://coveralls.io/repos/github/SciML/DiffEqJump.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/DiffEqJump.jl?branch=master)
 [![codecov.io](https://codecov.io/gh/SciML/DiffEqJump.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/DiffEqJump.jl)
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://diffeq.sciml.ai/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://diffeq.sciml.ai/dev/)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://jump.sciml.ai/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://jump.sciml.ai/dev/)
 
-DiffEqJump.jl is a component package in the [SciML](https://sciml.ai/) ecosystem. It
-holds the utilities for building jump equations, like stochastic simulation algorithms (SSAs), Gillespie methods or Kinetic Monte Carlo methods; and for building jump
-diffusions. It is one of the core solver libraries included in [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl). 
-Users interested in using this functionality should see the 
-[DifferentialEquations.jl documentation](https://diffeq.sciml.ai/latest/). The documentation includes 
-- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/), 
-- [a reference on the types of jumps and available simulation methods](https://diffeq.sciml.ai/latest/types/jump_types/), 
-- [a FAQ](https://diffeq.sciml.ai/latest/tutorials/discrete_stochastic_example/#FAQ) with information on changing parameters between simulations and using callbacks.
+DiffEqJump.jl provides methods for simulating jump processes, known as
+stochastic simulation algorithms (SSAs), Doob's method, Gillespie methods, or
+Kinetic Monte Carlo methods across different fields of science. It also enables the
+incorporation of jump processes into hybrid jump-ODE and jump-SDE models,
+including jump diffusions.
+
+DiffEqJump is a component package in the [SciML](https://sciml.ai/) ecosystem,
+and one of the core solver libraries included in
+[DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
+
+The documentation includes
+- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/latest/discrete_stochastic_example/),
+- [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/latest/jump_diffusion/)
+- [a reference on the types of jumps and available simulation methods](https://jump.sciml.ai/latest/jump_types/),
+- [a FAQ](https://jump.sciml.ai/latest/faq) with information on changing parameters between simulations and using callbacks.
+
+## Installation
+There are two ways to install `DiffEqJump.jl`. First, users may install the meta
+`DifferentialEquations.jl` package, which installs and wraps `OrdinaryDiffEq.jl`
+for solving ODEs, `StochasticDiffEq.jl` for solving SDEs, and `DiffEqJump.jl`,
+along with a number of other useful packages for solving models involving ODEs,
+SDEs and/or jump process. This single install will provide the user with all of
+the facilities for developing and solving Jump problems.
+
+To install the `DifferentialEquations.jl` package, refer to the following link
+for complete [installation
+details](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
+
+If the user wishes to separately install the `DiffEqJump.jl` library, which is a
+lighter dependency than `DifferentialEquations.jl`, then the following code will
+install `DiffEqJump.jl` using the Julia package manager:
+```julia
+using Pkg
+Pkg.add("DiffEqJump")
+```
+
+## Examples
+
+### Stochastic Chemical Kinetics SIR Model
+Here we consider the stochastic chemical kinetics jump process model for the
+basic SIR model, involving three species, $(S,I,R)$, that can undergo the
+reactions $S + I \to 2I$ and $I \to R$.
+```julia
+using DiffEqJump, Plots
+
+# here we order S = 1, I = 2, and R = 3
+# substrate stoichiometry:
+substoich = [[1 => 1, 2 => 1],    # 1*S + 1*I
+             [2 => 1]]            # 1*I
+# net change by each jump type
+netstoich = [[1 => -1, 2 => 1],   # S -> S-1, I -> I+1
+             [2 => -1, 3 => 1]]   # I -> I-1, R -> R+1
+# rate constants for each jump
+p = (0.1/1000, 0.01)
+
+# p[1] is rate for S+I --> 2I, p[2] for I --> R
+pidxs = [1, 2]
+
+maj = MassActionJump(substoich, netstoich; param_idxs=pidxs)
+
+u₀ = [999, 1, 0]       #[S(0),I(0),R(0)]
+tspan = (0.0, 250.0)
+dprob = DiscreteProblem(u₀, tspan, p)
+
+# use the Direct method to simulate
+jprob = JumpProblem(dprob, Direct(), maj)
+
+# solve as a pure jump process, i.e. using SSAStepper
+sol   = solve(jprob, SSAStepper())
+plot(sol)
+```
+
+![SIR Model](docs/src/assets/SIR.png)
+
+Instead of `MassActionJump`, we could have used the less efficient, but more
+flexible, `ConstantRateJump` type
+```julia
+rate1(u,p,t) = p[1]*u[1]*u[2]  # p[1]*S*I
+function affect1!(integrator)
+  integrator.u[1] -= 1         # S -> S - 1
+  integrator.u[2] += 1         # I -> I + 1
+end
+jump = ConstantRateJump(rate1,affect1!)
+
+rate2(u,p,t) = p[2]*u[2]      # p[2]*I
+function affect2!(integrator)
+  integrator.u[2] -= 1        # I -> I - 1
+  integrator.u[3] += 1        # R -> R + 1
+end
+jump2 = ConstantRateJump(rate2,affect2!)
+jprob = JumpProblem(dprob, Direct(), jump, jump2)
+sol   = solve(jprob, SSAStepper())
+```
+
+### Jump-ODE Example
+Let's solve an ODE for exponential growth, but coupled to a constant rate jump
+(Poisson) process that halves the solution each time it fires
+```julia
+using DifferentialEquations, Plots
+
+# du/dt = u is the ODE part
+function f(du,u,p,t)
+  du[1] = u[1]
+end
+u₀ = [0.2]
+tspan = (0.0, 10.0)
+prob = ODEProblem(f,u₀, tspan)
+
+# jump part
+
+# fires with a constant intensity of 2
+rate(u,p,t) = 2
+
+# halve the solution when firing
+affect!(integrator) = (integrator.u[1] = integrator.u[1]/2)
+jump = ConstantRateJump(rate, affect!)
+
+# use the Direct method to handle simulating the jumps
+jump_prob = JumpProblem(prob, Direct(), jump)
+
+# now couple to the ODE, solving the ODE with the Tsit5 method
+sol = solve(jump_prob, Tsit5())
+plot(sol)
+```
+
+![constant_rate_jump](docs/src/assets/constant_rate_jump.png)
+
+## Contributing
+- Please refer to the
+  [SciML ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://github.com/SciML/ColPrac/blob/master/README.md)
+  for guidance on PRs, issues, and other matters relating to contributing to SciML.
+- There are a few community forums:
+    - the #diffeq-bridged and #sciml-bridged channels on the [Julia Slack](https://julialang.org/slack/)
+    - [JuliaDiffEq](https://gitter.im/JuliaDiffEq/Lobby) on Gitter
+    - the [Julia Discourse forums](https://discourse.julialang.org)
+See also the [SciML Community page](https://sciml.ai/community/).

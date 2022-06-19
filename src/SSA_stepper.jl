@@ -43,13 +43,13 @@ struct SSAStepper <: DiffEqBase.DEAlgorithm end
 """
 $(TYPEDEF)
 
-Solution objects for pure jump problems solved via `SSAStepper`. 
+Solution objects for pure jump problems solved via `SSAStepper`.
 
 ## Fields
 
 $(FIELDS)
 """
-mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEIntegrator{SSAStepper,Nothing,uType,tType}
+mutable struct SSAIntegrator{F,uType,tType,tdirType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEIntegrator{SSAStepper,Nothing,uType,tType}
     """The underlying `prob.f` function. Not currently used."""
     f::F
     """The current solution values."""
@@ -58,6 +58,8 @@ mutable struct SSAIntegrator{F,uType,tType,P,S,CB,SA,OPT,TS} <: DiffEqBase.DEInt
     t::tType
     """The previous time a jump occured."""
     tprev::tType
+    """The direction time is changing in (must be positive indicating time is increasing)"""
+    tdir::tdirType
     """The current parameters."""
     p::P
     """The current solution object."""
@@ -104,7 +106,7 @@ function DiffEqBase.solve!(integrator)
     end_time = integrator.sol.prob.tspan[2]
     while should_continue_solve(integrator) # It stops before adding a tstop over
         step!(integrator)
-    end    
+    end
     integrator.t = end_time
 
     if integrator.saveat !== nothing && !isempty(integrator.saveat)
@@ -196,10 +198,12 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
      sizehint!(t,save_start+save_end)
    end
 
-    integrator = SSAIntegrator(prob.f,copy(prob.u0),prob.tspan[1],prob.tspan[1],prob.p,
-                               sol,1,prob.tspan[1],
-                               cb,_saveat,save_everystep,save_end,cur_saveat,
-                               opts,tstops,1,false,true)
+   tdir = sign(prob.tspan[2] - prob.tspan[1])
+   (tdir <= 0) && error("The time interval to solve over is non-increasing, i.e. tspan[2] <= tspan[1]. This is not allowed for pure jump problem.")
+
+    integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
+                               prob.p, sol,1, prob.tspan[1], cb, _saveat, save_everystep,
+                               save_end,cur_saveat, opts, tstops, 1, false, true)
     cb.initialize(cb,integrator.u,prob.tspan[1],integrator)
     DiffEqBase.initialize!(opts.callback,integrator.u,prob.tspan[1],integrator)
     integrator
@@ -209,7 +213,7 @@ function DiffEqBase.add_tstop!(integrator::SSAIntegrator,tstop)
     if tstop > integrator.t
         future_tstops = @view integrator.tstops[integrator.tstops_idx:end]
         insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
-        Base.insert!(integrator.tstops, insert_index, tstop) 
+        Base.insert!(integrator.tstops, insert_index, tstop)
     end
 end
 
@@ -248,7 +252,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         end
     end
 
-    # FP error means the new time may equal the old if the next jump time is 
+    # FP error means the new time may equal the old if the next jump time is
     # sufficiently small, hence we add this check to execute jumps until
     # this is no longer true.
     while integrator.t == integrator.tstop
@@ -283,7 +287,7 @@ function DiffEqBase.savevalues!(integrator::SSAIntegrator,force=false)
 end
 
 function should_continue_solve(integrator::SSAIntegrator)
-    end_time = integrator.sol.prob.tspan[2]    
+    end_time = integrator.sol.prob.tspan[2]
 
     # we continue the solve if there is a tstop between now and end_time
     has_tstop = !isempty(integrator.tstops) &&
@@ -308,4 +312,3 @@ function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = :Terminated)
 end
 
 export SSAStepper
-

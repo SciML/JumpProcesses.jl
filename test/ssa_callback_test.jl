@@ -114,7 +114,7 @@ p = (5.0,5.0)
 dprob = DiscreteProblem(rs, [10], (0.0, 100.0), p)
 jprob = JumpProblem(rs, dprob, Direct(), save_positions=(false, false))
 cbtimes = [20.0, 30.0]
-affectpresets!(integrator) = (@show "Here!!!"; integrator.u[1] += 1000)
+affectpresets!(integrator) = integrator.u[1] += 1000
 cb = PresetTimeCallback(cbtimes, affectpresets!)
 jsol = solve(jprob, SSAStepper(), saveat=0.1, callback=cb)
 @test (jsol(20.0001) - jsol(19.999))[1] == 1000

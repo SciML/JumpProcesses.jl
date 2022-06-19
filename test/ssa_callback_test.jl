@@ -111,10 +111,10 @@ jprob = JumpProblem(dprob, Direct(), maj5, save_positions=(false,false), rng=rng
 # test for https://github.com/SciML/DiffEqJump.jl/issues/239
 maj = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1. 2 => 1], [1 => 1, 2 => -1]]; param_idxs=[1,2])
 p = (5.0,5.0)
-dprob = DiscreteProblem(rs, [10], (0.0, 100.0), p)
+dprob = DiscreteProblem([10], (0.0, 100.0), p)
 jprob = JumpProblem(rs, dprob, Direct(), save_positions=(false, false))
 cbtimes = [20.0, 30.0]
 affectpresets!(integrator) = integrator.u[1] += 1000
 cb = PresetTimeCallback(cbtimes, affectpresets!)
 jsol = solve(jprob, SSAStepper(), saveat=0.1, callback=cb)
-@test (jsol(20.0001) - jsol(19.999))[1] == 1000
+@test (jsol(20.000000001) - jsol(19.99999999))[1] == 1000

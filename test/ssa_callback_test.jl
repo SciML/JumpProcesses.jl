@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase
+using DiffEqJump, DiffEqBase, DiffEqCallbacks
 using Test
 using StableRNGs
 rng = StableRNG(12345)
@@ -107,3 +107,14 @@ jprob = JumpProblem(dprob, Direct(), maj5, save_positions=(false,false), rng=rng
 @test all(jprob.massaction_jump.scaled_rates .== [.5])
 jprob = JumpProblem(dprob, Direct(), maj5, save_positions=(false,false), rng=rng, scale_rates=false)
 @test all(jprob.massaction_jump.scaled_rates .== [1.0])
+
+# test for https://github.com/SciML/DiffEqJump.jl/issues/239
+maj6 = MassActionJump([[1 => 1],[2 => 1]],[[1 => -1, 2 => 1],[1 => 1, 2 => -1]]; param_idxs=[1,2])
+p = (.1, .1)
+dprob = DiscreteProblem([10,0], (0.0, 100.0), p)
+jprob = JumpProblem(dprob, Direct(), maj6; save_positions=(false,false), rng=rng)
+cbtimes = [20.0, 30.0]
+affectpresets!(integrator) = integrator.u[1] += 10
+cb = PresetTimeCallback(cbtimes, affectpresets!)
+jsol = solve(jprob, SSAStepper(), saveat=0.1, callback=cb)
+@test (jsol(20.00000000001) - jsol(19.9999999999))[1] == 10

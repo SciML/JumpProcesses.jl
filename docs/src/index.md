@@ -11,7 +11,7 @@ and one of the core solver libraries included in
 
 The documentation includes
 - [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](@ref ssa_tutorial),
-- [a tutorial on simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
+- [a tutorial on simulating jump-diffusion processes](@ref jump_diffusion_tutorial),
 - [a reference on the types of jumps and available simulation methods](@ref jump_problem_type),
 - a [FAQ](@ref) with information on changing parameters between simulations and using callbacks.
 

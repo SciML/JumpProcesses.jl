@@ -6,7 +6,7 @@ solve(prob::JumpProblem,alg;kwargs)
 
 ## Recommended Methods
 
-A `JumpProblem(prob,aggregator,jumps...)` come in two forms. The first major
+A `JumpProblem(prob,aggregator,jumps...)` comes in two forms. The first major
 form is if it does not have a `RegularJump`. In this case, it can be solved with
 any integrator on  `prob`. However, in the case of a pure `JumpProblem` (a
 `JumpProblem` over a  `DiscreteProblem`), there are special algorithms
@@ -22,7 +22,7 @@ can have performance benefits.
 
 ## Special Methods for Pure Jump Problems
 
-If you are using jumps with a differential equations, use the same methods
+If you are using jumps with a differential equation, use the same methods
 as in the case of the differential equation solving. However, the following
 algorithms are optimized for pure jump problems.
 

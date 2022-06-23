@@ -61,22 +61,11 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    DirectCRJumpAggregation{T, S, F1, F2, RNG, typeof(dg), typeof(rt), typeof(ratetogroup)}(nj,
-                                                                                            nj,
-                                                                                            njt,
-                                                                                            et,
-                                                                                            crs,
-                                                                                            sr,
-                                                                                            maj,
-                                                                                            rs,
-                                                                                            affs!,
-                                                                                            sps,
-                                                                                            rng,
-                                                                                            dg,
-                                                                                            minrate,
-                                                                                            maxrate,
-                                                                                            rt,
-                                                                                            ratetogroup)
+    DirectCRJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
+                            typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
+                                                             rs, affs!, sps, rng, dg,
+                                                             minrate, maxrate, rt,
+                                                             ratetogroup)
 end
 
 ############################# Required Functions ##############################

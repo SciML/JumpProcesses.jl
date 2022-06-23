@@ -132,7 +132,7 @@ action form, offering improved performance within jump algorithms compared to
   param_idxs=nothing)`
 
 Here `reactant_stoich` denotes the reactant stoichiometry for each reaction and
-`net_stoich` the net stoichiometry for each reaction. 
+`net_stoich` the net stoichiometry for each reaction.
 
 ## Fields
 
@@ -140,7 +140,7 @@ $(FIELDS)
 
 ## Keyword Arguments
 - `scale_rates=true`, whether to rescale the reaction rate constants according
-  to the stoichiometry. 
+  to the stoichiometry.
 - `nocopy=false`, whether the `MassActionJump` can alias the `scaled_rates` and
   `reactant_stoch` from the input. Note, if `scale_rates=true` this will
   potentially modify both of these.
@@ -180,7 +180,7 @@ jprob = JumpProblem(prob, Direct(), maj)
 - Also see the [main
   docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
   for how to specify reactions with no products or no reactants.
-  
+
 
 """
 struct MassActionJump{T, S, U, V} <: AbstractMassActionJump
@@ -209,16 +209,13 @@ struct MassActionJump{T, S, U, V} <: AbstractMassActionJump
         end
         new(sr, rs, ns, pmapper)
     end
-    function MassActionJump{Nothing, Vector{S}, Vector{U}, V}(::Nothing, rs_in::Vector{S},
-                                                              ns::Vector{U}, pmapper::V,
-                                                              scale_rates::Bool,
-                                                              useiszero::Bool,
-                                                              nocopy::Bool) where {
-                                                                                   S <:
-                                                                                   AbstractVector,
-                                                                                   U <:
-                                                                                   AbstractVector,
-                                                                                   V}
+    function MassActionJump{Nothing, Vector{S},
+                            Vector{U}, V}(::Nothing, rs_in::Vector{S},
+                                          ns::Vector{U}, pmapper::V,
+                                          scale_rates::Bool,
+                                          useiszero::Bool,
+                                          nocopy::Bool) where {S <: AbstractVector,
+                                                               U <: AbstractVector, V}
         rs = nocopy ? rs_in : copy(rs_in)
         for i in eachindex(rs)
             if useiszero && (length(rs[i]) == 1) && iszero(rs[i][1][1])

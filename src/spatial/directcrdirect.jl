@@ -68,23 +68,13 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    DirectCRDirectJumpAggregation{J, T, RX, HOP, RNG, typeof(dg), typeof(vtoj_map),
-                                  typeof(jtov_map), SS, typeof(rt), typeof(ratetogroup)}(nj,
-                                                                                         nj,
-                                                                                         njt,
-                                                                                         et,
-                                                                                         rx_rates,
-                                                                                         hop_rates,
-                                                                                         site_rates,
-                                                                                         sps,
-                                                                                         rng,
-                                                                                         dg,
-                                                                                         vtoj_map,
-                                                                                         jtov_map,
-                                                                                         spatial_system,
-                                                                                         num_specs,
-                                                                                         rt,
-                                                                                         ratetogroup)
+    DirectCRDirectJumpAggregation{J, T, RX, HOP, RNG,
+                                  typeof(dg), typeof(vtoj_map),
+                                  typeof(jtov_map), SS, typeof(rt),
+                                  typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
+                                                       site_rates, sps, rng, dg, vtoj_map,
+                                                       jtov_map, spatial_system, num_specs,
+                                                       rt, ratetogroup)
 end
 
 ############################# Required Functions ##############################

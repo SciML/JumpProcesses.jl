@@ -1,5 +1,7 @@
-struct SpatialMassActionJump{A <: Union{AbstractVector, Nothing},
-                             B <: Union{AbstractMatrix, Nothing}, S, U, V} <:
+const AVecOrNothing = Union{AbstractVector, Nothing}
+const AMatOrNothing = Union{AbstractMatrix, Nothing}
+
+struct SpatialMassActionJump{A <: AVecOrNothing, B <: AMatOrNothing, S, U, V} <:
        AbstractMassActionJump
     uniform_rates::A # reactions that are uniform in space
     spatial_rates::B # reactions whose rate depends on the site
@@ -14,14 +16,9 @@ struct SpatialMassActionJump{A <: Union{AbstractVector, Nothing},
                                                   reactant_stoch::S, net_stoch::U,
                                                   param_mapper::V, scale_rates::Bool,
                                                   useiszero::Bool,
-                                                  nocopy::Bool) where {
-                                                                       A <:
-                                                                       Union{AbstractVector,
-                                                                             Nothing},
-                                                                       B <:
-                                                                       Union{AbstractMatrix,
-                                                                             Nothing}, S, U,
-                                                                       V}
+                                                  nocopy::Bool) where {A <: AVecOrNothing,
+                                                                       B <: AMatOrNothing,
+                                                                       S, U, V}
         uniform_rates = (nocopy || isnothing(uniform_rates)) ? uniform_rates :
                         copy(uniform_rates)
         spatial_rates = (nocopy || isnothing(spatial_rates)) ? spatial_rates :
@@ -48,40 +45,39 @@ end
 
 function SpatialMassActionJump(urates::A, srates::B, rs::S, ns::U, pmapper::V;
                                scale_rates = true, useiszero = true,
-                               nocopy = false) where {A <: Union{AbstractVector, Nothing},
-                                                      B <: Union{AbstractMatrix, Nothing},
-                                                      S, U, V}
+                               nocopy = false) where {A <: AVecOrNothing,
+                                                      B <: AMatOrNothing, S, U, V}
     SpatialMassActionJump{A, B, S, U, V}(urates, srates, rs, ns, pmapper, scale_rates,
                                          useiszero, nocopy)
 end
 function SpatialMassActionJump(urates::A, srates::B, rs, ns; scale_rates = true,
                                useiszero = true,
-                               nocopy = false) where {A <: Union{AbstractVector, Nothing},
-                                                      B <: Union{AbstractMatrix, Nothing}}
+                               nocopy = false) where {A <: AVecOrNothing,
+                                                      B <: AMatOrNothing}
     SpatialMassActionJump(urates, srates, rs, ns, nothing; scale_rates = scale_rates,
                           useiszero = useiszero, nocopy = nocopy)
 end
 
 function SpatialMassActionJump(srates::B, rs, ns, pmapper; scale_rates = true,
                                useiszero = true,
-                               nocopy = false) where {B <: Union{AbstractMatrix, Nothing}}
+                               nocopy = false) where {B <: AMatOrNothing}
     SpatialMassActionJump(nothing, srates, rs, ns, pmapper; scale_rates = scale_rates,
                           useiszero = useiszero, nocopy = nocopy)
 end
 function SpatialMassActionJump(srates::B, rs, ns; scale_rates = true, useiszero = true,
-                               nocopy = false) where {B <: Union{AbstractMatrix, Nothing}}
+                               nocopy = false) where {B <: AMatOrNothing}
     SpatialMassActionJump(nothing, srates, rs, ns, nothing; scale_rates = scale_rates,
                           useiszero = useiszero, nocopy = nocopy)
 end
 
 function SpatialMassActionJump(urates::A, rs, ns, pmapper; scale_rates = true,
                                useiszero = true,
-                               nocopy = false) where {A <: Union{AbstractVector, Nothing}}
+                               nocopy = false) where {A <: AVecOrNothing}
     SpatialMassActionJump(urates, nothing, rs, ns, pmapper; scale_rates = scale_rates,
                           useiszero = useiszero, nocopy = nocopy)
 end
 function SpatialMassActionJump(urates::A, rs, ns; scale_rates = true, useiszero = true,
-                               nocopy = false) where {A <: Union{AbstractVector, Nothing}}
+                               nocopy = false) where {A <: AVecOrNothing}
     SpatialMassActionJump(urates, nothing, rs, ns, nothing; scale_rates = scale_rates,
                           useiszero = useiszero, nocopy = nocopy)
 end
@@ -95,64 +91,38 @@ end
 
 ##############################################
 
-function get_num_majumps(spatial_majump::SpatialMassActionJump{Nothing, Nothing, S, U, V}) where {
-                                                                                                  S,
-                                                                                                  U,
-                                                                                                  V
-                                                                                                  }
+function get_num_majumps(smaj::SpatialMassActionJump{Nothing, Nothing, S, U, V}) where
+    {S, U, V}
     0
 end
-function get_num_majumps(spatial_majump::SpatialMassActionJump{Nothing, B, S, U, V}) where {
-                                                                                            B,
-                                                                                            S,
-                                                                                            U,
-                                                                                            V
-                                                                                            }
-    size(spatial_majump.spatial_rates, 1)
+function get_num_majumps(smaj::SpatialMassActionJump{Nothing, B, S, U, V}) where
+    {B, S, U, V}
+    size(smaj.spatial_rates, 1)
 end
-function get_num_majumps(spatial_majump::SpatialMassActionJump{A, Nothing, S, U, V}) where {
-                                                                                            A,
-                                                                                            S,
-                                                                                            U,
-                                                                                            V
-                                                                                            }
-    length(spatial_majump.uniform_rates)
+function get_num_majumps(smaj::SpatialMassActionJump{A, Nothing, S, U, V}) where
+    {A, S, U, V}
+    length(smaj.uniform_rates)
 end
-function get_num_majumps(spatial_majump::SpatialMassActionJump{A, B, S, U, V}) where {
-                                                                                      A <:
-                                                                                      AbstractVector,
-                                                                                      B <:
-                                                                                      AbstractMatrix,
-                                                                                      S, U,
-                                                                                      V}
-    length(spatial_majump.uniform_rates) + size(spatial_majump.spatial_rates, 1)
+function get_num_majumps(smaj::SpatialMassActionJump{A, B, S, U, V}) where
+    {A <: AbstractVector, B <: AbstractMatrix, S, U, V}
+    length(smaj.uniform_rates) + size(smaj.spatial_rates, 1)
 end
-using_params(spatial_majump::SpatialMassActionJump) = false
+using_params(smaj::SpatialMassActionJump) = false
 
 function rate_at_site(rx, site,
-                      spatial_majump::SpatialMassActionJump{Nothing, B, S, U, V}) where {B,
-                                                                                         S,
-                                                                                         U,
-                                                                                         V}
-    spatial_majump.spatial_rates[rx, site]
+                      smaj::SpatialMassActionJump{Nothing, B, S, U, V}) where {B, S, U, V}
+    smaj.spatial_rates[rx, site]
 end
 function rate_at_site(rx, site,
-                      spatial_majump::SpatialMassActionJump{A, Nothing, S, U, V}) where {A,
-                                                                                         S,
-                                                                                         U,
-                                                                                         V}
-    spatial_majump.uniform_rates[rx]
+                      smaj::SpatialMassActionJump{A, Nothing, S, U, V}) where {A, S, U, V}
+    smaj.uniform_rates[rx]
 end
 function rate_at_site(rx, site,
-                      spatial_majump::SpatialMassActionJump{A, B, S, U, V}) where {
-                                                                                   A <:
-                                                                                   AbstractVector,
-                                                                                   B <:
-                                                                                   AbstractMatrix,
-                                                                                   S, U, V}
-    num_unif_rxs = length(spatial_majump.uniform_rates)
-    rx <= num_unif_rxs ? spatial_majump.uniform_rates[rx] :
-    spatial_majump.spatial_rates[rx - num_unif_rxs, site]
+                      smaj::SpatialMassActionJump{A, B, S, U, V}) where
+    {A <: AbstractVector, B <: AbstractMatrix, S, U, V}
+    num_unif_rxs = length(smaj.uniform_rates)
+    rx <= num_unif_rxs ? smaj.uniform_rates[rx] :
+    smaj.spatial_rates[rx - num_unif_rxs, site]
 end
 
 function evalrxrate(speciesmat::AbstractMatrix{T}, rxidx::S, majump::SpatialMassActionJump,

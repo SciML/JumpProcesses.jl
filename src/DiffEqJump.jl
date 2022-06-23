@@ -23,15 +23,15 @@ abstract type AbstractJumpAggregator end
 
 import Base.Threads
 @static if VERSION < v"1.3"
-  seed_multiplier() = Threads.threadid()
+    seed_multiplier() = Threads.threadid()
 else
-  seed_multiplier() = 1
+    seed_multiplier() = 1
 end
 
 @static if VERSION >= v"1.7.0"
-  const DEFAULT_RNG = Random.default_rng()
+    const DEFAULT_RNG = Random.default_rng()
 else
-  const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
+    const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
 end
 
 include("jumps.jl")
@@ -59,7 +59,6 @@ include("spatial/utils.jl")
 
 include("spatial/nsm.jl")
 include("spatial/directcrdirect.jl")
-
 
 include("aggregators/aggregated_api.jl")
 

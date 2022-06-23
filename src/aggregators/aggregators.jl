@@ -144,7 +144,8 @@ doi: 10.1063/1.4928635
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
-const JUMP_AGGREGATORS = (Direct(),DirectFW(),DirectCR(),SortingDirect(),RSSA(),FRM(),FRMFW(),NRM(),RSSACR(),RDirect())
+const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
+                          FRMFW(), NRM(), RSSACR(), RDirect())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end

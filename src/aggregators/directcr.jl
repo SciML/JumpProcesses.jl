@@ -10,7 +10,8 @@ by S. Mauch and M. Stalzer, ACM Trans. Comp. Biol. and Bioinf., 8, No. 1, 27-35 
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:Function} <: AbstractSSAJumpAggregator
+mutable struct DirectCRJumpAggregation{T, S, F1, F2, RNG, DEPGR, U <: PriorityTable,
+                                       W <: Function} <: AbstractSSAJumpAggregator
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -20,20 +21,21 @@ mutable struct DirectCRJumpAggregation{T,S,F1,F2,RNG,DEPGR,U<:PriorityTable,W<:F
     ma_jumps::S
     rates::F1
     affects!::F2
-    save_positions::Tuple{Bool,Bool}
+    save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR
     minrate::T
     maxrate::T   # initial maxrate only, table can increase beyond it!
     rt::U
     ratetogroup::W
-  end
+end
 
 function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
-                                      rng::RNG; num_specs, dep_graph=nothing,
-                                      minrate=convert(T,MINJUMPRATE), maxrate=convert(T,Inf),
-                                      kwargs...) where {T,S,F1,F2,RNG}
+                                 maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+                                 rng::RNG; num_specs, dep_graph = nothing,
+                                 minrate = convert(T, MINJUMPRATE),
+                                 maxrate = convert(T, Inf),
+                                 kwargs...) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -57,13 +59,25 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2*minrate)
+    rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    DirectCRJumpAggregation{T,S,F1,F2,RNG,typeof(dg),typeof(rt),typeof(ratetogroup)}(
-                                            nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
-                                            dg, minrate, maxrate, rt, ratetogroup)
+    DirectCRJumpAggregation{T, S, F1, F2, RNG, typeof(dg), typeof(rt), typeof(ratetogroup)}(nj,
+                                                                                            nj,
+                                                                                            njt,
+                                                                                            et,
+                                                                                            crs,
+                                                                                            sr,
+                                                                                            maj,
+                                                                                            rs,
+                                                                                            affs!,
+                                                                                            sps,
+                                                                                            rng,
+                                                                                            dg,
+                                                                                            minrate,
+                                                                                            maxrate,
+                                                                                            rt,
+                                                                                            ratetogroup)
 end
-
 
 ############################# Required Functions ##############################
 
@@ -75,12 +89,12 @@ function aggregate(aggregator::DirectCR, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(DirectCRJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; num_specs=length(u), kwargs...)
+                           rates, affects!, save_positions, rng; num_specs = length(u),
+                           kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
-
     p.end_time = integrator.sol.prob.tspan[2]
 
     # initialize rates
@@ -88,7 +102,7 @@ function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
 
     # setup PriorityTable
     reset!(p.rt)
-    for (pid,priority) in enumerate(p.cur_rates)
+    for (pid, priority) in enumerate(p.cur_rates)
         insert!(p.rt, pid, priority)
     end
 
@@ -108,14 +122,13 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
-    p.next_jump_time  = t + randexp(p.rng) / p.sum_rate
-    
+    p.next_jump_time = t + randexp(p.rng) / p.sum_rate
+
     if p.next_jump_time < p.end_time
         p.next_jump = sample(p.rt, p.cur_rates, p.rng)
-    end    
+    end
     nothing
 end
-
 
 ######################## SSA specific helper routines #########################
 
@@ -138,4 +151,4 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
 
     p.sum_rate = groupsum(rt)
     nothing
-  end
+end

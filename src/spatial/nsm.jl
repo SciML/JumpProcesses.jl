@@ -1,10 +1,10 @@
 # Implementation of the Next Subvolume Method
 
-
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,PQ,SS} <: AbstractSSAJumpAggregator
+mutable struct NSMJumpAggregation{J, T, RX, HOP, RNG, DEPGR, VJMAP, JVMAP, PQ, SS} <:
+               AbstractSSAJumpAggregator
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -13,7 +13,7 @@ mutable struct NSMJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,PQ,SS} <: Abs
     hop_rates::HOP
     # rates::F1 #rates for constant-rate jumps
     # affects!::F2 #affects! function determines the effect of constant-rate jumps
-    save_positions::Tuple{Bool,Bool}
+    save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
     vartojumps_map::VJMAP #vartojumps_map is same for each site
@@ -23,8 +23,11 @@ mutable struct NSMJumpAggregation{J,T,RX,HOP,RNG,DEPGR,VJMAP,JVMAP,PQ,SS} <: Abs
     numspecies::Int #number of species
 end
 
-function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP, sps::Tuple{Bool,Bool},
-                                      rng::RNG, spatial_system::SS; num_specs, vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, kwargs...) where {J,T,RX,HOP,RNG,SS}
+function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP,
+                            sps::Tuple{Bool, Bool},
+                            rng::RNG, spatial_system::SS; num_specs,
+                            vartojumps_map = nothing, jumptovars_map = nothing,
+                            dep_graph = nothing, kwargs...) where {J, T, RX, HOP, RNG, SS}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -50,24 +53,32 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop
 
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{J,T,RX,HOP,RNG,typeof(dg),typeof(vtoj_map),typeof(jtov_map),typeof(pq),SS}(nj, nj, njt, et, rx_rates, hop_rates, sps, rng, dg, vtoj_map, jtov_map, pq, spatial_system, num_specs)
+    NSMJumpAggregation{J, T, RX, HOP, RNG, typeof(dg), typeof(vtoj_map), typeof(jtov_map),
+                       typeof(pq), SS}(nj, nj, njt, et, rx_rates, hop_rates, sps, rng, dg,
+                                       vtoj_map, jtov_map, pq, spatial_system, num_specs)
 end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps, ma_jumps, save_positions, rng; hopping_constants, spatial_system, kwargs...)
-    num_species = size(starting_state,1)
+function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps,
+                   ma_jumps, save_positions, rng; hopping_constants, spatial_system,
+                   kwargs...)
+    num_species = size(starting_state, 1)
     majumps = ma_jumps
     if majumps === nothing
-        majumps = MassActionJump(Vector{typeof(end_time)}(), Vector{Vector{Pair{Int,Int}}}(), Vector{Vector{Pair{Int,Int}}}())
+        majumps = MassActionJump(Vector{typeof(end_time)}(),
+                                 Vector{Vector{Pair{Int, Int}}}(),
+                                 Vector{Vector{Pair{Int, Int}}}())
     end
 
-    next_jump = SpatialJump{Int}(typemax(Int),typemax(Int),typemax(Int)) #a placeholder
+    next_jump = SpatialJump{Int}(typemax(Int), typemax(Int), typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
     rx_rates = RxRates(num_sites(spatial_system), majumps)
     hop_rates = HopRates(hopping_constants, spatial_system)
 
-    NSMJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates, save_positions, rng, spatial_system; num_specs = num_species, kwargs...)
+    NSMJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates,
+                       save_positions, rng, spatial_system; num_specs = num_species,
+                       kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -109,7 +120,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
     reset!(hop_rates)
 
     rxs = 1:num_rxs(rx_rates)
-    species = 1:aggregation.numspecies
+    species = 1:(aggregation.numspecies)
     num_nodes = num_sites(spatial_system)
 
     pqdata = Vector{typeof(t)}(undef, num_nodes)
@@ -138,7 +149,7 @@ function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, u, t)
         update_site_time!(p, target_site, t)
     else
         site = jump.src
-        update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p,jump))
+        update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p, jump))
         update_site_time!(p, site, t)
     end
     nothing

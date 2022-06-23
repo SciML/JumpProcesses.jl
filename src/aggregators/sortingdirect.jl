@@ -2,7 +2,8 @@
 # "The sorting direct method for stochastic simulation of biochemical systems with varying reaction execution behavior"
 # Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
-mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJumpAggregator
+mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
+               AbstractSSAJumpAggregator
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -12,16 +13,17 @@ mutable struct SortingDirectJumpAggregation{T,S,F1,F2,RNG,DEPGR} <: AbstractSSAJ
     ma_jumps::S
     rates::F1
     affects!::F2
-    save_positions::Tuple{Bool,Bool}
+    save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR
     jump_search_order::Vector{Int}
     jump_search_idx::Int
-  end
+end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
-                                      rng::RNG; num_specs, dep_graph=nothing, kwargs...) where {T,S,F1,F2,RNG}
+                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+                                      rng::RNG; num_specs, dep_graph = nothing,
+                                      kwargs...) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -39,8 +41,9 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
-    SortingDirectJumpAggregation{T,S,F1,F2,RNG,typeof(dg)}(nj, nj, njt, et, crs, sr,
-                                maj, rs, affs!, sps, rng, dg, jtoidx, zero(Int))
+    SortingDirectJumpAggregation{T, S, F1, F2, RNG, typeof(dg)}(nj, nj, njt, et, crs, sr,
+                                                                maj, rs, affs!, sps, rng,
+                                                                dg, jtoidx, zero(Int))
 end
 
 ############################# Required Functions ##############################
@@ -53,7 +56,8 @@ function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; num_specs=length(u), kwargs...)
+                           rates, affects!, save_positions, rng; num_specs = length(u),
+                           kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -70,12 +74,12 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
     u = update_state!(p, integrator, u)
 
     # update search order
-    jso   = p.jump_search_order
+    jso = p.jump_search_order
     jsidx = p.jump_search_idx
     if jsidx != 1
-        @inbounds tmp          = jso[jsidx]
-        @inbounds jso[jsidx]   = jso[jsidx-1]
-        @inbounds jso[jsidx-1] = tmp
+        @inbounds tmp = jso[jsidx]
+        @inbounds jso[jsidx] = jso[jsidx - 1]
+        @inbounds jso[jsidx - 1] = tmp
     end
 
     # update current jump rates
@@ -88,12 +92,12 @@ function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params,
     p.next_jump_time = t + randexp(p.rng) / p.sum_rate
 
     # search for next jump
-    if p.next_jump_time < p.end_time            
+    if p.next_jump_time < p.end_time
         cur_rates = p.cur_rates
-        numjumps  = length(cur_rates)
-        jso       = p.jump_search_order
-        rn        = p.sum_rate * rand(p.rng)
-        @inbounds for idx = 1:numjumps
+        numjumps = length(cur_rates)
+        jso = p.jump_search_order
+        rn = p.sum_rate * rand(p.rng)
+        @inbounds for idx in 1:numjumps
             rn -= cur_rates[jso[idx]]
             if rn < zero(rn)
                 p.jump_search_idx = idx
@@ -101,8 +105,7 @@ function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params,
             end
         end
         @inbounds p.next_jump = jso[p.jump_search_idx]
-    end    
+    end
 
     nothing
 end
-

@@ -20,7 +20,9 @@ An aggregator interface for SSA-like algorithms.
 """
 abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 
-DiscreteCallback(c::AbstractSSAJumpAggregator) = DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
+function DiscreteCallback(c::AbstractSSAJumpAggregator)
+    DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
+end
 
 ########### The following routines are templates for all SSAs ###########
 ########### Generally they should not need to be overloaded.  ###########
@@ -48,7 +50,7 @@ end
 function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)
-    u_modified!(integrator,false)
+    u_modified!(integrator, false)
     nothing
 end
 
@@ -79,8 +81,8 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
     majumps = ma_jumps
     if majumps === nothing
         majumps = MassActionJump(Vector{typeof(t)}(),
-                             Vector{Vector{Pair{Int,eltype(u)}}}(),
-                             Vector{Vector{Pair{Int,eltype(u)}}}())
+                                 Vector{Vector{Pair{Int, eltype(u)}}}(),
+                                 Vector{Vector{Pair{Int, eltype(u)}}}())
     end
 
     # current jump rates, allows mass action rates and constant jumps
@@ -90,7 +92,7 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
     next_jump = 0
     next_jump_time = typemax(typeof(t))
     jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-                majumps, rates, affects!, save_positions, rng; kwargs...)
+                  majumps, rates, affects!, save_positions, rng; kwargs...)
 end
 
 """
@@ -102,16 +104,16 @@ function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
     sum_rate = zero(typeof(p.sum_rate))
 
     # mass action jumps
-    majumps   = p.ma_jumps
+    majumps = p.ma_jumps
     cur_rates = p.cur_rates
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps)
-        sum_rate    += cur_rates[i]
+        sum_rate += cur_rates[i]
     end
 
     # constant rates
     rates = p.rates
-    idx   = get_num_majumps(majumps) + 1
+    idx = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
         cur_rates[idx] = rate(u, params, t)
         sum_rate += cur_rates[idx]
@@ -121,7 +123,6 @@ function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
     p.sum_rate = sum_rate
     nothing
 end
-
 
 """
     calculate_jump_rate(ma_jumps, rates, u, params, t, rx)
@@ -146,12 +147,13 @@ Notes:
 """
 function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    cur_rates   = p.cur_rates
-    sum_rate    = p.sum_rate
+    cur_rates = p.cur_rates
+    sum_rate = p.sum_rate
     num_majumps = get_num_majumps(p.ma_jumps)
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,params,t,rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,
+                                                      params, t, rx)
         sum_rate += cur_rates[rx]
     end
 
@@ -188,9 +190,9 @@ end
 
 Check if the total rate is zero, and if it is, make the next jump time Inf.
 """
-@inline function nomorejumps!(p, sum_rate) :: Bool
+@inline function nomorejumps!(p, sum_rate)::Bool
     if sum_rate < eps(typeof(sum_rate))
-        p.next_jump      = zero(p.next_jump)
+        p.next_jump = zero(p.next_jump)
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return true
     end
@@ -228,10 +230,11 @@ end
 
 Perform rejection sampling test (used in RSSA methods).
 """
-@inline function rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx, params, t)
+@inline function rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u,
+                          jidx, params, t)
     # rejection test
-    @inbounds r2     = rand(rng) * cur_rate_high[jidx]
-    @inbounds crlow  = cur_rate_low[jidx]
+    @inbounds r2 = rand(rng) * cur_rate_high[jidx]
+    @inbounds crlow = cur_rate_low[jidx]
 
     if crlow > zero(crlow) && r2 <= crlow
         return false

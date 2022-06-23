@@ -2,7 +2,7 @@
 A file with structs and functions for sampling hops and updating hopping rates
 """
 
-# TODO to simplify the design can do two things: 
+# TODO to simplify the design can do two things:
 # 1. make an abstract type HopRatesGridOptim (grid-optimized) and dispatch on it. Or maybe dispatch on the type of hop_const_cumulative_sums instead (Array{F} vs Array{Vector{F}})
 # 2. make an abstract type HopRatesGraphDsi, which has hop rates uniform wrt neighbors, and treat things not of that type as having hop_const_cumulative_sums field
 # 3. Use traits
@@ -35,38 +35,24 @@ function HopRates(hopping_constants::Matrix{Vector{F}},
 end
 
 function HopRates(p::Pair{SpecHop, SiteHop},
-                  spatial_system) where {SpecHop <: Vector{F}, SiteHop <: Vector{Vector{F}}
-                                         } where {F <: Number}
+                  spatial_system) where {F <: Number, SpecHop <: Vector{F},
+                                         SiteHop <: Vector{Vector{F}}}
     HopRatesGraphDsLij(p...)
 end
 function HopRates(p::Pair{SpecHop, SiteHop},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where {
-                                                                           SpecHop <:
-                                                                           Vector{F},
-                                                                           SiteHop <:
-                                                                           Vector{Vector{F}
-                                                                                  }
-                                                                           } where {
-                                                                                    F <:
-                                                                                    Number}
+                  grid::Union{CartesianGridRej, CartesianGridIter}) where
+    {F <: Number, SpecHop <: Vector{F}, SiteHop <: Vector{Vector{F}}}
     HopRatesGridDsLij(p..., grid)
 end
 
 function HopRates(p::Pair{SpecHop, SiteHop},
-                  spatial_system) where {SpecHop <: Matrix{F}, SiteHop <: Vector{Vector{F}}
-                                         } where {F <: Number}
+                  spatial_system) where {F <: Number, SpecHop <: Matrix{F},
+                                         SiteHop <: Vector{Vector{F}}}
     HopRatesGraphDsiLij(p...)
 end
 function HopRates(p::Pair{SpecHop, SiteHop},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where {
-                                                                           SpecHop <:
-                                                                           Matrix{F},
-                                                                           SiteHop <:
-                                                                           Vector{Vector{F}
-                                                                                  }
-                                                                           } where {
-                                                                                    F <:
-                                                                                    Number}
+                  grid::Union{CartesianGridRej, CartesianGridIter}) where
+    {SpecHop <: Matrix{F}, SiteHop <: Vector{Vector{F}}} where {F <: Number}
     HopRatesGridDsiLij(p..., grid)
 end
 
@@ -248,9 +234,8 @@ end
 
 function sample_target_site(hop_rates::HopRatesGraphDsij, site, species, rng,
                             spatial_system)
-    @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[species, site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants,
-                                    rand(rng) * cumulative_hop_constants[end])
+    @inbounds cum_hop_consts = hop_rates.hop_const_cumulative_sums[species, site]
+    @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_nbr(spatial_system, site, n)
 end
 
@@ -305,11 +290,8 @@ function HopRatesGridDsij(hopping_constants::Matrix{Vector{F}}, grid) where {F <
 end
 
 function sample_target_site(hop_rates::HopRatesGridDsij, site, species, rng, grid)
-    @inbounds cumulative_hop_constants = @view hop_rates.hop_const_cumulative_sums[:,
-                                                                                   species,
-                                                                                   site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants,
-                                    rand(rng) * cumulative_hop_constants[end])
+    @inbounds cum_hop_consts = @view hop_rates.hop_const_cumulative_sums[:, species, site]
+    @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_potential_nbr(grid, site, n)
 end
 
@@ -355,9 +337,8 @@ end
 
 function sample_target_site(hop_rates::HopRatesGraphDsLij, site, species, rng,
                             spatial_system)
-    @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants,
-                                    rand(rng) * cumulative_hop_constants[end])
+    @inbounds cum_hop_consts = hop_rates.hop_const_cumulative_sums[site]
+    @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_nbr(spatial_system, site, n)
 end
 
@@ -409,9 +390,8 @@ function HopRatesGridDsLij(species_hop_constants::Vector{F},
 end
 
 function sample_target_site(hop_rates::HopRatesGridDsLij, site, species, rng, grid)
-    @inbounds cumulative_hop_constants = @view hop_rates.hop_const_cumulative_sums[:, site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants,
-                                    rand(rng) * cumulative_hop_constants[end])
+    @inbounds cum_hop_consts = @view hop_rates.hop_const_cumulative_sums[:, site]
+    @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_potential_nbr(grid, site, n)
 end
 
@@ -453,9 +433,8 @@ end
 
 function sample_target_site(hop_rates::HopRatesGraphDsiLij, site, species, rng,
                             spatial_system)
-    @inbounds cumulative_hop_constants = hop_rates.hop_const_cumulative_sums[site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants,
-                                    rand(rng) * cumulative_hop_constants[end])
+    @inbounds cum_hop_consts = hop_rates.hop_const_cumulative_sums[site]
+    @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_nbr(spatial_system, site, n)
 end
 
@@ -508,9 +487,8 @@ function HopRatesGridDsiLij(species_hop_constants::Matrix{F},
 end
 
 function sample_target_site(hop_rates::HopRatesGridDsiLij, site, species, rng, grid)
-    @inbounds cumulative_hop_constants = @view hop_rates.hop_const_cumulative_sums[:, site]
-    @inbounds n = searchsortedfirst(cumulative_hop_constants,
-                                    rand(rng) * cumulative_hop_constants[end])
+    @inbounds cum_hop_consts = @view hop_rates.hop_const_cumulative_sums[:, site]
+    @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_potential_nbr(grid, site, n)
 end
 

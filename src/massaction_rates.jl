@@ -4,12 +4,8 @@
 ###############################################################################
 
 @inline @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
-                                      majump::MassActionJump{U, V, W, X})::R where {T, S, R,
-                                                                                    U <:
-                                                                                    AbstractVector{
-                                                                                                   R
-                                                                                                   },
-                                                                                    V, W, X}
+                                      majump::MassActionJump{U, V, W, X})::R where
+    {T, S, R, U <: AbstractVector{R}, V, W, X}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]

@@ -18,13 +18,13 @@ rate(u,p,t) = (1+t)*u[1]*u[2]
 
 # suppose we wish to decrease each of the two variables by one
 # when a jump occurs
-function affect!(integrator) 
+function affect!(integrator)
    # Method 1, direct indexing works like normal
    integrator.u[1] -= 1
    integrator.u[2] -= 1
 
    # Method 2, if we want to broadcast or use array operations we need
-   # to access integrator.u.u which is the actual state object. 
+   # to access integrator.u.u which is the actual state object.
    # So equivalently to above we could have said:
    # integrator.u.u .-= 1
 end
@@ -41,10 +41,10 @@ sol = solve(jprob,Tsit5())
   size `num_variableratejumps` then
   ```julia
   # for 1 <= i <= N
-  ueja[i] == ueja.u[i]       
+  ueja[i] == ueja.u[i]
 
   # for N < i <= (N+num_variableratejumps)
-  ueja[i] == ueja.jump_u[i]  
+  ueja[i] == ueja.jump_u[i]
   ```
 - In a system with `VariableRateJump`s all callback, `ConstantRateJump`, and
   `VariableRateJump` `affect!` functions will receive integrators with

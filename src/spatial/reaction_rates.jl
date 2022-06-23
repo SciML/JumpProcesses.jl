@@ -5,11 +5,11 @@ A file with structs and functions for sampling reactions and updating reaction r
 ### spatial rx rates ###
 struct RxRates{F,M}
     "rx_rates[i,j] is rate of reaction i at site j"
-    rates::Matrix{F} 
+    rates::Matrix{F}
 
     "rx_rates_sum[j] is sum of reaction rates at site j"
-    sum_rates::Vector{F} 
-    
+    sum_rates::Vector{F}
+
     "AbstractMassActionJump"
     ma_jumps::M
 end
@@ -22,7 +22,7 @@ initializes RxRates with zero rates
 function RxRates(num_sites::Int, ma_jumps::M) where {M}
     numrxjumps = get_num_majumps(ma_jumps)
     rates = zeros(Float64, numrxjumps, num_sites)
-    RxRates{Float64,M}(rates, vec(sum(rates, dims=1)), ma_jumps)
+    RxRates{Float64,M}(rates, vec(sum(rates, dims = 1)), ma_jumps)
 end
 
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
@@ -52,14 +52,24 @@ end
 
 update rates of all reactions in rxs at site
 """
-function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F, M <: MassActionJump}
+function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F,M<:MassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
-        set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate((@view u[:,site]), rx, ma_jumps))
+        set_rx_rate_at_site!(
+            rx_rates,
+            site,
+            rx,
+            evalrxrate((@view u[:, site]), rx, ma_jumps),
+        )
     end
 end
 
-function update_rx_rates!(rx_rates::RxRates{F,M}, rxs, u, site) where {F, M <: SpatialMassActionJump}
+function update_rx_rates!(
+    rx_rates::RxRates{F,M},
+    rxs,
+    u,
+    site,
+) where {F,M<:SpatialMassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate(u, rx, ma_jumps, site))
@@ -72,7 +82,10 @@ end
 sample a reaction at site, return reaction index
 """
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
-    linear_search((@view rx_rates.rates[:,site]), rand(rng) * total_site_rx_rate(rx_rates, site))
+    linear_search(
+        (@view rx_rates.rates[:, site]),
+        rand(rng) * total_site_rx_rate(rx_rates, site),
+    )
 end
 
 # helper functions

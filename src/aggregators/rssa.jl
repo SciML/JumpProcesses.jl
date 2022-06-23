@@ -4,7 +4,8 @@
 # functions of the current population sizes (i.e. u)
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
-mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: AbstractSSAJumpAggregator
+mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <:
+               AbstractSSAJumpAggregator
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -23,16 +24,31 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: Abstr
     bracket_data::BD
     ulow::T2V
     uhigh::T2V
-  end
+end
 
-  function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                                        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool,Bool},
-                                        rng::RNG; u::U, vartojumps_map=nothing, jumptovars_map=nothing,
-                                        bracket_data=nothing, kwargs...) where {T,S,F1,F2,RNG,U}
+function RSSAJumpAggregation(
+    nj::Int,
+    njt::T,
+    et::T,
+    crs::Vector{T},
+    sr::T,
+    maj::S,
+    rs::F1,
+    affs!::F2,
+    sps::Tuple{Bool,Bool},
+    rng::RNG;
+    u::U,
+    vartojumps_map = nothing,
+    jumptovars_map = nothing,
+    bracket_data = nothing,
+    kwargs...,
+) where {T,S,F1,F2,RNG,U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from variables to dependent jumps must be supplied.")
+            error(
+                "To use the RSSA algorithm a map from variables to dependent jumps must be supplied.",
+            )
         else
             vtoj_map = var_to_jumps_map(length(u), maj)
         end
@@ -42,7 +58,9 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: Abstr
 
     if jumptovars_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
+            error(
+                "To use the RSSA algorithm a map from jumps to dependent variables must be supplied.",
+            )
         else
             jtov_map = jump_to_vars_map(maj)
         end
@@ -60,26 +78,75 @@ mutable struct RSSAJumpAggregation{T,T2,S,F1,F2,RNG,VJMAP,JVMAP,BD,T2V} <: Abstr
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh
     cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
-    ulow    = @view cs_bnds[1,:]
-    uhigh   = @view cs_bnds[2,:]
+    ulow = @view cs_bnds[1, :]
+    uhigh = @view cs_bnds[2, :]
 
-    RSSAJumpAggregation{T,eltype(U),S,F1,F2,RNG,typeof(vtoj_map),typeof(jtov_map),typeof(bd),typeof(ulow)}(
-                        nj, nj, njt, et, crl_bnds, crh_bnds, sr, cs_bnds, maj, rs,
-                        affs!, sps, rng, vtoj_map, jtov_map, bd, ulow, uhigh)
+    RSSAJumpAggregation{
+        T,
+        eltype(U),
+        S,
+        F1,
+        F2,
+        RNG,
+        typeof(vtoj_map),
+        typeof(jtov_map),
+        typeof(bd),
+        typeof(ulow),
+    }(
+        nj,
+        nj,
+        njt,
+        et,
+        crl_bnds,
+        crh_bnds,
+        sr,
+        cs_bnds,
+        maj,
+        rs,
+        affs!,
+        sps,
+        rng,
+        vtoj_map,
+        jtov_map,
+        bd,
+        ulow,
+        uhigh,
+    )
 end
 
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::RSSA, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; kwargs...)
+function aggregate(
+    aggregator::RSSA,
+    u,
+    p,
+    t,
+    end_time,
+    constant_jumps,
+    ma_jumps,
+    save_positions,
+    rng;
+    kwargs...,
+)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    build_jump_aggregation(RSSAJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; u=u,
-                           kwargs...)
+    build_jump_aggregation(
+        RSSAJumpAggregation,
+        u,
+        p,
+        t,
+        end_time,
+        ma_jumps,
+        rates,
+        affects!,
+        save_positions,
+        rng;
+        u = u,
+        kwargs...,
+    )
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -108,20 +175,30 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     # next jump type
     @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
     num_majumps = get_num_majumps(ma_jumps)
-    rerl        = zero(sum_rate)
+    rerl = zero(sum_rate)
 
-    r    = rand(rng) * sum_rate
+    r = rand(rng) * sum_rate
     jidx = linear_search(cur_rate_high, r)
     if iszero(jidx)
         p.next_jump_time = Inf
-        return nothing 
+        return nothing
     end
     rerl += randexp(rng)
-    @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, 
-                             cur_rate_low, rng, u, jidx, params, t)
+    @inbounds while rejectrx(
+        ma_jumps,
+        num_majumps,
+        rates,
+        cur_rate_high,
+        cur_rate_low,
+        rng,
+        u,
+        jidx,
+        params,
+        t,
+    )
         # sample candidate reaction
-        r     = rand(rng) * sum_rate
-        jidx  = linear_search(cur_rate_high, r)
+        r = rand(rng) * sum_rate
+        jidx = linear_search(cur_rate_high, r)
         rerl += randexp(rng)
     end
     p.next_jump = jidx
@@ -141,17 +218,17 @@ end
 "Update rates"
 @inline function update_rates!(p::RSSAJumpAggregation, u, params, t)
     # update bracketing intervals
-    ubnds       = p.cur_u_bnds
-    sum_rate    = p.sum_rate
-    crhigh      = p.cur_rate_high
+    ubnds = p.cur_u_bnds
+    sum_rate = p.sum_rate
+    crhigh = p.cur_rate_high
 
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
 
         # if new u value is outside the bracketing interval
-        if uval == zero(uval) || uval < ubnds[1,uidx] || uval > ubnds[2,uidx]
+        if uval == zero(uval) || uval < ubnds[1, uidx] || uval > ubnds[2, uidx]
             # update u bracketing interval
-            ubnds[1,uidx], ubnds[2,uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+            ubnds[1, uidx], ubnds[2, uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]

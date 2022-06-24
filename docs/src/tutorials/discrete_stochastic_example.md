@@ -6,7 +6,7 @@ jump processes, also known in biological fields as stochastic chemical kinetics
 
 !!! note
 
-    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://diffeq.sciml.ai/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://diffeq.sciml.ai).
+    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/dev/modules/DiffEqDocs/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
 
 The discrete stochastic simulations we consider are a form of jump equation with
 a "trivial" (non-existent) differential equation. We will first demonstrate how
@@ -234,7 +234,7 @@ jump = ConstantRateJump(rate, affect!)
 
 where `rate` is a function `rate(u,p,t)` and `affect!` is a function of the
 integrator `affect!(integrator)` (for details on the integrator, see the
-[integrator interface docs](https://diffeq.sciml.ai/stable/basics/integrator/)).
+[integrator interface docs](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/)).
 Here `u` corresponds to the current state of the system; for our SIR model
 `u[1]=S(t)`, `u[2]=I(t)` and `u[3]=R(t)`. `p` corresponds to the parameters of
 the model, just as used for passing parameters to derivative functions in ODE

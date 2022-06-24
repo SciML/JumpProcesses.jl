@@ -5,7 +5,7 @@ Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
 does not *explicitly* depend on time. More precisely, one where the rate
 function is constant *between* the occurrence of jumps. For detailed examples
 and usage information see the
-- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
 
 ## Fields
 
@@ -37,7 +37,7 @@ Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
 may explicitly depend on time. More precisely, one where the rate function is
 allowed to change *between* the occurrence of jumps. For detailed examples and
 usage information see the
-- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
 
 ## Fields
 
@@ -124,8 +124,8 @@ Optimized representation for `ConstantRateJump`s that can be represented in mass
 action form, offering improved performance within jump algorithms compared to
 `ConstantRateJump`. For detailed examples and usage information see the
 - [Main
-  Docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
-- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+  Docs](https://jump.sciml.ai/stable/jump_types/#Defining-a-Mass-Action-Jump)
+- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
 
 ### Constructors
 - `MassActionJump(reactant_stoich, net_stoich; scale_rates=true,
@@ -175,10 +175,10 @@ jprob = JumpProblem(prob, Direct(), maj)
 ## Notes
 - By default reaction rates are rescaled when constructing the `MassActionJump`
   as explained in the [main
-  docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump).
+  docs](https://jump.sciml.ai/stable/jump_types/#Defining-a-Mass-Action-Jump).
   Disable this with the kwarg `scale_rates=false`.
 - Also see the [main
-  docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
+  docs](https://jump.sciml.ai/stable/jump_types/#Defining-a-Mass-Action-Jump)
   for how to specify reactions with no products or no reactants.
 
 

@@ -2,7 +2,7 @@
 
 !!! note
 
-    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://diffeq.sciml.ai/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://diffeq.sciml.ai).
+    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/dev/modules/DiffEqDocs/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
 
 Jump Diffusion equations are stochastic differential equations with discontinuous
 jumps. These can be written as:

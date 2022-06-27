@@ -11,9 +11,10 @@ SSAStepper
 
 ## Types of Jumps
 ```@docs
-MassActionJump
 ConstantRateJump
+MassActionJump
 VariableRateJump
+JumpSet
 ```
 
 ## Aggregators

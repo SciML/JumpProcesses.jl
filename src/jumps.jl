@@ -345,10 +345,48 @@ function update_parameters!(maj::MassActionJump, newparams; scale_rates = true, 
     maj.param_mapper(maj, newparams; scale_rates, kwargs)
 end
 
+"""
+$(TYPEDEF)
+
+Defines a collection of jumps that should collectively be included in a simulation.
+
+## Fields
+
+$(FIELDS)
+
+## Examples
+Here we construct two jumps, store them in a `JumpSet`, and then simulate the resulting
+process.
+```julia
+using DiffEqJump, OrdinaryDiffEq
+
+rate1(u,p,t) = p[1]
+affect1!(integrator) = (integrator.u[1] += 1)
+crj = ConstantRateJump(rate1, affect1!)
+
+rate2(u,p,t) = (t/(1+t))*p[2]*u[1]
+affect2!(integrator) = (integrator.u[1] -= 1)
+vrj = VariableRateJump(rate2, affect2!)
+
+jset = JumpSet(crj, vrj)
+
+f!(du,u,p,t) = (du .= 0)
+u0 = [0.0]
+p = (20.0, 2.0)
+tspan = (0.0, 200.0)
+oprob = ODEProblem(f!, u0, tspan, p)
+jprob = JumpProblem(oprob, Direct(), jset)
+sol = solve(jprob, Tsit5())
+```
+"""
 struct JumpSet{T1, T2, T3, T4} <: AbstractJump
+    """Collection of [`VariableRateJump`](@ref)s"""
     variable_jumps::T1
+    """Collection of [`ConstantRateJump`](@ref)s"""
     constant_jumps::T2
+    """Collection of `RegularJump`s"""
     regular_jump::T3
+    """Collection of [`MassActionJump`](@ref)s"""
     massaction_jump::T4
 end
 function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}

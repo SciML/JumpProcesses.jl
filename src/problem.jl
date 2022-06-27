@@ -350,9 +350,6 @@ function Base.summary(io::IO, prob::JumpProblem)
           type_color, nameof(typeof(prob.prob)),
           no_color, " with aggregator ",
           type_color, typeof(prob.aggregator))
-    # print(io, DiffEqBase.parameterless_type(prob), " with problem ",
-    #       DiffEqBase.parameterless_type(prob.prob), " and aggregator ",
-    #       typeof(prob.aggregator))
 end
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
     summary(io, A)
@@ -361,11 +358,10 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
             A.discrete_jump_aggregation === nothing ? 0 :
             num_constant_rate_jumps(A.discrete_jump_aggregation))
     println(io, "Number of variable rate jumps: ", length(A.variable_jumps))
+    nmajs = (A.massaction_jump !== nothing) ? get_num_majumps(A.massaction_jump) : 0
+    println(io, "Number of mass action jumps: ", nmajs)
     if A.regular_jump !== nothing
         println(io, "Have a regular jump")
-    end
-    if (A.massaction_jump !== nothing) && (get_num_majumps(A.massaction_jump) > 0)
-        println(io, "Have a mass action jump")
     end
 end
 

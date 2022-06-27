@@ -14,7 +14,6 @@ SSAStepper
 MassActionJump
 ConstantRateJump
 VariableRateJump
-RegularJump
 ```
 
 ## Aggregators

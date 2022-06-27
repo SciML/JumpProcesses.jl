@@ -343,12 +343,20 @@ end
 num_constant_rate_jumps(aggregator::AbstractSSAJumpAggregator) = length(aggregator.rates)
 
 function Base.summary(io::IO, prob::JumpProblem)
-    string(DiffEqBase.parameterless_type(prob), " with problem ",
-           DiffEqBase.parameterless_type(prob.prob), " and aggregator ",
-           typeof(prob.aggregator))
+    type_color, no_color = SciMLBase.get_colorizers(io)
+    print(io,
+          type_color, nameof(typeof(prob)),
+          no_color, " with problem ",
+          type_color, nameof(typeof(prob.prob)),
+          no_color, " with aggregator ",
+          type_color, typeof(prob.aggregator))
+    # print(io, DiffEqBase.parameterless_type(prob), " with problem ",
+    #       DiffEqBase.parameterless_type(prob.prob), " and aggregator ",
+    #       typeof(prob.aggregator))
 end
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
-    println(io, summary(A))
+    summary(io, A)
+    println(io)
     println(io, "Number of constant rate jumps: ",
             A.discrete_jump_aggregation === nothing ? 0 :
             num_constant_rate_jumps(A.discrete_jump_aggregation))

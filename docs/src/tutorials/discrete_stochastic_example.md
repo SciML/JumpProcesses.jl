@@ -8,14 +8,19 @@ jump processes, also known in biological fields as stochastic chemical kinetics
 
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/dev/modules/DiffEqDocs/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
 
-The discrete stochastic simulations we consider are a form of jump equation with
-a "trivial" (non-existent) differential equation. We will first demonstrate how
-to build these types of models using the biological modeling functionality of
-[Catalyst.jl](https://github.com/SciML/Catalyst.jl), then describe how to build
-them directly and more generally using
-[DiffEqJump.jl](https://github.com/SciML/DiffEqJump.jl) jump types, and finally
-show how to couple discrete stochastic simulations to differential equation
-models.
+We first demonstrate how to build jump processes using
+[DiffEqJump.jl](https://github.com/SciML/DiffEqJump.jl)'s different jump types,
+which encode the rate functions (i.e. intensities) and state changes when a
+given jump occurs.
+
+Note, the SIR model considered here is a type of stochastic chemical kinetics
+jump process model, and as such the biological modeling functionality of
+[Catalyst.jl](https://github.com/SciML/Catalyst.jl) can be used to easily
+specify the model and automatically calculate inputs needed for DiffEqJump's
+optimized simulation algorithms. We summarize this alternative approach at the
+end for users who may be interested in modeling chemical systems, but note this
+tutorial is intended to explain the general jump process formulation of
+DiffEqJump for all users.
 
 ## Illustrative Model: SIR disease dynamics
 To illustrate the jump process solvers, we will build an SIR model which matches
@@ -45,12 +50,12 @@ I(t) &= I(0) + Y_1\left(  \int_0^t \beta S(s^{-}) I(s^{-}) \, ds\right)
 R(t) &= R(0) + Y_2 \left( \int_0^t \nu I(s^-)  \, ds \right)
 \end{aligned}
 ```
-Notice, our model involves two jumps with rate functions, also known as
+Notice, our model involves two jump processes with rate functions, also known as
 intensities or propensities, given by ``\beta S(t) I(t)`` and ``\nu I(t)``
 respectively. These model the infection of susceptible individuals and recovery
-of infected individuals.
+of infected individuals. The
 
-## Defining the SIR Model using Reactions via Catalyst
+## Defining the SIR Model using Reactions
 For those less-familiar with the time-change representation, we now give a more
 intuitive explanation of the model, and then demonstrate how it can be written
 as a serious of chemical reactions in
@@ -454,86 +459,6 @@ jump_prob = JumpProblem(prob, Direct(), mass_act_jump, birth_jump)
 sol = solve(jump_prob, SSAStepper())
 ```
 ![gillespie_hybrid_jumps](../assets/gillespie_hybrid_jumps.png)
-
-## Adding Jumps to a Differential Equation
-
-If we instead used some form of differential equation instead of a
-`DiscreteProblem`, we would couple the jumps/reactions to the differential
-equation. Let's define an ODE problem, where the continuous part only acts on
-some new 4th component:
-
-```julia
-using OrdinaryDiffEq
-function f(du,u,p,t)
-  du[4] = u[2]*u[3]/100000 - u[1]*u[4]/100000
-end
-u₀   = [999.0,1.0,0.0,100.0]
-prob = ODEProblem(f,u₀,tspan,p)
-```
-
-Notice we gave the 4th component a starting value of 100.0, and used floating
-point numbers for the initial condition since some solution components now
-evolve continuously. The same steps as above will allow us to solve this hybrid
-equation when using `ConstantRateJumps` (or `MassActionJump`s). For example, we
-can solve it using the `Tsit5()` method via:
-
-```julia
-jump_prob = JumpProblem(prob,Direct(),jump,jump2)
-sol = solve(jump_prob,Tsit5())
-```
-
-![gillespie_ode](../assets/gillespie_ode.png)
-
-## [Adding a VariableRateJump](@id VariableRateJumpSect)
-
-Now let's consider adding a reaction whose rate changes continuously with the
-differential equation. To continue our example, let's let there be a new
-jump/reaction with rate depending on `u[4]`
-
-```julia
-rate3(u,p,t) = 1e-2*u[4]
-function affect3!(integrator)
-  integrator.u[2] += 1
-end
-jump3 = VariableRateJump(rate3,affect3!)
-```
-
-Notice, since `rate3` depends on a variable that evolves continuously, and hence
-is not constant between jumps, we must use a `VariableRateJump`.
-
-Solving the equation is exactly the same:
-
-```julia
-u₀   = [999.0,1.0,0.0,1.0]
-prob = ODEProblem(f,u₀,tspan,p)
-jump_prob = JumpProblem(prob,Direct(),jump,jump2,jump3)
-sol = solve(jump_prob,Tsit5())
-```
-
-![variable_rate_gillespie](../assets/variable_rate_gillespie.png)
-
-*Note that `VariableRateJump`s require a continuous problem, like an
-ODE/SDE/DDE/DAE problem.*
-
-Lastly, we are not restricted to ODEs. For example, we can solve the same jump
-problem except with multiplicative noise on `u[4]` by using an `SDEProblem`
-instead:
-
-```julia
-using StochasticDiffEq
-function g(du,u,p,t)
-  du[4] = 0.1u[4]
-end
-
-prob = SDEProblem(f,g,[999.0,1.0,0.0,1.0],(0.0,250.0), p)
-jump_prob = JumpProblem(prob,Direct(),jump,jump2,jump3)
-sol = solve(jump_prob,SRIW1())
-```
-
-![sde_gillespie](../assets/sde_gillespie.png)
-
-For more details about `VariableRateJump`s see [Defining a Variable Rate
-Jump](@ref).
 
 ## RegularJumps and Tau-Leaping
 

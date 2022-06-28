@@ -7,6 +7,7 @@ CurrentModule = DiffEqJump
 ```@docs
 JumpProblem
 SSAStepper
+reset_aggregated_jumps!
 ```
 
 ## Types of Jumps

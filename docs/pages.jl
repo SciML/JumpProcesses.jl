@@ -2,7 +2,8 @@
 
 pages = [
     "Home" => "index.md",
-    "Tutorials" => Any["tutorials/discrete_stochastic_example.md",
+    "Tutorials" => Any["tutorials/simple_poisson_process.md",
+                       "tutorials/discrete_stochastic_example.md",
                        "tutorials/jump_diffusion.md"],
     "FAQ" => "faq.md",
     "Type Documentation" => Any["Jump types and JumpProblem" => "jump_types.md",

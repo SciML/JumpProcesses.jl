@@ -5,7 +5,7 @@ Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
 does not *explicitly* depend on time. More precisely, one where the rate
 function is constant *between* the occurrence of jumps. For detailed examples
 and usage information see the
-- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
 
 ## Fields
 
@@ -37,7 +37,7 @@ Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
 may explicitly depend on time. More precisely, one where the rate function is
 allowed to change *between* the occurrence of jumps. For detailed examples and
 usage information see the
-- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
 
 ## Fields
 
@@ -124,8 +124,8 @@ Optimized representation for `ConstantRateJump`s that can be represented in mass
 action form, offering improved performance within jump algorithms compared to
 `ConstantRateJump`. For detailed examples and usage information see the
 - [Main
-  Docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
-- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+  Docs](https://jump.sciml.ai/stable/jump_types/#Defining-a-Mass-Action-Jump)
+- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
 
 ### Constructors
 - `MassActionJump(reactant_stoich, net_stoich; scale_rates=true,
@@ -175,10 +175,10 @@ jprob = JumpProblem(prob, Direct(), maj)
 ## Notes
 - By default reaction rates are rescaled when constructing the `MassActionJump`
   as explained in the [main
-  docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump).
+  docs](https://jump.sciml.ai/stable/jump_types/#Defining-a-Mass-Action-Jump).
   Disable this with the kwarg `scale_rates=false`.
 - Also see the [main
-  docs](https://diffeq.sciml.ai/stable/types/jump_types/#Defining-a-Mass-Action-Jump)
+  docs](https://jump.sciml.ai/stable/jump_types/#Defining-a-Mass-Action-Jump)
   for how to specify reactions with no products or no reactants.
 
 
@@ -345,10 +345,48 @@ function update_parameters!(maj::MassActionJump, newparams; scale_rates = true, 
     maj.param_mapper(maj, newparams; scale_rates, kwargs)
 end
 
+"""
+$(TYPEDEF)
+
+Defines a collection of jumps that should collectively be included in a simulation.
+
+## Fields
+
+$(FIELDS)
+
+## Examples
+Here we construct two jumps, store them in a `JumpSet`, and then simulate the resulting
+process.
+```julia
+using DiffEqJump, OrdinaryDiffEq
+
+rate1(u,p,t) = p[1]
+affect1!(integrator) = (integrator.u[1] += 1)
+crj = ConstantRateJump(rate1, affect1!)
+
+rate2(u,p,t) = (t/(1+t))*p[2]*u[1]
+affect2!(integrator) = (integrator.u[1] -= 1)
+vrj = VariableRateJump(rate2, affect2!)
+
+jset = JumpSet(crj, vrj)
+
+f!(du,u,p,t) = (du .= 0)
+u0 = [0.0]
+p = (20.0, 2.0)
+tspan = (0.0, 200.0)
+oprob = ODEProblem(f!, u0, tspan, p)
+jprob = JumpProblem(oprob, Direct(), jset)
+sol = solve(jprob, Tsit5())
+```
+"""
 struct JumpSet{T1, T2, T3, T4} <: AbstractJump
+    """Collection of [`VariableRateJump`](@ref)s"""
     variable_jumps::T1
+    """Collection of [`ConstantRateJump`](@ref)s"""
     constant_jumps::T2
+    """Collection of `RegularJump`s"""
     regular_jump::T3
+    """Collection of [`MassActionJump`](@ref)s"""
     massaction_jump::T4
 end
 function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}

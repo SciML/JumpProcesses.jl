@@ -7,6 +7,7 @@ using RandomNumbers, TreeViews, LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterfaceCore
 using FunctionWrappers, UnPack
 using Graphs
+using SciMLBase: SciMLBase
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge

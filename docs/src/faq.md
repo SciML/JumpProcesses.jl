@@ -19,42 +19,6 @@ condition, and other components of a generated `JumpProblem`. This can be useful
 when trying to call `solve` many times while avoiding reallocations of the
 internal aggregators for each new parameter value or initial condition.
 
-## How do I use callbacks with `ConstantRateJump` or `MassActionJump` systems?
-
-Callbacks can be used with `ConstantRateJump`s and `MassActionJump`s. When
-solving a pure jump system with `SSAStepper`, only discrete callbacks can be
-used (otherwise a different time stepper is needed).
-
-*Note, when modifying `u` or `p` within a callback, you must call
-`reset_aggregated_jumps!(integrator)` after making updates.* This ensures that
-the underlying jump simulation algorithms know to reinitialize their internal
-data structures. Leaving out this call will lead to incorrect behavior!
-
-A simple example that uses a `MassActionJump` and changes the parameters at a
-specified time in the simulation using a `DiscreteCallback` is
-```julia
-using DiffEqJump
-rs = [[1 => 1], [2 => 1]]
-ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
-p = [1.0, 0.0]
-maj = MassActionJump(rs, ns; param_idxs=[1, 2])
-u₀ = [100, 0]
-tspan = (0.0, 40.0)
-dprob = DiscreteProblem(u₀, tspan, p)
-jprob = JumpProblem(dprob, Direct(), maj)
-pcondit(u, t, integrator) = t == 20.0
-function paffect!(integrator)
-    integrator.p[1] = 0.0
-    integrator.p[2] = 1.0
-    reset_aggregated_jumps!(integrator)
-end
-sol = solve(jprob, SSAStepper(), tstops=[20.0], callback=DiscreteCallback(pcondit, paffect!))
-```
-Here at time `20.0` we turn off production of `u[2]` while activating production
-of `u[1]`, giving
-
-![callback_gillespie](assets/callback_gillespie.png)
-
 ## How can I define collections of many different jumps and pass them to `JumpProblem`?
 
 We can use `JumpSet`s to collect jumps together, and then pass them into
@@ -90,12 +54,14 @@ argument. Continuing the previous example:
 ```julia
 #] add RandomNumbers
 using RandomNumbers
-jprob = JumpProblem(dprob, Direct(), maj, rng=Xorshifts.Xoroshiro128Star(rand(UInt64)))
+jprob = JumpProblem(dprob, Direct(), maj,
+                    rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
 ```
 uses the `Xoroshiro128Star` generator from
 [RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
 
-On version 1.7 and up DiffEqJump uses Julia's builtin random number generator by default. On versions below 1.7 it uses `Xoroshiro128Star`.
+On version 1.7 and up DiffEqJump uses Julia's builtin random number generator by
+default. On versions below 1.7 it uses `Xoroshiro128Star`.
 
 ## What are these aggregators and aggregations in DiffEqJump?
 
@@ -135,3 +101,77 @@ then follow this ordering when assigning an integer id to each jump.
 
 See also [Constant Rate Jump Aggregators Requiring Dependency Graphs](@ref) for
 more on dependency graphs needed for the various SSAs.
+
+## How do I use callbacks with `ConstantRateJump` or `MassActionJump` systems?
+
+Callbacks can be used with `ConstantRateJump`s and `MassActionJump`s. When
+solving a pure jump system with `SSAStepper`, only discrete callbacks can be
+used (otherwise a different time stepper is needed). When using an ODE or SDE
+time stepper any callback should work.
+
+*Note, when modifying `u` or `p` within a callback, you must call
+`reset_aggregated_jumps!(integrator)` after making updates.* This ensures that
+the underlying jump simulation algorithms know to reinitialize their internal
+data structures. Leaving out this call will lead to incorrect behavior!
+
+A simple example that uses a `MassActionJump` and changes the parameters at a
+specified time in the simulation using a `DiscreteCallback` is
+```julia
+using DiffEqJump
+rs = [[1 => 1], [2 => 1]]
+ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
+p = [1.0, 0.0]
+maj = MassActionJump(rs, ns; param_idxs=[1, 2])
+u₀ = [100, 0]
+tspan = (0.0, 40.0)
+dprob = DiscreteProblem(u₀, tspan, p)
+jprob = JumpProblem(dprob, Direct(), maj)
+pcondit(u, t, integrator) = t == 20.0
+function paffect!(integrator)
+    integrator.p[1] = 0.0
+    integrator.p[2] = 1.0
+    reset_aggregated_jumps!(integrator)
+    nothing
+end
+sol = solve(jprob, SSAStepper(), tstops=[20.0], callback=DiscreteCallback(pcondit, paffect!))
+```
+Here at time `20.0` we turn off production of `u[2]` while activating production
+of `u[1]`, giving
+
+![callback_gillespie](assets/callback_gillespie.png)
+
+
+## How can I access earlier solution values in callbacks?
+When using an ODE or SDE time-stepper that conforms to the [integrator
+interface](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/) one
+can simply use `integrator.uprev`. For efficiency reasons, the pure jump
+[`SSAStepper`](@ref) integrator does not have such a field. If one needs
+solution components at earlier times one can save them within the callback
+condition by making a functor:
+```julia
+# stores the previous value of u[2] and represents the callback functions
+mutable struct UprevCondition{T}
+     u2::T
+end
+
+# condition
+function (upc::UprevCondition)(u, t, integrator)
+    # condition for the callback is that the new value of u[2]
+    # is smaller than the previous value
+    condit = u[2] - upc.u2 < 0
+
+    # save the new value as the previous value
+    upc.u2 = u[2]
+
+    condit
+end
+
+# affect!
+function (upc::UprevCondition)(integrator)
+    integrator.u[4] -= 1
+    nothing
+end
+
+upc = UprevCondition(u0[2])
+cb = DiscreteCallback(upc, upc)
+```

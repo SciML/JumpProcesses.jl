@@ -29,6 +29,7 @@ RDirect
 RSSA
 RSSACR
 SortingDirect
+reset_aggregated_jumps!
 ```
 
 # Private API Functions

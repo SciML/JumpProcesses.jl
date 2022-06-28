@@ -110,9 +110,9 @@ used (otherwise a different time stepper is needed). When using an ODE or SDE
 time stepper any callback should work.
 
 *Note, when modifying `u` or `p` within a callback, you must call
-`reset_aggregated_jumps!(integrator)` after making updates.* This ensures that
-the underlying jump simulation algorithms know to reinitialize their internal
-data structures. Leaving out this call will lead to incorrect behavior!
+[`reset_aggregated_jumps!`](@ref) after making updates.* This ensures that the
+underlying jump simulation algorithms know to reinitialize their internal data
+structures. Leaving out this call will lead to incorrect behavior!
 
 A simple example that uses a `MassActionJump` and changes the parameters at a
 specified time in the simulation using a `DiscreteCallback` is

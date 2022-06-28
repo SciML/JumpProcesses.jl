@@ -1,4 +1,4 @@
-using Documenter, DiffEqJump
+using Documenter, JumpProcesses
 
 include("pages.jl")
 
@@ -12,9 +12,9 @@ mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/require", "[tex]/ma
                                             "require",
                                         ])))
 
-makedocs(sitename = "DiffEqJump.jl",
+makedocs(sitename = "JumpProcesses.jl",
          authors = "Chris Rackauckas",
-         modules = [DiffEqJump],
+         modules = [JumpProcesses],
          clean = true,
          doctest = false,
          format = Documenter.HTML(; analytics = "UA-90474609-3",
@@ -24,5 +24,5 @@ makedocs(sitename = "DiffEqJump.jl",
                                   mathengine),
          pages = pages)
 
-deploydocs(repo = "github.com/SciML/DiffEqJump.jl.git";
+deploydocs(repo = "github.com/SciML/JumpProcesses.jl.git";
            push_preview = true)

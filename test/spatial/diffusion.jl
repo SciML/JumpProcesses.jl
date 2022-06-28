@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase
+using JumpProcesses, DiffEqBase
 using Test
 using LinearAlgebra
 using Graphs
@@ -103,7 +103,7 @@ end
 species_hop_constants = [hopping_rate]
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
+    site_hop_constants[site] = repeat([1.0], JumpProcesses.outdegree(grids[1], site))
 end
 for alg in algs
     push!(jump_problems,
@@ -120,7 +120,7 @@ end
 species_hop_constants = hopping_rate * ones(1, num_nodes)
 site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], DiffEqJump.outdegree(grids[1], site))
+    site_hop_constants[site] = repeat([1.0], JumpProcesses.outdegree(grids[1], site))
 end
 for alg in algs
     push!(jump_problems,

@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, SafeTestsets
+using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
     @time @safetestset "Spatial utilities" begin include("utils_test.jl") end

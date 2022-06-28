@@ -10,7 +10,7 @@ While `Direct` is often fastest for systems with 10 or less `ConstantRateJump`s
 or `MassActionJump`s, if your system has many jumps or one jump occurs most
 frequently, other stochastic simulation algorithms may be faster. See [Constant
 Rate Jump Aggregators](@ref) and the subsequent sections there for guidance on
-choosing different SSAs (called aggregators in DiffEqJump).
+choosing different SSAs (called aggregators in JumpProcesses).
 
 ## When running many consecutive simulations, for example within an `EnsembleProblem` or loop, how can I update `JumpProblem`s?
 
@@ -60,25 +60,25 @@ jprob = JumpProblem(dprob, Direct(), maj,
 uses the `Xoroshiro128Star` generator from
 [RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
 
-On version 1.7 and up DiffEqJump uses Julia's builtin random number generator by
+On version 1.7 and up JumpProcesses uses Julia's builtin random number generator by
 default. On versions below 1.7 it uses `Xoroshiro128Star`.
 
-## What are these aggregators and aggregations in DiffEqJump?
+## What are these aggregators and aggregations in JumpProcesses?
 
-DiffEqJump provides a variety of methods for sampling the time the next
+JumpProcesses provides a variety of methods for sampling the time the next
 `ConstantRateJump` or `MassActionJump` occurs, and which jump type happens at
 that time. These methods are examples of stochastic simulation algorithms
 (SSAs), also known as Gillespie methods, Doob's method, or Kinetic Monte Carlo
-methods. In the DiffEqJump terminology we call such methods "aggregators", and
+methods. In the JumpProcesses terminology we call such methods "aggregators", and
 the cache structures that hold their basic data "aggregations". See [Constant
 Rate Jump Aggregators](@ref) for a list of the available SSA aggregators.
 
 ## How should jumps be ordered in dependency graphs?
-Internally, DiffEqJump SSAs (aggregators) order all `MassActionJump`s first,
+Internally, JumpProcesses SSAs (aggregators) order all `MassActionJump`s first,
 then all `ConstantRateJumps`. i.e. in the example
 
 ```julia
-using DiffEqJump
+using JumpProcesses
 rs = [[1 => 1], [2 => 1]]
 ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
 p = [1.0, 0.0]
@@ -117,7 +117,7 @@ structures. Leaving out this call will lead to incorrect behavior!
 A simple example that uses a `MassActionJump` and changes the parameters at a
 specified time in the simulation using a `DiscreteCallback` is
 ```julia
-using DiffEqJump
+using JumpProcesses
 rs = [[1 => 1], [2 => 1]]
 ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
 p = [1.0, 0.0]

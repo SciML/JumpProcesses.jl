@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, Graphs
+using JumpProcesses, DiffEqBase, Graphs
 
 """
 prob.u0 must be a Matrix with prob.u0[i,j] being the number of species i at site j

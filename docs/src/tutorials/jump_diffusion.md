@@ -23,7 +23,7 @@ using Pkg
 Pkg.add("DifferentialEquations")
 Pkg.add("Plots")
 ```
-DifferentialEquations.jl will install DiffEqJump, along with the needed ODE and
+DifferentialEquations.jl will install JumpProcesses, along with the needed ODE and
 SDE solvers.
 
 We then load these packages, and set some plotting defaults, as

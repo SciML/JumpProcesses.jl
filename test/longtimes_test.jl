@@ -1,8 +1,8 @@
-using DiffEqBase, DiffEqJump, Test, StableRNGs
+using DiffEqBase, JumpProcesses, Test, StableRNGs
 
 rng = StableRNG(12345)
 
-# test for https://github.com/SciML/DiffEqJump.jl/issues/177
+# test for https://github.com/SciML/JumpProcesses.jl/issues/177
 p = [1.0, 2.0, 50.0]
 ns = [[1 => 1], [1 => -1], [1 => 1]]
 rs = [[1 => 1], [1 => 1], Pair{Int64, Int64}[]]

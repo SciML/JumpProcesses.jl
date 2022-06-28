@@ -1,6 +1,6 @@
 # calculates the mean from N stochastic A->B reactions at different rates
 # this really tests different ways of constructing the jump problems
-using DiffEqBase, DiffEqJump, Statistics
+using DiffEqBase, JumpProcesses, Statistics
 using Test
 using StableRNGs
 rng = StableRNG(12345)

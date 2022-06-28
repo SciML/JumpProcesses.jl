@@ -1,6 +1,6 @@
-using DiffEqBase, DiffEqJump
+using DiffEqBase, JumpProcesses
 using Test
-const DJ = DiffEqJump
+const DJ = JumpProcesses
 
 # test data
 minpriority = 2.0^exponent(1e-12)

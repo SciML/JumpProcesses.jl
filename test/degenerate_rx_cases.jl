@@ -3,7 +3,7 @@
 # tests zeroth order mass action reactions and passing just one mass action reaction
 # tests FW and tuple based mix of mass action jump / constant jump
 
-using DiffEqBase, DiffEqJump
+using DiffEqBase, JumpProcesses
 using Test
 using StableRNGs
 rng = StableRNG(12345)

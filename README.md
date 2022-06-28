@@ -18,10 +18,13 @@ and one of the core solver libraries included in
 [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
 
 The documentation includes
-- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/latest/discrete_stochastic_example/),
-- [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/latest/jump_diffusion/),
-- [a reference on the types of jumps and available simulation methods](https://jump.sciml.ai/latest/jump_types/),
-- [a FAQ](https://jump.sciml.ai/latest/faq) with information on changing parameters between simulations and using callbacks.
+- [a tutorial on simulating basic Poisson processes](https://jump.sciml.ai/stable/tutorials/simple_poisson_process/)
+- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/),
+- [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/stable/tutorials/jump_diffusion/),
+- [a reference on the types of jumps and available simulation methods](https://jump.sciml.ai/stable/jump_types/),
+- [a reference on jump time stepping methods](https://jump.sciml.ai/stable/jump_solve/),
+- [a FAQ](https://jump.sciml.ai/stable/faq) with information on changing parameters between simulations and using callbacks,
+- [the DiffEqJump.jl API documentation](https://jump.sciml.ai/stable/api/).
 
 ## Installation
 There are two ways to install `DiffEqJump.jl`. First, users may install the meta
@@ -48,7 +51,7 @@ Pkg.add("DiffEqJump")
 ### Stochastic Chemical Kinetics SIR Model
 Here we consider the stochastic chemical kinetics jump process model for the
 basic SIR model, involving three species, $(S,I,R)$, that can undergo the
-reactions $S + I \to 2I$ and $I \to R$.
+reactions $S + I \to 2I$ and $I \to R$ (each represented as a jump process)
 ```julia
 using DiffEqJump, Plots
 

@@ -377,7 +377,6 @@ explicitly or implicitly on a continuously changing quantity, you need to use a
 [`VariableRateJump`](@ref).
 
 ## SSAStepper
-
 Any common interface algorithm can be used to perform the time-stepping since it
 is implemented over the callback interface. This allows for hybrid systems that
 mix ODEs, SDEs and jumps. In many cases we may have a pure jump system that only
@@ -405,8 +404,9 @@ jump. If we do not want to save at every jump, we would thus pass:
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; save_positions = (false, false))
 ```
 Now the saving controls associated with the integrator should specified, see the
-main [SciML Docs](https://diffeq.sciml.ai/stable/basics/common_solver_opts/) for
-saving options. For example, we can use `saveat = 10.0` to save at an evenly
+main [SciML
+Docs](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/common_solver_opts/)
+for saving options. For example, we can use `saveat = 10.0` to save at an evenly
 spaced grid:
 ```@example tut2
 sol = solve(jump_prob, SSAStepper(); saveat = 10.0)

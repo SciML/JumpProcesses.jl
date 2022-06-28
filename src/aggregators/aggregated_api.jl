@@ -9,7 +9,6 @@ Notes
       MassActionJump that was built from the parameter vector. If the parameter
       vector is unchanged this can safely be set to false to improve performance.
 """
-
 function reset_aggregated_jumps!(integrator, uprev = nothing; update_jump_params = true,
                                  kwargs...)
     reset_aggregated_jumps!(integrator, uprev, integrator.opts.callback,

@@ -7,6 +7,7 @@ CurrentModule = DiffEqJump
 ```@docs
 JumpProblem
 SSAStepper
+reset_aggregated_jumps!
 ```
 
 ## Types of Jumps
@@ -29,7 +30,6 @@ RDirect
 RSSA
 RSSACR
 SortingDirect
-reset_aggregated_jumps!
 ```
 
 # Private API Functions

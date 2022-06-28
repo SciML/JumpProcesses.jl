@@ -184,7 +184,7 @@ people, and solve the problem from `t=0.0` to `t=250.0`. We use the parameters
 
 ```@example tut2
 p     = (:β => 0.1/1000, :ν => 0.01)
-u₀    = [:S => 999, :I => 1, :R => 0]
+u₀    = [:S => 999, :I => 10, :R => 0]
 tspan = (0.0, 250.0)
 prob  = DiscreteProblem(sir_model, u₀, tspan, p)
 ```
@@ -301,7 +301,7 @@ jump2 = ConstantRateJump(rate2,affect2!)
 We will start with `999` susceptible people, `1` infected person, and `0`
 recovered people, and solve the problem from `t=0.0` to `t=250.0` so that
 ```@example tut2
-u₀    = [999, 1, 0]
+u₀    = [999, 10, 0]
 tspan = (0.0, 250.0)
 ```
 *Notice, the initial populations are integers since we want the exact number of
@@ -538,7 +538,7 @@ function f(du, u, p, t)
   du[4] = u[2]*u[3]/100000 - u[1]*u[4]/100000
   nothing
 end
-u₀   = [999.0, 1.0, 0.0, 100.0]
+u₀   = [999.0, 10.0, 0.0, 100.0]
 prob = ODEProblem(f, u₀, tspan, p)
 ```
 Notice we gave the 4th component a starting value of 100.0, and used floating
@@ -570,7 +570,7 @@ is not constant between jumps, *we must use a `VariableRateJump`*.
 
 Solving the equation is exactly the same:
 ```@example tut2
-u₀   = [999.0, 1.0, 0.0, 1.0]
+u₀   = [999.0, 10.0, 0.0, 1.0]
 prob = ODEProblem(f, u₀, tspan, p)
 jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump3)
 sol = solve(jump_prob, Tsit5())

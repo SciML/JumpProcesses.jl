@@ -22,6 +22,11 @@ using Pkg
 Pkg.add("DiffEqJump")
 Pkg.add("Plots)
 ```
+Let's also load our packages and set some defaults for our plot formatting
+```@example tut1
+using DiffEqJump, Plots
+default(; lw = 2)
+```
 
 ## `ConstantRateJump`s
 Our first example will be to simulate a simple Poission counting process,
@@ -79,7 +84,7 @@ integrator](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/),
 and directly modify the current solution value it stores. i.e. `integrator.u` is
 the current solution vector, with `integrator.u[1]` the first component of this
 vector. In our case we will only have one unknown, so this will be the current
-value of the counting process. As our jump process' transition rate is constant
+value of the counting process. As our jump process's transition rate is constant
 between jumps, we can use a [`ConstantRateJump`](@ref) to encode it
 ```@example tut1
 crj = ConstantRateJump(rate, affect!)
@@ -116,7 +121,7 @@ Carlo in the physics literature)
 # jump times and events, and that our jump is encoded by crj
 jprob = JumpProblem(dprob, Direct(), crj)
 ```
-We are finally ready to simulate one realization of our jump process. Here we
+We are finally ready to simulate one realization of our jump process
 ```@example tut1
 # now we simulate the jump process in time, using the SSAStepper time-stepper
 sol = solve(jprob, SSAStepper())
@@ -164,8 +169,8 @@ a special type of [`ConstantRateJump`](@ref)s that require a more specialized
 form of transition rate and state update, but can offer better computational
 performance. They can encode any mass action reaction, as commonly arise in
 chemical and population process models, and essentially require that
-`rate(u,p,t)` be a monomial in the components of `u` and state changes to be
-given by adding or substrating a constant vector from `u`.
+`rate(u,p,t)` be a monomial in the components of `u` and state changes be given
+by adding or subtracting a constant vector from `u`.
 
 ## `VariableRateJump`s for processes that are not constant between jumps
 So far we have assumed that our jump processes have transition rates that are
@@ -179,7 +184,7 @@ previous example, but now let the birth rate be time dependent, ``b(t) = \lambda
 ```math
 \begin{align*}
 N(t) &= Y_b\left(\int_0^t \left( \lambda \sin\left(\tfrac{\pi s}{2}\right) + 1 \right) \, d s\right) - Y_d \left(\int_0^t \mu N(s^-) \, ds \right), \\
-D(t) &= Y_d \left(\int_0^t \mu N(s^-) \, ds \right),
+D(t) &= Y_d \left(\int_0^t \mu N(s^-) \, ds \right).
 \end{align*}
 ```
 
@@ -219,14 +224,17 @@ and then load it via
 using OrdinaryDiffEq
 # or using DifferentialEquations
 ```
-We can then construct our ODE problem with a trivial ODE derivative component
+We can then construct our ODE problem with a trivial ODE derivative component.
+Note, to work with the ODE solver time stepper we must change our initial
+condition to be floating point valued
 ```@example tut1
 function f!(du, u, p, t)
     du .= 0
     nothing
 end
+u₀ = [0.0, 0.0]
 oprob = ODEProblem(f!, u₀, tspan, p)
-jprob = JumpProblem(oprob, Direct(), crj, deathcrj)
+jprob = JumpProblem(oprob, Direct(), vrj, deathvrj)
 ```
 We simulate our jump process, using the `Tsit5` ODE solver as the time stepper in
 place of `SSAStepper`

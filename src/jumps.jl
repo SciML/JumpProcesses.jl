@@ -15,10 +15,19 @@ $(FIELDS)
 Suppose `u[1]` gives the amount of particles and `p[1]` the probability per time
 each particle can decay away. A corresponding `ConstantRateJump` for this jump
 process is
-```julia
+```jldoctest; output = false
+using DiffEqJump
+
 rate(u,p,t) = p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
+
 crj = ConstantRateJump(rate, affect!)
+
+crj isa ConstantRateJump
+
+# output
+
+true
 ```
 Notice, here that `rate` changes in time, but is constant between the occurrence
 of jumps (when `u[1]` will decrease).
@@ -47,10 +56,18 @@ $(FIELDS)
 Suppose `u[1]` gives the amount of particles and `t*p[1]` the probability per
 time each particle can decay away. A corresponding `VariableRateJump` for this
 jump process is
-```julia
+```jldoctest; output = false
+using DiffEqJump
+
 rate(u,p,t) = t*p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
+
 crj = VariableRateJump(rate, affect!)
+
+crj isa VariableRateJump
+# output
+
+true
 ```
 
 ## Notes
@@ -91,6 +108,59 @@ function VariableRateJump(rate, affect!;
                      save_positions, abstol, reltol)
 end
 
+"""
+$(TYPEDEF)
+
+Defines a jump process that pools together all of the jumps the user's model.
+In this process, the rate is a vector equation that computes the rates of each 
+jump process together:
+- [Tutorial](https://diffeq.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+
+## Fields
+
+$(FIELDS)
+
+## Examples
+The `rate` function computes the rates for each jump process while `c` computes 
+total change matrix of all species in the system. Note that each columns of `regular_c`
+represent a different jump process. 
+
+```jldoctest; output = false
+using DiffEqJump
+using StableRNGs
+using LinearAlgebra
+rng = StableRNG(12345)
+
+function regular_rate(out, u, p, t)
+  out[1] = (0.1 / 1000.0) * u[1] * u[2]
+  out[2] = 0.01u[2]
+end
+
+function regular_c(du, u, p, t, counts, mark)
+    mul!(du, dc, counts)
+end
+
+dc = zeros(3, 2)
+rj = RegularJump(regular_rate, regular_c, 2)
+
+rj isa RegularJump
+
+# output
+
+true
+```
+
+Further, `RegularJump` problems require special solvers, such as
+`SimpleTauLeaping`. For example:
+
+```julia
+jumps = JumpSet(rj)
+prob = DiscreteProblem([999, 1, 0], (0.0, 250.0))
+jump_prob = JumpProblem(prob, Direct(), rj; rng = rng)
+sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
+```
+
+"""
 struct RegularJump{iip, R, C, MD}
     rate::R
     c::C
@@ -152,7 +222,9 @@ See the tutorial and main docs for details.
 ## Examples
 An SIR model with `S + I --> 2I` at rate β as the first reaction and `I --> R`
 at rate ν as the second reaction can be encoded by
-```julia
+```jldoctest; output = false
+using DiffEqJump
+
 p        = (β=1e-4, ν=.01)
 u0       = [999, 1, 0]       # (S,I,R)
 tspan    = (0.0, 250.0)
@@ -170,6 +242,11 @@ net_stoich =
 maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=rateidxs)
 prob = DiscreteProblem(u0, tspan, p)
 jprob = JumpProblem(prob, Direct(), maj)
+
+maj isa MassActionJump
+# output
+
+true
 ```
 
 ## Notes

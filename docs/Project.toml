@@ -1,3 +1,5 @@
 [deps]
 DiffEqJump = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"

@@ -5,11 +5,12 @@ include("pages.jl")
 makedocs(sitename = "DiffEqJump.jl",
          authors = "Chris Rackauckas",
          modules = [DiffEqJump],
-         clean = true, doctest = false,
+         clean = true, doctest = true,
          format = Documenter.HTML(analytics = "UA-90474609-3",
                                   assets = ["assets/favicon.ico"],
                                   canonical = "https://diffeqjump.sciml.ai/stable/"),
-         pages = pages)
+         pages = pages,
+         strict = false)
 
 deploydocs(repo = "github.com/SciML/DiffEqJump.jl.git";
            push_preview = true)

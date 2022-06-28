@@ -1,11 +1,13 @@
 # DiffEqJump.jl
 
-[![Join the chat at https://gitter.im/JuliaDiffEq/Lobby](https://badges.gitter.im/JuliaDiffEq/Lobby.svg)](https://gitter.im/JuliaDiffEq/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
 [![Build Status](https://github.com/SciML/DiffEqJump.jl/workflows/CI/badge.svg)](https://github.com/SciML/DiffEqJump.jl/actions?query=workflow%3ACI)
 [![Coverage Status](https://coveralls.io/repos/github/SciML/DiffEqJump.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/DiffEqJump.jl?branch=master)
 [![codecov.io](https://codecov.io/gh/SciML/DiffEqJump.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/DiffEqJump.jl)
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://jump.sciml.ai/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://jump.sciml.ai/dev/)
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+[![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 DiffEqJump.jl provides methods for simulating jump processes, known as
 stochastic simulation algorithms (SSAs), Doob's method, Gillespie methods, or

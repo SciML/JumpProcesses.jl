@@ -150,8 +150,11 @@ rj isa RegularJump
 true
 ```
 
-Further, `RegularJump` problems require special solvers, such as
-`SimpleTauLeaping`. For example:
+!!! note
+
+    `RegularJump` problems require special solvers, such as `SimpleTauLeaping`.
+    
+## Example
 
 ```julia
 jumps = JumpSet(rj)

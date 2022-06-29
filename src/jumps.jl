@@ -15,19 +15,26 @@ $(FIELDS)
 Suppose `u[1]` gives the amount of particles and `p[1]` the probability per time
 each particle can decay away. A corresponding `ConstantRateJump` for this jump
 process is
-```jldoctest; output = false
+```@example
 using DiffEqJump
 
-rate(u,p,t) = p[1]*u[1]
-affect!(integrator) = integrator.u[1] -= 1
+β = 0.1 / 1000.0
+ν = .01;
+p = (β, ν)
+rate1(u, p, t) = p[1] * u[1] * u[2]  # β*S*I
+function affect1!(integrator)
+  integrator.u[1] -= 1         # S -> S - 1
+  integrator.u[2] += 1         # I -> I + 1
+  nothing
+end
+jump = ConstantRateJump(rate1,affect1!)
 
-crj = ConstantRateJump(rate, affect!)
-
-crj isa ConstantRateJump
-
-# output
-
-true
+u₀    = [999, 10, 0]
+tspan = (0.0, 250.0)
+prob = DiscreteProblem(u₀, tspan, p)
+jump_prob = JumpProblem(prob, Direct(), jump)
+sol = solve(jump_prob, SSAStepper())
+div(1,0)
 ```
 Notice, here that `rate` changes in time, but is constant between the occurrence
 of jumps (when `u[1]` will decrease).
@@ -56,18 +63,15 @@ $(FIELDS)
 Suppose `u[1]` gives the amount of particles and `t*p[1]` the probability per
 time each particle can decay away. A corresponding `VariableRateJump` for this
 jump process is
-```jldoctest; output = false
-using DiffEqJump
 
+```@example; output = false
+using DiffEqJump
 rate(u,p,t) = t*p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
-
 crj = VariableRateJump(rate, affect!)
 
-crj isa VariableRateJump
-# output
-
-true
+# output 
+VariableRateJump{typeof(rate), typeof(affect!), Nothing, Float64, Int64}(rate, affect!, nothing, true, 10, (true, true), 1.0e-12, 0)
 ```
 
 ## Notes
@@ -125,43 +129,55 @@ The `rate` function computes the rates for each jump process while `c` computes
 total change matrix of all species in the system. Note that each columns of `regular_c`
 represent a different jump process. 
 
-```jldoctest; output = false
+```@example; output = false
 using DiffEqJump
-using StableRNGs
+using StochasticDiffEq
 using LinearAlgebra
-rng = StableRNG(12345)
 
-function regular_rate(out, u, p, t)
-  out[1] = (0.1 / 1000.0) * u[1] * u[2]
-  out[2] = 0.01u[2]
+tspan = (0.0, 250.0) 
+p     = (:β => 0.1/1000, :ν => 0.01)
+
+β = 0.1 / 1000.0
+ν = .01;
+p = (β, ν)
+
+function rate(out, u, p, t)
+    out[1] = p[1] * u[1] * u[2]   # β * S * I
+    out[2] = p[2] * u[2]          # ν * I
+    nothing
 end
 
-function regular_c(du, u, p, t, counts, mark)
-    mul!(du, dc, counts)
+c = zeros(3, 2)
+# S + I --> I
+c[1,1] = -1    # S -> S - 1
+c[2,1] = 1     # I -> I + 1
+
+# I --> R
+c[2,2] = -1    # I -> I - 1
+c[3,2] = 1     # R -> R + 1
+
+function change(du, u, p, t, counts, mark)
+  mul!(du, c, counts)
+  nothing
 end
 
-dc = zeros(3, 2)
-rj = RegularJump(regular_rate, regular_c, 2)
+rj = RegularJump(rate, change, 2)
 
-rj isa RegularJump
+u₀ = [1000.0, 50.0, 0.0]
+prob = DiscreteProblem(u₀, tspan, p)
+jump_prob = JumpProblem(prob, Direct(), rj)
 
-# output
+sol = solve(jump_prob, TauLeaping(); dt=.001)
 
-true
+1/0
 ```
 
 !!! note
 
     `RegularJump` problems require special solvers, such as `SimpleTauLeaping`.
     
-## Example
 
-```julia
-jumps = JumpSet(rj)
-prob = DiscreteProblem([999, 1, 0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, Direct(), rj; rng = rng)
-sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
-```
+
 
 """
 struct RegularJump{iip, R, C, MD}
@@ -619,3 +635,7 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     rates, affects!
 end
+
+```@meta
+DocTestFilters = nothing
+```

@@ -1,4 +1,4 @@
-# [Simple Poisson Processes in DiffEqJump] (@id poisson_proc_tutorial)
+# [Simple Poisson Processes in JumpProcesses] (@id poisson_proc_tutorial)
 
 In this tutorial we show how to simulate several Poisson jump processes, for
 several types of intensities and jump distributions. Readers interested
@@ -6,7 +6,7 @@ primarily in chemical or population process models, where several types of jumps
 may occur, can skip directly to the [second tutorial](@ref ssa_tutorial) for a
 tutorial covering similar material but focused on the SIR model.
 
-DiffEqJump allows the simulation of jump processes where the transition rate, i.e.
+JumpProcesses allows the simulation of jump processes where the transition rate, i.e.
 intensity or propensity, can be a function of the current solution, current
 parameters, and current time. Throughout this tutorial these are denoted by `u`,
 `p` and `t`. Likewise, when a jump occurs any
@@ -19,12 +19,12 @@ This tutorial requires several packages, which can be added if not already
 installed via
 ```julia
 using Pkg
-Pkg.add("DiffEqJump")
+Pkg.add("JumpProcesses")
 Pkg.add("Plots)
 ```
 Let's also load our packages and set some defaults for our plot formatting
 ```@example tut1
-using DiffEqJump, Plots
+using JumpProcesses, Plots
 default(; lw = 2)
 ```
 
@@ -44,7 +44,7 @@ In the remainder of this tutorial we will use
 *transition rate*, *rate*, *propensity*, and *intensity* interchangeably. Here
 is the full program listing we will subsequently explain line by line
 ```julia
-using DiffEqJump, Plots
+using JumpProcesses, Plots
 
 rate(u,p,t) = p.λ
 affect!(integrator) = (integrator.u[1] += 1)
@@ -61,10 +61,10 @@ sol = solve(jprob, SSAStepper())
 plot(sol, label="N(t)", xlabel="t", legend=:bottomright)
 ```
 
-We can define and simulate our jump process using DiffEqJump. We first load our
+We can define and simulate our jump process using JumpProcesses. We first load our
 packages
 ```@example tut1
-using DiffEqJump, Plots
+using JumpProcesses, Plots
 ```
 To specify our jump process we need to define two functions. One that given the
 current state of the system, `u`, the parameters, `p`, and the time, `t`, can
@@ -175,7 +175,7 @@ by adding or subtracting a constant vector from `u`.
 ## `VariableRateJump`s for processes that are not constant between jumps
 So far we have assumed that our jump processes have transition rates that are
 constant in between jumps. In many applications this may be a limiting
-assumption. To support such models DiffEqJump has the [`VariableRateJump`](@ref)
+assumption. To support such models JumpProcesses has the [`VariableRateJump`](@ref)
 type, which represents jump processes that have an arbitrary time dependence in
 the calculation of the transition rate, including transition rates that depend
 on states which can change in between `ConstantRateJump`s. Let's consider the
@@ -252,13 +252,13 @@ with ``N(t)`` a Poisson counting process with constant transition rate
 ``\lambda``, and the ``C_i`` independent and identical samples from a uniform
 distribution over ``\{-1,1\}``. We can simulate such a process as follows.
 
-We first ensure that we use the same random number generator as DiffEqJump. We
+We first ensure that we use the same random number generator as JumpProcesses. We
 can either pass one as an input to [`JumpProblem`](@ref) via the `rng` keyword
 argument, and make sure it is the same one we use in our `affect!` function, or
-we can just use the default generator chosen by DiffEqJump if one is not
-specified, `DiffEqJump.DEFAULT_RNG`. Let's do the latter
+we can just use the default generator chosen by JumpProcesses if one is not
+specified, `JumpProcesses.DEFAULT_RNG`. Let's do the latter
 ```@example tut1
-rng = DiffEqJump.DEFAULT_RNG
+rng = JumpProcesses.DEFAULT_RNG
 ```
 Let's assume `u[1]` is ``N(t)`` and `u[2]` is ``G(t)``. We now proceed as in the
 previous examples

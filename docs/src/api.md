@@ -1,6 +1,6 @@
-# DiffEqJump.jl API
+# JumpProcesses.jl API
 ```@meta
-CurrentModule = DiffEqJump
+CurrentModule = JumpProcesses
 ```
 
 ## Core Types

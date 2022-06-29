@@ -358,7 +358,7 @@ $(FIELDS)
 Here we construct two jumps, store them in a `JumpSet`, and then simulate the resulting
 process.
 ```julia
-using DiffEqJump, OrdinaryDiffEq
+using JumpProcesses, OrdinaryDiffEq
 
 rate1(u,p,t) = p[1]
 affect1!(integrator) = (integrator.u[1] += 1)

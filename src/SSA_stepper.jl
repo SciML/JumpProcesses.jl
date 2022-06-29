@@ -12,7 +12,7 @@ Highly efficient integrator for pure jump problems that involve only
 ## Examples
 SIR model:
 ```julia
-using DiffEqJump
+using JumpProcesses
 β = 0.1 / 1000.0; ν = .01;
 p = (β,ν)
 rate1(u,p,t) = p[1]*u[1]*u[2]  # β*S*I

@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, OrdinaryDiffEq
+using JumpProcesses, DiffEqBase, OrdinaryDiffEq
 using Test
 using StableRNGs
 rng = StableRNG(12345)

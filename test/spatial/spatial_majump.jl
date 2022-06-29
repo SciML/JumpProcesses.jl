@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, OrdinaryDiffEq
+using JumpProcesses, DiffEqBase, OrdinaryDiffEq
 using Test, Graphs, LinearAlgebra
 
 reltol = 0.05

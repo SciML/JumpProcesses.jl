@@ -1,37 +1,39 @@
-# DiffEqJump.jl
+# JumpProcesses.jl
 
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
-[![Build Status](https://github.com/SciML/DiffEqJump.jl/workflows/CI/badge.svg)](https://github.com/SciML/DiffEqJump.jl/actions?query=workflow%3ACI)
-[![Coverage Status](https://coveralls.io/repos/github/SciML/DiffEqJump.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/DiffEqJump.jl?branch=master)
-[![codecov.io](https://codecov.io/gh/SciML/DiffEqJump.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/DiffEqJump.jl)
+[![Build Status](https://github.com/SciML/JumpProcesses.jl/workflows/CI/badge.svg)](https://github.com/SciML/JumpProcesses.jl/actions?query=workflow%3ACI)
+[![Coverage Status](https://coveralls.io/repos/github/SciML/JumpProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/JumpProcesses.jl?branch=master)
+[![codecov.io](https://codecov.io/gh/SciML/JumpProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/JumpProcesses.jl)
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://jump.sciml.ai/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://jump.sciml.ai/dev/)
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
-DiffEqJump.jl provides methods for simulating jump processes, known as
+*Note, JumpProcesses.jl is a renaming of DiffEqJump.jl, providing the current version of the latter.*
+
+JumpProcesses.jl provides methods for simulating jump processes, known as
 stochastic simulation algorithms (SSAs), Doob's method, Gillespie methods, or
 Kinetic Monte Carlo methods across different fields of science. It also enables the
 incorporation of jump processes into hybrid jump-ODE and jump-SDE models,
 including jump diffusions.
 
-DiffEqJump is a component package in the [SciML](https://sciml.ai/) ecosystem,
+JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
 and one of the core solver libraries included in
 [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
 
 The documentation includes
 - [a tutorial on simulating basic Poisson processes](https://jump.sciml.ai/stable/tutorials/simple_poisson_process/)
-- [a tutorial and details on using DiffEqJump to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/),
+- [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/),
 - [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/stable/tutorials/jump_diffusion/),
 - [a reference on the types of jumps and available simulation methods](https://jump.sciml.ai/stable/jump_types/),
 - [a reference on jump time stepping methods](https://jump.sciml.ai/stable/jump_solve/),
 - [a FAQ](https://jump.sciml.ai/stable/faq) with information on changing parameters between simulations and using callbacks,
-- [the DiffEqJump.jl API documentation](https://jump.sciml.ai/stable/api/).
+- [the JumpProcesses.jl API documentation](https://jump.sciml.ai/stable/api/).
 
 ## Installation
-There are two ways to install `DiffEqJump.jl`. First, users may install the meta
+There are two ways to install `JumpProcesses.jl`. First, users may install the meta
 `DifferentialEquations.jl` package, which installs and wraps `OrdinaryDiffEq.jl`
-for solving ODEs, `StochasticDiffEq.jl` for solving SDEs, and `DiffEqJump.jl`,
+for solving ODEs, `StochasticDiffEq.jl` for solving SDEs, and `JumpProcesses.jl`,
 along with a number of other useful packages for solving models involving ODEs,
 SDEs and/or jump process. This single install will provide the user with all of
 the facilities for developing and solving Jump problems.
@@ -40,12 +42,12 @@ To install the `DifferentialEquations.jl` package, refer to the following link
 for complete [installation
 details](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
 
-If the user wishes to separately install the `DiffEqJump.jl` library, which is a
+If the user wishes to separately install the `JumpProcesses.jl` library, which is a
 lighter dependency than `DifferentialEquations.jl`, then the following code will
-install `DiffEqJump.jl` using the Julia package manager:
+install `JumpProcesses.jl` using the Julia package manager:
 ```julia
 using Pkg
-Pkg.add("DiffEqJump")
+Pkg.add("JumpProcesses")
 ```
 
 ## Examples
@@ -55,7 +57,7 @@ Here we consider the stochastic chemical kinetics jump process model for the
 basic SIR model, involving three species, $(S,I,R)$, that can undergo the
 reactions $S + I \to 2I$ and $I \to R$ (each represented as a jump process)
 ```julia
-using DiffEqJump, Plots
+using JumpProcesses, Plots
 
 # here we order S = 1, I = 2, and R = 3
 # substrate stoichiometry:

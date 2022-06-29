@@ -1,4 +1,4 @@
-using DiffEqBase, DiffEqJump, StaticArrays
+using DiffEqBase, JumpProcesses, StaticArrays
 using Test
 using StableRNGs
 rng = StableRNG(12345)
@@ -17,7 +17,7 @@ dg = [[1]]
 majump = MassActionJump(rates, reactstoch, netstoch)
 u0 = [100000]
 dprob = DiscreteProblem(u0, (0.0, 1e5), rates)
-algs = DiffEqJump.JUMP_AGGREGATORS
+algs = JumpProcesses.JUMP_AGGREGATORS
 
 for n in 1:Nsims
     for ssa in algs

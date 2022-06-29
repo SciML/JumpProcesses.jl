@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase
+using JumpProcesses, DiffEqBase
 # using BenchmarkTools
 using Test, Graphs
 

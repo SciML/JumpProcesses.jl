@@ -1,4 +1,4 @@
-module DiffEqJump
+module JumpProcesses
 
 using Reexport
 @reexport using DiffEqBase

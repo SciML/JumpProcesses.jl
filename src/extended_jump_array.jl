@@ -12,7 +12,7 @@ $(FIELDS)
 
 ## Examples
 ```julia
-using DiffEqJump, OrdinaryDiffEq
+using JumpProcesses, OrdinaryDiffEq
 f(du,u,p,t) = du .= 0
 rate(u,p,t) = (1+t)*u[1]*u[2]
 

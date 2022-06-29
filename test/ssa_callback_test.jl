@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, DiffEqCallbacks
+using JumpProcesses, DiffEqBase, DiffEqCallbacks
 using Test
 using StableRNGs
 rng = StableRNG(12345)
@@ -117,7 +117,7 @@ jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng 
                     scale_rates = false)
 @test all(jprob.massaction_jump.scaled_rates .== [1.0])
 
-# test for https://github.com/SciML/DiffEqJump.jl/issues/239
+# test for https://github.com/SciML/JumpProcesses.jl/issues/239
 maj6 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
                       param_idxs = [1, 2])
 p = (0.1, 0.1)

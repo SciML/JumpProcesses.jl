@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase, SafeTestsets
+using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
     @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end

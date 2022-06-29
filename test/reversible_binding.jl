@@ -1,4 +1,4 @@
-using DiffEqJump, DiffEqBase
+using JumpProcesses, DiffEqBase
 using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)
@@ -45,7 +45,7 @@ function mastereqmean(u, rates)
 end
 mastereq_mean = mastereqmean(u0, rates)
 
-algs = DiffEqJump.JUMP_AGGREGATORS
+algs = JumpProcesses.JUMP_AGGREGATORS
 relative_tolerance = 0.01
 for alg in algs
     local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false),

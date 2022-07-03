@@ -188,11 +188,24 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     else
         disc = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
                          save_positions, rng; spatial_system = spatial_system,
-                         hopping_constants = hopping_constants, kwargs...)
+                         hopping_constants = hopping_constants, 
+                         bounded_va_jumps = Tuple{}(), kwargs...)
         constant_jump_callback = DiscreteCallback(disc)
     end
 
     iip = isinplace_jump(prob, jumps.regular_jump)
+
+    # Ficticious rate handling.
+    if !is_ficticious(aggregator) 
+      unbnd_var_jumps = jumps.variable_jumps
+    else
+      bounded_va_jumps, unbnd_var_jumps = split_variable_jumps(jumps.variable_jumps)
+      disc = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
+                       save_positions, rng; spatial_system = spatial_system, 
+                       hopping_constants = hopping_constants, 
+                       bounded_va_jumps=bounded_va_jumps, kwargs...)
+      constant_jump_callback = DiscreteCallback(disc)
+    end
 
     ## Variable Rate Handling
     if typeof(jumps.variable_jumps) <: Tuple{}
@@ -206,11 +219,11 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     callbacks = CallbackSet(constant_jump_callback, variable_jump_callback)
 
     JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(callbacks),
-                typeof(disc), typeof(jumps.variable_jumps),
+                typeof(disc), typeof(unbnd_var_jumps),
                 typeof(jumps.regular_jump), typeof(maj), typeof(rng)}(new_prob, aggregator,
                                                                       disc,
                                                                       callbacks,
-                                                                      jumps.variable_jumps,
+                                                                      unbnd_var_jumps,
                                                                       jumps.regular_jump,
                                                                       maj, rng)
 end
@@ -359,3 +372,4 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
 end
 
 TreeViews.hastreeview(x::JumpProblem) = true
+

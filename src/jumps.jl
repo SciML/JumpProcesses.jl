@@ -67,11 +67,15 @@ crj = VariableRateJump(rate, affect!)
   (5), DOI:10.1063/1.1835951 is used for calculating jump times with
   `VariableRateJump`s within ODE/SDE integrators.
 """
-struct VariableRateJump{R, F, I, T, T2} <: AbstractJump
+struct VariableRateJump{R1,F,R2,R3,I,T,T2} <: AbstractJump
     """Function `rate(u,p,t)` that returns the jump's current rate."""
-    rate::R
+    rate::R1
     """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
     affect!::F
+    rbnd::R2
+    """Function `rwnd(u,p,t)` that returns the time window length t* for which the
+    rate bound rbnd(u,p,t) is valid. Used for ficticious jump methods."""
+    rwnd::R3
     idxs::I
     rootfind::Bool
     interp_points::Int
@@ -83,10 +87,12 @@ end
 function VariableRateJump(rate, affect!;
                           idxs = nothing,
                           rootfind = true,
+                          rbnd=nothing,
+                          rwnd=nothing,
                           save_positions = (true, true),
                           interp_points = 10,
                           abstol = 1e-12, reltol = 0)
-    VariableRateJump(rate, affect!, idxs,
+    VariableRateJump(rate, affect!, rbnd, rwnd, idxs,
                      rootfind, interp_points,
                      save_positions, abstol, reltol)
 end
@@ -576,4 +582,25 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
     end
 
     rates, affects!
+end
+
+##### helpers for splitting variable rate jumps with rate bounds and without #####
+
+function split_variable_jumps(variable_jumps)
+  condition(v) = v.rbnd !== nothing
+  return filter(v -> condition(v), variable_jumps), filter(v -> !condition(v), variable_jumps)
+end
+
+function get_va_jump_bound_info_fwrapper(u,p,t,jumps)
+  RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
+
+  if (jumps !== nothing) && !isempty(jumps)
+    rates    = [j isa VariableRateJump ? RateWrapper(j.rbnd) : RateWrapper(j.rate) for j in jumps]
+    wnds    = [j isa VariableRateJump ? RateWrapper(j.rwnd) : RateWrapper((u,p,t) -> Inf) for j in jumps]
+  else
+    rates    = Vector{RateWrapper}()
+    wnds = Vector{RateWrapper}()
+  end
+
+  rates, wnds
 end

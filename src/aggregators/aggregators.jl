@@ -144,8 +144,18 @@ doi: 10.1063/1.4928635
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
+"""
+The Extrande method for simulating variable rate jumps with user-defined bounds
+on jumps rates and validity intervals via rejection.
+
+Stochastic Simulation of Biomolecular Networks in Dynamic Environments, Voliotis
+M, Thomas P, Grima R, Bowsher CG, PLOS Computational Biology 12(6): e1004923.
+(2016); doi.org/10.1371/journal.pcbi.1004923
+"""
+struct Extrande <: AbstractAggregatorAlgorithm end
+
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect())
+                          FRMFW(), NRM(), RSSACR(), RDirect(), Extrande())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -167,3 +177,6 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
+
+is_ficticious(aggregator::AbstractAggregatorAlgorithm) = false
+is_ficticious(aggregator::Extrande) = true

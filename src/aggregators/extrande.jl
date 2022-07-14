@@ -92,8 +92,8 @@ end
         nextrx = length(p.rates)
         idx = get_num_majumps(p.ma_jumps) + 1
         prop_ttnj = randexp(p.rng) / Bmax
-        if prop_ttnj < t + Wmin
-            fill_cur_rates(u, params, t, p.cur_rates, idx, p.rates...)
+        if prop_ttnj < Wmin
+            fill_cur_rates(u, params, prop_ttnj + t, p.cur_rates, idx, p.rates...)
 
             prev_rate = zero(t)
             cur_rates = p.cur_rates

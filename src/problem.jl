@@ -208,13 +208,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     end
 
     ## Variable Rate Handling
-    if typeof(jumps.variable_jumps) <: Tuple{}
+    if typeof(unbnd_var_jumps) <: Tuple{}
         new_prob = prob
         variable_jump_callback = CallbackSet()
     else
         new_prob = extend_problem(prob, jumps; rng = rng)
         variable_jump_callback = build_variable_callback(CallbackSet(), 0,
-                                                         jumps.variable_jumps...; rng = rng)
+                                                         unbnd_var_jumps...; rng = rng)
     end
     callbacks = CallbackSet(constant_jump_callback, variable_jump_callback)
 

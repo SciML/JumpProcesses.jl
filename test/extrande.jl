@@ -7,7 +7,6 @@ affect! = (integrator) -> (integrator.u[1] = integrator.u[1]+1)
 rbound = (u,p,t) -> (t + 0.1)
 rwindow = (u,p,t) -> 0.1
 jump = VariableRateJump(rate,affect!,interp_points=1000,rbnd=rbound,rwnd=rwindow)
-jump2 = deepcopy(jump)
 
 f = function (du,u,p,t)
   du[1] = 0.0 
@@ -21,7 +20,7 @@ sol = solve(jump_prob,Tsit5())
 
 rate2 = (u,p,t) -> t < 5.0 ? 1.0 : 0.0
 rbound2 = (u,p,t) -> 1.0 
-jump3 = VariableRateJump(rate2,affect2!,interp_points=1000;rbnd=rbound2)
+jump3 = VariableRateJump(rate2,affect!,interp_points=1000;rbnd=rbound2)
 
 prob2 = ODEProblem(f,[0.0],(0.0,10.0))
 jump_prob2 = JumpProblem(prob2,Extrande(),jump3; rng=rng)

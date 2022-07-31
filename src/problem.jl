@@ -112,7 +112,8 @@ function DiffEqBase.remake(thing::JumpProblem; kwargs...)
     end
 
     T(dprob, thing.aggregator, thing.discrete_jump_aggregation, thing.jump_callback,
-      thing.variable_jumps, thing.regular_jump, thing.massaction_jump, thing.rng)
+      thing.variable_jumps, thing.regular_jump, thing.massaction_jump, thing.rng,
+      thing.kwargs)
 end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip

@@ -80,7 +80,7 @@ end
 function JumpProblem(p::P, a::A, dj::J, jc::C, vj::J2, rj::J3, mj::J4,
                      rng::R, kwargs::K) where {P, A, J, C, J2, J3, J4, R, K}
     iip = isinplace_jump(p, rj)
-    JumpProblem{iip, P, A, C, J, J2, J3, J4, R}(p, a, dj, jc, vj, rj, mj, rng, kwargs)
+    JumpProblem{iip, P, A, C, J, J2, J3, J4, R, K}(p, a, dj, jc, vj, rj, mj, rng, kwargs)
 end
 
 # for remaking

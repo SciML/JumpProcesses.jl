@@ -57,7 +57,7 @@ DifferentialEquations.jl [docs](https://jump.sciml.ai/stable/) for usage example
 commonly asked questions.
 """
 mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J2,
-                           J3, J4, R} <: DiffEqBase.AbstractJumpProblem{P, J}
+                           J3, J4, R, K} <: DiffEqBase.AbstractJumpProblem{P, J}
     """The type of problem to couple the jumps to. For a pure jump process use `DiscreteProblem`, to couple to ODEs, `ODEProblem`, etc."""
     prob::P
     """The aggregator algorithm that determines the next jump times and types for `ConstantRateJump`s and `MassActionJump`s. Examples include `Direct`."""
@@ -74,11 +74,13 @@ mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggrega
     massaction_jump::J4
     """The random number generator to use."""
     rng::R
+    """kwargs to pass on to solve call."""
+    kwargs::K
 end
 function JumpProblem(p::P, a::A, dj::J, jc::C, vj::J2, rj::J3, mj::J4,
-                     rng::R) where {P, A, J, C, J2, J3, J4, R}
+                     rng::R, kwargs::K) where {P, A, J, C, J2, J3, J4, R, K}
     iip = isinplace_jump(p, rj)
-    JumpProblem{iip, P, A, C, J, J2, J3, J4, R}(p, a, dj, jc, vj, rj, mj, rng)
+    JumpProblem{iip, P, A, C, J, J2, J3, J4, R, K}(p, a, dj, jc, vj, rj, mj, rng, kwargs)
 end
 
 # for remaking
@@ -110,7 +112,8 @@ function DiffEqBase.remake(thing::JumpProblem; kwargs...)
     end
 
     T(dprob, thing.aggregator, thing.discrete_jump_aggregation, thing.jump_callback,
-      thing.variable_jumps, thing.regular_jump, thing.massaction_jump, thing.rng)
+      thing.variable_jumps, thing.regular_jump, thing.massaction_jump, thing.rng,
+      thing.kwargs)
 end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
@@ -156,11 +159,14 @@ function JumpProblem(prob, jumps::JumpSet; kwargs...)
     JumpProblem(prob, NullAggregator(), jumps; kwargs...)
 end
 
+make_kwarg(; kwargs...) = kwargs
+
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
                      save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ?
                                       (false, true) : (true, true),
                      rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
-                     spatial_system = nothing, hopping_constants = nothing, kwargs...)
+                     spatial_system = nothing, hopping_constants = nothing,
+                     callback = nothing, kwargs...)
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -203,16 +209,17 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         variable_jump_callback = build_variable_callback(CallbackSet(), 0,
                                                          jumps.variable_jumps...; rng = rng)
     end
-    callbacks = CallbackSet(constant_jump_callback, variable_jump_callback)
+    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
 
-    JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(callbacks),
-                typeof(disc), typeof(jumps.variable_jumps),
-                typeof(jumps.regular_jump), typeof(maj), typeof(rng)}(new_prob, aggregator,
-                                                                      disc,
-                                                                      callbacks,
-                                                                      jumps.variable_jumps,
-                                                                      jumps.regular_jump,
-                                                                      maj, rng)
+    solkwargs = make_kwarg(; callback)
+    JumpProblem{iip, typeof(new_prob), typeof(aggregator),
+                typeof(jump_cbs), typeof(disc),
+                typeof(jumps.variable_jumps),
+                typeof(jumps.regular_jump),
+                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc,
+                                                             jump_cbs, jumps.variable_jumps,
+                                                             jumps.regular_jump, maj, rng,
+                                                             solkwargs)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)

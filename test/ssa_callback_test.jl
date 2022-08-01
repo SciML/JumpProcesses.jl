@@ -26,9 +26,14 @@ end
 cb = DiscreteCallback(condition, fuel_affect!, save_positions = (false, true))
 
 sol = solve(jump_prob, SSAStepper(), callback = cb, tstops = [5])
-
 @test sol.t[1:2] == [0.0, 5.0] # no jumps between t=0 and t=5
 @test sol(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
+
+# test can pass callbacks via JumpProblem
+jump_prob2 = JumpProblem(prob, Direct(), jump; rng = rng, callback = cb)
+sol2 = solve(jump_prob2, SSAStepper(), tstops = [5])
+@test sol2.t[1:2] == [0.0, 5.0] # no jumps between t=0 and t=5
+@test sol2(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
 
 # test that callback initializer/finalizer is called and add_tstop! works as expected
 random_tstops = rand(rng, 100) .* 10 # 100 random Float64 between 0.0 and 10.0

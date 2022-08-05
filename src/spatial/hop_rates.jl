@@ -248,7 +248,7 @@ end
 Analogue of HopRatesGraphDsij, optimized for CartesianGrid
 """
 struct HopRatesGridDsij{F} <: AbstractHopRates
-    "hop_const_cumulative_sums[:,s,i] is the vector of cumulative sums of hopping constants of species s at site i"
+    "hop_const_cumulative_sums[:,s,i] is the vector of cumulative sums of hopping constants of species s at site i. Out-of-bounds neighbors are treated as having zero propensity."
     hop_const_cumulative_sums::Array{F, 3}
 
     "rates[s,i] is the total hopping rate of species s at site i"

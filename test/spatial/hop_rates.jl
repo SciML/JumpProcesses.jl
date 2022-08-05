@@ -60,9 +60,8 @@ hop_constants = [1.0, 3.0] # species
 hop_rates = JP.HopRates(hop_constants, g)
 @test hop_rates isa JP.HopRatesGraphDs
 show(io, "text/plain", hop_rates)
-
 for site in 1:num_nodes
-    spec_propensities = hop_constants*JP.outdegree(g,site)
+    spec_propensities = hop_constants * JP.outdegree(g,site)
     target_propensities = Dict{Int, Float64}()
     for (i,target) in enumerate(JP.neighbors(g, site))
         target_propensities[target] = 1.0
@@ -76,9 +75,8 @@ hop_constants = [2. 1. 1. 1. 1. 1.; 6. 3. 3. 3. 3. 3.] # [species, site]
 hop_rates = JP.HopRates(hop_constants, g)
 @test hop_rates isa JP.HopRatesGraphDsi
 show(io, "text/plain", hop_rates)
-
 for site in 1:num_nodes
-    spec_propensities = hop_constants[:,site]*JP.outdegree(g,site)
+    spec_propensities = hop_constants[:,site] * JP.outdegree(g,site)
     target_propensities = Dict{Int, Float64}()
     for (i,target) in enumerate(JP.neighbors(g, site))
         target_propensities[target] = 1.0
@@ -96,7 +94,6 @@ hop_rates_structs = [
     JP.HopRates(hop_constants, g),
 ]
 @test hop_rates_structs[2] isa JP.HopRatesGridDsij
-
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
@@ -110,65 +107,46 @@ for hop_rates in hop_rates_structs
 end
 test_reset(hop_rates,num_nodes)
 
-#TODO finish the tests
 # Tests for HopRatesGraphDsLij
-species_hop_constants = ones(num_species)
-site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
-for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], JP.outdegree(g, site))
-end
-spec_probs = ones(num_species) / num_species
+species_hop_constants = [1., 3.] #species
+site_hop_constants = [[2., 4.], [1., 2., 4.], [1., 2.], [1., 2.], [1., 2., 4.], [1., 2.]] #[site][target_site]
 hop_rates_structs = [
     JP.HopRatesGraphDsLij(species_hop_constants, site_hop_constants),
-    JP.HopRatesGridDsLij(species_hop_constants, site_hop_constants, g),
+    JP.HopRates((species_hop_constants => site_hop_constants), g),
 ]
-
+@test hop_rates_structs[2] isa JP.HopRatesGridDsLij
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
-        JP.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-        num_nbs = JP.outdegree(g, site)
-        target_probs = ones(num_nbs) / num_nbs
-        spec_dict = Dict{Int, Int}()
-        site_dict = Dict{Int, Int}()
-        for i in 1:num_samples
-            spec, target = JP.sample_hop_at_site(hop_rates, site, rng, g)
-            spec_dict[spec] = get(spec_dict, spec, 0) + 1
-            site_dict[target] = get(site_dict, target, 0) + 1
+        spec_propensities = [species_hop_constants[species] * sum(site_hop_constants[site]) for species in 1:num_species]
+        target_propensities = Dict{Int, Float64}()
+        for (i,target) in enumerate(JP.neighbors(g, site))
+            target_propensities[target] = sum([species_hop_constants[species] * site_hop_constants[site][i] for species in 1:num_species])
         end
-        @test maximum(abs.(collect(values(spec_dict)) / num_samples - spec_probs)) < rel_tol
-        @test maximum(abs.(collect(values(site_dict)) / num_samples - target_probs)) < rel_tol
+        statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u, site, g, rng, rel_tol)
     end
 end
+test_reset(hop_rates,num_nodes)
 
 # Tests for HopRatesGraphDsiLij
-species_hop_constants = ones(num_species, num_nodes)
-site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
-for site in 1:num_nodes
-    site_hop_constants[site] = repeat([1.0], JP.outdegree(g, site))
-end
-spec_probs = ones(num_species) / num_species
+species_hop_constants = [2. 1. 1. 1. 1. 1.; 6. 3. 3. 3. 3. 3.] #[species, site]
+site_hop_constants = [[2., 4.], [1., 2., 4.], [1., 2.], [1., 2.], [1., 2., 4.], [1., 2.]] #[site][target_site]
 hop_rates_structs = [
     JP.HopRatesGraphDsiLij(species_hop_constants, site_hop_constants),
-    JP.HopRatesGridDsiLij(species_hop_constants, site_hop_constants, g),
+    JP.HopRates((species_hop_constants => site_hop_constants), g),
 ]
-
+@test hop_rates_structs[2] isa JP.HopRatesGridDsiLij
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
-        JP.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
-        num_nbs = JP.outdegree(g, site)
-        target_probs = ones(num_nbs) / num_nbs
-        spec_dict = Dict{Int, Int}()
-        site_dict = Dict{Int, Int}()
-        for i in 1:num_samples
-            spec, target = JP.sample_hop_at_site(hop_rates, site, rng, g)
-            spec_dict[spec] = get(spec_dict, spec, 0) + 1
-            site_dict[target] = get(site_dict, target, 0) + 1
+        spec_propensities = [species_hop_constants[species, site] * sum(site_hop_constants[site]) for species in 1:num_species]
+        target_propensities = Dict{Int, Float64}()
+        for (i,target) in enumerate(JP.neighbors(g, site))
+            target_propensities[target] = sum([species_hop_constants[species, site] * site_hop_constants[site][i] for species in 1:num_species])
         end
-        @test maximum(abs.(collect(values(spec_dict)) / num_samples - spec_probs)) < rel_tol
-        @test maximum(abs.(collect(values(site_dict)) / num_samples - target_probs)) < rel_tol
+        statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u, site, g, rng, rel_tol)
     end
 end
+test_reset(hop_rates,num_nodes)
 
 @test String(take!(io)) !== nothing

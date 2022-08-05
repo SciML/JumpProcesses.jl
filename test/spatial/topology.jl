@@ -1,5 +1,5 @@
 # Tests for topology.jl
-using JumpProcesses, Graphs, Test, Random
+using JumpProcesses, Graphs, Test, Random, StableRNGs
 const JP = JumpProcesses
 
 # Functions to test:
@@ -10,7 +10,7 @@ const JP = JumpProcesses
 # nth_nbr(grid, site, n)
 
 io = IOBuffer()
-rng = MersenneTwister()
+rng = StableRNG(12345)
 dims = (4, 3, 2)
 sites = 1:prod(dims)
 num_samples = 10^5

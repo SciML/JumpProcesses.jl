@@ -1,4 +1,4 @@
-using JumpProcesses, Graphs, Test, Random
+using JumpProcesses, Graphs, Test, Random, StableRNGs
 const JP = JumpProcesses
 
 # Functions to test
@@ -14,6 +14,7 @@ function test_reset(hop_rates,num_nodes)
         @test JP.total_site_hop_rate(hop_rates, site) == 0.0
     end
 end
+
 function normalized(distribution::Dict)
     d = copy(distribution)
     s = sum(values(d))
@@ -22,8 +23,8 @@ function normalized(distribution::Dict)
     end
     return d
 end
-normalized(distribution) = distribution/sum(distribution)
 
+normalized(distribution) = distribution/sum(distribution)
 
 function statistical_test(hop_rates, spec_propensities, target_propensities::Dict, num_species, u, site, g, rng, rel_tol)
     spec_probs = normalized(spec_propensities)
@@ -46,7 +47,7 @@ function statistical_test(hop_rates, spec_propensities, target_propensities::Dic
 end
 
 io = IOBuffer()
-rng = MersenneTwister()
+rng = StableRNG(12345)
 rel_tol = 0.05
 num_samples = 10^4
 dims = (3, 2)

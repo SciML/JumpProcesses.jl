@@ -1,4 +1,4 @@
-using JumpProcesses, Test, Random
+using JumpProcesses, Test, Random, StableRNGs
 const JP = JumpProcesses
 
 # Functions to test:
@@ -22,7 +22,7 @@ num_rxs = length(rates)
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 spatial_ma_jumps = SpatialMassActionJump(rates, reactstoch, netstoch)
 u = ones(Int, num_species, num_nodes)
-rng = MersenneTwister()
+rng = StableRNG(12345)
 
 # Tests for RxRates
 rx_rates_list = [JP.RxRates(num_nodes, ma_jumps), JP.RxRates(num_nodes, spatial_ma_jumps)]

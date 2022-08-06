@@ -21,9 +21,9 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
     @time @safetestset "Remake tests" begin include("remake_test.jl") end
     @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
-    @time @safetestset "Reaction rates" begin include("reaction_rates.jl") end
-    @time @safetestset "Hop rates" begin include("hop_rates.jl") end
-    @time @safetestset "Topology" begin include("topology.jl") end
+    @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
+    @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
+    @time @safetestset "Topology" begin include("spatial/topology.jl") end
     @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
     @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
     @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end

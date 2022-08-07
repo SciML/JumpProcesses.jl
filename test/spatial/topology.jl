@@ -30,7 +30,8 @@ for grid in grids
     @test JP.outdegree(grid, 21) == 3
     @test JP.outdegree(grid, 6) == 5
     for site in sites
-        @test [JP.nth_nbr(grid, site, n) for n in 1:outdegree(grid, site)] == collect(neighbors(grid,site))
+        @test [JP.nth_nbr(grid, site, n) for n in 1:outdegree(grid, site)] ==
+              collect(neighbors(grid, site))
         d = Dict{Int, Int}()
         for i in 1:num_samples
             nb = JP.rand_nbr(rng, grid, site)

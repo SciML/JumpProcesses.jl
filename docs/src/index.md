@@ -38,16 +38,16 @@ using Pkg
 Pkg.add("JumpProcesses")
 ```
 
-## Contributing
+## Contributing and Getting Help
 
 - Please refer to the
   [SciML ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://github.com/SciML/ColPrac/blob/master/README.md)
   for guidance on PRs, issues, and other matters relating to contributing to SciML.
 - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
-- There are a few community forums:
+- There are a few community forums for getting help and asking questions:
     - The #diffeq-bridged and #sciml-bridged channels in the
       [Julia Slack](https://julialang.org/slack/)
     - The #diffeq-bridged and #sciml-bridged channels in the
       [Julia Zulip](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
-    - On the [Julia Discourse forums](https://discourse.julialang.org)
-    - See also [SciML Community page](https://sciml.ai/community/)
+    - The [Julia Discourse forums](https://discourse.julialang.org)
+    - See also the [SciML Community page](https://sciml.ai/community/)

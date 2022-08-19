@@ -1,4 +1,4 @@
-# JumpProcesses.jl
+# JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions
 JumpProcesses.jl, formerly DiffEqJump.jl, provides methods for simulating jump
 processes, known as stochastic simulation algorithms (SSAs), Doob's method,
 Gillespie methods, or Kinetic Monte Carlo methods across different fields of
@@ -39,11 +39,15 @@ Pkg.add("JumpProcesses")
 ```
 
 ## Contributing
+
 - Please refer to the
   [SciML ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://github.com/SciML/ColPrac/blob/master/README.md)
   for guidance on PRs, issues, and other matters relating to contributing to SciML.
+- See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
 - There are a few community forums:
-    - the #diffeq-bridged and #sciml-bridged channels on the [Julia Slack](https://julialang.org/slack/)
-    - [JuliaDiffEq](https://gitter.im/JuliaDiffEq/Lobby) on Gitter
-    - the [Julia Discourse forums](https://discourse.julialang.org)
-See also the [SciML Community page](https://sciml.ai/community/).
+    - The #diffeq-bridged and #sciml-bridged channels in the
+      [Julia Slack](https://julialang.org/slack/)
+    - The #diffeq-bridged and #sciml-bridged channels in the
+      [Julia Zulip](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
+    - On the [Julia Discourse forums](https://discourse.julialang.org)
+    - See also [SciML Community page](https://sciml.ai/community/)

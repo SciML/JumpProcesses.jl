@@ -153,11 +153,11 @@ for ci in CartesianIndices(hopping_constants)
     hopping_constants[species, site] = zeros(outdegree(grid, site))
     for (n, nb) in enumerate(neighbors(grid, site))
         if nb < site
-            hopping_constants[species, site][n] = 1.0
+            hopping_constants[species, site][n] = 10.0
         end
     end
 end
-starting_state = 100 * ones(Int, length(u0), num_nodes)
+starting_state = 25 * ones(Int, length(u0), num_nodes)
 tspan = (0.0, 10.0)
 prob = DiscreteProblem(starting_state, tspan, [])
 

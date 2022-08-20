@@ -109,7 +109,7 @@ struct CartesianGridRej{N, T}
     dims::NTuple{N, Int}
 
     "number of neighbor for each site"
-    nums_neighbors::Vector{Int}
+    nums_neighbors::Vector{Int8}
     CI::CartesianIndices{N, T}
     LI::LinearIndices{N, T}
 
@@ -127,7 +127,7 @@ function CartesianGridRej(dims::Tuple)
     CI = CartesianIndices(dims)
     LI = LinearIndices(dims)
     offsets = potential_offsets(dim)
-    nums_neighbors = [count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
+    nums_neighbors = Int8[count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
     CartesianGridRej(dims, nums_neighbors, CI, LI, offsets)
 end
 CartesianGridRej(dims) = CartesianGridRej(Tuple(dims))
@@ -147,7 +147,7 @@ end
 # neighbor sampling is iterator-based
 struct CartesianGridIter{N, T}
     dims::NTuple{N, Int}
-    nums_neighbors::Vector{Int}
+    nums_neighbors::Vector{Int8}
     CI::CartesianIndices{N, T}
     LI::LinearIndices{N, T}
     offsets::Vector{CartesianIndex{N}}
@@ -157,7 +157,7 @@ function CartesianGridIter(dims::Tuple)
     CI = CartesianIndices(dims)
     LI = LinearIndices(dims)
     offsets = potential_offsets(dim)
-    nums_neighbors = [count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
+    nums_neighbors = Int8[count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
     CartesianGridIter(dims, nums_neighbors, CI, LI, offsets)
 end
 CartesianGridIter(dims) = CartesianGridIter(Tuple(dims))

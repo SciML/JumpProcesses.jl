@@ -30,7 +30,7 @@ function cat_problems(prob::DiffEqBase.AbstractODEProblem,
     if isdefined(SciMLBase, :unwrapped_f)
         _f_control = SciMLBase.unwrapped_f(prob_control.f)
     else
-        _f_control = prob_c
+        _f_control = prob_control.f
     end
 
     new_f = function (du, u, p, t)
@@ -56,7 +56,7 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractOD
     if isdefined(SciMLBase, :unwrapped_f)
         _f_control = SciMLBase.unwrapped_f(prob_control.f)
     else
-        _f_control = prob_c
+        _f_control = prob_control.f
     end
 
     new_f = function (du, u, p, t)
@@ -95,7 +95,7 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
     if isdefined(SciMLBase, :unwrapped_f)
         _f_control = SciMLBase.unwrapped_f(prob_control.f)
     else
-        _f_control = prob_c
+        _f_control = prob_control.f
     end
 
     new_f = function (du, u, p, t)

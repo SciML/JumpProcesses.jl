@@ -227,9 +227,17 @@ function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = D
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
-    function jump_f(du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
-        prob.f(du.u, u.u, p, t)
-        update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+    if isdefined(SciMLBase,:unwrapped_f)
+        _f = SciMLBase.unwrapped_f(prob.f)
+    else
+        _f = prob.f
+    end
+
+    jump_f = let _f = _f
+        function jump_f(du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
+            _f(du.u, u.u, p, t)
+            update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+        end
     end
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,

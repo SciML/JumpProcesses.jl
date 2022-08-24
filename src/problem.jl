@@ -227,7 +227,6 @@ function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = D
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
-
     _f = SciMLBase.unwrapped_f(prob.f)
 
     jump_f = let _f = _f

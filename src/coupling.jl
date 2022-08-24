@@ -21,17 +21,8 @@ function cat_problems(prob::DiffEqBase.AbstractODEProblem,
                       prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
 
-    if isdefined(SciMLBase, :unwrapped_f)
-        _f = SciMLBase.unwrapped_f(prob.f)
-    else
-        _f = prob.f
-    end
-
-    if isdefined(SciMLBase, :unwrapped_f)
-        _f_control = SciMLBase.unwrapped_f(prob_control.f)
-    else
-        _f_control = prob_control.f
-    end
+    _f = SciMLBase.unwrapped_f(prob.f)
+    _f_control = SciMLBase.unwrapped_f(prob_control.f)
 
     new_f = function (du, u, p, t)
         _f(@view(du[1:l]), u.u, p, t)
@@ -47,17 +38,8 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractOD
         @warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
     end
 
-    if isdefined(SciMLBase, :unwrapped_f)
-        _f = SciMLBase.unwrapped_f(prob.f)
-    else
-        _f = prob.f
-    end
-
-    if isdefined(SciMLBase, :unwrapped_f)
-        _f_control = SciMLBase.unwrapped_f(prob_control.f)
-    else
-        _f_control = prob_control.f
-    end
+    _f = SciMLBase.unwrapped_f(prob.f)
+    _f_control = SciMLBase.unwrapped_f(prob_control.f)
 
     new_f = function (du, u, p, t)
         _f(@view(du[1:l]), u.u, p, t)
@@ -86,17 +68,8 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
                       prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0)
 
-    if isdefined(SciMLBase, :unwrapped_f)
-        _f = SciMLBase.unwrapped_f(prob.f)
-    else
-        _f = prob.f
-    end
-
-    if isdefined(SciMLBase, :unwrapped_f)
-        _f_control = SciMLBase.unwrapped_f(prob_control.f)
-    else
-        _f_control = prob_control.f
-    end
+    _f = SciMLBase.unwrapped_f(prob.f)
+    _f_control = SciMLBase.unwrapped_f(prob_control.f)
 
     new_f = function (du, u, p, t)
         _f(@view(du[1:l]), u.u, p, t)

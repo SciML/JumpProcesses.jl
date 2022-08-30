@@ -92,7 +92,7 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # spatial structs and functions
-export CartesianGrid, CartesianGridRej, CartesianGridIter
+export CartesianGrid, CartesianGridRej
 export SpatialMassActionJump
 export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect

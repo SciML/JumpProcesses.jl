@@ -17,7 +17,6 @@ num_samples = 10^5
 rel_tol = 0.01
 grids = [
     JP.CartesianGridRej(dims),
-    JP.CartesianGridIter(dims),
     Graphs.grid(dims),
 ]
 for grid in grids

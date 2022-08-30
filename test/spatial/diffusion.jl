@@ -80,7 +80,7 @@ for alg in algs
                       spatial_system = grids[1], save_positions = (false, false)))
     push!(jump_problems,
           JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # hop rates of form L_{s,i,j}
@@ -96,7 +96,7 @@ for alg in algs
                       spatial_system = grids[1], save_positions = (false, false)))
     push!(jump_problems,
           JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # hop rates of form D_s * L_{i,j}
@@ -113,7 +113,7 @@ for alg in algs
     push!(jump_problems,
           JumpProblem(prob, alg, majumps,
                       hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # hop rates of form D_{s,i} * L_{i,j}
@@ -130,7 +130,7 @@ for alg in algs
     push!(jump_problems,
           JumpProblem(prob, alg, majumps,
                       hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # testing

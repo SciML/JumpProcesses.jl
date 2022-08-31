@@ -55,8 +55,8 @@ Bt = B'
 analytic_solution(t) = B * diagm(ℯ .^ (t * evals)) * Bt * reshape(prob.u0, num_nodes, 1)
 
 num_time_points = 10
-Nsims = 10000
-rel_tol = 0.01
+Nsims = 50000
+rel_tol = 0.02
 times = 0.0:(tf / num_time_points):tf
 
 algs = [NSM(), DirectCRDirect()]
@@ -143,7 +143,7 @@ for (j, spatial_jump_prob) in enumerate(jump_problems)
     end
 end
 
-# testing non-uniform hopping rates
+# testing non-uniform hopping rates. Only hopping up or left.
 dims = (2, 2)
 num_nodes = prod(dims)
 grid = Graphs.grid(dims)
@@ -153,7 +153,7 @@ for ci in CartesianIndices(hopping_constants)
     hopping_constants[species, site] = zeros(outdegree(grid, site))
     for (n, nb) in enumerate(neighbors(grid, site))
         if nb < site
-            hopping_constants[species, site][n] = 1.0
+            hopping_constants[species, site][n] = 10.0
         end
     end
 end

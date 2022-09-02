@@ -26,7 +26,9 @@ and one of the core solver libraries included in
 For information on using the package,
 [see the stable documentation](http://jump.sciml.ai/stable/). Use the
 [in-development documentation](http://jump.sciml.ai/dev/) for the version of
-the documentation, which contains the unreleased features. This documentation includes
+the documentation, which contains the unreleased features. 
+
+The documentation includes
 - [a tutorial on simulating basic Poisson processes](https://jump.sciml.ai/stable/tutorials/simple_poisson_process/)
 - [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/),
 - [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/stable/tutorials/jump_diffusion/),

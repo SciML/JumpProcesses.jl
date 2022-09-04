@@ -14,7 +14,7 @@ function HopRates(hopping_constants::Vector{F}, spatial_system) where {F <: Numb
     HopRatesGraphDs(hopping_constants, num_sites(spatial_system))
 end
 function HopRates(hopping_constants::Vector{F},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where {F <: Number}
+                  grid::CartesianGridRej) where {F <: Number}
     HopRatesGraphDs(hopping_constants, num_sites(grid))
 end
 
@@ -22,7 +22,7 @@ function HopRates(hopping_constants::Matrix{F}, spatial_system) where {F <: Numb
     HopRatesGraphDsi(hopping_constants)
 end
 function HopRates(hopping_constants::Matrix{F},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where {F <: Number}
+                  grid::CartesianGridRej) where {F <: Number}
     HopRatesGraphDsi(hopping_constants)
 end
 
@@ -30,7 +30,7 @@ function HopRates(hopping_constants::Matrix{Vector{F}}, spatial_system) where {F
     HopRatesGraphDsij(hopping_constants)
 end
 function HopRates(hopping_constants::Matrix{Vector{F}},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where {F <: Number}
+                  grid::CartesianGridRej) where {F <: Number}
     HopRatesGridDsij(hopping_constants, grid)
 end
 
@@ -40,7 +40,7 @@ function HopRates(p::Pair{SpecHop, SiteHop},
     HopRatesGraphDsLij(p...)
 end
 function HopRates(p::Pair{SpecHop, SiteHop},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where
+                  grid::CartesianGridRej) where
     {F <: Number, SpecHop <: Vector{F}, SiteHop <: Vector{Vector{F}}}
     HopRatesGridDsLij(p..., grid)
 end
@@ -51,7 +51,7 @@ function HopRates(p::Pair{SpecHop, SiteHop},
     HopRatesGraphDsiLij(p...)
 end
 function HopRates(p::Pair{SpecHop, SiteHop},
-                  grid::Union{CartesianGridRej, CartesianGridIter}) where
+                  grid::CartesianGridRej) where
     {SpecHop <: Matrix{F}, SiteHop <: Vector{Vector{F}}} where {F <: Number}
     HopRatesGridDsiLij(p..., grid)
 end

@@ -58,7 +58,7 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
     p.sum_rate, ttnj = time_to_next_jump(p, u, params, t)
-    p.next_jump_time = t + ttnj
+    p.next_jump_time = add_fast(t, ttnj)
     @inbounds p.next_jump = searchsortedfirst(p.cur_rates, rand(p.rng) * p.sum_rate)
     nothing
 end
@@ -77,7 +77,7 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
     idx = get_num_majumps(majumps)
     @inbounds for i in 1:idx
         new_rate = evalrxrate(u, i, majumps)
-        cur_rates[i] = new_rate + prev_rate
+        cur_rates[i] = add_fast(new_rate, prev_rate)
         prev_rate = cur_rates[i]
     end
 
@@ -87,7 +87,7 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
         idx += 1
         fill_cur_rates(u, params, t, cur_rates, idx, rates...)
         @inbounds for i in idx:length(cur_rates)
-            cur_rates[i] = cur_rates[i] + prev_rate
+            cur_rates[i] = add_fast(cur_rates[i], prev_rate)
             prev_rate = cur_rates[i]
         end
     end
@@ -119,7 +119,7 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
     idx = get_num_majumps(majumps)
     @inbounds for i in 1:idx
         new_rate = evalrxrate(u, i, majumps)
-        cur_rates[i] = new_rate + prev_rate
+        cur_rates[i] = add_fast(new_rate, prev_rate)
         prev_rate = cur_rates[i]
     end
 
@@ -128,7 +128,7 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
     rates = p.rates
     @inbounds for i in 1:length(p.rates)
         new_rate = rates[i](u, params, t)
-        cur_rates[idx] = new_rate + prev_rate
+        cur_rates[idx] = add_fast(new_rate, prev_rate)
         prev_rate = cur_rates[idx]
         idx += 1
     end

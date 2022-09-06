@@ -58,7 +58,7 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
     p.sum_rate, ttnj = time_to_next_jump(p, u, params, t)
-    @fastmath p.next_jump_time = t + ttnj
+    p.next_jump_time = t + ttnj
     @inbounds p.next_jump = searchsortedfirst(p.cur_rates, rand(p.rng) * p.sum_rate)
     nothing
 end
@@ -66,8 +66,8 @@ end
 ######################## SSA specific helper routines ########################
 
 # tuple-based constant jumps
-@fastmath function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                                     t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
+                           t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -108,9 +108,8 @@ end
 end
 
 # function wrapper-based constant jumps
-@fastmath function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                                     t) where {T, S, F1 <: AbstractArray,
-                                               F2 <: AbstractArray, RNG}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
+                           t) where {T, S, F1 <: AbstractArray, F2 <: AbstractArray, RNG}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates

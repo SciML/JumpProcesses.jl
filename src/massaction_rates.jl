@@ -3,8 +3,8 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@inline @fastmath function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
-                                      majump::MassActionJump{U, V, W, X})::R where
+@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
+                            majump::MassActionJump{U, V, W, X})::R where
     {T, S, R, U <: AbstractVector{R}, V, W, X}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
@@ -19,8 +19,8 @@
     @inbounds return val * majump.scaled_rates[rxidx]
 end
 
-@inline @fastmath function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
-                                      majump::M) where {T, S, M <: AbstractMassActionJump}
+@inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
+                            majump::M) where {T, S, M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
         speciesvec[specstoch[1]] += specstoch[2]
@@ -28,8 +28,8 @@ end
     nothing
 end
 
-@inline @fastmath function executerx(speciesvec::SVector{T}, rxidx::S,
-                                     majump::M) where {T, S, M <: AbstractMassActionJump}
+@inline function executerx(speciesvec::SVector{T}, rxidx::S,
+                           majump::M) where {T, S, M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
         speciesvec = setindex(speciesvec, speciesvec[specstoch[1]] + specstoch[2],

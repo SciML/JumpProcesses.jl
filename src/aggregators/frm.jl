@@ -75,7 +75,7 @@ end
 ######################## SSA specific helper routines ########################
 
 # mass action jumps
-@fastmath function next_ma_jump(p::FRMJumpAggregation, u, params, t)
+function next_ma_jump(p::FRMJumpAggregation, u, params, t)
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     majumps = p.ma_jumps
@@ -91,9 +91,8 @@ end
 end
 
 # tuple-based constant jumps
-@fastmath function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u,
-                                           params,
-                                           t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
+function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, params,
+                                 t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)
@@ -111,10 +110,9 @@ end
 end
 
 # function wrapper-based constant jumps
-@fastmath function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u,
-                                           params,
-                                           t) where {T, S, F1 <: AbstractArray,
-                                                     F2 <: AbstractArray, RNG}
+function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, params,
+                                 t) where {T, S, F1 <: AbstractArray, F2 <: AbstractArray,
+                                           RNG}
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)

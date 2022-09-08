@@ -249,12 +249,12 @@ function MassActionJump(usr::T, rs::S, ns::U, pmapper::V; scale_rates = true,
     MassActionJump{T, S, U, V}(usr, rs, ns, pmapper, scale_rates, useiszero, nocopy)
 end
 function MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true,
-                        nocopy = false) where {T <: AbstractVector, S, U}
+                        nocopy = false) where {T <: AbstractVector}
     MassActionJump(usr, rs, ns, nothing; scale_rates = scale_rates, useiszero = useiszero,
                    nocopy = nocopy)
 end
 function MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true,
-                        nocopy = false) where {T <: Number, S, U}
+                        nocopy = false) where {T <: Number}
     MassActionJump(usr, rs, ns, nothing; scale_rates = scale_rates, useiszero = useiszero,
                    nocopy = nocopy)
 end

@@ -24,7 +24,7 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
                                 rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
                                 num_specs, counter_threshold = length(crs),
                                 dep_graph = nothing,
-                                kwargs...) where {T, S, F1, F2, RNG, DEPGR}
+                                kwargs...) where {T, S, F1, F2, RNG}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)

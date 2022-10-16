@@ -35,7 +35,7 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2)
 sol = solve(jump_prob, SSAStepper())
 ```
 see the
-[tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+[tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 for details.
 """
 struct SSAStepper <: DiffEqBase.DEAlgorithm end

@@ -2,7 +2,7 @@
 
 !!! note
 
-    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/dev/modules/DiffEqDocs/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
+    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 Jump Diffusion equations are stochastic differential equations with discontinuous
 jumps. These can be written as:
@@ -67,9 +67,9 @@ value 2, we do:
 rate(u, p, t) = 2
 ```
 Now we define the `affect!` of the jump. This is the same as an `affect!` from a
-[`DiscreteCallback`](https://docs.sciml.ai/dev/modules/DiffEqDocs/features/callback_functions/),
+[`DiscreteCallback`](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
 and thus acts directly on the
-[integrator](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/).
+[integrator](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/).
 Therefore, to make it halve the current value of `u`, we do:
 ```@example tut3
 function affect!(integrator)

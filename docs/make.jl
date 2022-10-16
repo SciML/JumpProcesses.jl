@@ -19,7 +19,7 @@ makedocs(sitename = "JumpProcesses.jl",
          doctest = false,
          format = Documenter.HTML(; analytics = "UA-90474609-3",
                                   assets = ["assets/favicon.ico"],
-                                  canonical = "https://jump.sciml.ai/stable/",
+                                  canonical = "https://docs.sciml.ai/JumpProcesses/",
                                   prettyurls = (get(ENV, "CI", nothing) == "true"),
                                   mathengine),
          pages = pages)

@@ -7,7 +7,7 @@ jump-ODE and jump-SDE models, including jump diffusions.
 
 JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
 and one of the core solver libraries included in
-[DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
+[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/).
 
 The documentation includes
 - [a tutorial on simulating basic Poisson processes](@ref poisson_proc_tutorial)
@@ -28,7 +28,7 @@ the facilities for developing and solving Jump problems.
 
 To install the `DifferentialEquations.jl` package, refer to the following link
 for complete [installation
-details](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
+details](https://docs.sciml.ai/DiffEqDocs/stable).
 
 If the user wishes to separately install the `JumpProcesses.jl` library, which is a
 lighter dependency than `DifferentialEquations.jl`, then the following code will

@@ -139,7 +139,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs=nothi
   ```
   is preferred over
   ```julia
-  reactant_stoich = [[3 => 1, 1 => 2, 4 = > 2], [3 => 2, 2 => 2]]
+  reactant_stoich = [[3 => 1, 1 => 2, 4 => 2], [3 => 2, 2 => 2]]
   ```
 
 
@@ -236,7 +236,7 @@ jump-jump dependency graph, passed through the named parameter `dep_graph`. i.e.
 JumpProblem(prob,DirectCR(),jump1,jump2; dep_graph=your_dependency_graph)
 ```
 For systems with only `MassActionJump`s, or those generated from a
-[Catalyst](https://github.com/SciML/Catalyst.jl) `reaction_network`, this graph
+[Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this graph
 will be auto-generated. Otherwise you must construct the dependency graph
 manually. Dependency graphs are represented as a `Vector{Vector{Int}}`, with the
 `i`th vector containing the indices of the jumps for which rates must be
@@ -253,7 +253,7 @@ through the following `JumpProblem` kwargs:
    of variable indices. The corresponding variables are those that have their
    value, `u[i]`, altered when the jump occurs.
 
-For systems generated from a [Catalyst](https://github.com/SciML/Catalyst.jl)
+For systems generated from a [Catalyst](https://docs.sciml.ai/Catalyst/stable/)
 `reaction_network` these will be auto-generated. Otherwise you must explicitly
 construct and pass in these mappings.
 
@@ -274,7 +274,7 @@ For representing and aggregating constant rate jumps
 In general, for systems with sparse dependency graphs if `Direct` is slow, one
 of `SortingDirect`, `RSSA` or `RSSACR` will usually offer substantially better
 performance. See
-[DiffEqBenchmarks.jl](https://github.com/JuliaDiffEq/DiffEqBenchmarks.jl) for
+[DiffEqBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/) for
 benchmarks on several example networks.
 
 ## Remaking `JumpProblem`s

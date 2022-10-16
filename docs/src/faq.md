@@ -143,7 +143,7 @@ of `u[1]`, giving
 
 ## How can I access earlier solution values in callbacks?
 When using an ODE or SDE time-stepper that conforms to the [integrator
-interface](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/) one
+interface](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/) one
 can simply use `integrator.uprev`. For efficiency reasons, the pure jump
 [`SSAStepper`](@ref) integrator does not have such a field. If one needs
 solution components at earlier times one can save them within the callback

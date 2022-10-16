@@ -12,9 +12,9 @@ end
 $(TYPEDEF)
 
 Defines a collection of jump processes to associate with another problem type.
-- [Documentation Page](https://jump.sciml.ai/stable/jump_types/)
-- [Tutorial Page](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
-- [FAQ Page](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/#FAQ)
+- [Documentation Page](https://docs.sciml.ai/JumpProcesses/stable/jump_types/)
+- [Tutorial Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+- [FAQ Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/#FAQ)
 
 ### Constructors
 
@@ -22,7 +22,7 @@ Defines a collection of jump processes to associate with another problem type.
 will be associated. For example, to  simulate a collection of jump processes for which the
 transition rates are constant *between* jumps (called [`ConstantRateJump`](@ref)s or
 [`MassActionJump`](@ref)s), we must first construct a
-[`DiscreteProblem`](https://docs.sciml.ai/dev/modules/DiffEqDocs/types/discrete_types/)
+[`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/)
 ```julia
 prob = DiscreteProblem(u0, p, tspan)
 ```
@@ -52,8 +52,8 @@ $(FIELDS)
 - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
 
 Please see the [tutorial
-page](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/) in the
-DifferentialEquations.jl [docs](https://jump.sciml.ai/stable/) for usage examples and
+page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in the
+DifferentialEquations.jl [docs](https://docs.sciml.ai/JumpProcesses/stable/) for usage examples and
 commonly asked questions.
 """
 mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J2,

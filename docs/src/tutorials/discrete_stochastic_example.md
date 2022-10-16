@@ -19,16 +19,16 @@ tutorial](@ref poisson_proc_tutorial). We will illustrate
 
 !!! note
 
-    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/dev/modules/DiffEqDocs/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
+    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 We begin by demonstrating how to build jump processes using
-[JumpProcesses.jl](https://github.com/SciML/JumpProcesses.jl)'s different jump types,
+[JumpProcesses.jl](https://docs.sciml.ai/JumpProcesses/stable/)'s different jump types,
 which encode the rate functions (i.e. transition rates, intensities, or
 propensities) and state changes when a given jump occurs.
 
 Note, the SIR model considered here is a type of stochastic chemical kinetics
 jump process model, and as such the biological modeling functionality of
-[Catalyst.jl](https://github.com/SciML/Catalyst.jl) can be used to easily
+[Catalyst.jl](https://docs.sciml.ai/Catalyst/stable/) can be used to easily
 specify the model and automatically calculate inputs needed for JumpProcesses's
 optimized simulation algorithms. We summarize this alternative approach at the
 beginning for users who may be interested in modeling chemical systems, but note
@@ -40,7 +40,7 @@ reaction, and necessary data structures for the simulation algorithms, such as
 dependency graphs, are automatically calculated.
 
 We'll make use of the
-[DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl)
+[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/)
 meta package, which includes JumpProcesses and ODE/SDE solvers, Plots.jl, and
 (optionally) Catalyst.jl in this tutorial. If not already installed they can be
 added as follows
@@ -97,9 +97,9 @@ created, and the probability per time some infected individual recovers.
 For those less-familiar with the time-change representation, we next give a more
 intuitive explanation of the model as a collection of chemical reactions, and
 then demonstrate how these reactions can be written in
-[Catalyst.jl](https://github.com/SciML/Catalyst.jl) and seamlessly converted
+[Catalyst.jl](https://docs.sciml.ai/Catalyst/stable/) and seamlessly converted
 into a form that can be used with the
-[JumpProcesses.jl](https://github.com/SciML/JumpProcesses.jl) solvers. Users
+[JumpProcesses.jl](https://docs.sciml.ai/JumpProcesses/stable/) solvers. Users
 interested in how to directly define jumps using the lower-level JumpProcesses
 interface can skip to [Building and Simulating the Jump Process Using the
 JumpProcesses Low-Level Interface](@ref).
@@ -164,7 +164,7 @@ frequently jumps should occur, and an `affect!` function for how the state
 should change when that jump type occurs.
 
 ## Building and Simulating the Jump Processes from Catalyst Models
-Using [Catalyst.jl](https://github.com/SciML/Catalyst.jl) we can input our full
+Using [Catalyst.jl](https://docs.sciml.ai/Catalyst/stable/) we can input our full
 reaction network in a form that can be easily used with JumpProcesses's solvers
 ```@example tut2
 using Catalyst
@@ -175,7 +175,7 @@ end β ν
 ```
 To build a pure jump process model of the reaction system, where the state is
  constant between jumps, we will use a
-[`DiscreteProblem`](https://docs.sciml.ai/dev/modules/DiffEqDocs/types/discrete_types/).
+[`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
 This encodes that the state only changes at the jump times. We do this by giving
 the constructor `u₀`, the initial condition, and `tspan`, the timespan. Here, we
 will start with `999` susceptible people, `1` infected person, and `0` recovered
@@ -270,7 +270,7 @@ jump = ConstantRateJump(rate, affect!)
 where `rate` is a function `rate(u,p,t)` and `affect!` is a function of the
 integrator `affect!(integrator)` (for details on the integrator, see the
 [integrator interface
-docs](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/)). Here
+docs](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/)). Here
 `u` corresponds to the current state vector of the system; for our SIR model
 `u[1] = S(t)`, `u[2] = I(t)` and `u[3] = R(t)`. `p` corresponds to the parameters of
 the model, just as used for passing parameters to derivative functions in ODE
@@ -309,7 +309,7 @@ people in the different states.*
 
 Since we want the system state to change only at the discrete jump times, we
 will build a
-[`DiscreteProblem`](https://docs.sciml.ai/dev/modules/DiffEqDocs/types/discrete_types/)
+[`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/)
 ```@example tut2
 prob = DiscreteProblem(u₀, tspan, p)
 ```
@@ -390,14 +390,14 @@ problems involving only `ConstantRateJump`s and `MassActionJump`s.
 ## [Reducing Memory Use: Controlling Saving Behavior](@id save_positions_docs)
 
 Note that jumps act via DifferentialEquations.jl's [callback
-interface](https://docs.sciml.ai/dev/modules/DiffEqDocs/features/callback_functions/),
+interface](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
 which defaults to saving at each event. This is required in order to accurately
 resolve every discontinuity exactly (and this is what allows for perfectly
 vertical lines in plots!). However, in many cases when using jump problems you
 may wish to decrease the saving pressure given by large numbers of jumps. To do
 this, you set the `save_positions` keyword argument to `JumpProblem`. Just like
 for other
-[callbacks](https://docs.sciml.ai/dev/modules/DiffEqDocs/features/callback_functions/),
+[callbacks](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
 this is a tuple `(bool1, bool2)` which sets whether to save before or after a
 jump. If we do not want to save at every jump, we would thus pass:
 ```@example tut2
@@ -405,7 +405,7 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2; save_positions = (false, fa
 ```
 Now the saving controls associated with the integrator should specified, see the
 main [SciML
-Docs](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/common_solver_opts/)
+Docs](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/)
 for saving options. For example, we can use `saveat = 10.0` to save at an evenly
 spaced grid:
 ```@example tut2

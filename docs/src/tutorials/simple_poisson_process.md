@@ -12,7 +12,7 @@ parameters, and current time. Throughout this tutorial these are denoted by `u`,
 `p` and `t`. Likewise, when a jump occurs any
 DifferentialEquations.jl-compatible change to the current system state, as
 encoded by a [DifferentialEquations.jl
-integrator](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/), is
+integrator](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/), is
 allowed. This includes changes to the current state or to parameter values.
 
 This tutorial requires several packages, which can be added if not already
@@ -80,7 +80,7 @@ occurred (at time `integrator.t`)
 affect!(integrator) = (integrator.u[1] += 1)
 ```
 Here the convention is to take a [DifferentialEquations.jl
-integrator](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/),
+integrator](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/),
 and directly modify the current solution value it stores. i.e. `integrator.u` is
 the current solution vector, with `integrator.u[1]` the first component of this
 vector. In our case we will only have one unknown, so this will be the current

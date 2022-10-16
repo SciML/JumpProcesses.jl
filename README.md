@@ -1,9 +1,7 @@
 # JumpProcesses.jl
 
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://jump.sciml.ai/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://jump.sciml.ai/dev/)
-[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/dev/modules/JumpProcesses/)
+[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/JumpProcesses/stable/)
 
 [![Coverage Status](https://coveralls.io/repos/github/SciML/JumpProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/JumpProcesses.jl?branch=master)
 [![codecov](https://codecov.io/gh/SciML/JumpProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/JumpProcesses.jl)
@@ -25,18 +23,18 @@ and one of the core solver libraries included in
 [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
 
 For information on using the package,
-[see the stable documentation](http://jump.sciml.ai/stable/). Use the
-[in-development documentation](http://jump.sciml.ai/dev/) for the version of
+[see the stable documentation](https://docs.sciml.ai/JumpProcesses/stable/). Use the
+[in-development documentation](https://docs.sciml.ai/JumpProcesses/dev/) for the version of
 the documentation, which contains the unreleased features. 
 
 The documentation includes
-- [a tutorial on simulating basic Poisson processes](https://jump.sciml.ai/stable/tutorials/simple_poisson_process/)
-- [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e. Gillespie methods)](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/),
-- [a tutorial on simulating jump-diffusion processes](https://jump.sciml.ai/stable/tutorials/jump_diffusion/),
-- [a reference on the types of jumps and available simulation methods](https://jump.sciml.ai/stable/jump_types/),
-- [a reference on jump time stepping methods](https://jump.sciml.ai/stable/jump_solve/),
-- [a FAQ](https://jump.sciml.ai/stable/faq) with information on changing parameters between simulations and using callbacks,
-- [the JumpProcesses.jl API documentation](https://jump.sciml.ai/stable/api/).
+- [a tutorial on simulating basic Poisson processes](https://docs.sciml.ai/JumpProcesses/stable/tutorials/simple_poisson_process/)
+- [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e. Gillespie methods)](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/),
+- [a tutorial on simulating jump-diffusion processes](https://docs.sciml.ai/JumpProcesses/stable/tutorials/jump_diffusion/),
+- [a reference on the types of jumps and available simulation methods](https://docs.sciml.ai/JumpProcesses/stable/jump_types/),
+- [a reference on jump time stepping methods](https://docs.sciml.ai/JumpProcesses/stable/jump_solve/),
+- [a FAQ](https://docs.sciml.ai/JumpProcesses/stable/faq) with information on changing parameters between simulations and using callbacks,
+- [the JumpProcesses.jl API documentation](https://docs.sciml.ai/JumpProcesses/stable/api/).
 
 ## Installation
 There are two ways to install `JumpProcesses.jl`. First, users may install the meta
@@ -48,7 +46,7 @@ the facilities for developing and solving Jump problems.
 
 To install the `DifferentialEquations.jl` package, refer to the following link
 for complete [installation
-details](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
+details](https://docs.sciml.ai/DiffEqDocs/stable/).
 
 If the user wishes to separately install the `JumpProcesses.jl` library, which is a
 lighter dependency than `DifferentialEquations.jl`, then the following code will

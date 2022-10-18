@@ -1,7 +1,8 @@
 # JumpProcesses.jl
 
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
-[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/JumpProcesses/stable/)
+[![Stable Release Docs](https://img.shields.io/badge/Stable%20Release%20Docs-SciML-blue)](https://docs.sciml.ai/JumpProcesses/stable/)
+[![Master Branch Docs](https://img.shields.io/badge/Master%20Branch%20Docs-SciML-blue)](https://docs.sciml.ai/JumpProcesses/dev/)
 
 [![Coverage Status](https://coveralls.io/repos/github/SciML/JumpProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/JumpProcesses.jl?branch=master)
 [![codecov](https://codecov.io/gh/SciML/JumpProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/JumpProcesses.jl)

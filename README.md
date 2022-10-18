@@ -26,7 +26,7 @@ and one of the core solver libraries included in
 For information on using the package,
 [see the stable documentation](https://docs.sciml.ai/JumpProcesses/stable/). Use the
 [in-development documentation](https://docs.sciml.ai/JumpProcesses/dev/) for the version of
-the documentation, which contains the unreleased features. 
+the documentation which contains unreleased features. 
 
 The documentation includes
 - [a tutorial on simulating basic Poisson processes](https://docs.sciml.ai/JumpProcesses/stable/tutorials/simple_poisson_process/)

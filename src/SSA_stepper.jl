@@ -102,7 +102,7 @@ function DiffEqBase.__solve(jump_prob::JumpProblem,
     integrator.sol
 end
 
-function DiffEqBase.solve!(integrator)
+function DiffEqBase.solve!(integrator::SSAIntegrator)
     end_time = integrator.sol.prob.tspan[2]
     while should_continue_solve(integrator) # It stops before adding a tstop over
         step!(integrator)

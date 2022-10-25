@@ -50,6 +50,7 @@ include("aggregators/prioritytable.jl")
 include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
+include("aggregators/queue.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -72,14 +73,14 @@ include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 
-export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
-       JumpSet
+export ConstantRateJump, VariableRateJump, ConditionalRateJump, RegularJump,
+       MassActionJump, JumpSet
 
 export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, SortingDirect, DirectCR
+export Direct, DirectFW, SortingDirect, DirectCR, QueueMethod
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect

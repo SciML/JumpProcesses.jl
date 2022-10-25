@@ -144,8 +144,13 @@ doi: 10.1063/1.4928635
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
+"""
+The Queue Method. This method handles conditional intensity rates.
+"""
+struct QueueMethod <: AbstractAggregatorAlgorithm end
+
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect())
+                          FRMFW(), NRM(), RSSACR(), RDirect(), QueueMethod())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -156,6 +161,7 @@ needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
 needs_depgraph(aggregator::RDirect) = true
+needs_depgraph(aggregator::QueueMethod) = true
 
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from

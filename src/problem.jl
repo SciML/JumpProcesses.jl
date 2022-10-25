@@ -64,7 +64,7 @@ mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggrega
     aggregator::A
     """The underlying state data associated with the chosen aggregator."""
     discrete_jump_aggregation::J
-    """`CallBackSet` with the underlying `ConstantRate` and `VariableRate` jumps."""
+    """`CallBackSet` with the underlying `ConstantRate`, `VariableRate` and `ConditionalRateJump` jumps."""
     jump_callback::C
     """The `VariableRateJump`s."""
     variable_jumps::J2
@@ -123,6 +123,9 @@ function JumpProblem(prob, jumps::ConstantRateJump; kwargs...)
     JumpProblem(prob, JumpSet(jumps); kwargs...)
 end
 function JumpProblem(prob, jumps::VariableRateJump; kwargs...)
+    JumpProblem(prob, JumpSet(jumps); kwargs...)
+end
+function JumpProblem(prob, jumps::ConditionalRateJump; kwargs...)
     JumpProblem(prob, JumpSet(jumps); kwargs...)
 end
 function JumpProblem(prob, jumps::RegularJump; kwargs...)
@@ -209,7 +212,18 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         variable_jump_callback = build_variable_callback(CallbackSet(), 0,
                                                          jumps.variable_jumps...; rng = rng)
     end
-    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
+
+    ## Conditional Rate Handling
+    if typeof(jumps.conditional_jumps) <: Tuple{}
+        cond = nothing
+        conditional_jump_callback = CallBackSet()
+    else
+        cond = aggregate(aggregator, u, prob.p, t, end_time, jumps.conditional_jumps, maj,
+                         save_positions, rng; spatial_system = spatial_system,
+                         hopping_constants = hopping_constants, kwargs...)
+        conditional_jump_callback = DiscreteCallback(cond)
+    end
+    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback, conditional_jump_callback)
 
     solkwargs = make_kwarg(; callback)
     JumpProblem{iip, typeof(new_prob), typeof(aggregator),

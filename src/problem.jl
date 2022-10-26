@@ -188,17 +188,31 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
        !is_spatial(aggregator) # check if need to flatten
         prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
     end
-    ## Constant Rate Handling
+    ## Constant and conditional rate handling
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
+    # check if there are no jumps
     if (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) &&
-       !is_spatial(aggregator) # check if there are no jumps
-        disc = nothing
+       !is_spatial(aggregator) && (typeof(jumps.conditional_jumps) <: Tuple{})
+        agg = nothing
         constant_jump_callback = CallbackSet()
-    else
-        disc = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
-                         save_positions, rng; spatial_system = spatial_system,
-                         hopping_constants = hopping_constants, kwargs...)
-        constant_jump_callback = DiscreteCallback(disc)
+        # constant and conditional jumps are exclusive
+    elseif (typeof(jumps.conditional_jumps) <: Tuple{})
+        if typeof(aggregator) <: QueueMethod
+            error("`QueueMethod` aggregator is not supported with `ConstantRateJump` or `MassActionJump`.")
+        end
+        agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
+                        save_positions, rng; spatial_system = spatial_system,
+                        hopping_constants = hopping_constants, kwargs...)
+        constant_jump_callback = DiscreteCallback(agg)
+    elseif (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) &&
+           !is_spatial(aggregator)
+        if !(typeof(aggregator) <: QueueMethod)
+            error("`ConditionalRateJump` can only be used with the `QueueMethod` aggregator.")
+        end
+        agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.conditional_jumps, maj,
+                        save_positions, rng; spatial_system = spatial_system,
+                        hopping_constants = hopping_constants, kwargs...)
+        constant_jump_callback = DiscreteCallback(agg)
     end
 
     iip = isinplace_jump(prob, jumps.regular_jump)
@@ -213,24 +227,14 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                                                          jumps.variable_jumps...; rng = rng)
     end
 
-    ## Conditional Rate Handling
-    if typeof(jumps.conditional_jumps) <: Tuple{}
-        cond = nothing
-        conditional_jump_callback = CallBackSet()
-    else
-        cond = aggregate(aggregator, u, prob.p, t, end_time, jumps.conditional_jumps, maj,
-                         save_positions, rng; spatial_system = spatial_system,
-                         hopping_constants = hopping_constants, kwargs...)
-        conditional_jump_callback = DiscreteCallback(cond)
-    end
-    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback, conditional_jump_callback)
+    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
 
     solkwargs = make_kwarg(; callback)
     JumpProblem{iip, typeof(new_prob), typeof(aggregator),
-                typeof(jump_cbs), typeof(disc),
+                typeof(jump_cbs), typeof(agg),
                 typeof(jumps.variable_jumps),
                 typeof(jumps.regular_jump),
-                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc,
+                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, agg,
                                                              jump_cbs, jumps.variable_jumps,
                                                              jumps.regular_jump, maj, rng,
                                                              solkwargs)
@@ -285,7 +289,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
                            [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
-    ramake(prob, f = DDEFunction{true}(jump_f), u0 = u0)
+    remake(prob, f = DDEFunction{true}(jump_f), u0 = u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
@@ -372,7 +376,7 @@ end
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
     summary(io, A)
     println(io)
-    println(io, "Number of constant rate jumps: ",
+    println(io, "Number of constant/conditional rate jumps: ",
             A.discrete_jump_aggregation === nothing ? 0 :
             num_constant_rate_jumps(A.discrete_jump_aggregation))
     println(io, "Number of variable rate jumps: ", length(A.variable_jumps))

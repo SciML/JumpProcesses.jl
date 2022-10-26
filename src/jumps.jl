@@ -94,21 +94,50 @@ end
 """
 $(TYPEDEF)
 
-Defines a jump process with a ...
+Defines a jump process with a conditional rate. More precisely, one where the rate
+function depends on past events. The rate can also change according to time between two jumps.
 
 ## Fields
 
 $(FIELDS)
 
 ## Examples
-
-Foo ...
+Suppose `u[1]` follows a Hawkes jump process. This is a type of self-exciting
+process in which the realization of an event increases the likelihood of new
+nearby events. A corresponding `ConditionalRateJump` for this jump process is
+```julia
+function rate(i, g, h, u, p, t)
+  λ0, α, β = p
+  _h = typeof(t)[]
+  for j in g[i]
+    for _t in reverse(h[i])
+      if α*exp(-β*(t - _t)) ≈ 0 break end
+      push!(_h, _t)
+    end
+  end
+  rate(u, p, s) = λ0 + α * sum([exp(-β*(s - _t)) for _t in _h])
+  lrate = λ0
+  urate = rate(u, p, t)
+  L = urate == lrate ? typemax(t) : 1/(2*urate)
+  return rate, lrate, urate, L
+end
+affect!(integrator) = integrator.u[1] += 1
+crj = ConditionalRateJump(rate, affect!)
+prob = DiscreteProblem(u0, tspan, p)
+jprob = JumpProblem(prob, QueueMethod(), crj)
+```
 """
 struct ConditionalRateJump{F1, F2} <: AbstractJump
-  """Function `rate(u, p, t)` that returns """
-  rate::F1
-  """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
-  affect!::F2
+    """
+    Function `rate(i, g, h, u, p, t)` that returns `rate(u, p, s)`, `lrate`,
+    `urate` and `L` for jump `i` with dependency graph `g`, history `h`, state
+    `u`, parameters `p` and time `t`. `rate(u, p, s)` is a function that computes the
+    rate at time `s`, `lrate` and `urate` are the lower and upper rate bounds in
+    interval `t` to `t + L`.
+    """
+    rate::F1
+    """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
+    affect!::F2
 end
 
 struct RegularJump{iip, R, C, MD}
@@ -422,7 +451,8 @@ JumpSet(jump::RegularJump) = JumpSet((), (), (), jump, nothing)
 JumpSet(jump::AbstractMassActionJump) = JumpSet((), (), (), nothing, jump)
 function JumpSet(; variable_jumps = (), constant_jumps = (), conditional_jumps = (),
                  regular_jumps = nothing, massaction_jumps = nothing)
-    JumpSet(variable_jumps, constant_jumps, conditional_jumps, regular_jumps, massaction_jumps)
+    JumpSet(variable_jumps, constant_jumps, conditional_jumps, regular_jumps,
+            massaction_jumps)
 end
 JumpSet(jb::Nothing) = JumpSet()
 
@@ -589,40 +619,18 @@ function get_jump_info_tuples(jumps)
     rates, affects!
 end
 
-function get_jump_info_fwrappers(u, p, t, jumps)
-    if eltype(jumps) <: ConstantRateJump
-        RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
-                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
-        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
+function get_jump_info_fwrappers(u, p, t, constant_jumps)
+    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
+                                                   Tuple{typeof(u), typeof(p), typeof(t)}}
+    AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
 
-        if (jumps !== nothing) && !isempty(jumps)
-            rates = [RateWrapper(c.rate) for c in jumps]
-            affects! = [AffectWrapper(x -> (c.affect!(x); nothing)) for c in jumps]
-        else
-            rates = Vector{RateWrapper}()
-            affects! = Vector{AffectWrapper}()
-        end
-
-        return rates, affects!
-    elseif eltype(jumps) <: ConditionalRateJump
-        # RateWrapper = FunctionWrappers.FunctionWrapper{
-        #     typeof(t),
-        #     Tuple{typeof(u), typeof(p), typeof(t)}
-        # }
-        # RateFactoryWrapper = FunctionWrappers.FunctionWrapper{
-        #     Tuple{RateWrapper, typeof(t), typeof(t), typeof(t)},
-        #     Tuple{Union{Nothing, RateWrapper}, typeof(t), typeof(u), typeof(p), typeof(t)}
-        # }
-        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
-        if (jumps !== nothing) & !isempty(jumps)
-            # rates = [RateFactoryWrapper(c.rate) for c in jumps]
-            rates = [c.rate for c in jumps]
-            affects! = [AffectWrapper(x -> (c.affect!(x); nothing)) for c in jumps]
-        else
-            rates = Vector{RateFactoryWrapper}()
-            affects! = Vector{AffectWrapper}()
-        end
-
-        rates, affects!
+    if (constant_jumps !== nothing) && !isempty(constant_jumps)
+        rates = [RateWrapper(c.rate) for c in constant_jumps]
+        affects! = [AffectWrapper(x -> (c.affect!(x); nothing)) for c in constant_jumps]
+    else
+        rates = Vector{RateWrapper}()
+        affects! = Vector{AffectWrapper}()
     end
+
+    rates, affects!
 end

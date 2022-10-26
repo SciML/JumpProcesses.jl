@@ -127,7 +127,7 @@ prob = DiscreteProblem(u0, tspan, p)
 jprob = JumpProblem(prob, QueueMethod(), crj)
 ```
 """
-struct ConditionalRateJump{F1, F2} <: AbstractJump
+struct ConditionalRateJump{F1, F2, F3} <: AbstractJump
     """
     Function `rate(i, g, h, u, p, t)` that returns `rate(u, p, s)`, `lrate`,
     `urate` and `L` for jump `i` with dependency graph `g`, history `h`, state
@@ -136,9 +136,17 @@ struct ConditionalRateJump{F1, F2} <: AbstractJump
     interval `t` to `t + L`.
     """
     rate::F1
-    """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
+    """Function `affect!(i, integrator)` or `affect!(i, integrator, m)` that updates the state for one occurrence of the jump."""
     affect!::F2
+    """
+    Function `mark(i, g, h, p, t)` that samples from the mark distribution for
+    jump `i` given dependency graph `g`, history `h`, parameters `p` and jump
+    time `t`. If `mark(i, g, h, p, t)` the jump is unmarked. 
+    """
+    mark::F3
 end
+
+ConditionalRateJump(rate, affect!) = ConditionalRateJump(rate, affect!, nothing)
 
 struct RegularJump{iip, R, C, MD}
     rate::R

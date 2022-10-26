@@ -133,27 +133,21 @@ function next_time(p::QueueMethodJumpAggregation, rx, rate, u, params, t)
     @unpack end_time, rng, dep_gr, h = p
     cur_rate = nothing
     while t < end_time
-        # println("HERE rx ", rx, " rate ", rate)
-        # println("HERE rx ", rx, " h ", h, " dep_gr ", dep_gr, " params ", params, " t ", t, " u ", u)
         cur_rate, lrate, urate, L = rate(rx, dep_gr, h, u, params, t)
-        # println("HERE 1")
         if lrate > urate
             error("The lower bound should be lower than the upper bound rate for t = $(t) and rx = $(rx), but lower bound = $(lrate) > upper bound = $(urate)")
         end
-        # println("HERE 2")
         s = randexp(rng) / urate
         if s > L
             t = t + L
             continue
         end
-        # println("HERE 3")
         v = rand(rng)
         # the first inequality is less expensive and short-circuits the evaluation
         if (v > lrate / urate) && (v > cur_rate(u, params, t + s) / urate)
             t = t + s
             continue
         end
-        # println("HERE 4")
         t = t + s
         return t, cur_rate
     end

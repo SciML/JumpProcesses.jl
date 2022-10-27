@@ -169,7 +169,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                                       (false, true) : (true, true),
                      rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
                      spatial_system = nothing, hopping_constants = nothing,
-                     callback = nothing, kwargs...)
+                     callback = nothing, save_history = false, kwargs...)
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -210,8 +210,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
             error("`ConditionalRateJump` can only be used with the `QueueMethod` aggregator.")
         end
         agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.conditional_jumps, maj,
-                        save_positions, rng; spatial_system = spatial_system,
-                        hopping_constants = hopping_constants, kwargs...)
+                        save_positions, rng; save_history = save_history, kwargs...)
         constant_jump_callback = DiscreteCallback(agg)
     end
 
@@ -342,12 +341,70 @@ function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
     CallbackSet(cb, new_cb)
 end
 
-aggregator(jp::JumpProblem{P, A, C, J, J2}) where {P, A, C, J, J2} = A
+aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A
 
 @inline function extend_tstops!(tstops,
                                 jp::JumpProblem{P, A, C, J, J2}) where {P, A, C, J, J2}
     !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) &&
         push!(tstops, jp.jump_callback.discrete_callbacks[1].condition.next_jump_time)
+end
+
+function history(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C,
+                                                          J <: QueueMethodJumpAggregation}
+    jp.discrete_jump_aggregation.h
+end
+
+function conditional_rate(jp::JumpProblem{iip, P, A, C, J},
+                          sol::DiffEqBase.AbstractODESolution;
+                          saveat = nothing) where {iip, P, A, C,
+                                                   J <: QueueMethodJumpAggregation}
+    agg = jp.discrete_jump_aggregation
+    if !agg.save_history
+        error("History was not saved; set `save_history = true` when calling `JumpProblem`.")
+    end
+    if typeof(saveat) <: Number
+        _saveat = jp.prob.tspan[1]:saveat:jp.prob.tspan[2]
+    else
+        _saveat = sol.t
+    end
+    h = agg.h
+    dep_gr = agg.dep_gr
+    rates = agg.rates
+    p = jp.prob.p
+    _h = [eltype(h)(undef, 0) for _ in 1:length(h)]
+    hixs = zeros(Int, length(h))
+    condrates = Array{Array{eltype(_saveat), 1}, 1}()
+    for t in _saveat
+        # get history up to t
+        @inbounds for i in 1:length(h)
+            # println("HERE2 i ", i)
+            hi = h[i]
+            ix = hixs[i]
+            if eltype(h) <: Tuple
+              while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= t
+                  ix += 1
+              end
+            else
+              while ((ix + 1) <= length(hi)) && hi[ix + 1] <= t
+                  ix += 1
+              end
+            end
+            _h[i] = ix == 0 ? [] : hi[1:ix]
+        end
+        # compute the rate at time t
+        u = sol(t)
+        condrate = Array{typeof(t), 1}()
+        @inbounds for i in 1:length(h)
+            _rate, = rates[i](i, dep_gr, _h, u, p, t)
+            push!(condrate, _rate(u, p, t))
+        end
+        push!(condrates, condrate)
+    end
+    return DiffEqBase.build_solution(jp.prob, sol.alg, _saveat, condrates, dense = false,
+                                     calculate_error = false,
+                                     destats = DiffEqBase.DEStats(0),
+                                     interp = DiffEqBase.ConstantInterpolation(_saveat,
+                                                                               condrates))
 end
 
 @inline function update_jumps!(du, u, p, t, idx, jump)

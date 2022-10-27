@@ -18,11 +18,13 @@ mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, DEPGR, PQ, 
     pq::PQ # priority queue of next time
     marks::F4 # vector of mark functions for ConditionalRateJumps
     h::V # history of jumps
+    save_history::Bool # whether to save event history after solving
 end
 
 function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
                                     maj::S, rs::F2, affs!::F3, sps::Tuple{Bool, Bool},
                                     rng::RNG; dep_graph = nothing, marks = nothing,
+                                    save_history = false,
                                     kwargs...) where {T, S, F1, F2, F3, RNG}
     if get_num_majumps(maj) > 0
         error("Mass-action jumps are not supported with the Queue Method.")
@@ -34,8 +36,6 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
         end
     else
         dg = dep_graph
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
     end
 
     pq = MutableBinaryMinHeap{T}()
@@ -51,12 +51,12 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
                                           rs,
                                           affs!, sps,
                                           rng,
-                                          dg, pq, marks, h)
+                                          dg, pq, marks, h, save_history)
 end
 
 # creating the JumpAggregation structure (tuple-based constant jumps)
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, conditional_jumps,
-                   ma_jumps, save_positions, rng; dep_graph, kwargs...)
+                   ma_jumps, save_positions, rng; kwargs...)
     # TODO: Fix FunctionWrapper as it unstable with more than 2 processes
     # U, P, T, G = typeof(u), typeof(p), typeof(t), typeof(dep_graph)
     # RateWrapper = FunctionWrappers.FunctionWrapper{T, Tuple{U, P, T}}
@@ -100,8 +100,7 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, conditional_jumps
     next_jump = 0
     next_jump_time = typemax(typeof(t))
     QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-                               ma_jumps, rates, affects!, save_positions, rng; dep_graph,
-                               marks,
+                               ma_jumps, rates, affects!, save_positions, rng; marks,
                                kwargs...)
 end
 
@@ -126,10 +125,10 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t)
     p.next_jump_time, p.next_jump = top_with_handle(p.pq)
-    # if p.next_jump_time > p.end_time
-    #     # throw the history away once simulation is over
-    #     p.h = Array{eltype(p.h)}(undef, length(p.h))
-    # end
+    if (p.next_jump_time > p.end_time) && !p.save_history
+        # throw the history away once simulation is over
+        p.h = Array{eltype(p.h)}(undef, length(p.h))
+    end
     nothing
 end
 
@@ -149,8 +148,11 @@ end
 
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    @unpack cur_rates, rates = p
+    @unpack cur_rates, rates, next_jump = p
+    @inbounds dep_rxs = p.dep_gr[next_jump]
+
+    @inbounds trx, cur_rates[next_jump] = next_time(p, next_jump, rates[next_jump], u, params, t)
+    update!(p.pq, next_jump, trx)
 
     @inbounds for rx in dep_rxs
         @inbounds trx, cur_rates[rx] = next_time(p, rx, rates[rx], u, params, t)

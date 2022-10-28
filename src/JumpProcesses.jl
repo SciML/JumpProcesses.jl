@@ -80,10 +80,11 @@ export JumpProblem
 
 export SplitCoupledJumpProblem
 
-export Direct, DirectFW, SortingDirect, DirectCR, QueueMethod
+export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
+export QueueMethod, history, conditional_rate
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

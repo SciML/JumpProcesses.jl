@@ -64,7 +64,7 @@ mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggrega
     aggregator::A
     """The underlying state data associated with the chosen aggregator."""
     discrete_jump_aggregation::J
-    """`CallBackSet` with the underlying `ConstantRate`, `VariableRate` and `ConditionalRateJump` jumps."""
+    """`CallBackSet` with the underlying `ConstantRate` and `VariableRate` jumps."""
     jump_callback::C
     """The `VariableRateJump`s."""
     variable_jumps::J2
@@ -125,9 +125,6 @@ end
 function JumpProblem(prob, jumps::VariableRateJump; kwargs...)
     JumpProblem(prob, JumpSet(jumps); kwargs...)
 end
-function JumpProblem(prob, jumps::ConditionalRateJump; kwargs...)
-    JumpProblem(prob, JumpSet(jumps); kwargs...)
-end
 function JumpProblem(prob, jumps::RegularJump; kwargs...)
     JumpProblem(prob, JumpSet(jumps); kwargs...)
 end
@@ -169,7 +166,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                                       (false, true) : (true, true),
                      rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
                      spatial_system = nothing, hopping_constants = nothing,
-                     callback = nothing, save_history = false, kwargs...)
+                     callback = nothing, kwargs...)
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -188,53 +185,58 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
        !is_spatial(aggregator) # check if need to flatten
         prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
     end
-    ## Constant and conditional rate handling
+    ## Constant rate handling
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
     # check if there are no jumps
     if (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) &&
-       !is_spatial(aggregator) && (typeof(jumps.conditional_jumps) <: Tuple{})
-        agg = nothing
+       !is_spatial(aggregator) && !(typeof(aggregator) <: QueueMethod)
+        disc_agg = nothing
         constant_jump_callback = CallbackSet()
-        # constant and conditional jumps are exclusive
-    elseif (typeof(jumps.conditional_jumps) <: Tuple{})
-        if typeof(aggregator) <: QueueMethod
-            error("`QueueMethod` aggregator is not supported with `ConstantRateJump` or `MassActionJump`.")
-        end
-        agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
-                        save_positions, rng; spatial_system = spatial_system,
-                        hopping_constants = hopping_constants, kwargs...)
-        constant_jump_callback = DiscreteCallback(agg)
-    elseif (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) &&
-           !is_spatial(aggregator)
-        if !(typeof(aggregator) <: QueueMethod)
-            error("`ConditionalRateJump` can only be used with the `QueueMethod` aggregator.")
-        end
-        agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.conditional_jumps, maj,
-                        save_positions, rng; save_history = save_history, kwargs...)
-        constant_jump_callback = DiscreteCallback(agg)
+    elseif !(typeof(aggregator) <: QueueMethod)
+        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
+                             save_positions, rng; spatial_system = spatial_system,
+                             hopping_constants = hopping_constants, kwargs...)
+        constant_jump_callback = DiscreteCallback(disc_agg)
     end
 
     iip = isinplace_jump(prob, jumps.regular_jump)
 
-    ## Variable Rate Handling
+    ## variable Rate Handling
+    variable_jumps = nothing
     if typeof(jumps.variable_jumps) <: Tuple{}
         new_prob = prob
         variable_jump_callback = CallbackSet()
+        cont_agg = JumpSet().variable_jumps
+    elseif typeof(aggregator) <: QueueMethod
+        if (typeof(jumps.constant_jumps) <: Tuple{})
+            variable_jumps = jumps.variable_jumps
+        else
+            variable_jumps = [jump for jump in jumps.variable_jumps]
+            append!(variable_jumps,
+                    [VariableRateJump(jump) for jump in jumps.constant_jumps])
+        end
+        new_prob = prob
+        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, variable_jumps, maj,
+                             save_positions, rng; kwargs...)
+        constant_jump_callback = DiscreteCallback(disc_agg)
+        variable_jump_callback = CallbackSet()
+        cont_agg = JumpSet().variable_jumps
     else
         new_prob = extend_problem(prob, jumps; rng = rng)
         variable_jump_callback = build_variable_callback(CallbackSet(), 0,
                                                          jumps.variable_jumps...; rng = rng)
+        cont_agg = jumps.variable_jumps
     end
 
     jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
 
     solkwargs = make_kwarg(; callback)
     JumpProblem{iip, typeof(new_prob), typeof(aggregator),
-                typeof(jump_cbs), typeof(agg),
-                typeof(jumps.variable_jumps),
+                typeof(jump_cbs), typeof(disc_agg),
+                typeof(cont_agg),
                 typeof(jumps.regular_jump),
-                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, agg,
-                                                             jump_cbs, jumps.variable_jumps,
+                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc_agg,
+                                                             jump_cbs, cont_agg,
                                                              jumps.regular_jump, maj, rng,
                                                              solkwargs)
 end
@@ -381,13 +383,13 @@ function conditional_rate(jp::JumpProblem{iip, P, A, C, J},
             hi = h[i]
             ix = hixs[i]
             if eltype(h) <: Tuple
-              while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= t
-                  ix += 1
-              end
+                while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= t
+                    ix += 1
+                end
             else
-              while ((ix + 1) <= length(hi)) && hi[ix + 1] <= t
-                  ix += 1
-              end
+                while ((ix + 1) <= length(hi)) && hi[ix + 1] <= t
+                    ix += 1
+                end
             end
             _h[i] = ix == 0 ? [] : hi[1:ix]
         end
@@ -395,8 +397,8 @@ function conditional_rate(jp::JumpProblem{iip, P, A, C, J},
         u = sol(t)
         condrate = Array{typeof(t), 1}()
         @inbounds for i in 1:length(h)
-            _rate, = rates[i](i, dep_gr, _h, u, p, t)
-            push!(condrate, _rate(u, p, t))
+            _rate = rates[i](u, p, t, dep_gr, _h)
+            push!(condrate, _rate)
         end
         push!(condrates, condrate)
     end
@@ -433,10 +435,10 @@ end
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
     summary(io, A)
     println(io)
-    println(io, "Number of constant/conditional rate jumps: ",
+    println(io, "Number of jumps with discrete aggregation: ",
             A.discrete_jump_aggregation === nothing ? 0 :
             num_constant_rate_jumps(A.discrete_jump_aggregation))
-    println(io, "Number of variable rate jumps: ", length(A.variable_jumps))
+    println(io, "Number of jumps with continuous aggregation: ", length(A.variable_jumps))
     nmajs = (A.massaction_jump !== nothing) ? get_num_majumps(A.massaction_jump) : 0
     println(io, "Number of mass action jumps: ", nmajs)
     if A.regular_jump !== nothing

@@ -50,7 +50,34 @@ jump process is
 ```julia
 rate(u,p,t) = t*p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
-crj = VariableRateJump(rate, affect!)
+vrj = VariableRateJump(rate, affect!)
+```
+
+Suppose `u[1]` follows a Hawkes jump process. This is a type of self-exciting
+process in which the realization of an event increases the likelihood of new
+nearby events. A corresponding `VariableRateJump` for this jump process is
+```julia
+function rate(u, p, t, g, h)
+    λ, α, β = p
+    x = zero(typeof(t))
+    for _t in reverse(h[1])
+        _x = α*exp(-β*(t - _t))
+        if  _x ≈ 0 break end
+        x += _x
+    end
+    return λ + x
+end
+lrate(u, p, t, g, h) = p[1]
+urate(u, p, ,t, g, h) = rate(u, p, t, g, h)
+function L(u, p, t, g, h)
+  _lrate = lrate(u, p, t, g, h)
+  _urate = urate(u, p, t, g, h)
+  return _urate == _lrate ? typemax(t) : 1/(2*_urate)
+end
+affect!(integrator) = integrator.u[1] += 1
+vrj = VariableRateJump(rate, affect!; lrate=lrate, urate=urate, L=L)
+prob = DiscreteProblem(u0, tspan, p)
+jprob = JumpProblem(prob, QueueMethod(), vrj)
 ```
 
 ## Notes
@@ -60,18 +87,46 @@ crj = VariableRateJump(rate, affect!)
   `VariableRateJump`s will result in all `ConstantRateJump`, `VariableRateJump`
   and callback `affect!` functions receiving an integrator with `integrator.u`
   an [`ExtendedJumpArray`](@ref).
-- Must be used with `ODEProblem`s or `SDEProblem`s to be correctly simulated
-  (i.e. can not currently be used with `DiscreteProblem`s).
+- When using the `QueueMethod` aggregator `DiscreteProblem` can be used.
+  Otherwise, `ODEProblem` or `SDEProblem` must be used to be correctly simulated.
 - Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of
   coupled chemical or biochemical reactions, Journal of Chemical Physics, 122
   (5), DOI:10.1063/1.1835951 is used for calculating jump times with
   `VariableRateJump`s within ODE/SDE integrators.
 """
-struct VariableRateJump{R, F, I, T, T2} <: AbstractJump
-    """Function `rate(u,p,t)` that returns the jump's current rate."""
+struct VariableRateJump{R, F, F3, H, R2, R3, R4, I, T, T2} <: AbstractJump
+    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
+    t, g, h)` that computes the rate at time `t` given state `u`, parameters
+    `p`, dependency graph `g` and history `h`. If using another aggregator,
+    function `rate(u,p,t)` that returns the jump's current rate."""
     rate::R
-    """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
+    """When planning to use marks, function `affect!(integrator, m)` that updates
+    the state for one occurrence of the jump given `integrator` and sampled mark
+    `m`. Otherwise, function `affect!(integrator)` that does not depend on the
+    mark."""
     affect!::F
+    """Function `mark(u, p, t, g, h)` that samples from the mark distribution for
+    jump, given dependency graph `g`, history `h`, parameters `p` and jump
+    time `t`. If `mark(u, p, t, g, h) === nothing` the jump is unmarked."""
+    mark::F3
+    """Array with previous jump history."""
+    history::H
+    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
+    t, g, h)` that computes the lower rate bound in interval `t` to `t + L` at
+    time `t` given state `u`, parameters `p`, dependency graph `g` and history
+    `h`. This is not required if using another aggregator."""
+    lrate::R2
+    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
+    t, g, h)` that computes the upper rate bound in interval `t` to `t + L` at
+    time `t` given state `u`, parameters `p`, dependency graph `g` and history
+    `h`. This is not required if using another aggregator."""
+    urate::R3
+    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
+    t, g, h)` that computes the interval  length `L` starting at time `t` given
+    state `u`, parameters `p`, dependency graph `g` and history `h` for which
+    the rate is bounded between `lrate` and `urate`. This is not required if
+    using another aggregator."""
+    L::R4
     idxs::I
     rootfind::Bool
     interp_points::Int
@@ -81,72 +136,33 @@ struct VariableRateJump{R, F, I, T, T2} <: AbstractJump
 end
 
 function VariableRateJump(rate, affect!;
+                          mark = nothing,
+                          history = nothing,
+                          lrate = nothing, urate = nothing,
+                          L = nothing, rootfind = true,
                           idxs = nothing,
-                          rootfind = true,
-                          save_positions = (true, true),
+                          save_positions = (lrate !== nothing && urate !== nothing &&
+                                            L !== nothing) ? (false, true) : (true, true),
                           interp_points = 10,
                           abstol = 1e-12, reltol = 0)
-    VariableRateJump(rate, affect!, idxs,
-                     rootfind, interp_points,
-                     save_positions, abstol, reltol)
-end
-
-"""
-$(TYPEDEF)
-
-Defines a jump process with a conditional rate. More precisely, one where the rate
-function depends on past events. The rate can also change according to time between two jumps.
-
-## Fields
-
-$(FIELDS)
-
-## Examples
-Suppose `u[1]` follows a Hawkes jump process. This is a type of self-exciting
-process in which the realization of an event increases the likelihood of new
-nearby events. A corresponding `ConditionalRateJump` for this jump process is
-```julia
-function rate(i, g, h, u, p, t)
-  λ0, α, β = p
-  _h = typeof(t)[]
-  for j in g[i]
-    for _t in reverse(h[i])
-      if α*exp(-β*(t - _t)) ≈ 0 break end
-      push!(_h, _t)
+    if !((lrate === nothing && urate === nothing && L === nothing) ||
+         (lrate !== nothing && urate !== nothing && L !== nothing))
+        error("Either `lrate`, `urate` and `L` must be nothing, or all of them must be defined.")
     end
-  end
-  rate(u, p, s) = λ0 + α * sum([exp(-β*(s - _t)) for _t in _h])
-  lrate = λ0
-  urate = rate(u, p, t)
-  L = urate == lrate ? typemax(t) : 1/(2*urate)
-  return rate, lrate, urate, L
-end
-affect!(integrator) = integrator.u[1] += 1
-crj = ConditionalRateJump(rate, affect!)
-prob = DiscreteProblem(u0, tspan, p)
-jprob = JumpProblem(prob, QueueMethod(), crj)
-```
-"""
-struct ConditionalRateJump{F1, F2, F3} <: AbstractJump
-    """
-    Function `rate(i, g, h, u, p, t)` that returns `rate(u, p, s)`, `lrate`,
-    `urate` and `L` for jump `i` with dependency graph `g`, history `h`, state
-    `u`, parameters `p` and time `t`. `rate(u, p, s)` is a function that computes the
-    rate at time `s`, `lrate` and `urate` are the lower and upper rate bounds in
-    interval `t` to `t + L`.
-    """
-    rate::F1
-    """Function `affect!(i, integrator)` or `affect!(i, integrator, m)` that updates the state for one occurrence of the jump."""
-    affect!::F2
-    """
-    Function `mark(i, g, h, p, t)` that samples from the mark distribution for
-    jump `i` given dependency graph `g`, history `h`, parameters `p` and jump
-    time `t`. If `mark(i, g, h, p, t)` the jump is unmarked. 
-    """
-    mark::F3
+
+    VariableRateJump(rate, affect!, mark, history, lrate, urate, L, idxs, rootfind,
+                     interp_points, save_positions, abstol, reltol)
 end
 
-ConditionalRateJump(rate, affect!) = ConditionalRateJump(rate, affect!, nothing)
+function VariableRateJump(jump::ConstantRateJump)
+    rate = (u, p, t, g, h) -> jump.rate(u, p, t)
+    L = (u, p, t, g, h) -> typemax(t)
+    VariableRateJump(rate, jump.affect!; mark = nothing, history = nothing, lrate = rate,
+                     urate = rate, L = L, idx = nothing, rootfind = true,
+                     save_positions = (false, true),
+                     interp_points = 10,
+                     abstol = 1e-12, reltol = 0)
+end
 
 struct RegularJump{iip, R, C, MD}
     rate::R
@@ -436,14 +452,12 @@ jprob = JumpProblem(oprob, Direct(), jset)
 sol = solve(jprob, Tsit5())
 ```
 """
-struct JumpSet{T1, T2, T3, T4, T5} <: AbstractJump
+struct JumpSet{T1, T2, T3, T4} <: AbstractJump
     """Collection of [`VariableRateJump`](@ref)s"""
     variable_jumps::T1
     """Collection of [`ConstantRateJump`](@ref)s"""
     constant_jumps::T2
-    """Collection of [`ConditionalRateJump`](@ref)s"""
-    conditional_jumps::T5
-    """Collection of `RegularJump`s"""
+    """Collection of [`RegularRateJump`](@ref)s"""
     regular_jump::T3
     """Collection of [`MassActionJump`](@ref)s"""
     massaction_jump::T4
@@ -452,25 +466,24 @@ function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number
     JumpSet(vj, cj, rj, check_majump_type(maj))
 end
 
-JumpSet(jump::VariableRateJump) = JumpSet((jump,), (), (), nothing, nothing)
-JumpSet(jump::ConstantRateJump) = JumpSet((), (jump,), (), nothing, nothing)
-JumpSet(jump::ConditionalRateJump) = JumpSet((), (), (jump,), nothing, nothing)
-JumpSet(jump::RegularJump) = JumpSet((), (), (), jump, nothing)
-JumpSet(jump::AbstractMassActionJump) = JumpSet((), (), (), nothing, jump)
-function JumpSet(; variable_jumps = (), constant_jumps = (), conditional_jumps = (),
+JumpSet(jump::VariableRateJump) = JumpSet((jump,), (), nothing, nothing)
+JumpSet(jump::ConstantRateJump) = JumpSet((), (jump,), nothing, nothing)
+JumpSet(jump::RegularJump) = JumpSet((), (), jump, nothing)
+JumpSet(jump::AbstractMassActionJump) = JumpSet((), (), nothing, jump)
+function JumpSet(; variable_jumps = (), constant_jumps = (),
                  regular_jumps = nothing, massaction_jumps = nothing)
-    JumpSet(variable_jumps, constant_jumps, conditional_jumps, regular_jumps,
+    JumpSet(variable_jumps, constant_jumps, regular_jumps,
             massaction_jumps)
 end
 JumpSet(jb::Nothing) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable
 function JumpSet(jumps::AbstractJump...)
-    JumpSet(split_jumps((), (), (), nothing, nothing, jumps...)...)
+    JumpSet(split_jumps((), (), nothing, nothing, jumps...)...)
 end
 
 # handle vector of mass action jumps
-function JumpSet(vjs, cjs, djs, rj, majv::Vector{T}) where {T <: MassActionJump}
+function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
     if isempty(majv)
         error("JumpSets do not accept empty mass action jump collections; use \"nothing\" instead.")
     end
@@ -481,31 +494,27 @@ function JumpSet(vjs, cjs, djs, rj, majv::Vector{T}) where {T <: MassActionJump}
         massaction_jump_combine(maj, majv[i])
     end
 
-    JumpSet(vjs, cjs, djs, rj, maj)
+    JumpSet(vjs, cjs, rj, maj)
 end
 
 @inline get_num_majumps(jset::JumpSet) = get_num_majumps(jset.massaction_jump)
 
-@inline split_jumps(vj, cj, dj, rj, maj) = vj, cj, dj, rj, maj
-@inline function split_jumps(vj, cj, dj, rj, maj, v::VariableRateJump, args...)
-    split_jumps((vj..., v), cj, dj, rj, maj, args...)
+@inline split_jumps(vj, cj, rj, maj) = vj, cj, rj, maj
+@inline function split_jumps(vj, cj, rj, maj, v::VariableRateJump, args...)
+    split_jumps((vj..., v), cj, rj, maj, args...)
 end
-@inline function split_jumps(vj, cj, dj, rj, maj, c::ConstantRateJump, args...)
-    split_jumps(vj, (cj..., c), dj, rj, maj, args...)
+@inline function split_jumps(vj, cj, rj, maj, c::ConstantRateJump, args...)
+    split_jumps(vj, (cj..., c), rj, maj, args...)
 end
-@inline function split_jumps(vj, cj, dj, rj, maj, d::ConditionalRateJump, args...)
-    split_jumps(vj, cj, (dj..., d), rj, maj, args...)
+@inline function split_jumps(vj, cj, rj, maj, c::RegularJump, args...)
+    split_jumps(vj, cj, regular_jump_combine(rj, c), maj, args...)
 end
-@inline function split_jumps(vj, cj, dj, rj, maj, c::RegularJump, args...)
-    split_jumps(vj, cj, dj, regular_jump_combine(rj, c), maj, args...)
+@inline function split_jumps(vj, cj, rj, maj, c::MassActionJump, args...)
+    split_jumps(vj, cj, rj, massaction_jump_combine(maj, c), args...)
 end
-@inline function split_jumps(vj, cj, dj, rj, maj, c::MassActionJump, args...)
-    split_jumps(vj, cj, dj, rj, massaction_jump_combine(maj, c), args...)
-end
-@inline function split_jumps(vj, cj, dj, rj, maj, j::JumpSet, args...)
+@inline function split_jumps(vj, cj, rj, maj, j::JumpSet, args...)
     split_jumps((vj..., j.variable_jumps...),
                 (cj..., j.constant_jumps...),
-                (dj..., j.conditional_jumps...),
                 regular_jump_combine(rj, j.regular_jump),
                 massaction_jump_combine(maj, j.massaction_jump), args...)
 end
@@ -614,7 +623,7 @@ function massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump)
                   maj2.param_mapper)
 end
 
-##### helper methods for unpacking rates and affects! from constant or conditional jumps #####
+##### helper methods for unpacking rates and affects! from constant jumps #####
 function get_jump_info_tuples(jumps)
     if (jumps !== nothing) && !isempty(jumps)
         rates = ((c.rate for c in jumps)...,)

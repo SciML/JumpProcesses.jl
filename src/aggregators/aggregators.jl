@@ -145,7 +145,7 @@ doi: 10.1063/1.4928635
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
 """
-The Queue Method. This method handles conditional intensity rates.
+The Queue Method. This method handles variable intensity rates.
 """
 struct QueueMethod <: AbstractAggregatorAlgorithm end
 

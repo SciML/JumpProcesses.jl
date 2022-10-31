@@ -6,7 +6,7 @@ Highly efficient integrator for pure jump problems that involve only
 
 ## Notes
 - Only works with `JumProblem`s defined from `DiscreteProblem`s.
-- Only works with collections of `ConstantRateJump`s, `ConditionalRateJump`s and  `MassActionJump`s.
+- Only works with collections of `ConstantRateJump`s, `VariableRateJump`s and `MassActionJump`s.
 - Only supports `DiscreteCallback`s for events.
 
 ## Examples

@@ -294,7 +294,7 @@ function reset_history!(p::QueueMethodJumpAggregation, integrator)
     @inbounds for i in 1:length(h)
         hi = h[i]
         ix = 0
-        if eltype(h) <: Tuple
+        if eltype(hi) <: Tuple
             while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= start_time
                 ix += 1
             end

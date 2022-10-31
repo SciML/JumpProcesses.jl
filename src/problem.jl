@@ -382,7 +382,7 @@ function conditional_rate(jp::JumpProblem{iip, P, A, C, J},
             # println("HERE2 i ", i)
             hi = h[i]
             ix = hixs[i]
-            if eltype(h) <: Tuple
+            if eltype(hi) <: Tuple
                 while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= t
                     ix += 1
                 end

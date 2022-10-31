@@ -58,64 +58,100 @@ end
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
                    ma_jumps, save_positions, rng; dep_graph = nothing, save_history = false,
                    kwargs...)
-    U, P, T, H = typeof(u), typeof(p), typeof(t), typeof(t)
-    G = Vector{Vector{Int}}
+    # TODO: FunctionWrapper slows down big problems
+    # U, P, T, H = typeof(u), typeof(p), typeof(t), typeof(t)
+    # G = Vector{Vector{Int}}
+    # if (variable_jumps !== nothing) && !isempty(variable_jumps)
+    #     marks = [c.mark for c in variable_jumps]
+    #     if eltype(marks) === Nothing
+    #         MarkWrapper = Nothing
+    #         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
+    #         RateWrapper = FunctionWrappers.FunctionWrapper{T,
+    #                                                        Tuple{U, P, T, G,
+    #                                                              Vector{Vector{H}}}}
+    #     else
+    #         MarkWrapper = FunctionWrappers.FunctionWrapper{U,
+    #                                                        Tuple{U, P, T, G,
+    #                                                              Vector{Vector{H}}}}
+    #         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,
+    #                                                          Tuple{Any, U}}
+    #         H = Tuple{T, U}
+    #         RateWrapper = FunctionWrappers.FunctionWrapper{T,
+    #                                                        Tuple{U, P, T, G,
+    #                                                              Vector{Vector{H}}}}
+    #     end
+    # else
+    #     MarkWrapper = Nothing
+    #     AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Int, Any}}
+    #     RateWrapper = FunctionWrappers.FunctionWrapper{T,
+    #                                                    Tuple{U, P, T, G, Vector{Vector{H}}}}
+    # end
+
+    # if (variable_jumps !== nothing) && !isempty(variable_jumps)
+    #     if eltype(marks) === Nothing
+    #         marks = nothing
+    #         affects! = [AffectWrapper((integrator) -> (c.affect!(integrator); nothing))
+    #                     for c in variable_jumps]
+    #     else
+    #         marks = [convert(MarkWrapper, m) for m in marks]
+    #         affects! = [AffectWrapper((integrator, m) -> (c.affect!(integrator, m); nothing))
+    #                     for c in variable_jumps]
+    #     end
+
+    #     history = [jump.history for jump in variable_jumps]
+    #     if eltype(history) === Nothing
+    #         history = [Vector{H}() for _ in variable_jumps]
+    #     else
+    #         history = [convert(H, h) for h in history]
+    #     end
+
+    #     rates = [RateWrapper(c.rate) for c in variable_jumps]
+    #     lrates = [RateWrapper(c.lrate) for c in variable_jumps]
+    #     urates = [RateWrapper(c.urate) for c in variable_jumps]
+    #     Ls = [RateWrapper(c.L) for c in variable_jumps]
+    # else
+    #     marks = nothing
+    #     history = Vector{Vector{H}}()
+    #     affects! = Vector{AffectWrapper}()
+    #     rates = Vector{RateWrapper}()
+    #     lrates = Vector{RateWrapper}()
+    #     urates = Vector{RateWrapper}()
+    #     Ls = Vector{RateWrapper}()
+    # end
+    U, T, H = typeof(u), typeof(t), typeof(t)
     if (variable_jumps !== nothing) && !isempty(variable_jumps)
         marks = [c.mark for c in variable_jumps]
         if eltype(marks) === Nothing
-            MarkWrapper = Nothing
-            AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
-            RateWrapper = FunctionWrappers.FunctionWrapper{T,
-                                                           Tuple{U, P, T, G,
-                                                                 Vector{Vector{H}}}}
-        else
-            MarkWrapper = FunctionWrappers.FunctionWrapper{U,
-                                                           Tuple{U, P, T, G,
-                                                                 Vector{Vector{H}}}}
-            AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,
-                                                             Tuple{Any, U}}
-            H = Tuple{T, U}
-            RateWrapper = FunctionWrappers.FunctionWrapper{T,
-                                                           Tuple{U, P, T, G,
-                                                                 Vector{Vector{H}}}}
-        end
-    else
-        MarkWrapper = Nothing
-        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Int, Any}}
-        RateWrapper = FunctionWrappers.FunctionWrapper{T,
-                                                       Tuple{U, P, T, G, Vector{Vector{H}}}}
-    end
-
-    if (variable_jumps !== nothing) && !isempty(variable_jumps)
-        if eltype(marks) === Nothing
             marks = nothing
+            AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
             affects! = [AffectWrapper((integrator) -> (c.affect!(integrator); nothing))
                         for c in variable_jumps]
         else
-            marks = [convert(MarkWrapper, m) for m in marks]
+            AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,
+                                                             Tuple{Any, eltype(u)}}
             affects! = [AffectWrapper((integrator, m) -> (c.affect!(integrator, m); nothing))
                         for c in variable_jumps]
+            H = Tuple{T, eltype(u)}
         end
-
         history = [jump.history for jump in variable_jumps]
         if eltype(history) === Nothing
             history = [Vector{H}() for _ in variable_jumps]
         else
-            history = [convert(H, h) for h in history]
+            history = [convert(Vector{H}, h) for h in history]
         end
-
-        rates = [RateWrapper(c.rate) for c in variable_jumps]
-        lrates = [RateWrapper(c.lrate) for c in variable_jumps]
-        urates = [RateWrapper(c.urate) for c in variable_jumps]
-        Ls = [RateWrapper(c.L) for c in variable_jumps]
+        rates = Any[c.rate for c in variable_jumps]
+        lrates = Any[c.lrate for c in variable_jumps]
+        urates = Any[c.urate for c in variable_jumps]
+        Ls = Any[c.L for c in variable_jumps]
     else
         marks = nothing
-        history = Vector{Vector{H}}()
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
         affects! = Vector{AffectWrapper}()
-        rates = Vector{RateWrapper}()
-        lrates = Vector{RateWrapper}()
-        urates = Vector{RateWrapper}()
-        Ls = Vector{RateWrapper}()
+        history = Vector{Vector{H}}()
+        rates = Vector{Any}()
+        lrates = Vector{Any}()
+        urates = Vector{Any}()
+        Ls = Vector{Any}()
     end
     cur_rates = nothing
     sum_rate = zero(typeof(t))

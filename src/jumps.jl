@@ -94,38 +94,27 @@ jprob = JumpProblem(prob, QueueMethod(), vrj)
   (5), DOI:10.1063/1.1835951 is used for calculating jump times with
   `VariableRateJump`s within ODE/SDE integrators.
 """
-struct VariableRateJump{R, F, F3, H, R2, R3, R4, I, T, T2} <: AbstractJump
-    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
-    t, g, h)` that computes the rate at time `t` given state `u`, parameters
-    `p`, dependency graph `g` and history `h`. If using another aggregator,
-    function `rate(u,p,t)` that returns the jump's current rate."""
+struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
+    """Function `rate(u,p,t)` that returns the jump's current rate given state
+    `u`, parameters `p` and time `t`."""
     rate::R
-    """When planning to use marks, function `affect!(integrator, m)` that updates
-    the state for one occurrence of the jump given `integrator` and sampled mark
-    `m`. Otherwise, function `affect!(integrator)` that does not depend on the
-    mark."""
+    """Function `affect!(integrator)` that updates the state for one occurrence
+    of the jump given `integrator`."""
     affect!::F
-    """Function `mark(u, p, t, g, h)` that samples from the mark distribution for
-    jump, given dependency graph `g`, history `h`, parameters `p` and jump
-    time `t`. If `mark(u, p, t, g, h) === nothing` the jump is unmarked."""
-    mark::F3
-    """Array with previous jump history."""
-    history::H
     """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
-    t, g, h)` that computes the lower rate bound in interval `t` to `t + L` at
-    time `t` given state `u`, parameters `p`, dependency graph `g` and history
-    `h`. This is not required if using another aggregator."""
+    t)` that computes the lower rate bound in interval `t` to `t + L` at time
+    `t` given state `u`, parameters `p`. This is not required if using another
+    aggregator."""
     lrate::R2
     """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
-    t, g, h)` that computes the upper rate bound in interval `t` to `t + L` at
-    time `t` given state `u`, parameters `p`, dependency graph `g` and history
-    `h`. This is not required if using another aggregator."""
+    t)` that computes the upper rate bound in interval `t` to `t + L` at time
+    `t` given state `u`, parameters `p`. This is not required if using another
+    aggregator."""
     urate::R3
     """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
-    t, g, h)` that computes the interval  length `L` starting at time `t` given
-    state `u`, parameters `p`, dependency graph `g` and history `h` for which
-    the rate is bounded between `lrate` and `urate`. This is not required if
-    using another aggregator."""
+    t)` that computes the interval  length `L` starting at time `t` given state
+    `u`, parameters `p` for which the rate is bounded between `lrate` and
+    `urate`. This is not required if using another aggregator."""
     L::R4
     idxs::I
     rootfind::Bool
@@ -136,8 +125,6 @@ struct VariableRateJump{R, F, F3, H, R2, R3, R4, I, T, T2} <: AbstractJump
 end
 
 function VariableRateJump(rate, affect!;
-                          mark = nothing,
-                          history = nothing,
                           lrate = nothing, urate = nothing,
                           L = nothing, rootfind = true,
                           idxs = nothing,
@@ -150,14 +137,14 @@ function VariableRateJump(rate, affect!;
         error("Either `lrate`, `urate` and `L` must be nothing, or all of them must be defined.")
     end
 
-    VariableRateJump(rate, affect!, mark, history, lrate, urate, L, idxs, rootfind,
+    VariableRateJump(rate, affect!, lrate, urate, L, idxs, rootfind,
                      interp_points, save_positions, abstol, reltol)
 end
 
 function VariableRateJump(jump::ConstantRateJump)
     rate = (u, p, t, g, h) -> jump.rate(u, p, t)
     L = (u, p, t, g, h) -> typemax(t)
-    VariableRateJump(rate, jump.affect!; mark = nothing, history = nothing, lrate = rate,
+    VariableRateJump(rate, jump.affect!; lrate = rate,
                      urate = rate, L = L, idx = nothing, rootfind = true,
                      save_positions = (false, true),
                      interp_points = 10,

@@ -1,7 +1,7 @@
 """
 Queue method. This method handles variable intensity rates.
 """
-mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, VJMAP, JVMAP, PQ, H} <:
+mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, RNG, VJMAP, JVMAP, PQ} <:
                AbstractSSAJumpAggregator
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
@@ -17,9 +17,6 @@ mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, VJMAP, JVMA
     vartojumps_map::VJMAP             # map from variable to dependent jumps
     jumptovars_map::JVMAP             # map from jumps to dependent variables
     pq::PQ                            # priority queue of next time
-    marks::F4                         # vector of mark functions for VariableRateJumps
-    h::H                              # history of jumps
-    save_history::Bool                # whether to save event history after solving
     lrates::F2                        # vector of rate lower bound functions
     urates::F2                        # vector of rate upper bound functions
     Ls::F2                            # vector of interval length functions
@@ -29,10 +26,7 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
                                     maj::S, rs::F2, affs!::F3, sps::Tuple{Bool, Bool},
                                     rng::RNG; vartojumps_map = nothing,
                                     jumptovars_map = nothing,
-                                    marks::F4,
-                                    history::H,
-                                    save_history = false,
-                                    lrates, urates, Ls) where {T, S, F1, F2, F3, F4, RNG, H}
+                                    lrates, urates, Ls) where {T, S, F1, F2, F3, RNG}
     if get_num_majumps(maj) > 0
         error("Mass-action jumps are not supported with the Queue Method.")
     end
@@ -76,23 +70,22 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
     jvmap = [OrderedSet{Int}(push!(vars, jump)) for (jump, vars) in enumerate(jvmap)]
 
     pq = PriorityQueue{Int, T}()
-    QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, typeof(vjmap), typeof(jvmap),
-                               typeof(pq),
-                               typeof(history)}(nj, nj, njt,
-                                                et,
-                                                crs, sr, maj,
-                                                rs,
-                                                affs!, sps,
-                                                rng,
-                                                vjmap, jvmap, pq, marks, history,
-                                                save_history,
-                                                lrates, urates, Ls)
+    QueueMethodJumpAggregation{T, S, F1, F2, F3, RNG, typeof(vjmap), typeof(jvmap),
+                               typeof(pq)
+                               }(nj, nj, njt,
+                                 et,
+                                 crs, sr, maj,
+                                 rs,
+                                 affs!, sps,
+                                 rng,
+                                 vjmap, jvmap, pq,
+                                 lrates, urates, Ls)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
                    ma_jumps, save_positions, rng; vartojumps_map = nothing,
-                   jumptovars_map = nothing, save_history = false,
+                   jumptovars_map = nothing,
                    kwargs...)
     # TODO: FunctionWrapper slows down big problems
     # U, P, T, H = typeof(u), typeof(p), typeof(t), typeof(t)
@@ -154,36 +147,18 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     #     urates = Vector{RateWrapper}()
     #     Ls = Vector{RateWrapper}()
     # end
-    U, T, H = typeof(u), typeof(t), typeof(t)
+    U, T = typeof(u), typeof(t), typeof(t)
     if (variable_jumps !== nothing) && !isempty(variable_jumps)
-        marks = [c.mark for c in variable_jumps]
-        if eltype(marks) === Nothing
-            marks = nothing
-            AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
-            affects! = [AffectWrapper((integrator) -> (c.affect!(integrator); nothing))
-                        for c in variable_jumps]
-        else
-            AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing,
-                                                             Tuple{Any, eltype(u)}}
-            affects! = [AffectWrapper((integrator, m) -> (c.affect!(integrator, m); nothing))
-                        for c in variable_jumps]
-            H = Tuple{T, eltype(u)}
-        end
-        history = [jump.history for jump in variable_jumps]
-        if eltype(history) === Nothing
-            history = [Vector{H}() for _ in variable_jumps]
-        else
-            history = [convert(Vector{H}, h) for h in history]
-        end
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
+        affects! = [AffectWrapper((integrator) -> (c.affect!(integrator); nothing))
+                    for c in variable_jumps]
         rates = Any[c.rate for c in variable_jumps]
         lrates = Any[c.lrate for c in variable_jumps]
         urates = Any[c.urate for c in variable_jumps]
         Ls = Any[c.L for c in variable_jumps]
     else
-        marks = nothing
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
         affects! = Vector{AffectWrapper}()
-        history = Vector{Vector{H}}()
         rates = Vector{Any}()
         lrates = Vector{Any}()
         urates = Vector{Any}()
@@ -196,15 +171,13 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                ma_jumps, rates, affects!, save_positions, rng;
                                vartojumps_map = vartojumps_map,
-                               jumptovars_map = jumptovars_map, marks = marks,
-                               history = history, save_history = save_history,
+                               jumptovars_map = jumptovars_map,
                                lrates = lrates, urates = urates, Ls = Ls, kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::QueueMethodJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
-    reset_history!(p, integrator)
     fill_rates_and_get_times!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -225,25 +198,14 @@ function generate_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t
     # println("GENERATE_JUMPS! ", peek(p.pq), " p.next_jump_time ", p.next_jump_time,
     #         " p.next_jump ",
     #         p.next_jump)
-    if (p.next_jump_time > p.end_time) && !p.save_history
-        # throw the history away once simulation is over
-        reset_history!(p, integrator)
-    end
     nothing
 end
 
 @inline function update_state!(p::QueueMethodJumpAggregation, integrator, u, params, t)
-    @unpack next_jump, jumptovars_map, marks, h = p
-    if marks === nothing
-        # println("UPDATE_STATE!", " p.next_jump ", p.next_jump, " p.next_jump_time ",
-        # p.next_jump_time, " integrator ", integrator)
-        push!(p.h[p.next_jump], p.next_jump_time)
-        @inbounds p.affects![next_jump](integrator)
-    else
-        m = marks[next_jump](u, params, t, jumptovars_map, h)
-        push!(p.h[p.next_jump], (p.next_jump_time, m))
-        @inbounds p.affects![next_jump](integrator, m)
-    end
+    @unpack next_jump = p
+    # println("UPDATE_STATE!", " p.next_jump ", p.next_jump, " p.next_jump_time ",
+    # p.next_jump_time, " integrator ", integrator)
+    @inbounds p.affects![next_jump](integrator)
     p.prev_jump = next_jump
     return integrator.u
 end
@@ -279,27 +241,27 @@ function next_time(p::QueueMethodJumpAggregation, i, u, params, t, tstop, ignore
 end
 
 function next_time(p::QueueMethodJumpAggregation, i, u, params, t, tstop)
-    @unpack rng, pq, jumptovars_map, h = p
+    @unpack rng, pq = p
     rate, lrate, urate, L = p.rates[i], p.lrates[i], p.urates[i], p.Ls[i]
     while t < tstop
         # println("NEXT_TIME i ", i, " u ", u, " params ", params, " t ", t, " jumptovars_map ",
         # jumptovars_map,
         # " h ", h)
-        _urate = urate(u, params, t, jumptovars_map, h)
-        _L = L(u, params, t, jumptovars_map, h)
+        _urate = urate(u, params, t)
+        _L = L(u, params, t)
         s = randexp(rng) / _urate
         if s > _L
             t = t + _L
             continue
         end
-        _lrate = lrate(u, params, t, jumptovars_map, h)
+        _lrate = lrate(u, params, t)
         if _lrate > _urate
             error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
         end
         v = rand(rng)
         # first inequality is less expensive and short-circuits the evaluation
         if (v > _lrate / _urate)
-            _rate = rate(u, params, t + s, jumptovars_map, h)
+            _rate = rate(u, params, t + s)
             if (v > _rate / _urate)
                 t = t + s
                 continue
@@ -324,22 +286,22 @@ function fill_rates_and_get_times!(p::QueueMethodJumpAggregation, u, params, t)
     nothing
 end
 
-function reset_history!(p::QueueMethodJumpAggregation, integrator)
-    start_time = integrator.sol.prob.tspan[1]
-    @unpack h = p
-    @inbounds for i in 1:length(h)
-        hi = h[i]
-        ix = 0
-        if eltype(hi) <: Tuple
-            while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= start_time
-                ix += 1
-            end
-        else
-            while ((ix + 1) <= length(hi)) && hi[ix + 1] <= start_time
-                ix += 1
-            end
-        end
-        h[i] = ix == 0 ? eltype(h)[] : hi[1:ix]
-    end
-    nothing
-end
+# function reset_history!(p::QueueMethodJumpAggregation, integrator)
+#     start_time = integrator.sol.prob.tspan[1]
+#     @unpack h = p
+#     @inbounds for i in 1:length(h)
+#         hi = h[i]
+#         ix = 0
+#         if eltype(hi) <: Tuple
+#             while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= start_time
+#                 ix += 1
+#             end
+#         else
+#             while ((ix + 1) <= length(hi)) && hi[ix + 1] <= start_time
+#                 ix += 1
+#             end
+#         end
+#         h[i] = ix == 0 ? eltype(h)[] : hi[1:ix]
+#     end
+#     nothing
+# end

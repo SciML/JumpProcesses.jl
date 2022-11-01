@@ -1,7 +1,7 @@
 """
 Queue method. This method handles variable intensity rates.
 """
-mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, DEPGR, PQ, H} <:
+mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, VJMAP, JVMAP, PQ, H} <:
                AbstractSSAJumpAggregator
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
@@ -14,7 +14,8 @@ mutable struct QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, DEPGR, PQ, 
     affects!::F3                      # vector of affect functions for VariableRateJumps
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
     rng::RNG                          # random number generator
-    dep_gr::DEPGR                     # dependency graph
+    vartojumps_map::VJMAP             # map from variable to dependent jumps
+    jumptovars_map::JVMAP             # map from jumps to dependent variables
     pq::PQ                            # priority queue of next time
     marks::F4                         # vector of mark functions for VariableRateJumps
     h::H                              # history of jumps
@@ -26,7 +27,9 @@ end
 
 function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
                                     maj::S, rs::F2, affs!::F3, sps::Tuple{Bool, Bool},
-                                    rng::RNG; dep_graph = nothing, marks::F4,
+                                    rng::RNG; vartojumps_map = nothing,
+                                    jumptovars_map = nothing,
+                                    marks::F4,
                                     history::H,
                                     save_history = false,
                                     lrates, urates, Ls) where {T, S, F1, F2, F3, F4, RNG, H}
@@ -34,29 +37,62 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
         error("Mass-action jumps are not supported with the Queue Method.")
     end
 
-    if dep_graph === nothing
-        gr = [Int[] for _ in length(rs)]
-    elseif length(dep_graph) != length(rs)
-        error("Dependency graph must have same length as the number of jumps.")
+    if vartojumps_map === nothing
+        vjmap = [Int[] for _ in length(rs)]
+        if jumptovars_map !== nothing
+            for (jump, vars) in enumerate(jumptovars_map)
+                for var in vars
+                    push!(vjmap[var], jump)
+                end
+            end
+        end
     else
-        gr = [sort(Int[d for d in deps]) for deps in dep_graph]
+        vjmap = vartojumps_map
     end
 
+    if length(vjmap) != length(rs)
+        error("Map from variable to dependent jumps must have same length as the number of jumps.")
+    end
+
+    vjmap = [OrderedSet{Int}(push!(jumps, var)) for (var, jumps) in enumerate(vjmap)]
+
+    if jumptovars_map === nothing
+        jvmap = [Int[] for _ in length(rs)]
+        if vartojumps_map !== nothing
+            for (var, jumps) in enumerate(vartojumps_map)
+                for jump in jumps
+                    push!(jvmap[jump], var)
+                end
+            end
+        end
+    else
+        jvmap = jumptovars_map
+    end
+
+    if length(jvmap) != length(rs)
+        error("Map from jump to dependent variables must have same length as the number of jumps.")
+    end
+
+    jvmap = [OrderedSet{Int}(push!(vars, jump)) for (jump, vars) in enumerate(jvmap)]
+
     pq = PriorityQueue{Int, T}()
-    QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, typeof(gr), typeof(pq),
+    QueueMethodJumpAggregation{T, S, F1, F2, F3, F4, RNG, typeof(vjmap), typeof(jvmap),
+                               typeof(pq),
                                typeof(history)}(nj, nj, njt,
                                                 et,
                                                 crs, sr, maj,
                                                 rs,
                                                 affs!, sps,
                                                 rng,
-                                                gr, pq, marks, history, save_history,
+                                                vjmap, jvmap, pq, marks, history,
+                                                save_history,
                                                 lrates, urates, Ls)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
-                   ma_jumps, save_positions, rng; dep_graph = nothing, save_history = false,
+                   ma_jumps, save_positions, rng; vartojumps_map = nothing,
+                   jumptovars_map = nothing, save_history = false,
                    kwargs...)
     # TODO: FunctionWrapper slows down big problems
     # U, P, T, H = typeof(u), typeof(p), typeof(t), typeof(t)
@@ -159,7 +195,8 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     next_jump_time = typemax(typeof(t))
     QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                ma_jumps, rates, affects!, save_positions, rng;
-                               dep_graph = dep_graph, marks = marks,
+                               vartojumps_map = vartojumps_map,
+                               jumptovars_map = jumptovars_map, marks = marks,
                                history = history, save_history = save_history,
                                lrates = lrates, urates = urates, Ls = Ls, kwargs...)
 end
@@ -196,14 +233,14 @@ function generate_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t
 end
 
 @inline function update_state!(p::QueueMethodJumpAggregation, integrator, u, params, t)
-    @unpack next_jump, dep_gr, marks, h = p
+    @unpack next_jump, jumptovars_map, marks, h = p
     if marks === nothing
         # println("UPDATE_STATE!", " p.next_jump ", p.next_jump, " p.next_jump_time ",
         # p.next_jump_time, " integrator ", integrator)
         push!(p.h[p.next_jump], p.next_jump_time)
         @inbounds p.affects![next_jump](integrator)
     else
-        m = marks[next_jump](u, params, t, dep_gr, h)
+        m = marks[next_jump](u, params, t, jumptovars_map, h)
         push!(p.h[p.next_jump], (p.next_jump_time, m))
         @inbounds p.affects![next_jump](integrator, m)
     end
@@ -214,26 +251,25 @@ end
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
     @unpack next_jump, end_time, rates, pq = p
-    @inbounds deps = copy(p.dep_gr[next_jump])
-
-    Base.insert!(deps, searchsortedfirst(deps, next_jump), next_jump)
-
-    while !isempty(deps)
-        j = pop!(deps)
-        @inbounds tj = next_time(p, j, u, params, t, end_time, deps)
-        pq[j] = tj
+    @inbounds vars = collect(p.jumptovars_map[next_jump])
+    shuffle!(vars)
+    while !isempty(vars)
+        var = pop!(vars)
+        tvar = next_time(p, var, u, params, t, end_time, vars)
+        pq[var] = tvar
     end
-
     nothing
 end
 
 function next_time(p::QueueMethodJumpAggregation, i, u, params, t, tstop, ignore)
-    @unpack pq, dep_gr, h = p
+    @unpack pq = p
+    jumps = p.vartojumps_map[i]
+
     # println("NEXT_TIME i ", i)
     # we only need to determine whether a jump will take place before any of the dependents
     for (j, _t) in pairs(pq)
         # println("NEXT_TIME pq LOOP1 j ", j, " _t ", _t)
-        @inbounds if j != i && !insorted(j, ignore) && insorted(j, dep_gr[i]) && _t < tstop
+        @inbounds if i != j && !(j in ignore) && (j in jumps) && _t < tstop
             # println("NEXT_TIME pq LOOP2 j ", j, " tstop ", _t)
             tstop = _t
             break
@@ -243,34 +279,34 @@ function next_time(p::QueueMethodJumpAggregation, i, u, params, t, tstop, ignore
 end
 
 function next_time(p::QueueMethodJumpAggregation, i, u, params, t, tstop)
-    @unpack rng, pq, dep_gr, h = p
+    @unpack rng, pq, jumptovars_map, h = p
     rate, lrate, urate, L = p.rates[i], p.lrates[i], p.urates[i], p.Ls[i]
     while t < tstop
-        # println("NEXT_TIME i ", i, " u ", u, " params ", params, " t ", t, " dep_gr ",
-        # dep_gr,
+        # println("NEXT_TIME i ", i, " u ", u, " params ", params, " t ", t, " jumptovars_map ",
+        # jumptovars_map,
         # " h ", h)
-        _urate = urate(u, params, t, dep_gr, h)
-        _L = L(u, params, t, dep_gr, h)
+        _urate = urate(u, params, t, jumptovars_map, h)
+        _L = L(u, params, t, jumptovars_map, h)
         s = randexp(rng) / _urate
         if s > _L
             t = t + _L
             continue
         end
-        _lrate = lrate(u, params, t, dep_gr, h)
+        _lrate = lrate(u, params, t, jumptovars_map, h)
         if _lrate > _urate
             error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
         end
         v = rand(rng)
         # first inequality is less expensive and short-circuits the evaluation
         if (v > _lrate / _urate)
-            _rate = rate(u, params, t + s, dep_gr, h)
+            _rate = rate(u, params, t + s, jumptovars_map, h)
             if (v > _rate / _urate)
                 t = t + s
                 continue
             end
         end
         t = t + s
-        # println("NEXT TIME RETURN t ", t, " rate ", rate(u, params, t, dep_gr, h))
+        # println("NEXT TIME RETURN t ", t, " rate ", rate(u, params, t, jumptovars_map, h))
         return t
     end
     return typemax(t)

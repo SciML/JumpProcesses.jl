@@ -161,7 +161,6 @@ needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
 needs_depgraph(aggregator::RDirect) = true
-needs_depgraph(aggregator::QueueMethod) = true
 
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from
@@ -169,6 +168,7 @@ needs_depgraph(aggregator::QueueMethod) = true
 needs_vartojumps_map(aggregator::AbstractAggregatorAlgorithm) = false
 needs_vartojumps_map(aggregator::RSSA) = true
 needs_vartojumps_map(aggregator::RSSACR) = true
+needs_vartojumps_map(aggregator::QueueMethod) = true
 
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true

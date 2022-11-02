@@ -23,7 +23,7 @@ function reset_history!(h; start_time = nothing)
     nothing
 end
 
-function conditional_rate(rate_closures, h, sol; saveat = nothing)
+function conditional_rate(rate_closures, h, sol; saveat = nothing, ixs=1:length(h))
     if eltype(h[1]) <: Tuple
         h = [_h[1] for _h in h]
     end
@@ -50,7 +50,7 @@ function conditional_rate(rate_closures, h, sol; saveat = nothing)
         # compute the rate at time t
         u = sol(t)
         condrate = Array{typeof(t), 1}()
-        @inbounds for i in 1:length(h)
+        @inbounds for i in ixs
             rate = rate_closures[i](_h)
             _rate = rate(u, p, t)
             push!(condrate, _rate)

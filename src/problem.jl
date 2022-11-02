@@ -351,64 +351,6 @@ aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A
         push!(tstops, jp.jump_callback.discrete_callbacks[1].condition.next_jump_time)
 end
 
-function history(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C,
-                                                          J <: QueueMethodJumpAggregation}
-    jp.discrete_jump_aggregation.h
-end
-
-function conditional_rate(jp::JumpProblem{iip, P, A, C, J},
-                          sol::DiffEqBase.AbstractODESolution;
-                          saveat = nothing) where {iip, P, A, C,
-                                                   J <: QueueMethodJumpAggregation}
-    agg = jp.discrete_jump_aggregation
-    if !agg.save_history
-        error("History was not saved; set `save_history = true` when calling `JumpProblem`.")
-    end
-    if typeof(saveat) <: Number
-        _saveat = jp.prob.tspan[1]:saveat:jp.prob.tspan[2]
-    else
-        _saveat = sol.t
-    end
-    h = agg.h
-    dep_gr = agg.dep_gr
-    rates = agg.rates
-    p = jp.prob.p
-    _h = [eltype(h)(undef, 0) for _ in 1:length(h)]
-    hixs = zeros(Int, length(h))
-    condrates = Array{Array{eltype(_saveat), 1}, 1}()
-    for t in _saveat
-        # get history up to t
-        @inbounds for i in 1:length(h)
-            # println("HERE2 i ", i)
-            hi = h[i]
-            ix = hixs[i]
-            if eltype(hi) <: Tuple
-                while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= t
-                    ix += 1
-                end
-            else
-                while ((ix + 1) <= length(hi)) && hi[ix + 1] <= t
-                    ix += 1
-                end
-            end
-            _h[i] = ix == 0 ? [] : hi[1:ix]
-        end
-        # compute the rate at time t
-        u = sol(t)
-        condrate = Array{typeof(t), 1}()
-        @inbounds for i in 1:length(h)
-            _rate = rates[i](u, p, t, dep_gr, _h)
-            push!(condrate, _rate)
-        end
-        push!(condrates, condrate)
-    end
-    return DiffEqBase.build_solution(jp.prob, sol.alg, _saveat, condrates, dense = false,
-                                     calculate_error = false,
-                                     destats = DiffEqBase.DEStats(0),
-                                     interp = DiffEqBase.ConstantInterpolation(_saveat,
-                                                                               condrates))
-end
-
 @inline function update_jumps!(du, u, p, t, idx, jump)
     idx += 1
     du[idx] = jump.rate(u.u, p, t)

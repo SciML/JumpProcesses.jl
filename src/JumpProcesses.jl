@@ -72,6 +72,7 @@ include("coupled_array.jl")
 include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
+include("utils.jl")
 
 export ConstantRateJump, VariableRateJump, RegularJump,
        MassActionJump, JumpSet
@@ -84,7 +85,7 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
-export QueueMethod, history, conditional_rate
+export QueueMethod
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
@@ -99,5 +100,8 @@ export CartesianGrid, CartesianGridRej
 export SpatialMassActionJump
 export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect
+
+# utilities to deal with conditional rates
+export reset_history!, conditional_rate
 
 end # module

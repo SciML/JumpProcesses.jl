@@ -32,42 +32,42 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::F1, sr::T,
     end
 
     if vartojumps_map === nothing
-        vjmap = [Int[] for _ in length(rs)]
+        vjmap = [OrderedSet{Int}() for _ in 1:length(rs)]
         if jumptovars_map !== nothing
             for (jump, vars) in enumerate(jumptovars_map)
+                push!(vjmap[jump], jump)
                 for var in vars
                     push!(vjmap[var], jump)
                 end
             end
         end
     else
-        vjmap = vartojumps_map
+        vjmap = [OrderedSet{Int}(append!([], jumps, [var]))
+                 for (var, jumps) in enumerate(vartojumps_map)]
     end
 
     if length(vjmap) != length(rs)
         error("Map from variable to dependent jumps must have same length as the number of jumps.")
     end
 
-    vjmap = [OrderedSet{Int}(push!(jumps, var)) for (var, jumps) in enumerate(vjmap)]
-
     if jumptovars_map === nothing
-        jvmap = [Int[] for _ in length(rs)]
+        jvmap = [OrderedSet{Int}() for _ in 1:length(rs)]
         if vartojumps_map !== nothing
             for (var, jumps) in enumerate(vartojumps_map)
+                push!(jvmap[var], var)
                 for jump in jumps
                     push!(jvmap[jump], var)
                 end
             end
         end
     else
-        jvmap = jumptovars_map
+        jvmap = [OrderedSet{Int}(append!([], vars, [jump]))
+                 for (jump, vars) in enumerate(jumptovars_map)]
     end
 
     if length(jvmap) != length(rs)
         error("Map from jump to dependent variables must have same length as the number of jumps.")
     end
-
-    jvmap = [OrderedSet{Int}(push!(vars, jump)) for (jump, vars) in enumerate(jvmap)]
 
     pq = PriorityQueue{Int, T}()
     QueueMethodJumpAggregation{T, S, F1, F2, F3, RNG, typeof(vjmap), typeof(jvmap),
@@ -285,23 +285,3 @@ function fill_rates_and_get_times!(p::QueueMethodJumpAggregation, u, params, t)
     p.pq = PriorityQueue(pqdata)
     nothing
 end
-
-# function reset_history!(p::QueueMethodJumpAggregation, integrator)
-#     start_time = integrator.sol.prob.tspan[1]
-#     @unpack h = p
-#     @inbounds for i in 1:length(h)
-#         hi = h[i]
-#         ix = 0
-#         if eltype(hi) <: Tuple
-#             while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= start_time
-#                 ix += 1
-#             end
-#         else
-#             while ((ix + 1) <= length(hi)) && hi[ix + 1] <= start_time
-#                 ix += 1
-#             end
-#         end
-#         h[i] = ix == 0 ? eltype(h)[] : hi[1:ix]
-#     end
-#     nothing
-# end

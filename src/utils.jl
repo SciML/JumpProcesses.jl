@@ -23,7 +23,16 @@ function reset_history!(h; start_time = nothing)
     nothing
 end
 
-function conditional_rate(rate_closures, h, sol; saveat = nothing, ixs=1:length(h))
+"""
+Computes conditional rate, given a vector of `rate_closures`, the history of
+the process `h`, the solution `sol`. Optionally, it is possible to provide save
+points with `saveat` and the indices of the targeted variables with `ixs`.
+
+The vector `rate_closures` contains functions `closure(_h)` that returns a
+function `rate(u, p, t)` which computes the conditional rate given any history
+`_h`.
+"""
+function conditional_rate(rate_closures, h, sol; saveat = nothing, ixs = 1:length(h))
     if eltype(h[1]) <: Tuple
         h = [_h[1] for _h in h]
     end
@@ -37,9 +46,7 @@ function conditional_rate(rate_closures, h, sol; saveat = nothing, ixs=1:length(
     hixs = zeros(Int, length(h))
     condrates = Array{Array{eltype(_saveat), 1}, 1}()
     for t in _saveat
-        # get history up to t
         @inbounds for i in 1:length(h)
-            # println("HERE2 i ", i)
             hi = h[i]
             ix = hixs[i]
             while ((ix + 1) <= length(hi)) && hi[ix + 1] <= t
@@ -47,7 +54,6 @@ function conditional_rate(rate_closures, h, sol; saveat = nothing, ixs=1:length(
             end
             _h[i] = ix == 0 ? [] : hi[1:ix]
         end
-        # compute the rate at time t
         u = sol(t)
         condrate = Array{typeof(t), 1}()
         @inbounds for i in ixs

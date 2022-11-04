@@ -185,10 +185,11 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
        !is_spatial(aggregator) # check if need to flatten
         prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
     end
-    ## Constant rate handling
+
+    ## Constant and variable rate handling
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
     # check if there are no jumps
-    if (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) &&
+    if (length(jumps.constant_jumps) == 0) && (maj === nothing) &&
        !is_spatial(aggregator) && !(typeof(aggregator) <: QueueMethod)
         disc_agg = nothing
         constant_jump_callback = CallbackSet()
@@ -199,19 +200,20 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         constant_jump_callback = DiscreteCallback(disc_agg)
     end
 
-    iip = isinplace_jump(prob, jumps.regular_jump)
-
-    ## variable Rate Handling
-    variable_jumps = nothing
-    if typeof(jumps.variable_jumps) <: Tuple{}
+    if length(jumps.variable_jumps) == 0
         new_prob = prob
         variable_jump_callback = CallbackSet()
         cont_agg = JumpSet().variable_jumps
+        if typeof(aggregator) <: QueueMethod
+            disc_agg = nothing
+            constant_jump_callback = CallbackSet()
+        end
     elseif typeof(aggregator) <: QueueMethod
-        if (typeof(jumps.constant_jumps) <: Tuple{})
+        variable_jumps = VariableRateJump[]
+        if (length(jumps.constant_jumps) == 0)
             variable_jumps = jumps.variable_jumps
         else
-            variable_jumps = [jump for jump in jumps.variable_jumps]
+            variable_jumps = append!(variable_jumps, jumps.variable_jumps)
             append!(variable_jumps,
                     [VariableRateJump(jump) for jump in jumps.constant_jumps])
         end
@@ -223,12 +225,16 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         cont_agg = JumpSet().variable_jumps
     else
         new_prob = extend_problem(prob, jumps; rng = rng)
+        disc_agg = nothing
+        constant_jump_callback = CallbackSet()
         variable_jump_callback = build_variable_callback(CallbackSet(), 0,
                                                          jumps.variable_jumps...; rng = rng)
         cont_agg = jumps.variable_jumps
     end
 
     jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
+
+    iip = isinplace_jump(prob, jumps.regular_jump)
 
     solkwargs = make_kwarg(; callback)
     JumpProblem{iip, typeof(new_prob), typeof(aggregator),

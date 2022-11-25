@@ -304,7 +304,7 @@ function reset_aggregated_jumps!(integrator::SSAIntegrator, uprev = nothing)
     nothing
 end
 
-function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = :Terminated)
+function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = ReturnCode.Terminated)
     integrator.keep_stepping = false
     integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, retcode)
     nothing

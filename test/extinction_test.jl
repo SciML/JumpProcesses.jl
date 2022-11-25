@@ -72,4 +72,4 @@ dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
 @test sol[1, end] == 1
-@test sol.retcode == :Terminated
+@test sol.retcode == ReturnCode.Terminated

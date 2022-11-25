@@ -1,7 +1,7 @@
 """
 Queue method. This method handles variable intensity rates.
 """
-mutable struct QueueMethodJumpAggregation{T, S, F2, F3, RNG, VJMAP, JVMAP, PQ} <:
+mutable struct QueueMethodJumpAggregation{T, S, F1, F2, RNG, INVDEPGR, DEPGR, PQ} <:
                AbstractSSAJumpAggregator
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
@@ -10,67 +10,64 @@ mutable struct QueueMethodJumpAggregation{T, S, F2, F3, RNG, VJMAP, JVMAP, PQ} <
     cur_rates::Nothing                # not used
     sum_rate::Nothing                 # not used
     ma_jumps::S                       # not used
-    rates::F2                         # vector of rate functions
-    affects!::F3                      # vector of affect functions for VariableRateJumps
+    rates::F1                         # vector of rate functions
+    affects!::F2                      # vector of affect functions for VariableRateJumps
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
     rng::RNG                          # random number generator
-    vartojumps_map::VJMAP             # map from variable to dependent jumps
-    jumptovars_map::JVMAP             # map from jumps to dependent variables
+    dep_gr::DEPGR                     # map from jumps to jumps depending on it
+    inv_dep_gr::INVDEPGR              # map from jumsp to jumps it depends on
     pq::PQ                            # priority queue of next time
-    lrates::F2                        # vector of rate lower bound functions
-    urates::F2                        # vector of rate upper bound functions
-    Ls::F2                            # vector of interval length functions
+    lrates::F1                        # vector of rate lower bound functions
+    urates::F1                        # vector of rate upper bound functions
+    Ls::F1                            # vector of interval length functions
 end
 
 function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothing,
-                                    maj::S, rs::F2, affs!::F3, sps::Tuple{Bool, Bool},
-                                    rng::RNG; vartojumps_map = nothing,
-                                    jumptovars_map = nothing,
-                                    lrates, urates, Ls) where {T, S, F1, F2, F3, RNG}
-    if get_num_majumps(maj) > 0
-        error("Mass-action jumps are not supported with the Queue Method.")
-    end
-
-    if vartojumps_map === nothing
-        vjmap = [OrderedSet{Int}() for _ in 1:length(rs)]
-        if jumptovars_map !== nothing
-            for (jump, vars) in enumerate(jumptovars_map)
-                push!(vjmap[jump], jump)
-                for var in vars
-                    push!(vjmap[var], jump)
-                end
-            end
+                                    maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+                                    rng::RNG; u::U, inv_dep_gr = nothing,
+                                    dep_gr = nothing,
+                                    lrates, urates, Ls) where {T, S, F1, F2, RNG, U}
+    if inv_dep_gr === nothing && dep_gr === nothing
+        if (get_num_majumps(maj) == 0) || !isempty(rs)
+            error("To use VariableRateJumps with the Queue Method algorithm a dependency graph between jumps and/or its inverse must be supplied.")
+        else
+            dg = make_dependency_graph(length(u), maj)
+            idg = dg
         end
-    else
-        vjmap = [OrderedSet{Int}(append!([], jumps, [var]))
-                 for (var, jumps) in enumerate(vartojumps_map)]
     end
 
-    if length(vjmap) != length(rs)
-        error("Map from variable to dependent jumps must have same length as the number of jumps.")
+    num_jumps = get_num_majumps(maj) + length(rs)
+
+    if dep_gr !== nothing
+        # using a Set to ensure that edges are not duplicate
+        dg = [Set{Int}(append!([], jumps, [var]))
+              for (var, jumps) in enumerate(dep_gr)]
     end
 
-    if jumptovars_map === nothing
-        jvmap = [OrderedSet{Int}() for _ in 1:length(rs)]
-        if vartojumps_map !== nothing
-            for (var, jumps) in enumerate(vartojumps_map)
-                push!(jvmap[var], var)
-                for jump in jumps
-                    push!(jvmap[jump], var)
-                end
-            end
-        end
-    else
-        jvmap = [OrderedSet{Int}(append!([], vars, [jump]))
-                 for (jump, vars) in enumerate(jumptovars_map)]
+    if inv_dep_gr !== nothing
+        # using a Set to ensure that edges are not duplicate
+        idg = [Set{Int}(append!([], vars, [jump]))
+               for (jump, vars) in enumerate(inv_dep_gr)]
     end
 
-    if length(jvmap) != length(rs)
-        error("Map from jump to dependent variables must have same length as the number of jumps.")
+    if dep_gr === nothing
+        dg = idg
+    end
+
+    if inv_dep_gr === nothing
+        idg = dg
+    end
+
+    if length(dg) != num_jumps
+        error("Number of nodes in the dependency graph must be the same as the number of jumps.")
+    end
+
+    if length(idg) != num_jumps
+        error("Number of nodes in the inverse dependency graph must be the same as the number of jumps.")
     end
 
     pq = PriorityQueue{Int, T}()
-    QueueMethodJumpAggregation{T, S, F2, F3, RNG, typeof(vjmap), typeof(jvmap),
+    QueueMethodJumpAggregation{T, S, F1, F2, RNG, typeof(dg), typeof(idg),
                                typeof(pq)
                                }(nj, nj, njt,
                                  et,
@@ -78,16 +75,17 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
                                  rs,
                                  affs!, sps,
                                  rng,
-                                 vjmap, jvmap, pq,
+                                 dg, idg, pq,
                                  lrates, urates, Ls)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
-                   ma_jumps, save_positions, rng; vartojumps_map = nothing,
-                   jumptovars_map = nothing,
+                   ma_jumps, save_positions, rng;
+                   dep_gr = nothing, inv_dep_gr = nothing,
                    kwargs...)
     # TODO: FunctionWrapper slows down big problems
+    # keeping the problematic implementation here for future reference
     # U, P, T, H = typeof(u), typeof(p), typeof(t), typeof(t)
     # G = Vector{Vector{Int}}
     # if (variable_jumps !== nothing) && !isempty(variable_jumps)
@@ -147,7 +145,6 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     #     urates = Vector{RateWrapper}()
     #     Ls = Vector{RateWrapper}()
     # end
-    U, T = typeof(u), typeof(t), typeof(t)
     if (variable_jumps !== nothing) && !isempty(variable_jumps)
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
         affects! = [AffectWrapper((integrator) -> (c.affect!(integrator); nothing))
@@ -170,8 +167,9 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     next_jump_time = typemax(typeof(t))
     QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                ma_jumps, rates, affects!, save_positions, rng;
-                               vartojumps_map = vartojumps_map,
-                               jumptovars_map = jumptovars_map,
+                               u = u,
+                               dep_gr = dep_gr,
+                               inv_dep_gr = inv_dep_gr,
                                lrates = lrates, urates = urates, Ls = Ls, kwargs...)
 end
 
@@ -199,8 +197,18 @@ function generate_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t
 end
 
 @inline function update_state!(p::QueueMethodJumpAggregation, integrator, u, params, t)
-    @unpack next_jump = p
-    @inbounds p.affects![next_jump](integrator)
+    @unpack ma_jumps, next_jump = p
+    num_majumps = get_num_majumps(ma_jumps)
+    if next_jump <= num_majumps
+        if u isa SVector
+            integrator.u = executerx(u, next_jump, ma_jumps)
+        else
+            @inbounds executerx!(u, next_jump, ma_jumps)
+        end
+    else
+        idx = next_jump - num_majumps
+        @inbounds p.affects![next_jump](integrator)
+    end
     p.prev_jump = next_jump
     return integrator.u
 end
@@ -208,22 +216,41 @@ end
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
     @unpack next_jump, rates, pq = p
-    @inbounds vars = collect(p.jumptovars_map[next_jump])
+    @inbounds vars = collect(p.dep_gr[next_jump])
     shuffle!(vars)
+    for i in vars
+        pq[i] = typemax(t)
+    end
     while !isempty(vars)
-        var = pop!(vars)
-        tvar = next_time(p, var, u, params, t)
-        pq[var] = tvar
+        i = pop!(vars)
+        ti = next_time(p, i, u, params, t)
+        pq[i] = ti
     end
     nothing
 end
 
+function get_rates(p::QueueMethodJumpAggregation, i, u, t)
+    ma_jumps = p.ma_jumps
+    num_majumps = get_num_majumps(ma_jumps)
+    if i <= num_majumps
+        _rate = evalrxrate(u, i, ma_jumps)
+        rate(u, p, t) = _rate
+        lrate = rate
+        urate = rate
+        L(u, p, t) = typemax(t)
+    else
+        idx = i - num_majumps
+        rate, lrate, urate, L = p.rates[idx], p.lrates[idx], p.urates[idx], p.Ls[idx]
+    end
+    return rate, lrate, urate, L
+end
+
 function next_time(p::QueueMethodJumpAggregation, i, u, params, t)
     @unpack end_time, rng, pq = p
-    rate, lrate, urate, L = p.rates[i], p.lrates[i], p.urates[i], p.Ls[i]
-    vartojumps_map = p.vartojumps_map[i]
+    rate, lrate, urate, L = get_rates(p, i, u, t)
+    inv_dep_gr = p.inv_dep_gr[i]
     tstop = end_time
-    for j in vartojumps_map
+    for j in inv_dep_gr
         if j == i
             continue
         end
@@ -262,11 +289,16 @@ end
 # reevaulate all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::QueueMethodJumpAggregation, u, params, t)
     @unpack rates, end_time = p
-    pqdata = Vector{Tuple{Int, eltype(t)}}(undef, length(rates))
-    @inbounds for i in 1:length(rates)
-        @inbounds ti = next_time(p, i, u, params, t)
-        pqdata[i] = (i, ti)
+    num_jumps = get_num_majumps(p.ma_jumps) + length(rates)
+    pqdata = Vector{Tuple{Int, eltype(t)}}(undef, num_jumps)
+    @inbounds for i in 1:num_jumps
+        pqdata[i] = (i, typemax(t))
     end
-    p.pq = PriorityQueue(pqdata)
+    pq = PriorityQueue(pqdata)
+    p.pq = pq
+    @inbounds for i in shuffle(1:num_jumps)
+        @inbounds ti = next_time(p, i, u, params, t)
+        pq[i] = ti
+    end
     nothing
 end

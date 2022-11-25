@@ -188,27 +188,17 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     ## Constant and variable rate handling
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
-    # check if there are no jumps
-    if (length(jumps.constant_jumps) == 0) && (maj === nothing) &&
-       !is_spatial(aggregator) && !(typeof(aggregator) <: QueueMethod)
-        disc_agg = nothing
-        constant_jump_callback = CallbackSet()
-    elseif !(typeof(aggregator) <: QueueMethod)
-        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
-                             save_positions, rng; spatial_system = spatial_system,
-                             hopping_constants = hopping_constants, kwargs...)
-        constant_jump_callback = DiscreteCallback(disc_agg)
-    end
 
-    if length(jumps.variable_jumps) == 0
+    if length(jumps.variable_jumps) == 0 && (length(jumps.constant_jumps) == 0) &&
+       (maj === nothing) && !is_spatial(aggregator)
+        # check if there are no jumps
         new_prob = prob
         variable_jump_callback = CallbackSet()
         cont_agg = JumpSet().variable_jumps
-        if typeof(aggregator) <: QueueMethod
-            disc_agg = nothing
-            constant_jump_callback = CallbackSet()
-        end
+        disc_agg = nothing
+        constant_jump_callback = CallbackSet()
     elseif typeof(aggregator) <: QueueMethod
+        # QueueMethod handles all types of jumps together
         variable_jumps = VariableRateJump[]
         if (length(jumps.constant_jumps) == 0)
             variable_jumps = jumps.variable_jumps
@@ -224,12 +214,32 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         variable_jump_callback = CallbackSet()
         cont_agg = JumpSet().variable_jumps
     else
-        new_prob = extend_problem(prob, jumps; rng = rng)
-        disc_agg = nothing
-        constant_jump_callback = CallbackSet()
-        variable_jump_callback = build_variable_callback(CallbackSet(), 0,
-                                                         jumps.variable_jumps...; rng = rng)
-        cont_agg = jumps.variable_jumps
+        # the fallback is to handle each jump type separately
+        if (length(jumps.constant_jumps) == 0) && (maj === nothing) &&
+           !is_spatial(aggregator)
+            disc_agg = nothing
+            constant_jump_callback = CallbackSet()
+        else
+            disc_agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps,
+                                 maj,
+                                 save_positions, rng; spatial_system = spatial_system,
+                                 hopping_constants = hopping_constants, kwargs...)
+            constant_jump_callback = DiscreteCallback(disc_agg)
+        end
+
+        if length(jumps.variable_jumps) > 0 && !is_spatial(aggregator)
+            new_prob = extend_problem(prob, jumps; rng = rng)
+            disc_agg = nothing
+            constant_jump_callback = CallbackSet()
+            variable_jump_callback = build_variable_callback(CallbackSet(), 0,
+                                                             jumps.variable_jumps...;
+                                                             rng = rng)
+            cont_agg = jumps.variable_jumps
+        else
+            new_prob = prob
+            variable_jump_callback = CallbackSet()
+            cont_agg = JumpSet().variable_jumps
+        end
     end
 
     jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)

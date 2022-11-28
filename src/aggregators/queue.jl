@@ -15,7 +15,8 @@ mutable struct QueueMethodJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
     rng::RNG                          # random number generator
     dep_gr::GR                        # map from jumps to jumps depending on it
-    inv_dep_gr::GR                    # map from jumsp to jumps it depends on
+    inv_dep_gr::GR                    # map from jumps to jumps it depends on
+    jump_times::Vector{T}             # map from jumps to candidate times
     pq::PQ                            # priority queue of next time
     lrates::F1                        # vector of rate lower bound functions
     urates::F1                        # vector of rate upper bound functions
@@ -68,7 +69,8 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
         error("Number of nodes in the inverse dependency graph must be the same as the number of jumps.")
     end
 
-    pq = PriorityQueue{Int, T}()
+    jts = Vector{T}()
+    pq = MutableBinaryMinHeap{T}()
     QueueMethodJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
                                typeof(pq)
                                }(nj, nj, njt,
@@ -77,7 +79,7 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
                                  rs,
                                  affs!, sps,
                                  rng,
-                                 dg, idg, pq,
+                                 dg, idg, jts, pq,
                                  lrates, urates, Ls)
 end
 
@@ -134,7 +136,7 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t)
-    p.next_jump, p.next_jump_time = peek(p.pq)
+    p.next_jump_time, p.next_jump = top_with_handle(p.pq)
     nothing
 end
 
@@ -157,11 +159,12 @@ end
 
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
-    @unpack next_jump, rates, pq = p
+    @unpack next_jump, rates, jump_times, pq = p
     @inbounds deps = p.dep_gr[next_jump]
     for (ix, i) in enumerate(deps)
         ti = next_time(p, u, params, t, i, @inbounds view(deps, ix:length(deps)))
-        pq[i] = ti
+        jump_times[i] = ti
+        update!(pq, i, ti)
     end
     nothing
 end
@@ -183,23 +186,22 @@ function get_rates(p::QueueMethodJumpAggregation, i, u)
 end
 
 function next_time(p::QueueMethodJumpAggregation, u, params, t, i, not_updated)
-    @unpack end_time, pq = p
+    @unpack end_time, jump_times = p
     tstop = end_time
     inv_dep_gr = p.inv_dep_gr[i]
     for j in inv_dep_gr
         if j == i
             continue
         end
-        if (j < i || !(j in not_updated)) && @inbounds pq[j] < end_time
-            @inbounds tstop = pq[j]
-            break
+        if (j < i || !(j in not_updated)) && @inbounds jump_times[j] < tstop
+            @inbounds tstop = jump_times[j]
         end
     end
     return next_time(p, u, params, t, i, tstop)
 end
 
 function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
-    @unpack rng, pq = p
+    @unpack rng = p
     rate, lrate, urate, L = get_rates(p, i, u)
     while t < tstop
         _urate = urate(u, params, t)
@@ -212,17 +214,18 @@ function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) 
         _lrate = lrate(u, params, t)
         if _lrate > _urate
             error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
-        else _lrate < _urate
-          # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _rate / _urate
-          v = rand(rng)
-          # first inequality is less expensive and short-circuits the evaluation
-          if (v > _lrate / _urate)
-              _rate = rate(u, params, t + s)
-              if (v > _rate / _urate)
-                  t = t + s
-                  continue
-              end
-          end
+        else
+            _lrate < _urate
+            # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _rate / _urate
+            v = rand(rng)
+            # first inequality is less expensive and short-circuits the evaluation
+            if (v > _lrate / _urate)
+                _rate = rate(u, params, t + s)
+                if (v > _rate / _urate)
+                    t = t + s
+                    continue
+                end
+            end
         end
         t = t + s
         return t
@@ -234,15 +237,15 @@ end
 function fill_rates_and_get_times!(p::QueueMethodJumpAggregation, u, params, t)
     @unpack rates = p
     num_jumps = get_num_majumps(p.ma_jumps) + length(rates)
-    pqdata = Vector{Tuple{Int, eltype(t)}}(undef, num_jumps)
+    jump_times = Vector{eltype(t)}(undef, num_jumps)
     @inbounds for i in 1:num_jumps
-        pqdata[i] = (i, typemax(t))
+        jump_times[i] = typemax(t)
     end
-    pq = PriorityQueue(pqdata)
-    p.pq = pq
-    @inbounds for i in shuffle(1:num_jumps)
-        @inbounds ti = next_time(p, u, params, t, i, i:num_jumps)
-        pq[i] = ti
+    p.jump_times = jump_times
+    @inbounds for i in 1:num_jumps
+        ti = next_time(p, u, params, t, i, Int[])
+        jump_times[i] = ti
     end
+    p.pq = MutableBinaryMinHeap(copy(jump_times))
     nothing
 end

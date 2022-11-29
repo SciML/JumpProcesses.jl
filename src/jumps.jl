@@ -142,10 +142,9 @@ function VariableRateJump(rate, affect!;
 end
 
 function VariableRateJump(jump::ConstantRateJump)
-    rate = (u, p, t, g, h) -> jump.rate(u, p, t)
-    L = (u, p, t, g, h) -> typemax(t)
-    VariableRateJump(rate, jump.affect!; lrate = rate,
-                     urate = rate, L = L, idx = nothing, rootfind = true,
+    L = (u, p, t) -> typemax(t)
+    VariableRateJump(jump.rate, jump.affect!; lrate = jump.rate,
+                     urate = jump.rate, L = L, idxs = nothing, rootfind = true,
                      save_positions = (false, true),
                      interp_points = 10,
                      abstol = 1e-12, reltol = 0)

@@ -25,10 +25,10 @@ end
 
 function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothing,
                                     maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                                    rng::RNG; u::U, inv_dep_gr = nothing,
-                                    dep_gr = nothing,
+                                    rng::RNG; u::U, inv_dep_graph = nothing,
+                                    dep_graph = nothing,
                                     lrates, urates, Ls) where {T, S, F1, F2, RNG, U}
-    if inv_dep_gr === nothing && dep_gr === nothing
+    if inv_dep_graph === nothing && dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use VariableRateJumps with the Queue Method algorithm a dependency graph between jumps and/or its inverse must be supplied.")
         else
@@ -39,25 +39,25 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
 
     num_jumps = get_num_majumps(maj) + length(rs)
 
-    if dep_gr !== nothing
+    if dep_graph !== nothing
         # using a Set to ensure that edges are not duplicate
         dg = [Set{Int}(append!([], jumps, [var]))
-              for (var, jumps) in enumerate(dep_gr)]
+              for (var, jumps) in enumerate(dep_graph)]
         dg = [sort!(collect(i)) for i in dg]
     end
 
-    if inv_dep_gr !== nothing
+    if inv_dep_graph !== nothing
         # using a Set to ensure that edges are not duplicate
         idg = [Set{Int}(append!([], vars, [jump]))
-               for (jump, vars) in enumerate(inv_dep_gr)]
+               for (jump, vars) in enumerate(inv_dep_graph)]
         idg = [sort!(collect(i)) for i in idg]
     end
 
-    if dep_gr === nothing
+    if dep_graph === nothing
         dg = idg
     end
 
-    if inv_dep_gr === nothing
+    if inv_dep_graph === nothing
         idg = dg
     end
 
@@ -86,7 +86,7 @@ end
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
                    ma_jumps, save_positions, rng;
-                   dep_gr = nothing, inv_dep_gr = nothing,
+                   dep_graph = nothing, inv_dep_graph = nothing,
                    kwargs...)
     AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
@@ -112,8 +112,8 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                ma_jumps, rates, affects!, save_positions, rng;
                                u = u,
-                               dep_gr = dep_gr,
-                               inv_dep_gr = inv_dep_gr,
+                               dep_graph = dep_graph,
+                               inv_dep_graph = inv_dep_graph,
                                lrates = lrates, urates = urates, Ls = Ls, kwargs...)
 end
 

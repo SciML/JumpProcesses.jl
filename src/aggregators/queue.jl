@@ -211,6 +211,10 @@ function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) 
             t = t + _L
             continue
         end
+        _t = t + s
+        if _t > tstop
+            break
+        end
         _lrate = lrate(u, params, t)
         if _lrate > _urate
             error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
@@ -220,15 +224,14 @@ function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) 
             v = rand(rng)
             # first inequality is less expensive and short-circuits the evaluation
             if (v > _lrate / _urate)
-                _rate = rate(u, params, t + s)
+                _rate = rate(u, params, _t)
                 if (v > _rate / _urate)
-                    t = t + s
+                    t = _t
                     continue
                 end
             end
         end
-        t = t + s
-        return t
+        return _t
     end
     return typemax(t)
 end

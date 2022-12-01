@@ -15,8 +15,6 @@ mutable struct QueueMethodJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
     rng::RNG                          # random number generator
     dep_gr::GR                        # map from jumps to jumps depending on it
-    inv_dep_gr::GR                    # map from jumps to jumps it depends on
-    jump_times::Vector{T}             # map from jumps to candidate times
     pq::PQ                            # priority queue of next time
     lrates::F1                        # vector of rate lower bound functions
     urates::F1                        # vector of rate upper bound functions
@@ -25,51 +23,28 @@ end
 
 function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothing,
                                     maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                                    rng::RNG; u::U, inv_dep_graph = nothing,
+                                    rng::RNG; u::U,
                                     dep_graph = nothing,
                                     lrates, urates, Ls) where {T, S, F1, F2, RNG, U}
-    if inv_dep_graph === nothing && dep_graph === nothing
+    if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use VariableRateJumps with the Queue Method algorithm a dependency graph between jumps and/or its inverse must be supplied.")
+            error("To use VariableRateJumps with the Queue Method algorithm a dependency graph between jumps must be supplied.")
         else
             dg = make_dependency_graph(length(u), maj)
-            idg = dg
         end
     end
 
     num_jumps = get_num_majumps(maj) + length(rs)
 
-    if dep_graph !== nothing
-        # using a Set to ensure that edges are not duplicate
-        dg = [Set{Int}(append!([], jumps, [var]))
-              for (var, jumps) in enumerate(dep_graph)]
-        dg = [sort!(collect(i)) for i in dg]
-    end
-
-    if inv_dep_graph !== nothing
-        # using a Set to ensure that edges are not duplicate
-        idg = [Set{Int}(append!([], vars, [jump]))
-               for (jump, vars) in enumerate(inv_dep_graph)]
-        idg = [sort!(collect(i)) for i in idg]
-    end
-
-    if dep_graph === nothing
-        dg = idg
-    end
-
-    if inv_dep_graph === nothing
-        idg = dg
-    end
+    # using a Set to ensure that edges are not duplicate
+    dg = [Set{Int}(append!([], jumps, [var]))
+          for (var, jumps) in enumerate(dep_graph)]
+    dg = [sort!(collect(i)) for i in dg]
 
     if length(dg) != num_jumps
         error("Number of nodes in the dependency graph must be the same as the number of jumps.")
     end
 
-    if length(idg) != num_jumps
-        error("Number of nodes in the inverse dependency graph must be the same as the number of jumps.")
-    end
-
-    jts = Vector{T}()
     pq = MutableBinaryMinHeap{T}()
     QueueMethodJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
                                typeof(pq)
@@ -79,14 +54,14 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
                                  rs,
                                  affs!, sps,
                                  rng,
-                                 dg, idg, jts, pq,
+                                 dg, pq,
                                  lrates, urates, Ls)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
                    ma_jumps, save_positions, rng;
-                   dep_graph = nothing, inv_dep_graph = nothing,
+                   dep_graph = nothing,
                    kwargs...)
     AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
@@ -108,13 +83,12 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     cur_rates = nothing
     sum_rate = nothing
     next_jump = 0
-    next_jump_time = typemax(typeof(t))
+    next_jump_time = typemax(t)
     QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                ma_jumps, rates, affects!, save_positions, rng;
                                u = u,
                                dep_graph = dep_graph,
-                               inv_dep_graph = inv_dep_graph,
-                               lrates = lrates, urates = urates, Ls = Ls, kwargs...)
+                               lrates = lrates, urates = urates, Ls = Ls)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -151,7 +125,7 @@ end
         end
     else
         idx = next_jump - num_majumps
-        @inbounds p.affects![next_jump](integrator)
+        @inbounds p.affects![idx](integrator)
     end
     p.prev_jump = next_jump
     return integrator.u
@@ -159,11 +133,10 @@ end
 
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
-    @unpack next_jump, rates, jump_times, pq = p
-    @inbounds deps = p.dep_gr[next_jump]
+    @inbounds deps = p.dep_gr[p.next_jump]
+    @unpack end_time, pq = p
     for (ix, i) in enumerate(deps)
-        ti = next_time(p, u, params, t, i, @inbounds view(deps, ix:length(deps)))
-        jump_times[i] = ti
+        ti = next_time(p, u, params, t, i, end_time)
         update!(pq, i, ti)
     end
     nothing
@@ -185,26 +158,14 @@ function get_rates(p::QueueMethodJumpAggregation, i, u)
     return rate, lrate, urate, L
 end
 
-function next_time(p::QueueMethodJumpAggregation, u, params, t, i, not_updated)
-    @unpack end_time, jump_times = p
-    tstop = end_time
-    inv_dep_gr = p.inv_dep_gr[i]
-    for j in inv_dep_gr
-        if j == i
-            continue
-        end
-        if (j < i || !(j in not_updated)) && @inbounds jump_times[j] < tstop
-            @inbounds tstop = jump_times[j]
-        end
-    end
-    return next_time(p, u, params, t, i, tstop)
-end
-
 function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
     @unpack rng = p
     rate, lrate, urate, L = get_rates(p, i, u)
     while t < tstop
         _urate = urate(u, params, t)
+        if _urate == zero(t)
+            return typemax(t)
+        end
         _L = L(u, params, t)
         s = randexp(rng) / _urate
         if s > _L
@@ -218,8 +179,7 @@ function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) 
         _lrate = lrate(u, params, t)
         if _lrate > _urate
             error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
-        else
-            _lrate < _urate
+        elseif _lrate < _urate
             # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _rate / _urate
             v = rand(rng)
             # first inequality is less expensive and short-circuits the evaluation
@@ -238,17 +198,12 @@ end
 
 # reevaulate all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::QueueMethodJumpAggregation, u, params, t)
-    @unpack rates = p
-    num_jumps = get_num_majumps(p.ma_jumps) + length(rates)
+    @unpack end_time = p
+    num_jumps = get_num_majumps(p.ma_jumps) + length(p.rates)
     jump_times = Vector{eltype(t)}(undef, num_jumps)
     @inbounds for i in 1:num_jumps
-        jump_times[i] = typemax(t)
+        jump_times[i] = next_time(p, u, params, t, i, end_time)
     end
-    p.jump_times = jump_times
-    @inbounds for i in 1:num_jumps
-        ti = next_time(p, u, params, t, i, Int[])
-        jump_times[i] = ti
-    end
-    p.pq = MutableBinaryMinHeap(copy(jump_times))
+    p.pq = MutableBinaryMinHeap(jump_times)
     nothing
 end

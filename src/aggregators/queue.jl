@@ -163,17 +163,14 @@ function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) 
     rate, lrate, urate, L = get_rates(p, i, u)
     while t < tstop
         _urate = urate(u, params, t)
-        if _urate == zero(t)
-            return typemax(t)
-        end
         _L = L(u, params, t)
-        s = randexp(rng) / _urate
+        s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
+        _t = t + s
         if s > _L
             t = t + _L
             continue
         end
-        _t = t + s
-        if _t > tstop
+        if _t >= tstop
             break
         end
         _lrate = lrate(u, params, t)

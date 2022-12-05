@@ -72,7 +72,6 @@ include("coupled_array.jl")
 include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
-include("utils.jl")
 
 export ConstantRateJump, VariableRateJump, RegularJump,
        MassActionJump, JumpSet
@@ -100,8 +99,5 @@ export CartesianGrid, CartesianGridRej
 export SpatialMassActionJump
 export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect
-
-# utilities to deal with conditional rates
-export reset_history!, conditional_rate
 
 end # module

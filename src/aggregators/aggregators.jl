@@ -145,7 +145,14 @@ doi: 10.1063/1.4928635
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
 """
-The Queue Method. This method handles variable intensity rates.
+The Queue Method. This method handles variable intensity rates with
+user-defined bounds and interdependent processes. It reduces to NRM when rates
+are constant.
+
+COEVOLVE: a joint point process model for information diffusion and network
+evolution, M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L.
+Song, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
+10.5555/3122009.3122050.
 """
 struct QueueMethod <: AbstractAggregatorAlgorithm end
 

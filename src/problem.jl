@@ -229,8 +229,6 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
         if length(jumps.variable_jumps) > 0 && !is_spatial(aggregator)
             new_prob = extend_problem(prob, jumps; rng = rng)
-            disc_agg = nothing
-            constant_jump_callback = CallbackSet()
             variable_jump_callback = build_variable_callback(CallbackSet(), 0,
                                                              jumps.variable_jumps...;
                                                              rng = rng)

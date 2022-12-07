@@ -32,14 +32,14 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
         else
             dg = make_dependency_graph(length(u), maj)
         end
+    else
+        # using a Set to ensure that edges are not duplicate
+        dg = [Set{Int}(append!([], jumps, [var]))
+              for (var, jumps) in enumerate(dep_graph)]
+        dg = [sort!(collect(i)) for i in dg]
     end
 
     num_jumps = get_num_majumps(maj) + length(rs)
-
-    # using a Set to ensure that edges are not duplicate
-    dg = [Set{Int}(append!([], jumps, [var]))
-          for (var, jumps) in enumerate(dep_graph)]
-    dg = [sort!(collect(i)) for i in dg]
 
     if length(dg) != num_jumps
         error("Number of nodes in the dependency graph must be the same as the number of jumps.")

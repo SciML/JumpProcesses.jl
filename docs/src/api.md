@@ -13,14 +13,15 @@ reset_aggregated_jumps!
 ## Types of Jumps
 ```@docs
 ConstantRateJump
-MassActionJump
 VariableRateJump
+MassActionJump
 JumpSet
 ```
 
 ## Aggregators
 Aggregators are the underlying algorithms used for sampling
-[`MassActionJump`](@ref)s and [`ConstantRateJump`](@ref)s.
+[`MassActionJump`](@ref)s, [`ConstantRateJump`](@ref)s and
+[`VariableRateJump`](@ref)s.
 ```@docs
 Direct
 DirectCR
@@ -30,6 +31,7 @@ RDirect
 RSSA
 RSSACR
 SortingDirect
+QueueMethod
 ```
 
 # Private API Functions

@@ -120,6 +120,11 @@ plot(sol)
 In this way we have solve a mixed jump-ODE, i.e. a piecewise deterministic
 Markov process.
 
+Note that in this case, the rate of the `VariableRateJump`s depend on a variable
+that is driven by an `ODEProblem`, thus we cannot use the `QueueMethod` to solve
+the jump problem.
+
+
 ## Jump Diffusion
 Now we will finally solve the jump diffusion problem. The steps are the same
 as before, except we now start with a `SDEProblem` instead of an `ODEProblem`.

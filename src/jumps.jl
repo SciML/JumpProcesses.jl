@@ -53,42 +53,27 @@ affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!)
 ```
 
-Suppose `u[1]` follows a Hawkes jump process. This is a type of self-exciting
-process in which the realization of an event increases the likelihood of new
-nearby events. A corresponding `VariableRateJump` for this jump process is
+In case we want to use the `QueueMethod` aggregator, we need to pass the rate
+boundaries and interval for which the rates apply. The `QueueMethod` aggregator
+allow us to perform discrete steps with `SSAStepper()`.
 ```julia
-function rate(u, p, t, g, h)
-    λ, α, β = p
-    x = zero(typeof(t))
-    for _t in reverse(h[1])
-        _x = α*exp(-β*(t - _t))
-        if  _x ≈ 0 break end
-        x += _x
-    end
-    return λ + x
-end
-lrate(u, p, t, g, h) = p[1]
-urate(u, p, ,t, g, h) = rate(u, p, t, g, h)
-function L(u, p, t, g, h)
-  _lrate = lrate(u, p, t, g, h)
-  _urate = urate(u, p, t, g, h)
-  return _urate == _lrate ? typemax(t) : 1/(2*_urate)
-end
-affect!(integrator) = integrator.u[1] += 1
+L(u,p,t) = (1/p[1])*2
+rate(u,p,t) = t*p[1]*u[1]
+lrate(u, p, t) = rate(u, p, t)
+urate(u,p,t) = rate(u, p, t + L(u,p,t))
+affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!; lrate=lrate, urate=urate, L=L)
-prob = DiscreteProblem(u0, tspan, p)
-jprob = JumpProblem(prob, QueueMethod(), vrj)
 ```
 
 ## Notes
-- **`VariableRateJump`s result in `integrator`s storing an effective state type
-  that wraps the main state vector.** See [`ExtendedJumpArray`](@ref) for
-  details on using this object. Note that the presence of *any*
-  `VariableRateJump`s will result in all `ConstantRateJump`, `VariableRateJump`
-  and callback `affect!` functions receiving an integrator with `integrator.u`
-  an [`ExtendedJumpArray`](@ref).
-- When using the `QueueMethod` aggregator `DiscreteProblem` can be used.
+- When using the `QueueMethod` aggregator, `DiscreteProblem` can be used.
   Otherwise, `ODEProblem` or `SDEProblem` must be used to be correctly simulated.
+- **When not using the `QueueMethod` aggregator, `VariableRateJump`s result in
+  `integrator`s storing an effective state type that wraps the main state
+  vector.** See [`ExtendedJumpArray`](@ref) for details on using this object. Note
+  that the presence of *any* `VariableRateJump`s will result in all
+  `ConstantRateJump`, `VariableRateJump` and callback `affect!` functions
+  receiving an integrator with `integrator.u` an [`ExtendedJumpArray`](@ref).
 - Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of
   coupled chemical or biochemical reactions, Journal of Chemical Physics, 122
   (5), DOI:10.1063/1.1835951 is used for calculating jump times with
@@ -102,16 +87,16 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     of the jump given `integrator`."""
     affect!::F
     """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
-    t)` that computes the lower rate bound in interval `t` to `t + L` at time
+    t)` that computes the lower bound of the rate in interval `t` to `t + L` at time
     `t` given state `u`, parameters `p`. This is not required if using another
     aggregator."""
     lrate::R2
-    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
-    t)` that computes the upper rate bound in interval `t` to `t + L` at time
+    """When planning to use the `QueueMethod` aggregator, function `urate(u, p,
+    t)` that computes the upper bound of the rate in interval `t` to `t + L` at time
     `t` given state `u`, parameters `p`. This is not required if using another
     aggregator."""
     urate::R3
-    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
+    """When planning to use the `QueueMethod` aggregator, function `L(u, p,
     t)` that computes the interval  length `L` starting at time `t` given state
     `u`, parameters `p` for which the rate is bounded between `lrate` and
     `urate`. This is not required if using another aggregator."""

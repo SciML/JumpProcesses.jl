@@ -188,25 +188,51 @@ D(t) &= Y_d \left(\int_0^t \mu N(s^-) \, ds \right).
 \end{align*}
 ```
 
-We'll then re-encode the first jump as a
+The birth rate is cyclical, bounded between a lower-bound of ``λ`` and an
+upper-bound of ``2 λ``. We'll then re-encode the first jump as a
 `VariableRateJump`
 ```@example tut1
 rate1(u,p,t) = p.λ * (sin(pi*t/2) + 1)
+lrate1(u,p,t) = p.λ
+urate1(u, p, t) = 2 * p.λ
+L1(u, p, t) = typemax(t)
 affect1!(integrator) = (integrator.u[1] += 1)
-vrj = VariableRateJump(rate1, affect1!)
+vrj1 = VariableRateJump(rate1, affect1!; lrate=lrate1, urate=urate1, L=L1)
 ```
-Because this new jump can modify the value of `u[1]` between death events, and
-the death transition rate depends on this value, we must also update our death
-jump process to also be a `VariableRateJump`
+
+Since births modify the population size `u[1]` and deaths `u[2]` occur at a rate
+proportional to the population size. We must represent this relation in
+a dependency graph. Note that the indices in the graph correspond to the order
+in which the jumps appear when the problem is constructed. The graph below
+indicates that births (event 1) modify deaths (event 2), but deaths do not
+modify births.
+```@example tut1
+dep_graph = [[2], []]
+```
+
+We can then construct the corresponding problem, passing both jumps to
+`JumpProblem` as well as the dependency graph. Since we are dealing with
+a `VariableRateJump` we must use the `QueueMethod` aggregator.
+```@example tut1
+jprob = JumpProblem(dprob, QueueMethod(), vrj1, deathcrj; dep_graph=dep_graph)
+sol = solve(jprob, SSAStepper())
+plot(sol, label=["N(t)" "D(t)"], xlabel="t", legend=:topleft)
+```
+
+In a scenario, where we did not know the bounds of the time-dependent rate. We
+would have to use a continuous problem type to properly handle the jump times.
+Under this assumption we would define the `VariableRateJump` as following:
+```@example tut1
+vrj2 = VariableRateJump(rate1, affect1!)
+```
+
+Since the death rate now depends on a `VariableRateJump` without bounds, we need
+to redefine the death jump process as a `VariableRateJump`
 ```@example tut1
 deathvrj = VariableRateJump(deathrate, deathaffect!)
 ```
-Note, if the death rate only depended on values that were unchanged by a
-variable rate jump, then it could have remained a `ConstantRateJump`. This would
-have been the case if, for example, it depended on `u[2]` instead of `u[1]`.
 
-To simulate our jump process we now need to use a continuous problem type to
-properly handle determining the jump times. We do this by constructing an
+To simulate our jump process we now need to construct an
 ordinary differential equation problem, `ODEProblem`, but setting the ODE
 derivative to preserve the state (i.e. to zero). We are essentially defining a
 combined ODE-jump process, i.e. a [piecewise deterministic Markov
@@ -234,7 +260,7 @@ function f!(du, u, p, t)
 end
 u₀ = [0.0, 0.0]
 oprob = ODEProblem(f!, u₀, tspan, p)
-jprob = JumpProblem(oprob, Direct(), vrj, deathvrj)
+jprob = JumpProblem(oprob, Direct(), vrj2, deathvrj)
 ```
 We simulate our jump process, using the `Tsit5` ODE solver as the time stepper in
 place of `SSAStepper`

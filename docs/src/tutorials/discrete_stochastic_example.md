@@ -418,23 +418,24 @@ L(u, p, t) = 1 / (2*urate(u, p, t))
 function affect3!(integrator)
   integrator.u[1] -= 1     # S -> S - 1
   integrator.u[2] += 1     # I -> I + 1
-  push!(I, integrator.t)
+  push!(H, integrator.t)
   nothing
 end
-jump3 = VariableRateJump(rate3, affect3; lrate=lrate, urate=urate, L=L)
+jump3 = VariableRateJump(rate3, affect3!; lrate=lrate, urate=urate, L=L)
 ```
 
 Next, we redefine the recovery jump's `affect!` such that a random infection is 
 removed from `H` for every recovery.
 
 ```@example tut2
+rate4(u, p, t) = p[2] * u[2]         # ν*I
 function affect4!(integrator)
   integrator.u[2] -= 1
   integrator.u[3] += 1
-  length(I) > 0 && deleteat!(H, rand(1:length(I)))
+  length(H) > 0 && deleteat!(H, rand(1:length(H)))
   nothing
 end
-jump4 = ConstantRateJump(rate2, affect4!)
+jump4 = ConstantRateJump(rate4, affect4!)
 ```
 
 With the jumps defined, we can build
@@ -444,6 +445,7 @@ a [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_typ
 aggregator. In this case, both processes mutually affect each other.
 
 ```@example tut2
+prob = DiscreteProblem(u₀, tspan, p1)
 jump_prob = JumpProblem(prob, QueueMethod(), jump3, jump4; dep_graph=[[1,2], [1,2]])
 ```
 
@@ -451,7 +453,7 @@ We now have a problem that can be solved with `SSAStepper` to handle
 time-stepping the `QueueMethod` aggregator from jump to jump:
 
 ```@example tut2
-sol = solve(jump_pro, SSAStepper())
+sol = solve(jump_prob, SSAStepper())
 plot(sol, label=["S(t)", "I(t)", "R(t)"])
 ```
 
@@ -491,6 +493,7 @@ for other
 this is a tuple `(bool1, bool2)` which sets whether to save before or after a
 jump. If we do not want to save at every jump, we would thus pass:
 ```@example tut2
+prob = DiscreteProblem(u₀, tspan, p)
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; save_positions = (false, false))
 ```
 Now the saving controls associated with the integrator should specified, see the
@@ -656,21 +659,21 @@ differential equation. To continue our example, let there be a new reaction
 with rate depending on `u[4]` of the form ``u_4 \to u_4 + \textrm{I}``, with a
 rate constant of `1e-2`:
 ```@example tut2
-rate3(u, p, t) = 1e-2 * u[4]
-function affect3!(integrator)
+rate5(u, p, t) = 1e-2 * u[4]
+function affect5!(integrator)
   integrator.u[2] += 1    # I -> I + 1
   nothing
 end
-jump3 = VariableRateJump(rate3, affect3!)
+jump5 = VariableRateJump(rate5, affect5!)
 ```
-Notice, since `rate3` depends on a variable that evolves continuously, and hence
+Notice, since `rate5` depends on a variable that evolves continuously, and hence
 is not constant between jumps, *we must use a `VariableRateJump`*.
 
 Solving the equation is exactly the same:
 ```@example tut2
 u₀   = [999.0, 10.0, 0.0, 1.0]
 prob = ODEProblem(f, u₀, tspan, p)
-jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump3)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump5)
 sol = solve(jump_prob, Tsit5())
 plot(sol; label=["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
@@ -686,7 +689,7 @@ function g(du, u, p, t)
   du[4] = 0.1u[4]
 end
 prob = SDEProblem(f, g, [999.0, 1.0, 0.0, 1.0], (0.0, 250.0), p)
-jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump3)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump5)
 sol = solve(jump_prob, SRIW1())
 plot(sol; label=["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```

@@ -5,7 +5,7 @@
 Jumps (or point) processes are stochastic processes with discrete changes driven
 by some `rate`. The homogeneous Poisson process is the canonical point process
 with a constant rate of change. Processes involving multiple jumps are known as
-compound jump (or point) processes. 
+compound jump (or point) processes.
 
 A compound Poisson process is a continuous-time Markov Chain where the time to
 the next jump is exponentially distributed as calculated by the rate. This type
@@ -32,32 +32,32 @@ du = f(u,p,t)dt + \sum_{j}g_j(u,t)dW_j(t) + \sum_{i}c_i(u,p,t)dp_i(t)
 ## Types of Jumps: Regular, Variable, Constant Rate and Mass Action
 
 
-Exact algorithms tend to describe the realization of each jump chronologically. 
-In more complex cases, such jumps are conditioned on the history of past events. 
-Such jumps are usually associated with changes to the state variable `u` which 
-in turn changes the `rate` of event occurence. These jumps can be specified as 
-a `ConstantRateJump`, `MassActionJump`, or a `VariableRateJump`. Since exact 
-methods simulate each and every point, they might face termination issues when 
+Exact algorithms tend to describe the realization of each jump chronologically.
+In more complex cases, such jumps are conditioned on the history of past events.
+Such jumps are usually associated with changes to the state variable `u` which
+in turn changes the `rate` of event occurence. These jumps can be specified as
+a `ConstantRateJump`, `MassActionJump`, or a `VariableRateJump`. Since exact
+methods simulate each and every point, they might face termination issues when
 the `rate` of event occurrence explodes.
 
-Alternatively, inexact methods tend to take small leaps through time so they are 
-guaranteed to terminate in finite time. These methods can be much faster as they 
-only simulate the total number of points in each leap interval and thus do not 
-need to simulate the realization of every single jump. Since inexact methods 
-trade accuracy for speed, they should be used when a set of jumps do not make 
-significant changes to the system during the leap interval. A `RegularJump` is 
-used for inexact algorithms. Note that inexact methods are not always 
-inaccurate. In the case of homogeneous Poisson processes, they produce accurate 
-results. However, they can produce less accurate results for more complex 
-problems, thus it is important to have a good understanding of the problem. As 
-a rule of thumb, if changes to the state variable `u` during a leap are minimal 
-compared to size of the system, an inexact method should provide reasonable 
+Alternatively, inexact methods tend to take small leaps through time so they are
+guaranteed to terminate in finite time. These methods can be much faster as they
+only simulate the total number of points in each leap interval and thus do not
+need to simulate the realization of every single jump. Since inexact methods
+trade accuracy for speed, they should be used when a set of jumps do not make
+significant changes to the system during the leap interval. A `RegularJump` is
+used for inexact algorithms. Note that inexact methods are not always
+inaccurate. In the case of homogeneous Poisson processes, they produce accurate
+results. However, they can produce less accurate results for more complex
+problems, thus it is important to have a good understanding of the problem. As
+a rule of thumb, if changes to the state variable `u` during a leap are minimal
+compared to size of the system, an inexact method should provide reasonable
 solutions.
 
 We denote a jump as variable if its rate function is dependent on values
-which may change between any jump in the system. For instance, when the rate is 
-a function of time. Variable jumps can be more expensive to simulate because it 
-is necessary to take into account the dynamics of the rate function when 
+which may change between any jump in the system. For instance, when the rate is
+a function of time. Variable jumps can be more expensive to simulate because it
+is necessary to take into account the dynamics of the rate function when
 simulating the next jump time.
 
 A `MassActionJump` is a specialized representation for a collection of constant
@@ -67,7 +67,7 @@ will offer improved performance. Note, only one `MassActionJump` should be
 defined per `JumpProblem`; it is then responsible for handling all mass action
 reaction type jumps. For systems with both mass action jumps and non-mass action
 jumps, one can create one `MassActionJump` to handle the mass action jumps, and
-create a number of `ConstantRateJumps` or `VariableRateJump` to handle the 
+create a number of `ConstantRateJumps` or `VariableRateJump` to handle the
 non-mass action jumps.
 
 `RegularJump`s are optimized for inexact jumping algorithms like tau-leaping and
@@ -93,8 +93,8 @@ ConstantRateJump(rate,affect!)
 The constructor for a `VariableRateJump` is:
 
 ```julia
-VariableRateJump(rate,affect!; 
-                 lrate=nothing, urate=nothing, L=nothing
+VariableRateJump(rate,affect!;
+                 lrate=nothing, urate=nothing, L=nothing,
                  idxs=nothing,
                  rootfind=true,
                  save_positions=(true,true),
@@ -105,19 +105,19 @@ VariableRateJump(rate,affect!;
 - `rate(u,p,t)` is a function which calculates the rate given the time and the state.
 - `affect!(integrator)` is the effect on the equation, using the integrator interface.
 - When planning to use the `QueueMethod` aggregator, the arguments `lrate`,
-  `urate` and `L` are required. They consist of three functions: `lrate(u, p,
-  t)` computes the lower bound of the intensity rate in the interval `t` to `t 
-  + L` given state `u` and parameters `p`; `urate(u, p, t)` computes the upper
+  `urate` and `L` are required. They consist of three functions: `lrate(u, p, t)`
+  computes the lower bound of the intensity rate in the interval `t` to `t + L`
+  given state `u` and parameters `p`; `urate(u, p, t)` computes the upper
   bound of the intensity rate; and `L(u, p, t)` computes the interval length
-  for which the rate is bounded between `lrate` and `urate`. 
-- It is only possible to solve a `VariableRateJump` with `SSAStepper` when using 
+  for which the rate is bounded between `lrate` and `urate`.
+- It is only possible to solve a `VariableRateJump` with `SSAStepper` when using
   the `QueueMethod` aggregator.
-- When using a different aggregator than `QueueMethod`, there is no need to 
-  define `lrate`, `urate` and `L`. Note that in this case, the problem can only 
-  be solved with continuous integration. Internally, `VariableRateJump` is 
-  transformed into a `ContinuousCallback`. The `rate(u, p, t)` is used to 
+- When using a different aggregator than `QueueMethod`, there is no need to
+  define `lrate`, `urate` and `L`. Note that in this case, the problem can only
+  be solved with continuous integration. Internally, `VariableRateJump` is
+  transformed into a `ContinuousCallback`. The `rate(u, p, t)` is used to
   construct the `condition` function that triggers the callback.
-  
+
 #### Defining a Mass Action Jump
 
 The constructor for a `MassActionJump` is:
@@ -286,16 +286,16 @@ JumpProblem(prob,DirectCR(),jump1,jump2; dep_graph=your_dependency_graph)
 ```
 For systems with only `MassActionJump`s, or those generated from a
 [Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this graph
-will be auto-generated. Otherwise, you must construct the dependency graph 
-whenever using `ConstantRateJump`s and/or `VariableRateJump`s. This is also the 
-case when combining `MassActionJump` with `ConstantRateJump`s and/or 
-`VariableRateJump`s. 
+will be auto-generated. Otherwise, you must construct the dependency graph
+whenever using `ConstantRateJump`s and/or `VariableRateJump`s. This is also the
+case when combining `MassActionJump` with `ConstantRateJump`s and/or
+`VariableRateJump`s.
 
 Dependency graphs are represented as a `Vector{Vector{Int}}`, with the `i`th
 vector containing the indices of the jumps for which rates must be recalculated
 when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
 `ConstantRateJump`s and `VariableRateJump`s (with the latter internally ordered
-in the same order they were passed in). Thus, keep that in mind when combining 
+in the same order they were passed in). Thus, keep that in mind when combining
 `MassActionJump`s with other types of jumps.
 
 `RSSA` and `RSSACR` require two different types of dependency graphs, passed
@@ -314,14 +314,14 @@ construct and pass in these mappings.
 ## Recommendations for exact methods
 For representing and aggregating jumps
 - Use a `MassActionJump` to handle all jumps that can be represented as mass
-  action reactions with constant rate between jumps. This will generally offer 
+  action reactions with constant rate between jumps. This will generally offer
   the fastest performance.
-- Use `ConstantRateJump`s for any remaining jumps with constant rate between 
+- Use `ConstantRateJump`s for any remaining jumps with constant rate between
   jumps.
-- Use `VariableRateJump`s for any remaining jumps with variable rate between 
-  jumps. You will need to define the lower and upper rate boundaries as well as 
-  the interval for which the boundaries apply. The tighter the boundaries and 
-  the easier to compute, the faster the resulting algorithm will be. 
+- Use `VariableRateJump`s for any remaining jumps with variable rate between
+  jumps. You will need to define the lower and upper rate boundaries as well as
+  the interval for which the boundaries apply. The tighter the boundaries and
+  the easier to compute, the faster the resulting algorithm will be.
 - For a small number of jumps, < ~10, `Direct` will often perform as well as the
   other aggregators.
 - For > ~10 jumps `SortingDirect` will often offer better performance than `Direct`.
@@ -330,12 +330,11 @@ For representing and aggregating jumps
   `NRM` often have the best performance.
 - For very large networks, with many updates per jump, `RSSA` and `RSSACR` will
   often substantially outperform the other methods.
-- For systems with `VariableRateJump`, only the `QueueMethod` aggregator is 
+- For systems with `VariableRateJump`, only the `QueueMethod` aggregator is
   supported.
 - The `SSAStepper()` can be used with `VariableRateJump`s that modify the state
   of differential equations. However, it is not possible to use `SSAStepper()`
-  to solve `VariableRateJump` that are combined with differential equations that
-  modify the rate of the jumps.
+  to solve `VariableRateJump`s whose rate depends on a continuous variable.
 
 In general, for systems with sparse dependency graphs if `Direct` is slow, one
 of `SortingDirect`, `RSSA` or `RSSACR` will usually offer substantially better

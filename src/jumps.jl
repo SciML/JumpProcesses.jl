@@ -53,8 +53,8 @@ affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!)
 ```
 
-In case we want to use the `QueueMethod` aggregator, we need to pass the rate
-boundaries and interval for which the rates apply. The `QueueMethod` aggregator
+In case we want to use the `Coevolve` aggregator, we need to pass the rate
+boundaries and interval for which the rates apply. The `Coevolve` aggregator
 allow us to perform discrete steps with `SSAStepper()`.
 ```julia
 L(u,p,t) = (1/p[1])*2
@@ -66,9 +66,9 @@ vrj = VariableRateJump(rate, affect!; lrate=lrate, urate=urate, L=L)
 ```
 
 ## Notes
-- When using the `QueueMethod` aggregator, `DiscreteProblem` can be used.
+- When using the `Coevolve` aggregator, `DiscreteProblem` can be used.
   Otherwise, `ODEProblem` or `SDEProblem` must be used to be correctly simulated.
-- **When not using the `QueueMethod` aggregator, `VariableRateJump`s result in
+- **When not using the `Coevolve` aggregator, `VariableRateJump`s result in
   `integrator`s storing an effective state type that wraps the main state
   vector.** See [`ExtendedJumpArray`](@ref) for details on using this object. Note
   that the presence of *any* `VariableRateJump`s will result in all
@@ -86,17 +86,17 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     """Function `affect!(integrator)` that updates the state for one occurrence
     of the jump given `integrator`."""
     affect!::F
-    """When planning to use the `QueueMethod` aggregator, function `lrate(u, p,
+    """When planning to use the `Coevolve` aggregator, function `lrate(u, p,
     t)` that computes the lower bound of the rate in interval `t` to `t + L` at time
     `t` given state `u`, parameters `p`. This is not required if using another
     aggregator."""
     lrate::R2
-    """When planning to use the `QueueMethod` aggregator, function `urate(u, p,
+    """When planning to use the `Coevolve` aggregator, function `urate(u, p,
     t)` that computes the upper bound of the rate in interval `t` to `t + L` at time
     `t` given state `u`, parameters `p`. This is not required if using another
     aggregator."""
     urate::R3
-    """When planning to use the `QueueMethod` aggregator, function `L(u, p,
+    """When planning to use the `Coevolve` aggregator, function `L(u, p,
     t)` that computes the interval  length `L` starting at time `t` given state
     `u`, parameters `p` for which the rate is bounded between `lrate` and
     `urate`. This is not required if using another aggregator."""

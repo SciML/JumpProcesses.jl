@@ -104,15 +104,15 @@ VariableRateJump(rate,affect!;
 
 - `rate(u,p,t)` is a function which calculates the rate given the time and the state.
 - `affect!(integrator)` is the effect on the equation, using the integrator interface.
-- When planning to use the `QueueMethod` aggregator, the arguments `lrate`,
+- When planning to use the `Coevolve` aggregator, the arguments `lrate`,
   `urate` and `L` are required. They consist of three functions: `lrate(u, p, t)`
   computes the lower bound of the intensity rate in the interval `t` to `t + L`
   given state `u` and parameters `p`; `urate(u, p, t)` computes the upper
   bound of the intensity rate; and `L(u, p, t)` computes the interval length
   for which the rate is bounded between `lrate` and `urate`.
 - It is only possible to solve a `VariableRateJump` with `SSAStepper` when using
-  the `QueueMethod` aggregator.
-- When using a different aggregator than `QueueMethod`, there is no need to
+  the `Coevolve` aggregator.
+- When using a different aggregator than `Coevolve`, there is no need to
   define `lrate`, `urate` and `L`. Note that in this case, the problem can only
   be solved with continuous integration. Internally, `VariableRateJump` is
   transformed into a `ContinuousCallback`. The `rate(u, p, t)` is used to
@@ -237,34 +237,34 @@ with `RegularJumps` which are used for inexact methods.
 
 The current aggregators are:
 
-- `Direct`: the Gillespie Direct method SSA.
-- `RDirect`: A variant of Gillespie's Direct method that uses rejection to
-  sample the next reaction.
-- *`DirectCR`*: The Composition-Rejection Direct method of Slepoy et al. For
-  large networks and linear chain-type networks it will often give better
-  performance than `Direct`. (Requires dependency graph, see below.)
-- `DirectFW`: the Gillespie Direct method SSA with `FunctionWrappers`. This
+- `Direct`: The Gillespie Direct method SSA [1].
+- `DirectFW`: the Gillespie Direct method SSA [1] with `FunctionWrappers`. This
   aggregator uses a different internal storage format for collections of
   `ConstantRateJumps`.
-- `FRM`: the Gillespie first reaction method SSA. `Direct` should generally
-  offer better performance and be preferred to `FRM`.
-- `FRMFW`: the Gillespie first reaction method SSA with `FunctionWrappers`.
-- *`NRM`*: The Gibson-Bruck Next Reaction Method. For some reaction network
-   structures this may offer better performance than `Direct` (for example,
-   large, linear chains of reactions). (Requires dependency graph, see below.)
-- *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al. With `RSSACR`, for
+- *`DirectCR`*: The Composition-Rejection Direct method of Slepoy et al [2]. For
+  large networks and linear chain-type networks it will often give better
+  performance than `Direct`. (Requires dependency graph, see below.)
+- *`SortingDirect`*: The Sorting Direct Method of McCollum et al [3]. It will
+  usually offer performance as good as `Direct`, and for some systems can offer
+  substantially better performance. (Requires dependency graph, see below.)
+- *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al [4,5]. With `RSSACR`, for
   very large reaction networks it often offers the best performance of all
   methods. (Requires dependency graph, see below.)
 - *`RSSACR`*: The Rejection SSA (RSSA) with Composition-Rejection method of
-  Thanh et al. With `RSSA`, for very large reaction networks it often offers the
+  Thanh et al [6]. With `RSSA`, for very large reaction networks it often offers the
   best performance of all methods. (Requires dependency graph, see below.)
-- *`SortingDirect`*: The Sorting Direct Method of McCollum et al. It will
-  usually offer performance as good as `Direct`, and for some systems can offer
-  substantially better performance. (Requires dependency graph, see below.)
-- *`QueueMethod`*: The queueing method. This is a modification of Ogata's
-  algorihm for simulating any compound point process that evolves through time.
-  This is the only aggregator that handles `VariableRateJump`. If rates do not
-  change between jump events (i.e. `ConsantRateJump` or `MassActionJump`) this
+- `RDirect`: A variant of Gillespie's Direct method [1] that uses rejection to
+  sample the next reaction.
+- `FRM`: The Gillespie first reaction method SSA [1]. `Direct` should generally
+  offer better performance and be preferred to `FRM`.
+- `FRMFW`: The Gillespie first reaction method SSA [1] with `FunctionWrappers`.
+- *`NRM`*: The Gibson-Bruck Next Reaction Method [7]. For some reaction network
+   structures this may offer better performance than `Direct` (for example,
+   large, linear chains of reactions). (Requires dependency graph, see below.)
+- *`Coevolve`*: An adaptation of the COEVOLVE algorithm of Farajtabar et al [8].
+  for simulating any compound point process that evolves through time. This is
+  the only aggregator that handles `VariableRateJump`. If rates do not change
+  between jump events (i.e. `ConsantRateJump` or `MassActionJump`) this
   aggregator is very similar to `NRM`. (Requires dependency graph, see below.)
 
 To pass the aggregator, pass the instantiation of the type. For example:
@@ -276,9 +276,44 @@ JumpProblem(prob,Direct(),jump1,jump2)
 will build a problem where the constant rate jumps are solved using Gillespie's
 Direct SSA method.
 
+[1] Daniel T. Gillespie, A general method for numerically simulating the stochastic
+time evolution of coupled chemical reactions, Journal of Computational Physics,
+22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
+
+[2] A. Slepoy, A.P. Thompson and S.J. Plimpton, A constant-time kinetic Monte
+Carlo algorithm for simulation of large biochemical reaction networks, Journal
+of Chemical Physics, 128 (20), 205101 (2008). doi:10.1063/1.2919546.
+
+[3] J. M. McCollum, G. D. Peterson, C. D. Cox, M. L. Simpson and N. F.
+Samatova, The sorting direct method for stochastic simulation of biochemical
+systems with varying reaction execution behavior, Computational Biology and
+Chemistry, 30 (1), 39049 (2006). doi:10.1016/j.compbiolchem.2005.10.007.
+
+[4] V. H. Thanh, C. Priami and R. Zunino, Efficient rejection-based simulation
+of biochemical reactions with stochastic noise and delays, Journal of Chemical
+Physics, 141 (13), 134116 (2014). doi:10.1063/1.4896985.
+
+[5] V. H. Thanh, R. Zunino and C. Priami, On the rejection-based algorithm for
+simulation and analysis of large-scale reaction networks, Journal of Chemical
+Physics, 142 (24), 244106 (2015). doi:10.1063/1.4922923.
+
+[6] V. H. Thanh, R. Zunino, and C. Priami, Efficient constant-time complexity
+algorithm for stochastic simulation of large reaction networks, IEEE/ACM
+Transactions on Computational Biology and Bioinformatics, 14 (3), 657-667
+(2017). doi:10.1109/TCBB.2016.2530066.
+
+[7] M. A. Gibson and J. Bruck, Efficient exact stochastic simulation of chemical
+systems with many species and many channels, Journal of Physical Chemistry A,
+104 (9), 1876-1889 (2000). doi:10.1021/jp993732q.
+
+[8] M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L. Song,
+COEVOLVE: a joint point process model for information diffusion and network
+evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
+10.5555/3122009.3122050.
+
 ## Jump Aggregators Requiring Dependency Graphs
 Italicized constant rate jump aggregators require the user to pass a dependency
-graph to `JumpProblem`. `DirectCR`, `NRM`, `SortingDirect` and `QueueMethod`
+graph to `JumpProblem`. `DirectCR`, `NRM`, `SortingDirect` and `Coevolve`
 require a jump-jump dependency graph, passed through the named parameter
 `dep_graph`. i.e.
 ```julia
@@ -330,7 +365,7 @@ For representing and aggregating jumps
   `NRM` often have the best performance.
 - For very large networks, with many updates per jump, `RSSA` and `RSSACR` will
   often substantially outperform the other methods.
-- For systems with `VariableRateJump`, only the `QueueMethod` aggregator is
+- For systems with `VariableRateJump`, only the `Coevolve` aggregator is
   supported.
 - The `SSAStepper()` can be used with `VariableRateJump`s that modify the state
   of differential equations. However, it is not possible to use `SSAStepper()`

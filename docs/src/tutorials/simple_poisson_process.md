@@ -212,9 +212,9 @@ dep_graph = [[2], []]
 
 We can then construct the corresponding problem, passing both jumps to
 `JumpProblem` as well as the dependency graph. Since we are dealing with
-a `VariableRateJump` we must use the `QueueMethod` aggregator.
+a `VariableRateJump` we must use the `Coevolve` aggregator.
 ```@example tut1
-jprob = JumpProblem(dprob, QueueMethod(), vrj1, deathcrj; dep_graph=dep_graph)
+jprob = JumpProblem(dprob, Coevolve(), vrj1, deathcrj; dep_graph=dep_graph)
 sol = solve(jprob, SSAStepper())
 plot(sol, label=["N(t)" "D(t)"], xlabel="t", legend=:topleft)
 ```

@@ -84,7 +84,7 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
-export QueueMethod
+export Coevolve
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

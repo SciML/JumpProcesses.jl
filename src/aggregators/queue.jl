@@ -1,7 +1,7 @@
 """
 Queue method. This method handles variable intensity rates.
 """
-mutable struct QueueMethodJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
+mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
                AbstractSSAJumpAggregator
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
@@ -21,7 +21,7 @@ mutable struct QueueMethodJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     Ls::F1                            # vector of interval length functions
 end
 
-function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothing,
+function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothing,
                                     maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
                                     rng::RNG; u::U,
                                     dep_graph = nothing,
@@ -46,7 +46,7 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
     end
 
     pq = MutableBinaryMinHeap{T}()
-    QueueMethodJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
+    CoevolveJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
                                typeof(pq)
                                }(nj, nj, njt,
                                  et,
@@ -59,7 +59,7 @@ function QueueMethodJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::No
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
-function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
+function aggregate(aggregator::Coevolve, u, p, t, end_time, variable_jumps,
                    ma_jumps, save_positions, rng;
                    dep_graph = nothing,
                    kwargs...)
@@ -84,7 +84,7 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
     sum_rate = nothing
     next_jump = 0
     next_jump_time = typemax(t)
-    QueueMethodJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
+    CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                ma_jumps, rates, affects!, save_positions, rng;
                                u = u,
                                dep_graph = dep_graph,
@@ -92,7 +92,7 @@ function aggregate(aggregator::QueueMethod, u, p, t, end_time, variable_jumps,
 end
 
 # set up a new simulation and calculate the first jump / jump time
-function initialize!(p::QueueMethodJumpAggregation, integrator, u, params, t)
+function initialize!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
@@ -100,7 +100,7 @@ function initialize!(p::QueueMethodJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     # execute jump
     u = update_state!(p, integrator, u, params, t)
     # update current jump rates and times
@@ -109,12 +109,12 @@ function execute_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::QueueMethodJumpAggregation, integrator, u, params, t)
+function generate_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.next_jump_time, p.next_jump = top_with_handle(p.pq)
     nothing
 end
 
-@inline function update_state!(p::QueueMethodJumpAggregation, integrator, u, params, t)
+@inline function update_state!(p::CoevolveJumpAggregation, integrator, u, params, t)
     @unpack ma_jumps, next_jump = p
     num_majumps = get_num_majumps(ma_jumps)
     if next_jump <= num_majumps
@@ -132,7 +132,7 @@ end
 end
 
 ######################## SSA specific helper routines ########################
-function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
+function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]
     @unpack end_time, pq = p
     for (ix, i) in enumerate(deps)
@@ -142,7 +142,7 @@ function update_dependent_rates!(p::QueueMethodJumpAggregation, u, params, t)
     nothing
 end
 
-function get_rates(p::QueueMethodJumpAggregation, i, u)
+function get_rates(p::CoevolveJumpAggregation, i, u)
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if i <= num_majumps
@@ -158,7 +158,7 @@ function get_rates(p::QueueMethodJumpAggregation, i, u)
     return rate, lrate, urate, L
 end
 
-function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
+function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
     @unpack rng = p
     rate, lrate, urate, L = get_rates(p, i, u)
     while t < tstop
@@ -194,7 +194,7 @@ function next_time(p::QueueMethodJumpAggregation{T}, u, params, t, i, tstop::T) 
 end
 
 # reevaulate all rates, recalculate all jump times, and reinit the priority queue
-function fill_rates_and_get_times!(p::QueueMethodJumpAggregation, u, params, t)
+function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t)
     @unpack end_time = p
     num_jumps = get_num_majumps(p.ma_jumps) + length(p.rates)
     jump_times = Vector{eltype(t)}(undef, num_jumps)

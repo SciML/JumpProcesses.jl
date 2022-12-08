@@ -8,9 +8,9 @@ tuples. Fastest for a small (total) number of `ConstantRateJump`s or
 `MassActionJump`s (~10). For larger numbers of possible jumps use other
 methods.
 
-Gillespie, Daniel T. (1976). A General Method for Numerically Simulating the
-Stochastic Time Evolution of Coupled Chemical Reactions. Journal of
-Computational Physics. 22 (4): 403–434. doi:10.1016/0021-9991(76)90041-3.
+Daniel T. Gillespie, A general method for numerically simulating the stochastic
+time evolution of coupled chemical reactions, Journal of Computational Physics,
+22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
 """
 struct Direct <: AbstractAggregatorAlgorithm end
 
@@ -21,9 +21,9 @@ numbers of `ConstantRateJump`s. However, for such large numbers of jump
 different classes of aggregators are usually much more performant (i.e.
 `SortingDirect`, `DirectCR`, `RSSA` or `RSSACR`).
 
-Gillespie, Daniel T. (1976). A General Method for Numerically Simulating the
-Stochastic Time Evolution of Coupled Chemical Reactions. Journal of
-Computational Physics. 22 (4): 403–434. doi:10.1016/0021-9991(76)90041-3.
+Daniel T. Gillespie, A general method for numerically simulating the stochastic
+time evolution of coupled chemical reactions, Journal of Computational Physics,
+22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
 """
 struct DirectFW <: AbstractAggregatorAlgorithm end
 
@@ -33,13 +33,13 @@ for systems with large numbers of jumps with special structure (for example a
 linear chain of reactions, or jumps corresponding to particles hopping on a grid
 or graph).
 
-- A. Slepoy, A.P. Thompson and S.J. Plimpton, A constant-time kinetic Monte
-  Carlo algorithm for simulation of large biochemical reaction networks, Journal
-  of Chemical Physics, 128 (20), 205101 (2008). doi:10.1063/1.2919546
+A. Slepoy, A.P. Thompson and S.J. Plimpton, A constant-time kinetic Monte
+Carlo algorithm for simulation of large biochemical reaction networks, Journal
+of Chemical Physics, 128 (20), 205101 (2008). doi:10.1063/1.2919546.
 
-- S. Mauch and M. Stalzer, Efficient formulations for exact stochastic
-  simulation of chemical systems, ACM Transactions on Computational Biology and
-  Bioinformatics, 8 (1), 27-35 (2010). doi:10.1109/TCBB.2009.47
+S. Mauch and M. Stalzer, Efficient formulations for exact stochastic
+simulation of chemical systems, ACM Transactions on Computational Biology and
+Bioinformatics, 8 (1), 27-35 (2010). doi:10.1109/TCBB.2009.47.
 """
 struct DirectCR <: AbstractAggregatorAlgorithm end
 
@@ -49,9 +49,9 @@ sized systems (tens of jumps), or systems where a few jumps occur much more
 frequently than others.
 
 J. M. McCollum, G. D. Peterson, C. D. Cox, M. L. Simpson and N. F. Samatova, The
-  sorting direct method for stochastic simulation of biochemical systems with
-  varying reaction execution behavior, Computational Biology and Chemistry, 30
-  (1), 39049 (2006). doi:10.1016/j.compbiolchem.2005.10.007
+sorting direct method for stochastic simulation of biochemical systems with
+varying reaction execution behavior, Computational Biology and Chemistry, 30
+(1), 39049 (2006). doi:10.1016/j.compbiolchem.2005.10.007.
 """
 struct SortingDirect <: AbstractAggregatorAlgorithm end
 
@@ -59,13 +59,13 @@ struct SortingDirect <: AbstractAggregatorAlgorithm end
 The Rejection SSA method. One of the best methods for systems with hundreds to
 many thousands of jumps (along with `RSSACR`) and sparse dependency graphs.
 
-- V. H. Thanh, C. Priami and R. Zunino, Efficient rejection-based simulation of
-  biochemical reactions with stochastic noise and delays, Journal of Chemical
-  Physics, 141 (13), 134116 (2014). doi:10.1063/1.4896985
+V. H. Thanh, C. Priami and R. Zunino, Efficient rejection-based simulation of
+biochemical reactions with stochastic noise and delays, Journal of Chemical
+Physics, 141 (13), 134116 (2014). doi:10.1063/1.4896985
 
-- V. H. Thanh, R. Zunino and C. Priami, On the rejection-based algorithm for
-  simulation and analysis of large-scale reaction networks, Journal of Chemical
-  Physics, 142 (24), 244106 (2015). doi:10.1063/1.4922923
+V. H. Thanh, R. Zunino and C. Priami, On the rejection-based algorithm for
+simulation and analysis of large-scale reaction networks, Journal of Chemical
+Physics, 142 (24), 244106 (2015). doi:10.1063/1.4922923.
 """
 struct RSSA <: AbstractAggregatorAlgorithm end
 
@@ -73,15 +73,15 @@ struct RSSA <: AbstractAggregatorAlgorithm end
 The Rejection SSA Composition-Rejection method. Often the best performer for
 systems with tens of thousands of jumps and sparse depedency graphs.
 
-V. H. Thanh, R. Zunino, and C. Priami, Efficient Constant-Time Complexity
-Algorithm for Stochastic Simulation of Large Reaction Networks, IEEE/ACM
-Transactions on Computational Biology and Bioinformatics, Vol. 14, No. 3,
-657-667 (2017).
+V. H. Thanh, R. Zunino, and C. Priami, Efficient constant-time complexity
+algorithm for stochastic simulation of large reaction networks, IEEE/ACM
+Transactions on Computational Biology and Bioinformatics, 14 (3), 657-667
+(2017). doi:10.1109/TCBB.2016.2530066.
 """
 struct RSSACR <: AbstractAggregatorAlgorithm end
 
 """
-A rejection-based direct method. 
+A rejection-based direct method.
 """
 struct RDirect <: AbstractAggregatorAlgorithm end
 
@@ -91,9 +91,9 @@ struct RDirect <: AbstractAggregatorAlgorithm end
 Gillespie's First Reaction Method. Should not be used for practical applications
 due to slow performance relative to all other methods.
 
-Gillespie, Daniel T. (1976). A General Method for Numerically Simulating the
-Stochastic Time Evolution of Coupled Chemical Reactions. Journal of
-Computational Physics. 22 (4): 403–434. doi:10.1016/0021-9991(76)90041-3.
+Daniel T. Gillespie, A general method for numerically simulating the stochastic
+time evolution of coupled chemical reactions, Journal of Computational Physics,
+22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
 """
 struct FRM <: AbstractAggregatorAlgorithm end
 
@@ -102,9 +102,9 @@ Gillespie's First Reaction Method with `FunctionWrappers` for handling
 `ConstantRateJump`s. Should not be used for practical applications
 due to slow performance relative to all other methods.
 
-Gillespie, Daniel T. (1976). A General Method for Numerically Simulating the
-Stochastic Time Evolution of Coupled Chemical Reactions. Journal of
-Computational Physics. 22 (4): 403–434. doi:10.1016/0021-9991(76)90041-3.
+Daniel T. Gillespie, A general method for numerically simulating the stochastic
+time evolution of coupled chemical reactions, Journal of Computational Physics,
+22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
 """
 struct FRMFW <: AbstractAggregatorAlgorithm end
 
@@ -115,9 +115,22 @@ one of `DirectCR`, `RSSA`, or `RSSACR` for such systems.
 
 M. A. Gibson and J. Bruck, Efficient exact stochastic simulation of chemical
 systems with many species and many channels, Journal of Physical Chemistry A,
-104 (9), 1876-1889 (2000). doi:10.1021/jp993732q
+104 (9), 1876-1889 (2000). doi:10.1021/jp993732q.
 """
 struct NRM <: AbstractAggregatorAlgorithm end
+
+"""
+An adaptaton of the COEVOLVE algorithm for simulating any compound jump process
+that evolves through time. This method handles variable intensity rates with
+user-defined bounds and inter-dependent processes. It reduces to NRM when rates
+are constant.
+
+M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L. Song,
+COEVOLVE: a joint point process model for information diffusion and network
+evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
+10.5555/3122009.3122050.
+"""
+struct Coevolve <: AbstractAggregatorAlgorithm end
 
 # spatial methods
 
@@ -128,8 +141,8 @@ determine where on the grid/graph the next jump occurs, and then the `Direct`
 method to determine which jump at the given location occurs.
 
 Elf, Johan and Ehrenberg, M, Spontaneous separation of bi-stable biochemical
-systems into spatial domains of opposite phases,Systems Biology, 2004 vol. 1(2)
-pp. 230-236. doi:10.1049/sb:20045021
+systems into spatial domains of opposite phases,Systems Biology, 1(2), 230-236
+(2004). doi:10.1049/sb:20045021.
 """
 struct NSM <: AbstractAggregatorAlgorithm end
 
@@ -138,26 +151,14 @@ The Direct Composition-Rejection Direct method. Uses the `DirectCR` method to
 determine where on the grid/graph a jump occurs, and the `Direct` method to
 determine which jump occurs at the sampled location.
 
-Constant-complexity stochastic simulation algorithm with optimal binning, Kevin
-R. Sanft and Hans G. Othmer, Journal of Chemical Physics 143, 074108 (2015);
-doi: 10.1063/1.4928635
+Kevin R. Sanft and Hans G. Othmer, Constant-complexity stochastic simulation
+algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
+(2015). doi: 10.1063/1.4928635.
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
-"""
-The Queue Method. This method handles variable intensity rates with
-user-defined bounds and interdependent processes. It reduces to NRM when rates
-are constant.
-
-COEVOLVE: a joint point process model for information diffusion and network
-evolution, M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L.
-Song, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
-10.5555/3122009.3122050.
-"""
-struct QueueMethod <: AbstractAggregatorAlgorithm end
-
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect(), QueueMethod())
+                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -168,7 +169,7 @@ needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
 needs_depgraph(aggregator::RDirect) = true
-needs_depgraph(aggregator::QueueMethod) = true
+needs_depgraph(aggregator::Coevolve) = true
 
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from

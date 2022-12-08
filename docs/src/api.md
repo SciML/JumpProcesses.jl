@@ -31,7 +31,7 @@ RDirect
 RSSA
 RSSACR
 SortingDirect
-QueueMethod
+Coevolve
 ```
 
 # Private API Functions

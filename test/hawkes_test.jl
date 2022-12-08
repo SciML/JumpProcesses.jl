@@ -52,7 +52,7 @@ function hawkes_jump(u, g, h)
     return [hawkes_jump(i, g, h) for i in 1:length(u)]
 end
 
-function hawkes_problem(p, agg::QueueMethod; u = [0.0], tspan = (0.0, 50.0),
+function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]], h = [[]])
     dprob = DiscreteProblem(u, tspan, p)
@@ -98,12 +98,12 @@ h = [Float64[]]
 
 Eλ, Varλ = expected_stats_hawkes_problem(p, tspan)
 
-algs = (Direct(), QueueMethod())
+algs = (Direct(), Coevolve())
 Nsims = 250
 
 for alg in algs
     jump_prob = hawkes_problem(p, alg; u = u0, tspan = tspan, g = g, h = h)
-    if typeof(alg) <: QueueMethod
+    if typeof(alg) <: Coevolve
         stepper = SSAStepper()
     else
         stepper = Tsit5()
@@ -113,7 +113,7 @@ for alg in algs
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
-    if typeof(alg) <: QueueMethod
+    if typeof(alg) <: Coevolve
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
     else
         cols = length(sols[1].u[1].u)

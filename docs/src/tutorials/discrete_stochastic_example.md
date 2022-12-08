@@ -255,14 +255,14 @@ In general
 | [`MassActionJump`](@ref MassActionJumpSect) | Fastest | Restrictive rates/affects |
 | [`ConstantRateJump`](@ref ConstantRateJumpSect) | Somewhat Slower | Rates must
 be constant between jumps |
-| [`VariableRateJump` with `QueueMethod` aggregator](@ref VariableRateJumpQueueMethodSect) | Somewhat Slower | Rates can be a function of time, but not of ODE variables  |
+| [`VariableRateJump` with `Coevolve` aggregator](@ref VariableRateJumpCoevolveSect) | Somewhat Slower | Rates can be a function of time, but not of ODE variables  |
 | [`VariableRateJump`](@ref VariableRateJumpSect) | Slowest | Completely general |
 
 It is recommended to try to encode jumps using the most performant option that
 supports the desired generality of the underlying `rate` and `affect!`
 functions. Below we describe the different jump types, and show how the SIR
 model can be formulated using first `ConstantRateJump`s, `VariableRateJump`s
-with `QueueMethod` aggregator and then `MassActionJump`s. Completely general
+with `Coevolve` aggregator and then `MassActionJump`s. Completely general
 models that use `VariableRateJump`s with over an `ODEProblem` are considered
 later.
 
@@ -380,7 +380,7 @@ In summary, if a particular jump process has a rate function that depends
 explicitly or implicitly on a continuously changing quantity, you need to use a
 [`VariableRateJump`](@ref).
 
-## [Defining the Jumps Directly: `VariableRateJump`](@id VariableRateJumpQueueMethodSect)
+## [Defining the Jumps Directly: `VariableRateJump`](@id VariableRateJumpCoevolveSect)
 
 Now, let's assume that the infection rate is decreasing over time. That is, once
 individuals gets infected they reaches peak infectivity. The force of infection
@@ -405,7 +405,7 @@ p1 = (β1, ν, α, γ)
 ```
 
 We define a vector `H` to hold the timestamp of active infections. Then, we 
-define infection as a `VariableRateJump`. To use the `QueueMethod` aggregator, 
+define infection as a `VariableRateJump`. To use the `Coevolve` aggregator, 
 we need to specify the lower- and upper-bounds of the rate which should be valid 
 from the time they are computed `t` until `t + L(u, p, t)`.
 
@@ -441,16 +441,16 @@ jump4 = ConstantRateJump(rate4, affect4!)
 With the jumps defined, we can build
 a [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
 `VariableRateJump`s over a `DiscreteProblem` can only be solved with the
-`QueueMethod` aggregator. We need to specify a depedency graph to use this
+`Coevolve` aggregator. We need to specify a depedency graph to use this
 aggregator. In this case, both processes mutually affect each other.
 
 ```@example tut2
 prob = DiscreteProblem(u₀, tspan, p1)
-jump_prob = JumpProblem(prob, QueueMethod(), jump3, jump4; dep_graph=[[1,2], [1,2]])
+jump_prob = JumpProblem(prob, Coevolve(), jump3, jump4; dep_graph=[[1,2], [1,2]])
 ```
 
 We now have a problem that can be solved with `SSAStepper` to handle
-time-stepping the `QueueMethod` aggregator from jump to jump:
+time-stepping the `Coevolve` aggregator from jump to jump:
 
 ```@example tut2
 sol = solve(jump_prob, SSAStepper())
@@ -621,7 +621,7 @@ plot(sol; label=["S(t)" "I(t)" "R(t)"])
 ```
 
 Note that, we can also combine `MassActionJump` with `VariableRateJump` when
-using the `QueueMethod` aggregator in the same manner.
+using the `Coevolve` aggregator in the same manner.
 
 ## Adding Jumps to a Differential Equation
 If we instead used some form of differential equation instead of a
@@ -648,10 +648,10 @@ sol = solve(jump_prob, Tsit5())
 plot(sol; label=["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
-Note that when using `VariableRateJump`s with the `QueueMethod` aggregator, the 
+Note that when using `VariableRateJump`s with the `Coevolve` aggregator, the 
 ODE problem should not modify the rates of any jump. However, the opposite where 
 the jumps modify the ODE variables is allowed. In these cases, you should 
-observe an improved performance when using the `QueueMethod`.
+observe an improved performance when using the `Coevolve`.
 
 ## [Adding a VariableRateJump that Depends on a Continuous Variable](@id VariableRateJumpSect)
 Now let's consider adding a reaction whose rate changes continuously with the

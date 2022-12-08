@@ -50,7 +50,7 @@ include("aggregators/prioritytable.jl")
 include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
-include("aggregators/queue.jl")
+include("aggregators/coevolve.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

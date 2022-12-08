@@ -22,10 +22,10 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
 end
 
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothing,
-                                    maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                                    rng::RNG; u::U,
-                                    dep_graph = nothing,
-                                    lrates, urates, Ls) where {T, S, F1, F2, RNG, U}
+                                 maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+                                 rng::RNG; u::U,
+                                 dep_graph = nothing,
+                                 lrates, urates, Ls) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use VariableRateJumps with the Queue Method algorithm a dependency graph between jumps must be supplied.")
@@ -47,15 +47,15 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothi
 
     pq = MutableBinaryMinHeap{T}()
     CoevolveJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
-                               typeof(pq)
-                               }(nj, nj, njt,
-                                 et,
-                                 crs, sr, maj,
-                                 rs,
-                                 affs!, sps,
-                                 rng,
-                                 dg, pq,
-                                 lrates, urates, Ls)
+                            typeof(pq)
+                            }(nj, nj, njt,
+                              et,
+                              crs, sr, maj,
+                              rs,
+                              affs!, sps,
+                              rng,
+                              dg, pq,
+                              lrates, urates, Ls)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
@@ -85,10 +85,10 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, variable_jumps,
     next_jump = 0
     next_jump_time = typemax(t)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-                               ma_jumps, rates, affects!, save_positions, rng;
-                               u = u,
-                               dep_graph = dep_graph,
-                               lrates = lrates, urates = urates, Ls = Ls)
+                            ma_jumps, rates, affects!, save_positions, rng;
+                            u = u,
+                            dep_graph = dep_graph,
+                            lrates = lrates, urates = urates, Ls = Ls)
 end
 
 # set up a new simulation and calculate the first jump / jump time

@@ -1,6 +1,4 @@
 # Spatial SSAs with JumpProcesses.jl
-author: Vasily Ilin
----
 
 This tutorial shows how to use spatial solvers.
 

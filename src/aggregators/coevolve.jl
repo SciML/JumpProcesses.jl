@@ -102,7 +102,7 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     # execute jump
-    u = update_state!(p, integrator, u, params, t)
+    u = update_state!(p, integrator, u)
     # update current jump rates and times
     update_dependent_rates!(p, u, params, t)
     nothing

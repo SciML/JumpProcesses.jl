@@ -180,7 +180,7 @@ end
 function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t)
     @unpack end_time = p
     num_jumps = get_num_majumps(p.ma_jumps) + length(p.rates)
-    jump_times = Vector{eltype(t)}(undef, num_jumps)
+    jump_times = Vector{typeof(t)}(undef, num_jumps)
     @inbounds for i in 1:num_jumps
         jump_times[i] = next_time(p, u, params, t, i, end_time)
     end

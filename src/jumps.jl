@@ -113,13 +113,15 @@ function VariableRateJump(rate, affect!;
                           lrate = nothing, urate = nothing,
                           L = nothing, rootfind = true,
                           idxs = nothing,
-                          save_positions = (lrate !== nothing && urate !== nothing &&
-                                            L !== nothing) ? (false, true) : (true, true),
+                          save_positions = (false, true),
                           interp_points = 10,
                           abstol = 1e-12, reltol = 0)
-    if !((lrate === nothing && urate === nothing && L === nothing) ||
-         (lrate !== nothing && urate !== nothing && L !== nothing))
-        error("Either `lrate`, `urate` and `L` must be nothing, or all of them must be defined.")
+    if !(urate !== nothing && L !== nothing) && !(urate === nothing && L === nothing)
+        error("Either `urate` and `L` must be nothing, or both of them must be defined.")
+    end
+
+    if (urate !== nothing && lrate === nothing)
+        lrate = (u, p, t) -> zero(typeof(t))
     end
 
     VariableRateJump(rate, affect!, lrate, urate, L, idxs, rootfind,

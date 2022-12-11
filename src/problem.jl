@@ -197,7 +197,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         cont_agg = JumpSet().variable_jumps
         disc_agg = nothing
         constant_jump_callback = CallbackSet()
-    elseif typeof(aggregator) <: Coevolve
+    elseif supports_variablerates(aggregator)
         # Coevolve handles all types of jumps together
         variable_jumps = VariableRateJump[]
         if (length(jumps.constant_jumps) == 0)

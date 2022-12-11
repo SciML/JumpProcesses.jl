@@ -125,7 +125,7 @@ function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     nothing
 end
 
-function get_rates(p::CoevolveJumpAggregation, i, u)
+@inline function get_rates(p::CoevolveJumpAggregation, i, u)
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if i <= num_majumps

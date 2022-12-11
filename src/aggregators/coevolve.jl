@@ -34,9 +34,9 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Nothing, sr::Nothi
         end
     else
         # using a Set to ensure that edges are not duplicate
-        dg = [Set{Int}(append!([], jumps, [var]))
-              for (var, jumps) in enumerate(dep_graph)]
-        dg = [sort!(collect(i)) for i in dg]
+        dgsets = [Set{Int}(append!(Int[], jumps, [var]))
+                  for (var, jumps) in enumerate(dep_graph)]
+        dg = [sort!(collect(i)) for i in dgsets]
     end
 
     num_jumps = get_num_majumps(maj) + length(rs)

@@ -114,23 +114,6 @@ function generate_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     nothing
 end
 
-@inline function update_state!(p::CoevolveJumpAggregation, integrator, u, params, t)
-    @unpack ma_jumps, next_jump = p
-    num_majumps = get_num_majumps(ma_jumps)
-    if next_jump <= num_majumps
-        if u isa SVector
-            integrator.u = executerx(u, next_jump, ma_jumps)
-        else
-            @inbounds executerx!(u, next_jump, ma_jumps)
-        end
-    else
-        idx = next_jump - num_majumps
-        @inbounds p.affects![idx](integrator)
-    end
-    p.prev_jump = next_jump
-    return integrator.u
-end
-
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]

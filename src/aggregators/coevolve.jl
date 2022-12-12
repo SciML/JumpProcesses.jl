@@ -39,7 +39,7 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
         dg = [sort!(collect(i)) for i in dgsets]
     end
 
-    num_jumps = get_num_majumps(maj) + length(rs)
+    num_jumps = get_num_majumps(maj) + length(urates)
 
     if length(dg) != num_jumps
         error("Number of nodes in the dependency graph must be the same as the number of jumps.")
@@ -59,28 +59,37 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
-function aggregate(aggregator::Coevolve, u, p, t, end_time, variable_jumps,
+function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng;
-                   dep_graph = nothing,
+                   dep_graph = nothing, variable_jumps = nothing,
                    kwargs...)
     AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
-    if (variable_jumps !== nothing) && !isempty(variable_jumps)
-        affects! = [AffectWrapper((integrator) -> (c.affect!(integrator); nothing))
-                    for c in variable_jumps]
-        rates = [RateWrapper(c.rate) for c in variable_jumps]
-        lrates = Any[RateWrapper(c.lrate) for c in variable_jumps]
-        urates = Any[RateWrapper(c.urate) for c in variable_jumps]
-        Ls = Any[RateWrapper(c.L) for c in variable_jumps]
-    else
-        affects! = Vector{AffectWrapper}()
-        rates = Vector{RateWrapper}()
-        lrates = Vector{RateWrapper}()
-        urates = Vector{RateWrapper}()
-        Ls = Vector{RateWrapper}()
+    affects! = Vector{AffectWrapper}()
+    rates = Vector{RateWrapper}()
+    lrates = Vector{RateWrapper}()
+    urates = Vector{RateWrapper}()
+    Ls = Vector{RateWrapper}()
+
+    if (constant_jumps !== nothing) && !isempty(constant_jumps)
+        append!(affects!,
+                [AffectWrapper((integrator) -> (j.affect!(integrator); nothing))
+                 for j in constant_jumps])
+        append!(urates, [RateWrapper(j.rate) for j in constant_jumps])
     end
-    num_jumps = get_num_majumps(ma_jumps) + length(rates)
+
+    if (variable_jumps !== nothing) && !isempty(variable_jumps)
+        append!(affects!,
+                [AffectWrapper((integrator) -> (j.affect!(integrator); nothing))
+                 for j in variable_jumps])
+        append!(rates, [RateWrapper(j.rate) for j in variable_jumps])
+        append!(lrates, [RateWrapper(j.lrate) for j in variable_jumps])
+        append!(urates, [RateWrapper(j.urate) for j in variable_jumps])
+        append!(Ls, [RateWrapper(j.L) for j in variable_jumps])
+    end
+
+    num_jumps = get_num_majumps(ma_jumps) + length(urates)
     cur_rates = Vector{typeof(t)}(undef, num_jumps)
     sum_rate = nothing
     next_jump = 0
@@ -128,72 +137,81 @@ function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
 end
 
 @inline function get_ma_urate(p::CoevolveJumpAggregation, i, u, params, t)
-    return evalrxrate(u, i, p.ma_jumps), typemax(t)
+    return evalrxrate(u, i, p.ma_jumps)
 end
 
-@inline function get_urate(p::CoevolveJumpAggregation, idx, u, params, t)
-    @inbounds return p.urates[idx](u, params, t), p.Ls[idx](u, params, t)
+@inline function get_urate(p::CoevolveJumpAggregation, uidx, u, params, t)
+    @inbounds return p.urates[uidx](u, params, t)
 end
 
-@inline function get_lrate(p::CoevolveJumpAggregation, idx, u, params, t)
-    @inbounds return p.lrates[idx](u, params, t)
+@inline function get_L(p::CoevolveJumpAggregation, lidx, u, params, t)
+    @inbounds return p.Ls[lidx](u, params, t)
 end
 
-@inline function get_rate(p::CoevolveJumpAggregation, idx, u, params, t)
-    @inbounds return p.rates[idx](u, params, t)
+@inline function get_lrate(p::CoevolveJumpAggregation, lidx, u, params, t)
+    @inbounds return p.lrates[lidx](u, params, t)
+end
+
+@inline function get_rate(p::CoevolveJumpAggregation, lidx, u, params, t)
+    @inbounds return p.rates[lidx](u, params, t)
 end
 
 function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
     @unpack rng = p
-    idx = i - get_num_majumps(p.ma_jumps)
-    _urate, _L = idx > 0 ? get_urate(p, idx, u, params, t) :
-                 get_ma_urate(p, i, u, params, t)
-    _last_urate = p.cur_rates[i]
-    if i != p.next_jump && _last_urate > zero(t)
-        s = _urate == zero(t) ? typemax(t) : _last_urate / _urate * (p.pq[i] - t)
+    num_majumps = get_num_majumps(p.ma_jumps)
+    num_cjumps = length(p.urates) - length(p.rates)
+    uidx = i - num_majumps
+    lidx = i - num_majumps - num_cjumps
+    urate = uidx > 0 ? get_urate(p, uidx, u, params, t) :
+            get_ma_urate(p, i, u, params, t)
+    last_urate = p.cur_rates[i]
+    if i != p.next_jump && last_urate > zero(t)
+        s = urate == zero(t) ? typemax(t) : last_urate / urate * (p.pq[i] - t)
     else
-        s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
+        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
     end
     _t = t + s
-    while t < tstop
-        if s > _L
-            t = t + _L
-            _urate, _L = get_urate(p, idx, u, params, t)
-            s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
-            _t = t + s
-            continue
-        end
-        if _t >= tstop
-            break
-        end
-        if idx > 0 && @inbounds p.urates[idx] !== p.lrates[idx]
-            _lrate = get_lrate(p, idx, u, params, t)
-            if _lrate > _urate
-                error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
-            elseif _lrate < _urate
-                # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _urate / _urate
+    if lidx > 0
+        while t < tstop
+            L = get_L(p, lidx, u, params, t)
+            if s > L
+                t = t + L
+                urate = get_urate(p, uidx, u, params, t)
+                s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+                _t = t + s
+                continue
+            end
+            if _t >= tstop
+                break
+            end
+            lrate = p.urates[uidx] === p.lrates[lidx] ? urate :
+                    get_lrate(p, lidx, u, params, t)
+            if lrate > urate
+                error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(lrate) > upper bound = $(urate)")
+            elseif lrate < urate
+                # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
                 v = rand(rng)
                 # first inequality is less expensive and short-circuits the evaluation
-                if (v > _lrate / _urate)
-                    if (v > get_rate(p, idx, u, params, _t) / _urate)
+                if (v > lrate / urate)
+                    if (v > get_rate(p, lidx, u, params, _t) / urate)
                         t = _t
-                        _urate, _L = get_urate(p, idx, u, params, t)
-                        s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
+                        urate = get_urate(p, uidx, u, params, t)
+                        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
                         _t = t + s
                         continue
                     end
                 end
             end
+            break
         end
-        break
     end
-    return _t, _urate
+    return _t, urate
 end
 
 # reevaulate all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t)
     @unpack end_time = p
-    num_jumps = get_num_majumps(p.ma_jumps) + length(p.rates)
+    num_jumps = get_num_majumps(p.ma_jumps) + length(p.urates)
     p.cur_rates = zeros(typeof(t), num_jumps)
     jump_times = Vector{typeof(t)}(undef, num_jumps)
     @inbounds for i in 1:num_jumps

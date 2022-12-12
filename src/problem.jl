@@ -198,20 +198,10 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         disc_agg = nothing
         constant_jump_callback = CallbackSet()
     elseif supports_variablerates(aggregator)
-        # Coevolve handles all types of jumps together
-        variable_jumps = VariableRateJump[]
-        if (length(jumps.constant_jumps) == 0)
-            variable_jumps = jumps.variable_jumps
-        else
-            append!(variable_jumps,
-                    [VariableRateJump(jump.rate, jump.affect!; lrate = jump.rate,
-                                      urate = jump.rate, L = (u, p, t) -> typemax(t))
-                     for jump in jumps.constant_jumps])
-            append!(variable_jumps, jumps.variable_jumps)
-        end
         new_prob = prob
-        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, variable_jumps, maj,
-                             save_positions, rng; kwargs...)
+        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
+                             save_positions, rng; variable_jumps = jumps.variable_jumps,
+                             kwargs...)
         constant_jump_callback = DiscreteCallback(disc_agg)
         variable_jump_callback = CallbackSet()
         cont_agg = JumpSet().variable_jumps

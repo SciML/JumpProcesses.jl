@@ -128,15 +128,6 @@ function VariableRateJump(rate, affect!;
                      interp_points, save_positions, abstol, reltol)
 end
 
-function VariableRateJump(jump::ConstantRateJump)
-    L = (u, p, t) -> typemax(t)
-    VariableRateJump(jump.rate, jump.affect!; lrate = jump.rate,
-                     urate = jump.rate, L = L, idxs = nothing, rootfind = true,
-                     save_positions = (false, true),
-                     interp_points = 10,
-                     abstol = 1e-12, reltol = 0)
-end
-
 struct RegularJump{iip, R, C, MD}
     rate::R
     c::C

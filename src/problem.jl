@@ -203,9 +203,11 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         if (length(jumps.constant_jumps) == 0)
             variable_jumps = jumps.variable_jumps
         else
-            variable_jumps = append!(variable_jumps, jumps.variable_jumps)
             append!(variable_jumps,
-                    [VariableRateJump(jump) for jump in jumps.constant_jumps])
+                    [VariableRateJump(jump.rate, jump.affect!; lrate = jump.rate,
+                                      urate = jump.rate, L = (u, p, t) -> typemax(t))
+                     for jump in jumps.constant_jumps])
+            append!(variable_jumps, jumps.variable_jumps)
         end
         new_prob = prob
         disc_agg = aggregate(aggregator, u, prob.p, t, end_time, variable_jumps, maj,

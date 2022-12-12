@@ -439,27 +439,19 @@ function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number
     JumpSet(vj, cj, rj, check_majump_type(maj))
 end
 
-function JumpSet(jump::VariableRateJump)
-    JumpSet(VariableRateJump[jump], ConstantRateJump[], nothing, nothing)
-end
-function JumpSet(jump::ConstantRateJump)
-    JumpSet(VariableRateJump[], ConstantRateJump[jump], nothing, nothing)
-end
-JumpSet(jump::RegularJump) = JumpSet(VariableRateJump[], ConstantRateJump[], jump, nothing)
-function JumpSet(jump::AbstractMassActionJump)
-    JumpSet(VariableRateJump[], ConstantRateJump[], nothing, jump)
-end
-function JumpSet(; variable_jumps = VariableRateJump[], constant_jumps = ConstantRateJump[],
+JumpSet(jump::ConstantRateJump) = JumpSet((), (jump,), nothing, nothing)
+JumpSet(jump::VariableRateJump) = JumpSet((jump,), (), nothing, nothing)
+JumpSet(jump::RegularJump) = JumpSet((), (), jump, nothing)
+JumpSet(jump::AbstractMassActionJump) = JumpSet((), (), nothing, jump)
+function JumpSet(; variable_jumps = (), constant_jumps = (),
                  regular_jumps = nothing, massaction_jumps = nothing)
-    JumpSet(variable_jumps, constant_jumps, regular_jumps,
-            massaction_jumps)
+    JumpSet(variable_jumps, constant_jumps, regular_jumps, massaction_jumps)
 end
 JumpSet(jb::Nothing) = JumpSet()
 
 # For Varargs, use recursion to make it type-stable
 function JumpSet(jumps::AbstractJump...)
-    JumpSet(split_jumps(VariableRateJump[], ConstantRateJump[], nothing, nothing,
-                        jumps...)...)
+    JumpSet(split_jumps((), (), nothing, nothing, jumps...)...)
 end
 
 # handle vector of mass action jumps
@@ -481,10 +473,10 @@ end
 
 @inline split_jumps(vj, cj, rj, maj) = vj, cj, rj, maj
 @inline function split_jumps(vj, cj, rj, maj, v::VariableRateJump, args...)
-    split_jumps(push!(vj, v), cj, rj, maj, args...)
+    split_jumps((vj..., v), cj, rj, maj, args...)
 end
 @inline function split_jumps(vj, cj, rj, maj, c::ConstantRateJump, args...)
-    split_jumps(vj, push!(cj, c), rj, maj, args...)
+    split_jumps(vj, (cj..., c), rj, maj, args...)
 end
 @inline function split_jumps(vj, cj, rj, maj, c::RegularJump, args...)
     split_jumps(vj, cj, regular_jump_combine(rj, c), maj, args...)
@@ -493,8 +485,8 @@ end
     split_jumps(vj, cj, rj, massaction_jump_combine(maj, c), args...)
 end
 @inline function split_jumps(vj, cj, rj, maj, j::JumpSet, args...)
-    split_jumps(append!(vj, j.variable_jumps),
-                append!(cj, j.constant_jumps),
+    split_jumps((vj..., j.variable_jumps...),
+                (cj..., j.constant_jumps...),
                 regular_jump_combine(rj, j.regular_jump),
                 massaction_jump_combine(maj, j.massaction_jump), args...)
 end

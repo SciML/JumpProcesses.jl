@@ -7,7 +7,7 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     prev_jump::Int                    # the previous jump that was executed
     next_jump_time::T                 # the time of the next jump
     end_time::T                       # the time to stop a simulation
-    cur_rates::Vector{T}              # not used
+    cur_rates::Vector{T}              # the last computed upper bound for each rate
     sum_rate::Nothing                 # not used
     ma_jumps::S                       # MassActionJumps
     rates::F1                         # vector of rate functions
@@ -171,7 +171,7 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
             if _lrate > _urate
                 error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
             elseif _lrate < _urate
-                # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _rate / _urate
+                # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _urate / _urate
                 v = rand(rng)
                 # first inequality is less expensive and short-circuits the evaluation
                 if (v > _lrate / _urate)

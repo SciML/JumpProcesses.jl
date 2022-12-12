@@ -9,7 +9,7 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     end_time::T                       # the time to stop a simulation
     cur_rates::Vector{T}              # not used
     sum_rate::Nothing                 # not used
-    ma_jumps::S                       # not used
+    ma_jumps::S                       # MassActionJumps
     rates::F1                         # vector of rate functions
     affects!::F2                      # vector of affect functions for VariableRateJumps
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
@@ -127,26 +127,27 @@ function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     nothing
 end
 
-@inline function get_rates(p::CoevolveJumpAggregation, i, u)
-    ma_jumps = p.ma_jumps
-    num_majumps = get_num_majumps(ma_jumps)
-    if i <= num_majumps
-        _rate = evalrxrate(u, i, ma_jumps)
-        rate(u, p, t) = _rate
-        lrate = rate
-        urate = rate
-        L(u, p, t) = typemax(t)
-    else
-        idx = i - num_majumps
-        rate, lrate, urate, L = p.rates[idx], p.lrates[idx], p.urates[idx], p.Ls[idx]
-    end
-    return rate, lrate, urate, L
+@inline function get_ma_urate(p::CoevolveJumpAggregation, i, u, params, t)
+    return evalrxrate(u, i, p.ma_jumps), typemax(t)
+end
+
+@inline function get_urate(p::CoevolveJumpAggregation, idx, u, params, t)
+    @inbounds return p.urates[idx](u, params, t), p.Ls[idx](u, params, t)
+end
+
+@inline function get_lrate(p::CoevolveJumpAggregation, idx, u, params, t)
+    @inbounds return p.lrates[idx](u, params, t)
+end
+
+@inline function get_rate(p::CoevolveJumpAggregation, idx, u, params, t)
+    @inbounds return p.rates[idx](u, params, t)
 end
 
 function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
     @unpack rng = p
-    rate, lrate, urate, L = get_rates(p, i, u)
-    _urate = urate(u, params, t)
+    idx = i - get_num_majumps(p.ma_jumps)
+    _urate, _L = idx > 0 ? get_urate(p, idx, u, params, t) :
+                 get_ma_urate(p, i, u, params, t)
     _last_urate = p.cur_rates[i]
     if i != p.next_jump && _last_urate > zero(t)
         s = _urate == zero(t) ? typemax(t) : _last_urate / _urate * (p.pq[i] - t)
@@ -155,10 +156,9 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
     end
     _t = t + s
     while t < tstop
-        _L = L(u, params, t)
         if s > _L
             t = t + _L
-            _urate = urate(u, params, t)
+            _urate, _L = get_urate(p, idx, u, params, t)
             s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
             _t = t + s
             continue
@@ -166,21 +166,22 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
         if _t >= tstop
             break
         end
-        _lrate = lrate(u, params, t)
-        if _lrate > _urate
-            error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
-        elseif _lrate < _urate
-            # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _rate / _urate
-            v = rand(rng)
-            # first inequality is less expensive and short-circuits the evaluation
-            if (v > _lrate / _urate)
-                _rate = rate(u, params, _t)
-                if (v > _rate / _urate)
-                    t = _t
-                    _urate = urate(u, params, t)
-                    s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
-                    _t = t + s
-                    continue
+        if idx > 0 && @inbounds p.urates[idx] !== p.lrates[idx]
+            _lrate = get_lrate(p, idx, u, params, t)
+            if _lrate > _urate
+                error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(_lrate) > upper bound = $(_urate)")
+            elseif _lrate < _urate
+                # when the lower and upper bound are the same, then v < 1 = _lrate / _urate = _rate / _urate
+                v = rand(rng)
+                # first inequality is less expensive and short-circuits the evaluation
+                if (v > _lrate / _urate)
+                    if (v > get_rate(p, idx, u, params, _t) / _urate)
+                        t = _t
+                        _urate, _L = get_urate(p, idx, u, params, t)
+                        s = _urate == zero(t) ? typemax(t) : randexp(rng) / _urate
+                        _t = t + s
+                        continue
+                    end
                 end
             end
         end

@@ -510,28 +510,29 @@ define an infection reaction as a bounded `VariableRateJump`, requiring us to
 again provide `rate` and `affect` functions, but also give functions that
 calculate an upper-bound on the rate (`urate(u,p,t)`), an optional lower-bound
 on the rate (`lrate(u,p,t)`), and a time window over which the bounds are valid
-as long as any states these three rates depend on are unchanged (`L(u,p,t)`).
+as long as any states these three rates depend on are unchanged
+(`rateinterval(u,p,t)`).
 The lower- and upper-bounds of the rate should be valid from the time they are
-computed `t` until `t + L(u, p, t)`:
+computed `t` until `t + rateinterval(u, p, t)`:
 
 ```@example tut2
 H = zeros(Float64, 10)
 rate3(u, p, t) = p[1]*u[1]*u[2] + p[3]*u[1]*sum(exp(-p[4]*(t - _t)) for _t in H)
 lrate = rate1              # β*S*I
 urate = rate3
-L(u, p, t) = 1 / (2*urate(u, p, t))
+rateinterval(u, p, t) = 1 / (2*urate(u, p, t))
 function affect3!(integrator)
   integrator.u[1] -= 1     # S -> S - 1
   integrator.u[2] += 1     # I -> I + 1
   push!(H, integrator.t)
   nothing
 end
-jump3 = VariableRateJump(rate3, affect3!; lrate=lrate, urate=urate, L=L)
+jump3 = VariableRateJump(rate3, affect3!; lrate, urate, rateinterval)
 ```
 Note that here we set the lower bound rate to be the normal SIR infection rate,
 and set the upper bound rate equal to the new rate of infection (`rate3`). As
 long as `u[1]` and `u[2]` are unchanged by another jump, for any `s` in `[t,t +
-L(u,p,t)]` we have that `lrate(u,p,t) <= rate3(u,p,s) <= urate(u,p,t)`.
+rateinterval(u,p,t)]` we have that `lrate(u,p,t) <= rate3(u,p,s) <= urate(u,p,t)`.
 
 Next, we redefine the recovery jump's `affect!` such that a random infection is
 removed from `H` for every recovery.

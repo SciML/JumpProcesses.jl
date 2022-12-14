@@ -36,7 +36,7 @@ function hawkes_jump(i::Int, g, h)
     rate = hawkes_rate(i, g, h)
     lrate(u, p, t) = p[1]
     urate = rate
-    function L(u, p, t)
+    function rateinterval(u, p, t)
         _lrate = lrate(u, p, t)
         _urate = urate(u, p, t)
         return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)
@@ -45,7 +45,7 @@ function hawkes_jump(i::Int, g, h)
         push!(h[i], integrator.t)
         integrator.u[i] += 1
     end
-    return VariableRateJump(rate, affect!; lrate = lrate, urate = urate, L = L)
+    return VariableRateJump(rate, affect!; lrate, urate, rateinterval)
 end
 
 function hawkes_jump(u, g, h)
@@ -57,8 +57,7 @@ function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
                         g = [[1]], h = [[]])
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h)
-    jprob = JumpProblem(dprob, agg, jumps...;
-                        dep_graph = g, save_positions = save_positions, rng = rng)
+    jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
     return jprob
 end
 
@@ -72,7 +71,7 @@ function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
                         g = [[1]], h = [[]])
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
-    jprob = JumpProblem(oprob, agg, jumps...; save_positions = save_positions, rng = rng)
+    jprob = JumpProblem(oprob, agg, jumps...; save_positions, rng)
     return jprob
 end
 
@@ -102,7 +101,7 @@ algs = (Direct(), Coevolve())
 Nsims = 250
 
 for alg in algs
-    jump_prob = hawkes_problem(p, alg; u = u0, tspan = tspan, g = g, h = h)
+    jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h)
     if typeof(alg) <: Coevolve
         stepper = SSAStepper()
     else

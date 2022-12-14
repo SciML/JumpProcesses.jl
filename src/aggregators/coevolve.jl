@@ -18,14 +18,13 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     pq::PQ                            # priority queue of next time
     lrates::F1                        # vector of rate lower bound functions
     urates::F1                        # vector of rate upper bound functions
-    Ls::F1                            # vector of interval length functions
+    rateintervals::F1                 # vector of interval length functions
 end
 
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
                                  maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                                 rng::RNG; u::U,
-                                 dep_graph = nothing,
-                                 lrates, urates, Ls) where {T, S, F1, F2, RNG, U}
+                                 rng::RNG; u::U, dep_graph = nothing, lrates, urates,
+                                 rateintervals) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use Coevolve a dependency graph between jumps must be supplied.")
@@ -47,22 +46,14 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
 
     pq = MutableBinaryMinHeap{T}()
     CoevolveJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
-                            typeof(pq)
-                            }(nj, nj, njt,
-                              et,
-                              crs, sr, maj,
-                              rs,
-                              affs!, sps,
-                              rng,
-                              dg, pq,
-                              lrates, urates, Ls)
+                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
+                                        dg, pq, lrates, urates, rateintervals)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng;
-                   dep_graph = nothing, variable_jumps = nothing,
-                   kwargs...)
+                   ma_jumps, save_positions, rng; dep_graph = nothing,
+                   variable_jumps = nothing, kwargs...)
     AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
@@ -70,7 +61,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     rates = Vector{RateWrapper}()
     lrates = Vector{RateWrapper}()
     urates = Vector{RateWrapper}()
-    Ls = Vector{RateWrapper}()
+    rateintervals = Vector{RateWrapper}()
 
     if (constant_jumps !== nothing) && !isempty(constant_jumps)
         append!(affects!,
@@ -86,7 +77,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
         append!(rates, [RateWrapper(j.rate) for j in variable_jumps])
         append!(lrates, [RateWrapper(j.lrate) for j in variable_jumps])
         append!(urates, [RateWrapper(j.urate) for j in variable_jumps])
-        append!(Ls, [RateWrapper(j.L) for j in variable_jumps])
+        append!(rateintervals, [RateWrapper(j.rateinterval) for j in variable_jumps])
     end
 
     num_jumps = get_num_majumps(ma_jumps) + length(urates)
@@ -96,9 +87,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     next_jump_time = typemax(t)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                             ma_jumps, rates, affects!, save_positions, rng;
-                            u = u,
-                            dep_graph = dep_graph,
-                            lrates = lrates, urates = urates, Ls = Ls)
+                            u, dep_graph, lrates, urates, rateintervals)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -144,8 +133,8 @@ end
     @inbounds return p.urates[uidx](u, params, t)
 end
 
-@inline function get_L(p::CoevolveJumpAggregation, lidx, u, params, t)
-    @inbounds return p.Ls[lidx](u, params, t)
+@inline function get_rateinterval(p::CoevolveJumpAggregation, lidx, u, params, t)
+    @inbounds return p.rateintervals[lidx](u, params, t)
 end
 
 @inline function get_lrate(p::CoevolveJumpAggregation, lidx, u, params, t)
@@ -173,9 +162,9 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
     _t = t + s
     if lidx > 0
         while t < tstop
-            L = get_L(p, lidx, u, params, t)
-            if s > L
-                t = t + L
+            rateinterval = get_rateinterval(p, lidx, u, params, t)
+            if s > rateinterval
+                t = t + rateinterval
                 urate = get_urate(p, uidx, u, params, t)
                 s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
                 _t = t + s

@@ -165,7 +165,7 @@ function VariableRateJump(rate, affect!;
                           interp_points = 10,
                           abstol = 1e-12, reltol = 0)
     if !(urate !== nothing && rateinterval !== nothing) &&
-        !(urate === nothing && rateinterval === nothing)
+       !(urate === nothing && rateinterval === nothing)
         error("`urate` and `rateinterval` must both be `nothing`, or must both be defined.")
     end
 

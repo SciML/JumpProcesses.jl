@@ -145,6 +145,8 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     reltol::T2
 end
 
+nullrate(u, p, t::T) where {T <: Number} = zero(T)
+
 """
 ```
 function VariableRateJump(rate, affect!; lrate = nothing, urate = nothing,
@@ -168,7 +170,7 @@ function VariableRateJump(rate, affect!;
     end
 
     if (urate !== nothing && lrate === nothing)
-        lrate = (u, p, t) -> zero(typeof(t))
+        lrate = nullrate
     end
 
     VariableRateJump(rate, affect!, lrate, urate, rateinterval, idxs, rootfind,

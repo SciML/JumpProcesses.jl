@@ -79,20 +79,21 @@ versioninfo() # hide
 ```
 ```@example
 using Pkg # hide
-Pkg.status(;mode = PKGMODE_MANIFEST) # hide
+Pkg.status(; mode = PKGMODE_MANIFEST) # hide
 ```
 ```@raw html
 </details>
 ```
 ```@raw html
-You can also download the 
+You can also download the
 <a href="
 ```
 ```@eval
 using TOML
-version = TOML.parse(read("../../Project.toml",String))["version"]
-name = TOML.parse(read("../../Project.toml",String))["name"]
-link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Manifest.toml"
+projtoml = joinpath("..", "..", "Project.toml")
+version = TOML.parse(read(projtoml, String))["version"]
+name = TOML.parse(read(projtoml, String))["name"]
+link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version * "/assets/Manifest.toml"
 ```
 ```@raw html
 ">manifest</a> file and the
@@ -100,9 +101,10 @@ link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/M
 ```
 ```@eval
 using TOML
-version = TOML.parse(read("../../Project.toml",String))["version"]
-name = TOML.parse(read("../../Project.toml",String))["name"]
-link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Project.toml"
+projtoml = joinpath("..", "..", "Project.toml")
+version = TOML.parse(read(projtoml, String))["version"]
+name = TOML.parse(read(projtoml, String))["name"]
+link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version * "/assets/Project.toml"
 ```
 ```@raw html
 ">project</a> file.

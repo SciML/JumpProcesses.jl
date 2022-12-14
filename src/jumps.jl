@@ -128,6 +128,10 @@ function VariableRateJump(rate, affect!;
                      interp_points, save_positions, abstol, reltol)
 end
 
+"""
+$(TYPEDEF)
+
+"""
 struct RegularJump{iip, R, C, MD}
     rate::R
     c::C
@@ -421,7 +425,7 @@ struct JumpSet{T1, T2, T3, T4} <: AbstractJump
     variable_jumps::T1
     """Collection of [`ConstantRateJump`](@ref)s"""
     constant_jumps::T2
-    """Collection of [`RegularRateJump`](@ref)s"""
+    """Collection of [`RegularJump`](@ref)s"""
     regular_jump::T3
     """Collection of [`MassActionJump`](@ref)s"""
     massaction_jump::T4

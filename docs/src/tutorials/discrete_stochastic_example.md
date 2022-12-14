@@ -6,13 +6,15 @@ chemical kinetics (i.e. Gillespie) models. It is not necessary to have read the
 [first tutorial](@ref poisson_proc_tutorial). We will illustrate
 - The different types of jumps that can be represented in JumpProcesses and their
   use cases.
-- How to speed up pure-jump simulations with only [`ConstantRateJump`](@ref)s
-  and [`MassActionJump`](@ref)s by using the [`SSAStepper`](@ref) time stepper.
+- How to speed up pure-jump simulations with only [`ConstantRateJump`](@ref)s,
+  [`MassActionJump`](@ref)s, and bounded `VariableRateJump`s by using the
+  [`SSAStepper`](@ref) time stepper.
 - How to define and use [`MassActionJump`](@ref)s, a more specialized type of
   [`ConstantRateJump`](@ref) that offers improved computational performance.
+- How to define and use bounded [`VariableRateJump`](@ref)s in pure-jump simulations.
 - How to use saving controls to reduce memory use per simulation.
-- How to use [`VariableRateJump`](@ref)s and when they should be preferred over
-  `ConstantRateJump`s and `MassActionJump`s.
+- How to use general [`VariableRateJump`](@ref)s and when they should be
+  preferred over the other jump types.
 - How to create hybrid problems mixing the various jump types with ODEs or SDEs.
 - How to use `RegularJump`s to enable faster, but approximate, time stepping via
   τ-leaping methods.
@@ -202,7 +204,7 @@ jump_prob = JumpProblem(sir_model, prob, Direct())
 Here `Direct()` indicates that we will determine the random times and types of
 reactions using [Gillespie's Direct stochastic simulation algorithm
 (SSA)](https://doi.org/10.1016/0021-9991(76)90041-3), also known as Doob's
-method or Kinetic Monte Carlo. See [Constant Rate Jump Aggregators](@ref) for
+method or Kinetic Monte Carlo. See [Jump Aggregators for Exact Simulation](@ref) for
 other supported SSAs.
 
 We now have a problem that can be evolved in time using the JumpProcesses solvers.
@@ -253,18 +255,25 @@ In general
 | Jump Type          | Performance     | Generality |
 |:----------:        | :----------:    |:------------:|
 | [`MassActionJump`](@ref MassActionJumpSect) | Fastest | Restrictive rates/affects |
-| [`ConstantRateJump`](@ref ConstantRateJumpSect) | Somewhat Slower | Rates must
-be constant between jumps |
-| [`VariableRateJump` with `Coevolve` aggregator](@ref VariableRateJumpCoevolveSect) | Somewhat Slower | Rates can be a function of time, but not of ODE variables  |
+| [`ConstantRateJump`](@ref ConstantRateJumpSect) | Somewhat Slower than `MassActionJump`| Rate function must be constant between jumps |
+| [`VariableRateJump` with rate bounds](@ref VariableRateJumpWithBnds) | Somewhat Slower than `ConstantRateJump` | Rate functions can explicitly depend on time, but require an upper bound that is guaranteed constant between jumps over some time interval |
 | [`VariableRateJump`](@ref VariableRateJumpSect) | Slowest | Completely general |
 
 It is recommended to try to encode jumps using the most performant option that
 supports the desired generality of the underlying `rate` and `affect!`
 functions. Below we describe the different jump types, and show how the SIR
-model can be formulated using first `ConstantRateJump`s, `VariableRateJump`s
-with `Coevolve` aggregator and then `MassActionJump`s. Completely general
-models that use `VariableRateJump`s with over an `ODEProblem` are considered
-later.
+model can be formulated using first `ConstantRateJump`s, then more performant
+`MassActionJump`s, and finally with `VariableRateJump`s using rate bounds. We
+conclude by presenting several completely general models that use
+`VariableRateJump`s without rate bounds, and which require an ODE solver to
+handle time-stepping.
+
+We note, in the remainder we will refer to *bounded* `VariableRateJump`s as
+those for which we can specify functions calculating a time window over which
+the rate is bounded by a constant (as long as the state is unchanged), see [the
+section on bounded `VariableRateJump`s for details](@ref VariableRateJumpWithBnds).
+`VariableRateJump`s or *general* `VariableRateJump`s will refer to those for
+which such functions are not available.
 
 ## [Defining the Jumps Directly: `ConstantRateJump`](@id ConstantRateJumpSect)
 The constructor for a `ConstantRateJump` is:
@@ -326,7 +335,7 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2)
 Here [`Direct()`](@ref) indicates that we will determine the random times and
 types of jumps that occur using [Gillespie's Direct stochastic simulation
 algorithm (SSA)](https://doi.org/10.1016/0021-9991(76)90041-3), also known as
-Doob's method or Kinetic Monte Carlo. See [Constant Rate Jump Aggregators](@ref)
+Doob's method or Kinetic Monte Carlo. See [Jump Aggregators for Exact Simulation](@ref)
 for other supported SSAs.
 
 We now have a problem that can be evolved in time using the JumpProcesses solvers.
@@ -347,175 +356,20 @@ plot(sol, label=["S(t)" "I(t)" "R(t)"])
 Note, in systems with more than a few jumps (more than ~10), it can be
 advantageous to use more sophisticated SSAs than `Direct`. For such systems it
 is recommended to use [`SortingDirect`](@ref), [`RSSA`](@ref) or
-[`RSSACR`](@ref), see the list of JumpProcesses SSAs at [Constant Rate Jump
-Aggregators](@ref).
-
-
-### *Caution about Constant Rate Jumps*
-`ConstantRateJump`s are quite general, but they do have one restriction. They
-assume that the rate functions are constant at all times between two consecutive
-jumps of the system. i.e. any species/states or parameters that the rate
-function depends on must not change between the times at which two consecutive
-jumps occur. Such conditions are violated if one has a time dependent parameter
-like ``\beta(t)`` or if some of the solution components, say `u[2]`, may also
-evolve through a coupled ODE, SDE, or a [`VariableRateJump`](@ref) (see below
-for examples). For problems where the rate function may change between
-consecutive jumps, [`VariableRateJump`](@ref)s must be used.
-
-Thus in the examples above,
-```julia
-rate1(u,p,t) = p[1]*u[1]*u[2]
-rate2(u,p,t) = p[2]*u[2]
-```
-both must be constant other than changes due to some other `ConstantRateJump` or
-`MassActionJump` (the same restriction applies to `MassActionJump`s). Since
-these rates only change when `u[1]` or `u[2]` is changed, and `u[1]` and `u[2]`
-only change when one of the jumps occur, this setup is valid. However, a rate of
-`t*p[1]*u[1]*u[2]` would not be valid because the rate would change during the
-interval, as would `p[2]*u[1]*u[4]` when `u[4]` is the solution to a continuous
-problem such as an ODE or SDE. Thus one must be careful to follow this rule when
-choosing rates.
-
-In summary, if a particular jump process has a rate function that depends
-explicitly or implicitly on a continuously changing quantity, you need to use a
-[`VariableRateJump`](@ref).
-
-## [Defining the Jumps Directly: `VariableRateJump`](@id VariableRateJumpCoevolveSect)
-
-Now, let's assume that the infection rate is decreasing over time. That is, once
-individuals gets infected they reaches peak infectivity. The force of infection
-then decreases exponentially to a basal level. In this case, we must keep track
-of the time of infection events. Let the history `H(t)` contain the timestamp of
-all active infections. Then, the rate of infection becomes
-```math
-\beta S(t) I(t) + \alpha S(t) \sum_{t_i \in H(t)} exp(-\gamma (t - t_i))
-```
-Where ``\beta`` is the basal rate of infection, ``\alpha`` is the spike in the
-rate of infection and ``\gamma`` is the rate which the spike decreases. Here we
-choose parameters such that infectivity reaches a basal rate close to ``0``
-after spiking. The spike is equal to the rate ``\beta`` chosen in the previous
-section and ``gamma`` is the same as the recovery rate. In other words, we are
-modelling a situation in which individuals gradually recover.
-
-```@example tut2
-β1 = 0.001 / 1000.0
-α = 0.1 / 1000.0
-γ = 0.001
-p1 = (β1, ν, α, γ)
-```
-
-We define a vector `H` to hold the timestamp of active infections. Then, we 
-define infection as a `VariableRateJump`. To use the `Coevolve` aggregator, 
-we need to specify the lower- and upper-bounds of the rate which should be valid 
-from the time they are computed `t` until `t + L(u, p, t)`.
-
-```@example tut2
-H = zeros(Float64, 10)
-rate3(u, p, t) = p[1]*u[1]*u[2] + p[3]*u[1]*sum([exp(-p[4]*(t - _t)) for _t in H])
-lrate = rate1              # β*S*I
-urate = rate3
-L(u, p, t) = 1 / (2*urate(u, p, t))
-function affect3!(integrator)
-  integrator.u[1] -= 1     # S -> S - 1
-  integrator.u[2] += 1     # I -> I + 1
-  push!(H, integrator.t)
-  nothing
-end
-jump3 = VariableRateJump(rate3, affect3!; lrate=lrate, urate=urate, L=L)
-```
-
-Next, we redefine the recovery jump's `affect!` such that a random infection is 
-removed from `H` for every recovery.
-
-```@example tut2
-rate4(u, p, t) = p[2] * u[2]         # ν*I
-function affect4!(integrator)
-  integrator.u[2] -= 1
-  integrator.u[3] += 1
-  length(H) > 0 && deleteat!(H, rand(1:length(H)))
-  nothing
-end
-jump4 = ConstantRateJump(rate4, affect4!)
-```
-
-With the jumps defined, we can build
-a [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
-`VariableRateJump`s over a `DiscreteProblem` can only be solved with the
-`Coevolve` aggregator. We need to specify a depedency graph to use this
-aggregator. In this case, both processes mutually affect each other.
-
-```@example tut2
-prob = DiscreteProblem(u₀, tspan, p1)
-jump_prob = JumpProblem(prob, Coevolve(), jump3, jump4; dep_graph=[[1,2], [1,2]])
-```
-
-We now have a problem that can be solved with `SSAStepper` to handle
-time-stepping the `Coevolve` aggregator from jump to jump:
-
-```@example tut2
-sol = solve(jump_prob, SSAStepper())
-plot(sol, label=["S(t)", "I(t)", "R(t)"])
-```
-
-Surprinsingly, we see that even with an exponential decrease in infectivity we 
-reach similar results as with a constant infection rate.
-
-Note that `VariableRateJump` over `DiscreteProblem` can be quite general, but it 
-is not possible to handle rates that change according to an ODE variable. A rate 
-such as `p[2]*u[1]*u[4]` when `u[4]` is the solution of a continuous problem 
-such as an ODE or SDE can only solved using a continuous integrator as discussed 
-[below](@ref VariableRateJumpSect)
+[`RSSACR`](@ref), see the list of JumpProcesses SSAs at [Jump Aggregators for
+Exact Simulation](@ref).
 
 ## SSAStepper
 Any common interface algorithm can be used to perform the time-stepping since it
 is implemented over the callback interface. This allows for hybrid systems that
 mix ODEs, SDEs and jumps. In many cases we may have a pure jump system that only
-involves `ConstantRateJump`s, `VariableRateJump`s whose rates do not depend on
-a continuous variable, and/or `MassActionJump`s (see below). When that's the
-case, a substantial performance benefit may be gained by using
-[`SSAStepper`](@ref). Note, `SSAStepper` is a more limited time-stepper which
-only supports discrete events, and does not allow simultaneous coupled ODEs or
-SDEs or `VariableRateJump`s whose rate depend on a continuous variable. It is,
+involves `ConstantRateJump`s, `MassActionJump`s, and/or bounded
+`VariableRateJump`s (see below). In those cases a substantial performance
+benefit may be gained by using [`SSAStepper`](@ref). Note, `SSAStepper` is a
+more limited time-stepper which only supports discrete events, and does not
+allow simultaneous coupled ODEs/SDEs, or general `VariableRateJump`s. It is,
 however, very efficient for pure jump problems involving only
-`ConstantRateJump`s, `VariableRateJump`s and `MassActionJump`s.
-
-## [Reducing Memory Use: Controlling Saving Behavior](@id save_positions_docs)
-
-Note that jumps act via DifferentialEquations.jl's [callback
-interface](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
-which defaults to saving at each event. This is required in order to accurately
-resolve every discontinuity exactly (and this is what allows for perfectly
-vertical lines in plots!). However, in many cases when using jump problems you
-may wish to decrease the saving pressure given by large numbers of jumps. To do
-this, you set the `save_positions` keyword argument to `JumpProblem`. Just like
-for other
-[callbacks](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
-this is a tuple `(bool1, bool2)` which sets whether to save before or after a
-jump. If we do not want to save at every jump, we would thus pass:
-```@example tut2
-prob = DiscreteProblem(u₀, tspan, p)
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; save_positions = (false, false))
-```
-Now the saving controls associated with the integrator should specified, see the
-main [SciML
-Docs](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/)
-for saving options. For example, we can use `saveat = 10.0` to save at an evenly
-spaced grid:
-```@example tut2
-sol = solve(jump_prob, SSAStepper(); saveat = 10.0)
-
-# we plot each solution component separately since
-# the graph should no longer be a step function
-plot(sol.t, sol[1,:]; marker = :o, label="S(t)", xlabel="t")
-plot!(sol.t, sol[2,:]; marker = :x, label="I(t)", xlabel="t")
-plot!(sol.t, sol[3,:]; marker = :d, label="R(t)", xlabel="t")
-```
-Notice that our plot (and solutions) are now defined at precisely the specified
-time points. *It is important to note that interpolation of the solution object
-will no longer be exact for a pure jump process, as the solution values at jump
-times have not been stored. i.e for `t` a time we did not save at `sol(t)` will
-no longer give the exact value of the solution at `t`.*
-
+`ConstantRateJump`s, `MassActionJump`s, and bounded `VariableRateJump`s.
 
 ## [Defining the Jumps Directly: `MassActionJump`](@id MassActionJumpSect)
 For `ConstantRateJump`s that can be represented as mass action reactions a
@@ -592,19 +446,189 @@ function that gets evaluated is
 ```
 with ``\hat{k} = k / \prod_{i=1}^{N} R_i!`` the renormalized rate constant.
 Passing the keyword argument `scale_rates = false` will disable
-`MassActionJump`s internally rescaling the rate constant by `\prod_{i=1}^{N}
-R_i!`.
+`MassActionJump`s internally rescaling the rate constant by ``(\prod_{i=1}^{N}
+R_i!)^{-1}``.
 
 For chemical reaction systems Catalyst.jl automatically groups reactions
 into their optimal jump representation.
 
+### *Caution about ConstantRateJumps and MassActionJumps*
+`ConstantRateJump`s and `MassActionJump`s are restricted in that they assume the
+rate functions are constant at all times between two consecutive jumps of the
+system. That is, any species/states or parameters that a rate function depends
+on must not change between the times at which two consecutive jumps occur. Such
+conditions are violated if one has a time dependent parameter like ``\beta(t)``
+or if some of the solution components, say `u[2]`, may also evolve through a
+coupled ODE, SDE, or a general [`VariableRateJump`](@ref) (see below for
+examples). For problems where the rate function may change between consecutive
+jumps, bounded or general [`VariableRateJump`](@ref)s must be used.
+
+Thus in the examples above,
+```julia
+rate1(u,p,t) = p[1]*u[1]*u[2]
+rate2(u,p,t) = p[2]*u[2]
+```
+both must be constant other than changes due to some other `ConstantRateJump` or
+`MassActionJump` (the same restriction applies to `MassActionJump`s). Since
+these rates only change when `u[1]` or `u[2]` is changed, and `u[1]` and `u[2]`
+only change when one of the jumps occur, this setup is valid. However, a rate of
+`t*p[1]*u[1]*u[2]` would not be valid because the rate would change in between
+jumps, as would `p[2]*u[1]*u[4]` when `u[4]` is the solution to a continuous
+problem such as an ODE/SDE, or can be changed by a general `VariableRateJump`.
+Thus one must be careful to follow this rule when choosing rates.
+
+In summary, if a particular jump process has a rate function that depends
+explicitly or implicitly on a continuously changing quantity, you need to use a
+[`VariableRateJump`](@ref).
+
+## [Defining the Jumps Directly using a bounded `VariableRateJump`](@id VariableRateJumpWithBnds)
+
+Assume that the infection rate is now decreasing over time. That is, when
+individuals get infected they immediately reach peak infectivity. The force of
+infection then decreases exponentially to a basal level. In this case, we must
+keep track of the time of infection events. Let the history ``H(t)`` contain the
+timestamps of all ``I(t)`` active infections. The rate of infection is then
+```math
+\beta S(t) I(t) + \alpha S(t) \sum_{t_i \in H(t)} \exp(-\gamma (t - t_i))
+```
+where ``\beta`` is the basal rate of infection, ``\alpha`` is the spike in the
+rate of infection, and ``\gamma`` is the rate at which the spike decreases. Here
+we choose parameters such that infectivity rate due to a single infected
+individual returns to the basal rate after spiking to ``\beta + \alpha``. In
+other words, we are modelling a situation in infected individuals gradually
+become less infectious prior to recovering. Our parameters are then
+
+```@example tut2
+β1 = 0.001 / 1000.0
+α = 0.1 / 1000.0
+γ = 0.05
+p1 = (β1, ν, α, γ)
+```
+
+We define a vector `H` to hold the timestamp of active infections. Then, we
+define an infection reaction as a bounded `VariableRateJump`, requiring us to
+again provide `rate` and `affect` functions, but also give functions that
+calculate an upper-bound on the rate (`urate(u,p,t)`), an optional lower-bound
+on the rate (`lrate(u,p,t)`), and a time window over which the bounds are valid
+as long as any states these three rates depend on are unchanged (`L(u,p,t)`).
+The lower- and upper-bounds of the rate should be valid from the time they are
+computed `t` until `t + L(u, p, t)`:
+
+```@example tut2
+H = zeros(Float64, 10)
+rate3(u, p, t) = p[1]*u[1]*u[2] + p[3]*u[1]*sum(exp(-p[4]*(t - _t)) for _t in H)
+lrate = rate1              # β*S*I
+urate = rate3
+L(u, p, t) = 1 / (2*urate(u, p, t))
+function affect3!(integrator)
+  integrator.u[1] -= 1     # S -> S - 1
+  integrator.u[2] += 1     # I -> I + 1
+  push!(H, integrator.t)
+  nothing
+end
+jump3 = VariableRateJump(rate3, affect3!; lrate=lrate, urate=urate, L=L)
+```
+Note that here we set the lower bound rate to be the normal SIR infection rate,
+and set the upper bound rate equal to the new rate of infection (`rate3`). As
+long as `u[1]` and `u[2]` are unchanged by another jump, for any `s` in `[t,t +
+L(u,p,t)]` we have that `lrate(u,p,t) <= rate3(u,p,s) <= urate(u,p,t)`.
+
+Next, we redefine the recovery jump's `affect!` such that a random infection is
+removed from `H` for every recovery.
+
+```@example tut2
+rate4(u, p, t) = p[2] * u[2]         # ν*I
+function affect4!(integrator)
+  integrator.u[2] -= 1
+  integrator.u[3] += 1
+  length(H) > 0 && deleteat!(H, rand(1:length(H)))
+  nothing
+end
+jump4 = ConstantRateJump(rate4, affect4!)
+```
+
+With the jumps defined, we can build a
+[`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
+Bounded `VariableRateJump`s over a `DiscreteProblem` can currently only be
+simulated with the `Coevolve` aggregator. The aggregator requires a dependency
+graph to indicate when a given jump occurs which other jumps in the system
+should have their rate recalculated (i.e. their rate depends on states modified
+by one occurrence of the first jump). In this case, both processes mutually
+affect each other so we have
+
+```@example tut2
+dep_graph = [[1,2], [1,2]]
+```
+Here `dep_graph[2] = [1,2]` indicates that when the second jump occurs, both the
+first and second jumps need to have their rates recalculated. We can then
+construct our `JumpProblem` as before, specifying the `Coevolve` aggregator:
+
+```@example tut2
+prob = DiscreteProblem(u₀, tspan, p1)
+jump_prob = JumpProblem(prob, Coevolve(), jump3, jump4; dep_graph)
+```
+
+We now have a problem that can be solved with `SSAStepper` to handle
+time-stepping the `Coevolve` aggregator from jump to jump:
+
+```@example tut2
+sol = solve(jump_prob, SSAStepper())
+plot(sol, label=["S(t)" "I(t)" "R(t)"])
+```
+
+We see that the time-dependent infection rate leads to a lower peak of the
+infection throughout the population.
+
+Note that bounded `VariableRateJump`s over `DiscreteProblem`s can be quite
+general, but it is not possible to handle rates that change according to an
+ODE/SDE modified variable. A rate such as `p[2]*u[1]*u[4]` when `u[4]` is the
+solution of a continuous problem such as an ODE or SDE can only be handled using
+a general `VariableRateJump` within a continuous integrator as discussed
+[below](@ref VariableRateJumpSect)
+
+## [Reducing Memory Use: Controlling Saving Behavior](@id save_positions_docs)
+
+Note that jumps act via DifferentialEquations.jl's [callback
+interface](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
+which defaults to saving at each event. This is required in order to accurately
+resolve every discontinuity exactly (and this is what allows for perfectly
+vertical lines in plots!). However, in many cases when using jump problems you
+may wish to decrease the saving pressure given by large numbers of jumps. To do
+this, you set the `save_positions` keyword argument to `JumpProblem`. Just like
+for other
+[callbacks](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
+this is a tuple `(bool1, bool2)` which sets whether to save before or after a
+jump. If we do not want to save at every jump, we would thus pass:
+```@example tut2
+prob = DiscreteProblem(u₀, tspan, p)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; save_positions = (false, false))
+```
+Now the saving controls associated with the integrator should specified, see the
+main [SciML
+Docs](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/)
+for saving options. For example, we can use `saveat = 10.0` to save at an evenly
+spaced grid:
+```@example tut2
+sol = solve(jump_prob, SSAStepper(); saveat = 10.0)
+
+# we plot each solution component separately since
+# the graph should no longer be a step function
+plot(sol.t, sol[1,:]; marker = :o, label="S(t)", xlabel="t")
+plot!(sol.t, sol[2,:]; marker = :x, label="I(t)", xlabel="t")
+plot!(sol.t, sol[3,:]; marker = :d, label="R(t)", xlabel="t")
+```
+Notice that our plot (and solutions) are now defined at precisely the specified
+time points. *It is important to note that interpolation of the solution object
+will no longer be exact for a pure jump process, as the solution values at jump
+times have not been stored. i.e for `t` a time we did not save at `sol(t)` will
+no longer give the exact value of the solution at `t`.*
 
 ## Defining the Jumps Directly: Mixing `ConstantRateJump`/`VariableRateJump` and `MassActionJump`
-Suppose we now want to add in to the SIR model another jump that can not be
-represented as a mass action reaction. We can create a new `ConstantRateJump`
-and simulate a hybrid system using both the `MassActionJump` for the two
-previous reactions, and the new `ConstantRateJump`. Let's suppose we want to let
-susceptible people be born with the following jump rate:
+Suppose we now want to add in to the original SIR model another jump that can
+not be represented as a mass action reaction. We can create a new
+`ConstantRateJump` and simulate a hybrid system using both the `MassActionJump`
+for the two original reactions, and the new `ConstantRateJump`. Let's suppose we
+want to let susceptible people be born with the following jump rate:
 ```@example tut2
 birth_rate(u,p,t) = 10.0 * u[1] / (200.0 + u[1]) + 10.0
 function birth_affect!(integrator)
@@ -620,14 +644,14 @@ sol = solve(jump_prob, SSAStepper())
 plot(sol; label=["S(t)" "I(t)" "R(t)"])
 ```
 
-Note that, we can also combine `MassActionJump` with `VariableRateJump` when
-using the `Coevolve` aggregator in the same manner.
+Note that we can combine `MassActionJump`s, `ConstantRateJump`s and bounded
+`VariableRateJump`s using the `Coevolve` aggregator.
 
 ## Adding Jumps to a Differential Equation
-If we instead used some form of differential equation instead of a
-`DiscreteProblem`, we would couple the jumps/reactions to the differential
-equation. Let's define an ODE problem, where the continuous part only acts on
-some new 4th component:
+If we instead used some form of differential equation via an `ODEProblem`
+instead of a `DiscreteProblem`, we can couple the jumps/reactions to the
+differential equation. Let's define an ODE problem, where the continuous part
+only acts on some new 4th component:
 ```@example tut2
 using OrdinaryDiffEq
 function f(du, u, p, t)
@@ -640,20 +664,24 @@ prob = ODEProblem(f, u₀, tspan, p)
 Notice we gave the 4th component a starting value of 100.0, and used floating
 point numbers for the initial condition since some solution components now
 evolve continuously. The same steps as above will allow us to solve this hybrid
-equation when using `ConstantRateJump`s, `VariableRateJump`s or
-`MassActionJump`s. For example, we can solve it using the `Tsit5()` method via:
+equation when using `ConstantRateJump`s, `MassActionJump`s, or
+`VariableRateJump`s. For example, we can solve it using the `Tsit5()` method
+via:
 ```@example tut2
 jump_prob = JumpProblem(prob, Direct(), jump, jump2)
 sol = solve(jump_prob, Tsit5())
 plot(sol; label=["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
-Note that when using `VariableRateJump`s with the `Coevolve` aggregator, the 
-ODE problem should not modify the rates of any jump. However, the opposite where 
-the jumps modify the ODE variables is allowed. In these cases, you should 
-observe an improved performance when using the `Coevolve`.
+Note, when using `ConstantRateJump`s, `MassActionJump`s, and bounded
+`VariableRateJump`s, the ODE derivative function `f(du, u, p, t)` should not
+modify any states in `du` that the corresponding jump rate functions depend on.
+However, the opposite where jumps modify the ODE variables is allowed. If one
+needs to change a component of `u` in the ODE for which a rate function is
+dependent, then one must use a general `VariableRateJump` as described in the
+next section.
 
-## [Adding a VariableRateJump that Depends on a Continuous Variable](@id VariableRateJumpSect)
+## [Adding a general VariableRateJump that Depends on a Continuously Evolving Variable](@id VariableRateJumpSect)
 Now let's consider adding a reaction whose rate changes continuously with the
 differential equation. To continue our example, let there be a new reaction
 with rate depending on `u[4]` of the form ``u_4 \to u_4 + \textrm{I}``, with a
@@ -667,7 +695,8 @@ end
 jump5 = VariableRateJump(rate5, affect5!)
 ```
 Notice, since `rate5` depends on a variable that evolves continuously, and hence
-is not constant between jumps, *we must use a `VariableRateJump`*.
+is not constant between jumps, *we must use a general `VariableRateJump` without
+upper/lower bounds*.
 
 Solving the equation is exactly the same:
 ```@example tut2
@@ -677,8 +706,8 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump5)
 sol = solve(jump_prob, Tsit5())
 plot(sol; label=["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
-*Note that `VariableRateJump`s require using a continuous problem, like an
-ODE/SDE/DDE/DAE problem, and using floating point initial conditions.*
+*Note that general `VariableRateJump`s require using a continuous problem, like
+an ODE/SDE/DDE/DAE problem, and using floating point initial conditions.*
 
 Lastly, we are not restricted to ODEs. For example, we can solve the same jump
 problem except with multiplicative noise on `u[4]` by using an `SDEProblem`
@@ -694,7 +723,7 @@ sol = solve(jump_prob, SRIW1())
 plot(sol; label=["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
-For more details about `VariableRateJump`s see [Defining a Variable Rate
+For more details about general `VariableRateJump`s see [Defining a Variable Rate
 Jump](@ref).
 
 

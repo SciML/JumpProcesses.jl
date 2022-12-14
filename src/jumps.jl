@@ -33,51 +33,79 @@ end
 """
 $(TYPEDEF)
 
-Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
-may explicitly depend on time. More precisely, one where the rate function is
-allowed to change *between* the occurrence of jumps. For detailed examples and
-usage information see the
+Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that may
+explicitly depend on time. More precisely, one where the rate function is allowed to change
+*between* the occurrence of jumps. For detailed examples and usage information see the
 - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+
+Note that two types of `VariableRateJump`s are currently supported, with different
+performance charactertistics.
+- A general `VariableRateJump` or `VariableRateJump` will refer to one in which only `rate`
+  and `affect` functions are specified.
+
+    * These are the most general in what they can represent, but require the use of an
+      `ODEProblem` or `SDEProblem` whose underlying timestepper handles their evolution in
+      time (via the callback interface).
+    * This is the least performant jump type in simulations.
+
+- Bounded `VariableRateJump`s require passing the keyword arguments `urate` and
+  `rateinterval`, corresponding to functions `urate(u, p, t)` and `rateinterval(u, p, t)`,
+  see below. These must calculate a time window over which the rate function is bounded by a
+  constant (as long as any components of the state on which the upper bound function depends
+  do not change). One can also optionally provide a lower bound function, `lrate(u, p, t)`
+  via the `lrate` keyword argument, that can lead to increased performance.
+
+    * Bounded `VariableRateJump`s can currently be used in the `Coevolve` aggregator, and
+      can therefore be efficiently simulated in pure-jump `DiscreteProblem`s using the
+      `SSAStepper` time-stepper.
+    * These can be substantially more performant than general `VariableRateJump`s without
+      the rate bound functions.
+
+The additional user provided functions leveraged by bounded `VariableRateJumps`, `urate(u,
+p, t)`, `rateinterval(u, p, t)`, and the optional `lrate(u, p, t)` require that
+- For `s` in `[t, t + rateinterval(u, p, t)]`, we should have that `lrate(u, p, t) <=
+  rate(u, p, s) <= urate(u, p, t)` provided any components of `u` on which these functions
+  depend remain unchanged.
 
 ## Fields
 
 $(FIELDS)
 
 ## Examples
-Suppose `u[1]` gives the amount of particles and `t*p[1]` the probability per
-time each particle can decay away. A corresponding `VariableRateJump` for this
-jump process is
+Suppose `u[1]` gives the amount of particles and `t*p[1]` the probability per time each
+particle can decay away. A corresponding `VariableRateJump` for this jump process is
 ```julia
 rate(u,p,t) = t*p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!)
 ```
 
-In case we want to use the `Coevolve` aggregator, we need to pass the rate
-boundaries and interval for which the rates apply. The `Coevolve` aggregator
-allow us to perform discrete steps with `SSAStepper()`.
+In case we want to use the `Coevolve` aggregator, we need to pass the rate boundaries and
+interval for which the rates apply. The `Coevolve` aggregator allow us to perform discrete
+steps with `SSAStepper()`.
 ```julia
-L(u,p,t) = (1/p[1])*2
-rate(u,p,t) = t*p[1]*u[1]
+rateinterval(u,p,t) = (1 / p[1]) * 2
+rate(u,p,t) = t * p[1] * u[1]
 lrate(u, p, t) = rate(u, p, t)
-urate(u,p,t) = rate(u, p, t + L(u,p,t))
+urate(u,p,t) = rate(u, p, t + rateinterval(u,p,t))
 affect!(integrator) = integrator.u[1] -= 1
-vrj = VariableRateJump(rate, affect!; lrate=lrate, urate=urate, L=L)
+vrj = VariableRateJump(rate, affect!; lrate = lrate, urate = urate,
+                                      rateinterval = rateinterval)
 ```
 
 ## Notes
-- When using the `Coevolve` aggregator, `DiscreteProblem` can be used.
-  Otherwise, `ODEProblem` or `SDEProblem` must be used to be correctly simulated.
-- **When not using the `Coevolve` aggregator, `VariableRateJump`s result in
-  `integrator`s storing an effective state type that wraps the main state
-  vector.** See [`ExtendedJumpArray`](@ref) for details on using this object. Note
-  that the presence of *any* `VariableRateJump`s will result in all
-  `ConstantRateJump`, `VariableRateJump` and callback `affect!` functions
-  receiving an integrator with `integrator.u` an [`ExtendedJumpArray`](@ref).
-- Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of
-  coupled chemical or biochemical reactions, Journal of Chemical Physics, 122
-  (5), DOI:10.1063/1.1835951 is used for calculating jump times with
-  `VariableRateJump`s within ODE/SDE integrators.
+- When using the `Coevolve` aggregator, `DiscreteProblem` can be used. Otherwise,
+  `ODEProblem` or `SDEProblem` must be used to be correctly simulated.
+- **When not using the `Coevolve` aggregator, `VariableRateJump`s result in `integrator`s
+  storing an effective state type that wraps the main state vector.** See
+  [`ExtendedJumpArray`](@ref) for details on using this object. Note that the presence of
+  *any* `VariableRateJump`s will result in all `ConstantRateJump`, `VariableRateJump` and
+  callback `affect!` functions receiving an integrator with `integrator.u` an
+  [`ExtendedJumpArray`](@ref).
+- Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of coupled
+  chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
+  DOI:10.1063/1.1835951 is used for calculating jump times with `VariableRateJump`s within
+  ODE/SDE integrators.
 """
 struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     """Function `rate(u,p,t)` that returns the jump's current rate given state
@@ -86,21 +114,29 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     """Function `affect!(integrator)` that updates the state for one occurrence
     of the jump given `integrator`."""
     affect!::F
-    """When planning to use the `Coevolve` aggregator, function `lrate(u, p,
-    t)` that computes the lower bound of the rate in interval `t` to `t + L` at time
-    `t` given state `u`, parameters `p`. This is not required if using another
-    aggregator."""
+    """Optional function `lrate(u, p, t)` that computes a lower bound on the rate in the
+    interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and parameters
+    `p`. The bound should hold over this time interval as long as components of `u` for
+    which the rate functions are dependent do not change. When using aggregators that
+    support bounded `VariableRateJump`s, currently only `Coevolve`, providing a lower-bound
+    can lead to improved performance.
+    """
     lrate::R2
-    """When planning to use the `Coevolve` aggregator, function `urate(u, p,
-    t)` that computes the upper bound of the rate in interval `t` to `t + L` at time
-    `t` given state `u`, parameters `p`. This is not required if using another
-    aggregator."""
+    """Optional function `urate(u, p, t)` for general `VariableRateJump`s, but is required
+    to define a bounded `VariableRateJump`, which can be used with supporting aggregators,
+     currently only `Coevolve`, and offers improved computational performance. Computes an
+    upper bound for the rate in the interval `t` to `t + rateinterval(u, p, t)` at time `t`
+    given state `u` and parameters `p`. The bound should hold over this time interval as
+    long as components of `u` for which the rate functions are dependent do not change. """
     urate::R3
-    """When planning to use the `Coevolve` aggregator, function `L(u, p,
-    t)` that computes the interval  length `L` starting at time `t` given state
-    `u`, parameters `p` for which the rate is bounded between `lrate` and
-    `urate`. This is not required if using another aggregator."""
-    L::R4
+    """Optional function `rateinterval(u, p, t)` for general `VariableRateJump`s, but is
+    required to define a bounded `VariableRateJump`, which can be used with supporting
+     aggregators, currently only `Coevolve`, and offers improved computational performance.
+    Computes the time interval from time `t` over which the `urate` and `lrate` bounds will
+    hold, `t` to `t + rateinterval(u, p, t)`, given state `u` and parameters `p`. The bound
+    should hold over this time interval as long as components of `u` for which the rate
+    functions are dependent do not change. """
+    rateinterval::R4
     idxs::I
     rootfind::Bool
     interp_points::Int
@@ -109,22 +145,33 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     reltol::T2
 end
 
+"""
+```
+function VariableRateJump(rate, affect!; lrate = nothing, urate = nothing,
+                                         rateinterval = nothing, rootfind = true,
+                                         idxs = nothing,
+                                         save_positions = (false, true),
+                                         interp_points = 10,
+                                         abstol = 1e-12, reltol = 0)
+```
+"""
 function VariableRateJump(rate, affect!;
                           lrate = nothing, urate = nothing,
-                          L = nothing, rootfind = true,
+                          rateinterval = nothing, rootfind = true,
                           idxs = nothing,
                           save_positions = (false, true),
                           interp_points = 10,
                           abstol = 1e-12, reltol = 0)
-    if !(urate !== nothing && L !== nothing) && !(urate === nothing && L === nothing)
-        error("Either `urate` and `L` must be nothing, or both of them must be defined.")
+    if !(urate !== nothing && rateinterval !== nothing) &&
+        !(urate === nothing && rateinterval === nothing)
+        error("`urate` and `rateinterval` must both be `nothing`, or must both be defined.")
     end
 
     if (urate !== nothing && lrate === nothing)
         lrate = (u, p, t) -> zero(typeof(t))
     end
 
-    VariableRateJump(rate, affect!, lrate, urate, L, idxs, rootfind,
+    VariableRateJump(rate, affect!, lrate, urate, rateinterval, idxs, rootfind,
                      interp_points, save_positions, abstol, reltol)
 end
 

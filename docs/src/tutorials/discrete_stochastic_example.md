@@ -511,9 +511,8 @@ again provide `rate` and `affect` functions, but also give functions that
 calculate an upper-bound on the rate (`urate(u,p,t)`), an optional lower-bound
 on the rate (`lrate(u,p,t)`), and a time window over which the bounds are valid
 as long as any states these three rates depend on are unchanged
-(`rateinterval(u,p,t)`).
-The lower- and upper-bounds of the rate should be valid from the time they are
-computed `t` until `t + rateinterval(u, p, t)`:
+(`rateinterval(u,p,t)`). The lower- and upper-bounds of the rate should be valid
+from the time they are computed `t` until `t + rateinterval(u, p, t)`:
 
 ```@example tut2
 H = zeros(Float64, 10)
@@ -531,8 +530,9 @@ jump3 = VariableRateJump(rate3, affect3!; lrate, urate, rateinterval)
 ```
 Note that here we set the lower bound rate to be the normal SIR infection rate,
 and set the upper bound rate equal to the new rate of infection (`rate3`). As
-long as `u[1]` and `u[2]` are unchanged by another jump, for any `s` in `[t,t +
-rateinterval(u,p,t)]` we have that `lrate(u,p,t) <= rate3(u,p,s) <= urate(u,p,t)`.
+required for bounded `VariableRateJump`s, we have for any `s` in `[t,t +
+rateinterval(u,p,t)]` the bound `lrate(u,p,t) <= rate3(u,p,s) <= urate(u,p,t)`
+will hold provided the dependent states `u[1]` and `u[2]` have not changed.
 
 Next, we redefine the recovery jump's `affect!` such that a random infection is
 removed from `H` for every recovery.
@@ -554,8 +554,9 @@ Bounded `VariableRateJump`s over a `DiscreteProblem` can currently only be
 simulated with the `Coevolve` aggregator. The aggregator requires a dependency
 graph to indicate when a given jump occurs which other jumps in the system
 should have their rate recalculated (i.e. their rate depends on states modified
-by one occurrence of the first jump). In this case, both processes mutually
-affect each other so we have
+by one occurrence of the first jump). This ensures that rates, rate bounds, and
+rate intervals are recalculated when invalidated due to changes in `u`. For the
+current example, both processes mutually affect each other so we have
 
 ```@example tut2
 dep_graph = [[1,2], [1,2]]

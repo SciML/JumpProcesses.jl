@@ -2,17 +2,18 @@
 
 ### Mathematical Specification of an problem with jumps
 
-Jumps (or point) processes are stochastic processes with discrete changes driven
-by some `rate`. The homogeneous Poisson process is the canonical point process
-with a constant rate of change. Processes involving multiple jumps are known as
-compound jump (or point) processes.
+Jumps (or point) processes are stochastic processes with discrete state changes
+driven by a `rate` function. The homogeneous Poisson process is the canonical
+point process with a constant rate of change. Processes involving multiple jumps
+are known as compound jump (or point) processes.
 
 A compound Poisson process is a continuous-time Markov Chain where the time to
-the next jump is exponentially distributed as calculated by the rate. This type
-of process is known in biology as "Gillespie discrete stochastic simulation",
-modeled by the Chemical Master Equation (CME). Alternatively, in the statistics
-literature the composition of Poisson processes is described by the
-superposition theorem.
+the next jump is exponentially distributed as determined by the rate. Simulation
+algorithms for these types of processes are known in biology and chemistry as
+Gillespie methods or Stochastic Simulation Algorithms (SSA), with the time
+evolution that the probability these processes are an a given state at a given
+time satisfying the Chemical Master Equation (CME). In the statistics literature,
+the composition of Poisson processes is described by the superposition theorem.
 
 Any differential equation can be extended by jumps. For example, we have an ODE
 with jumps, denoted by

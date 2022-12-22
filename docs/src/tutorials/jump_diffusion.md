@@ -120,7 +120,7 @@ plot(sol)
 In this way we have solve a mixed jump-ODE, i.e. a piecewise deterministic
 Markov process.
 
-Note that in this case, the rate of the `VariableRateJump`s depends on a
+Note that in this case, the rates of the `VariableRateJump`s depend on a
 variable that is driven by an `ODEProblem`, and thus they would not satisfy the
 conditions to be represented as bounded `VariableRateJump`s (and hence can not
 be simulated with the `Coevolve` aggregator).

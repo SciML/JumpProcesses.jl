@@ -51,9 +51,16 @@ performance charactertistics.
 - Bounded `VariableRateJump`s require passing the keyword arguments `urate` and
   `rateinterval`, corresponding to functions `urate(u, p, t)` and `rateinterval(u, p, t)`,
   see below. These must calculate a time window over which the rate function is bounded by a
-  constant (as long as any components of the state on which the upper bound function depends
-  do not change). One can also optionally provide a lower bound function, `lrate(u, p, t)`
-  via the `lrate` keyword argument, that can lead to increased performance.
+  constant. Note that it is ok if the rate bound would be violated within the time interval
+  due to a change in `u` arising from another `ConstantRateJump`, `MassActionJump` or
+  *bounded* `VariableRateJump being executed, as the chosen aggregator will then handle
+  recalculating the rate bound and interval. *However, if the bound could be violated within
+  the time interval due to a change in `u` arising from continuous dynamics such as a
+  coupled ODE, SDE, or a general `VariableRateJump`, bounds should not be given.* This
+  ensures the jump is classified as a general `VariableRateJump` and properly handled. One
+  can also optionally provide a lower bound function, `lrate(u, p, t)`, via the `lrate`
+  keyword argument. This can lead to increased performance. The validity of the lower bound
+  should hold under the same conditions and rate interval as `urate`.
 
     * Bounded `VariableRateJump`s can currently be used in the `Coevolve` aggregator, and
       can therefore be efficiently simulated in pure-jump `DiscreteProblem`s using the
@@ -61,11 +68,15 @@ performance charactertistics.
     * These can be substantially more performant than general `VariableRateJump`s without
       the rate bound functions.
 
-The additional user provided functions leveraged by bounded `VariableRateJumps`, `urate(u,
-p, t)`, `rateinterval(u, p, t)`, and the optional `lrate(u, p, t)` require that
-- For `s` in `[t, t + rateinterval(u, p, t)]`, we should have that `lrate(u, p, t) <=
-  rate(u, p, s) <= urate(u, p, t)` provided any components of `u` on which these functions
-  depend remain unchanged.
+Reemphasizing, the additional user provided functions leveraged by bounded
+`VariableRateJumps`, `urate(u, p, t)`, `rateinterval(u, p, t)`, and the optional `lrate(u,
+p, t)` require that
+- For `s` in `[t, t + rateinterval(u, p, t)]`, we have that `lrate(u, p, t) <= rate(u, p, s)
+  <= urate(u, p, t)`.
+- It is ok if these bounds would be violated during the time window due to another
+  `ConstantRateJump`, `MassActionJump` or bounded `VariableRateJump` occurring, however,
+  they must remaing valid if `u` changes for any other reason (for example, due to
+  continuous dynamics like ODEs, SDEs, or general `VariableRateJump`s).
 
 ## Fields
 
@@ -116,26 +127,27 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     affect!::F
     """Optional function `lrate(u, p, t)` that computes a lower bound on the rate in the
     interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and parameters
-    `p`. The bound should hold over this time interval as long as components of `u` for
-    which the rate functions are dependent do not change. When using aggregators that
-    support bounded `VariableRateJump`s, currently only `Coevolve`, providing a lower-bound
-    can lead to improved performance.
+    `p`. This bound must rigorously hold during the time interval as long as another
+    `ConstantRateJump`, `MassActionJump`, or *bounded* `VariableRateJump` has not been
+    sampled. When using aggregators that support bounded `VariableRateJump`s, currently only
+    `Coevolve`, providing a lower-bound can lead to improved performance.
     """
     lrate::R2
     """Optional function `urate(u, p, t)` for general `VariableRateJump`s, but is required
     to define a bounded `VariableRateJump`, which can be used with supporting aggregators,
      currently only `Coevolve`, and offers improved computational performance. Computes an
     upper bound for the rate in the interval `t` to `t + rateinterval(u, p, t)` at time `t`
-    given state `u` and parameters `p`. The bound should hold over this time interval as
-    long as components of `u` for which the rate functions are dependent do not change. """
+    given state `u` and parameters `p`. This bound must rigorously hold during the time
+    interval as long as another `ConstantRateJump`, `MassActionJump`, or *bounded*
+    `VariableRateJump` has not been sampled. """
     urate::R3
     """Optional function `rateinterval(u, p, t)` for general `VariableRateJump`s, but is
     required to define a bounded `VariableRateJump`, which can be used with supporting
      aggregators, currently only `Coevolve`, and offers improved computational performance.
     Computes the time interval from time `t` over which the `urate` and `lrate` bounds will
-    hold, `t` to `t + rateinterval(u, p, t)`, given state `u` and parameters `p`. The bound
-    should hold over this time interval as long as components of `u` for which the rate
-    functions are dependent do not change. """
+    hold, `t` to `t + rateinterval(u, p, t)`, given state `u` and parameters `p`. This bound
+    must rigorously hold during the time interval as long as another `ConstantRateJump`,
+    `MassActionJump`, or *bounded* `VariableRateJump` has not been sampled. """
     rateinterval::R4
     idxs::I
     rootfind::Bool
@@ -218,8 +230,7 @@ action form, offering improved performance within jump algorithms compared to
 - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 ### Constructors
-- `MassActionJump(reactant_stoich, net_stoich; scale_rates=true,
-  param_idxs=nothing)`
+- `MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = nothing)`
 
 Here `reactant_stoich` denotes the reactant stoichiometry for each reaction and
 `net_stoich` the net stoichiometry for each reaction.
@@ -229,12 +240,12 @@ Here `reactant_stoich` denotes the reactant stoichiometry for each reaction and
 $(FIELDS)
 
 ## Keyword Arguments
-- `scale_rates=true`, whether to rescale the reaction rate constants according
+- `scale_rates = true`, whether to rescale the reaction rate constants according
   to the stoichiometry.
-- `nocopy=false`, whether the `MassActionJump` can alias the `scaled_rates` and
+- `nocopy = false`, whether the `MassActionJump` can alias the `scaled_rates` and
   `reactant_stoch` from the input. Note, if `scale_rates=true` this will
   potentially modify both of these.
-- `param_idxs=nothing`, indexes in the parameter vector, `JumpProblem.prob.p`,
+- `param_idxs = nothing`, indexes in the parameter vector, `JumpProblem.prob.p`,
   that correspond to each reaction's rate.
 
 See the tutorial and main docs for details.

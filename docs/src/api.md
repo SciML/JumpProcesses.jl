@@ -15,6 +15,7 @@ reset_aggregated_jumps!
 ConstantRateJump
 MassActionJump
 VariableRateJump
+RegularJump
 JumpSet
 ```
 

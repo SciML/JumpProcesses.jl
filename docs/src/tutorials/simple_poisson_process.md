@@ -225,16 +225,18 @@ Finally, to efficiently simulate the new jump process we must also specify a
 dependency graph. This indicates when a given jump occurs, which jumps in the
 system need to have their rates and/or rate bounds recalculated (for example,
 due to depending on changed components in `u`). We also assume the convention
-that a given jump depends on itself. Since the first (birth) jump modifies the
-population size `u[1]`, and the second (death) jump occurs at a rate
-proportional to `u[1]`, when the first jump occurs we need to recalculate both
-of the rates. In contrast, death does not change `u[1]`, and so the dependencies
-of the second (death) jump are only itself. Note that the indices in the graph
-correspond to the order in which the jumps appear when the problem is
-constructed. The graph below encodes the dependents of the birth and death jumps
-respectively
+that a given jump depends on itself. Internally, JumpProcesses preserves the
+relative ordering of jumps of each distinct type, but always reorders all
+`ConstantRateJump`s to appear before any `VariableRateJump`s. As such, the
+`ConstantRateJump` representing the death process will have internal index 1,
+and our new bounded `VariableRateJump` for birth will have internal index 2.
+Since birth modifies the population size `u[1]`, and death occurs at a rate
+proportional to `u[1]`, when birth occurs we need to recalculate both of rates.
+In contrast, death does not change `u[1]`, and so when death occurs we only need
+to recalculate the death rate. The graph below encodes the dependents of the
+death (`dep_graph[1]`) and birth (`dep_graph[2]`) jumps respectively
 ```@example tut1
-dep_graph = [[1,2], [2]]
+dep_graph = [[1], [1,2]]
 ```
 
 We can then construct the corresponding problem, passing both jumps to

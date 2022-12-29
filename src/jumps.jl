@@ -53,7 +53,7 @@ performance charactertistics.
   see below. These must calculate a time window over which the rate function is bounded by a
   constant. Note that it is ok if the rate bound would be violated within the time interval
   due to a change in `u` arising from another `ConstantRateJump`, `MassActionJump` or
-  *bounded* `VariableRateJump being executed, as the chosen aggregator will then handle
+  *bounded* `VariableRateJump` being executed, as the chosen aggregator will then handle
   recalculating the rate bound and interval. *However, if the bound could be violated within
   the time interval due to a change in `u` arising from continuous dynamics such as a
   coupled ODE, SDE, or a general `VariableRateJump`, bounds should not be given.* This
@@ -91,9 +91,8 @@ affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!)
 ```
 
-In case we want to use the `Coevolve` aggregator, we need to pass the rate boundaries and
-interval for which the rates apply. The `Coevolve` aggregator allow us to perform discrete
-steps with `SSAStepper()`.
+To define a bounded `VariableRateJump` that can be used with supporting aggregators such as
+`Coevolve`, we must define bounds and a rate interval:
 ```julia
 rateinterval(u,p,t) = (1 / p[1]) * 2
 rate(u,p,t) = t * p[1] * u[1]
@@ -105,14 +104,13 @@ vrj = VariableRateJump(rate, affect!; lrate = lrate, urate = urate,
 ```
 
 ## Notes
-- When using the `Coevolve` aggregator, `DiscreteProblem` can be used. Otherwise,
-  `ODEProblem` or `SDEProblem` must be used to be correctly simulated.
-- **When not using the `Coevolve` aggregator, `VariableRateJump`s result in `integrator`s
-  storing an effective state type that wraps the main state vector.** See
-  [`ExtendedJumpArray`](@ref) for details on using this object. Note that the presence of
-  *any* `VariableRateJump`s will result in all `ConstantRateJump`, `VariableRateJump` and
-  callback `affect!` functions receiving an integrator with `integrator.u` an
-  [`ExtendedJumpArray`](@ref).
+- When using an aggregator that supports bounded `VariableRateJump`s, `DiscreteProblem` can
+  be used. Otherwise, `ODEProblem` or `SDEProblem` must be used.
+- **When not using aggregators that support bounded `VariableRateJump`s, or when there are
+  general `VariableRateJump`s, `integrator`s store an effective state type that wraps the
+  main state vector.** See [`ExtendedJumpArray`](@ref) for details on using this object. In
+  this case all `ConstantRateJump`, `VariableRateJump` and callback `affect!` functions
+  receive an integrator with `integrator.u` an [`ExtendedJumpArray`](@ref).
 - Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of coupled
   chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
   DOI:10.1063/1.1835951 is used for calculating jump times with `VariableRateJump`s within

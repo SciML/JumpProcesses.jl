@@ -223,11 +223,11 @@ Note that
   `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
   `Coevolve` aggregator.
 - When choosing a different aggregator than `Coevolve`, `SSAStepper` can not
- currently be used, and the `JumpProblem` must be coupled to a continuous
- problem type such as an `ODEProblem` to handle time-stepping. The continuous
- time-stepper treats *all* `VariableRateJump`s as `ContinuousCallback`s, using
- the `rate(u, p, t)` function to construct the `condition` function that
- triggers a callback.
+  currently be used, and the `JumpProblem` must be coupled to a continuous
+  problem type such as an `ODEProblem` to handle time-stepping. The continuous
+  time-stepper treats *all* `VariableRateJump`s as `ContinuousCallback`s, using
+  the `rate(u, p, t)` function to construct the `condition` function that
+  triggers a callback.
 
 
 #### Defining a Regular Jump

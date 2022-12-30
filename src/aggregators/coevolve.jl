@@ -120,7 +120,7 @@ function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     for (ix, i) in enumerate(deps)
         ti, last_urate_i = next_time(p, u, params, t, i, end_time)
         update!(pq, i, ti)
-        cur_rates[i] = last_urate_i
+        @inbounds cur_rates[i] = last_urate_i
     end
     nothing
 end

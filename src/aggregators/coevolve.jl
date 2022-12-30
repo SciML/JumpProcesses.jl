@@ -150,9 +150,8 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
     num_majumps = get_num_majumps(p.ma_jumps)
     num_cjumps = length(p.urates) - length(p.rates)
     uidx = i - num_majumps
-    lidx = i - num_majumps - num_cjumps
-    urate = uidx > 0 ? get_urate(p, uidx, u, params, t) :
-            get_ma_urate(p, i, u, params, t)
+    lidx = uidx - num_cjumps
+    urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
     last_urate = p.cur_rates[i]
     if i != p.next_jump && last_urate > zero(t)
         s = urate == zero(t) ? typemax(t) : last_urate / urate * (p.pq[i] - t)
@@ -170,26 +169,22 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
                 _t = t + s
                 continue
             end
-            if _t >= tstop
-                break
-            end
-            lrate = p.urates[uidx] === p.lrates[lidx] ? urate :
-                    get_lrate(p, lidx, u, params, t)
-            if lrate > urate
-                error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(lrate) > upper bound = $(urate)")
-            elseif lrate < urate
+            (_t >= tstop) && break
+
+            lrate = get_lrate(p, lidx, u, params, t)
+            if lrate < urate
                 # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
-                v = rand(rng)
+                v = rand(rng) * urate
                 # first inequality is less expensive and short-circuits the evaluation
-                if (v > lrate / urate)
-                    if (v > get_rate(p, lidx, u, params, _t) / urate)
-                        t = _t
-                        urate = get_urate(p, uidx, u, params, t)
-                        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
-                        _t = t + s
-                        continue
-                    end
+                if (v > lrate) && (v > get_rate(p, lidx, u, params, _t))
+                    t = _t
+                    urate = get_urate(p, uidx, u, params, t)
+                    s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+                    _t = t + s
+                    continue
                 end
+            elseif lrate > urate
+                error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(i), but lower bound = $(lrate) > upper bound = $(urate)")
             end
             break
         end

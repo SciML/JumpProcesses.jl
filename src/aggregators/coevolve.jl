@@ -65,8 +65,8 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     affects! = Vector{AffectWrapper}(undef, nrjs)
     rates = Vector{RateWrapper}(undef, nvrjs)
     lrates = similar(rates)
-    urates = similar(rates)
     rateintervals = similar(rates)
+    urates = Vector{RateWrapper}(undef, nrjs)
     haslratevec = zeros(Bool, nvrjs)
 
     idx = 1

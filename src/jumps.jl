@@ -155,6 +155,10 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     reltol::T2
 end
 
+isbounded(::VariableRateJump) = true
+isbounded(::VariableRateJump{R,F,R2,Nothing}) where {R,F,R2} = false
+haslrate(::VariableRateJump) = true
+haslrate(::VariableRateJump{R, F, Nothing}) where {R,F} = false
 nullrate(u, p, t::T) where {T <: Number} = zero(T)
 
 """
@@ -179,8 +183,8 @@ function VariableRateJump(rate, affect!;
         error("`urate` and `rateinterval` must both be `nothing`, or must both be defined.")
     end
 
-    if (urate !== nothing && lrate === nothing)
-        lrate = nullrate
+    if lrate !== nothing
+        (urate !== nothing) || error("If a lower bound rate, `lrate`, is given than an upper bound rate, `urate`, and rate interval, `rateinterval`, must also be provided.")
     end
 
     VariableRateJump(rate, affect!, lrate, urate, rateinterval, idxs, rootfind,

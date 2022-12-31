@@ -19,12 +19,13 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     lrates::F1                        # vector of rate lower bound functions
     urates::F1                        # vector of rate upper bound functions
     rateintervals::F1                 # vector of interval length functions
+    haslratevec::Vector{Bool}         # vector of whether an lrate was provided for this vrj
 end
 
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
                                  maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
                                  rng::RNG; u::U, dep_graph = nothing, lrates, urates,
-                                 rateintervals) where {T, S, F1, F2, RNG, U}
+                                 rateintervals, haslratevec) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
             error("To use Coevolve a dependency graph between jumps must be supplied.")
@@ -47,7 +48,7 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
     pq = MutableBinaryMinHeap{T}()
     CoevolveJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
                             typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
-                                        dg, pq, lrates, urates, rateintervals)
+                                        dg, pq, lrates, urates, rateintervals, haslratevec)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
@@ -57,37 +58,46 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
-    affects! = Vector{AffectWrapper}()
-    rates = Vector{RateWrapper}()
-    lrates = Vector{RateWrapper}()
-    urates = Vector{RateWrapper}()
-    rateintervals = Vector{RateWrapper}()
 
-    if (constant_jumps !== nothing) && !isempty(constant_jumps)
-        append!(affects!,
-                [AffectWrapper((integrator) -> (j.affect!(integrator); nothing))
-                 for j in constant_jumps])
-        append!(urates, [RateWrapper(j.rate) for j in constant_jumps])
+    ncrjs = (constant_jumps === nothing) ? 0 : length(constant_jumps)
+    nvrjs = (variable_jumps === nothing) ? 0 : length(variable_jumps)
+    nrjs  = ncrjs + nvrjs
+    affects! = Vector{AffectWrapper}(undef, nrjs)
+    rates = Vector{RateWrapper}(undef, nvrjs)
+    lrates = similar(rates)
+    urates = similar(rates)
+    rateintervals = similar(rates)
+    haslratevec = zeros(Bool, nvrjs)
+
+    idx = 1
+    if constant_jumps !== nothing
+        for crj in constant_jumps
+            affects![idx] = AffectWrapper(integ -> (crj.affect!(integ); nothing))
+            urates[idx] = RateWrapper(crj.rate)
+            idx += 1
+        end
     end
 
-    if (variable_jumps !== nothing) && !isempty(variable_jumps)
-        append!(affects!,
-                [AffectWrapper((integrator) -> (j.affect!(integrator); nothing))
-                 for j in variable_jumps])
-        append!(rates, [RateWrapper(j.rate) for j in variable_jumps])
-        append!(lrates, [RateWrapper(j.lrate) for j in variable_jumps])
-        append!(urates, [RateWrapper(j.urate) for j in variable_jumps])
-        append!(rateintervals, [RateWrapper(j.rateinterval) for j in variable_jumps])
+    if variable_jumps !== nothing
+        for (i, vrj) in enumerate(variable_jumps)
+            affects![idx] = AffectWrapper(integ -> (vrj.affect!(integ); nothing))
+            urates[idx] = RateWrapper(vrj.urate)
+            idx += 1
+            rates[i] = RateWrapper(vrj.rate)
+            rateintervals[i] = RateWrapper(vrj.rateinterval)
+            haslratevec[i] = haslrate(vrj)
+            lrates[i] = haslratevec[i] ? RateWrapper(vrj.lrate) : RateWrapper(nullrate)
+        end
     end
 
-    num_jumps = get_num_majumps(ma_jumps) + length(urates)
+    num_jumps = get_num_majumps(ma_jumps) + nrjs
     cur_rates = Vector{typeof(t)}(undef, num_jumps)
     sum_rate = nothing
     next_jump = 0
     next_jump_time = typemax(t)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                             ma_jumps, rates, affects!, save_positions, rng;
-                            u, dep_graph, lrates, urates, rateintervals)
+                            u, dep_graph, lrates, urates, rateintervals, haslratevec)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -146,7 +156,7 @@ end
 end
 
 function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
-    @unpack rng = p
+    @unpack rng, haslratevec = p
     num_majumps = get_num_majumps(p.ma_jumps)
     num_cjumps = length(p.urates) - length(p.rates)
     uidx = i - num_majumps
@@ -171,7 +181,7 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
             end
             (_t >= tstop) && break
 
-            lrate = get_lrate(p, lidx, u, params, t)
+            lrate = haslratevec[lidx] ? get_lrate(p, lidx, u, params, t) : zero(t)
             if lrate < urate
                 # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
                 v = rand(rng) * urate

@@ -186,11 +186,14 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     ## Spatial jumps handling
     if spatial_system !== nothing && hopping_constants !== nothing &&
        !is_spatial(aggregator)
+        (num_crjs(jumps) == num_vrjs(jumps) == 0) ||
+            error("Spatial aggregators only support MassActionJumps currently.")
         prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
     end
 
     if is_spatial(aggregator)
-        (num_crjs(jumps) == num_vrjs(jumps) == 0) || error("Spatial aggregators only support MassActionJumps currently.")
+        (num_crjs(jumps) == num_vrjs(jumps) == 0) ||
+            error("Spatial aggregators only support MassActionJumps currently.")
         kwargs = merge((; hopping_constants, spatial_system), kwargs)
     end
 

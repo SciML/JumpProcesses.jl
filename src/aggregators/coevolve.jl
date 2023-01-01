@@ -61,7 +61,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
 
     ncrjs = (constant_jumps === nothing) ? 0 : length(constant_jumps)
     nvrjs = (variable_jumps === nothing) ? 0 : length(variable_jumps)
-    nrjs  = ncrjs + nvrjs
+    nrjs = ncrjs + nvrjs
     affects! = Vector{AffectWrapper}(undef, nrjs)
     rates = Vector{RateWrapper}(undef, nvrjs)
     lrates = similar(rates)

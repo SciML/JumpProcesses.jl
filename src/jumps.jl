@@ -527,6 +527,27 @@ function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
 end
 
 @inline get_num_majumps(jset::JumpSet) = get_num_majumps(jset.massaction_jump)
+@inline num_majumps(jset::JumpSet) = get_num_majumps(jset)
+
+@inline function num_crjs(jset::JumpSet)
+    (jset.constant_jumps !== nothing) ? length(jset.constant_jumps) : 0
+end
+
+@inline function num_vrjs(jset::JumpSet)
+    (jset.variable_jumps !== nothing) ? length(jset.variable_jumps) : 0
+end
+
+@inline function num_bndvrjs(jset::JumpSet)
+    (jset.variable_jumps !== nothing) ? count(isbounded, jset.variable_jumps) : 0
+end
+
+@inline function num_continvrjs(jset::JumpSet)
+    (jset.variable_jumps !== nothing) ? count(!isbounded, jset.variable_jumps) : 0
+end
+
+num_jumps(jset::JumpSet) = num_majumps(jset) + num_crjs(jset) + num_vrjs(jset)
+num_discretejumps(jset::JumpSet) = num_majumps(jset) + num_crjs(jset) + num_bndvrjs(jset)
+num_cdiscretejumps(jset::JumpSet) = num_majumps(jset) + num_crjs(jset)
 
 @inline split_jumps(vj, cj, rj, maj) = vj, cj, rj, maj
 @inline function split_jumps(vj, cj, rj, maj, v::VariableRateJump, args...)

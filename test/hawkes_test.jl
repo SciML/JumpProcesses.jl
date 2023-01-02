@@ -131,3 +131,37 @@ for (i, alg) in enumerate(algs)
     @test isapprox(mean(λs), Eλ; atol = 0.01)
     @test isapprox(var(λs), Varλ; atol = 0.001)
 end
+
+# test stepping Coevolve with continuous integrator and bounded jumps
+let
+    oprob = ODEProblem(f!, u0, tspan, p)
+    jumps = hawkes_jump(u0, g, h)
+    jprob = JumpProblem(oprob, Coevolve(), jumps...; dep_graph = g, rng)
+    @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
+    sols = Vector{ODESolution}(undef, Nsims)
+    for n in 1:Nsims
+        reset_history!(h)
+        sols[n] = solve(jprob, Tsit5())
+    end
+    λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
+    @test isapprox(mean(λs), Eλ; atol = 0.01)
+    @test isapprox(var(λs), Varλ; atol = 0.001)
+end
+
+# test disabling bounded jumps and using continuous integrator
+let
+    oprob = ODEProblem(f!, u0, tspan, p)
+    jumps = hawkes_jump(u0, g, h)
+    jprob = JumpProblem(oprob, Coevolve(), jumps...; dep_graph = g, rng,
+                        use_vrj_bounds = false)
+    @test length(jprob.variable_jumps) == 1
+    sols = Vector{ODESolution}(undef, Nsims)
+    for n in 1:Nsims
+        reset_history!(h)
+        sols[n] = solve(jprob, Tsit5())
+    end
+    cols = length(sols[1].u[1].u)
+    λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
+    @test isapprox(mean(λs), Eλ; atol = 0.01)
+    @test isapprox(var(λs), Varλ; atol = 0.001)
+end

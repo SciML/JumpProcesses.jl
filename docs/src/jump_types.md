@@ -69,7 +69,7 @@ change between the times at which two consecutive jumps occur.
 A [`MassActionJump`](@ref)s is a specialized representation for a collection of
 `ConstantRateJump` jumps that can each be interpreted as a standard mass action
 reaction. For systems comprised of many mass action reactions, using the
-`MassActionJump` type will offer improved performance comnpared to using
+`MassActionJump` type will offer improved performance compared to using
 multiple `ConstantRateJump`s. Note, only one `MassActionJump` should be defined
 per [`JumpProblem`](@ref); it is then responsible for handling all mass action
 reaction type jumps. For systems with both mass action jumps and non-mass action

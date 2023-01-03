@@ -1,16 +1,20 @@
 # FAQ
 
 ## My simulation is really slow and/or using a lot of memory, what can I do?
-To reduce memory use, use `save_positions=(false,false)` in the `JumpProblem`
-constructor as described [earlier](@ref save_positions_docs) to turn off saving
-the system state before and after every jump. Combined with use of `saveat` in
-the call to `solve` this can dramatically reduce memory usage.
+Exact methods simulate every jump, and by default save the state before and
+after each jump. To reduce memory use, use `save_positions = (false, false)` in
+the `JumpProblem` constructor as described [earlier](@ref save_positions_docs)
+to turn off saving the system state before and after every jump. Combined with
+use of `saveat` in the call to `solve`, to specify the specific times at which
+to save the state, this can dramatically reduce memory usage.
 
 While `Direct` is often fastest for systems with 10 or less `ConstantRateJump`s
-or `MassActionJump`s, if your system has many jumps or one jump occurs most
-frequently, other stochastic simulation algorithms may be faster. See [Constant
-Rate Jump Aggregators](@ref) and the subsequent sections there for guidance on
-choosing different SSAs (called aggregators in JumpProcesses).
+and/or `MassActionJump`s, if your system has many jumps or one jump occurs most
+frequently, other stochastic simulation algorithms may be faster. See [Jump
+Aggregators for Exact Simulation](@ref) and the subsequent sections there for
+guidance on choosing different SSAs (called aggregators in JumpProcesses). For
+systems with bounded `VariableRateJump`s using `Coevolve` with `SSAStepper`
+instead of an ODE/SDE time stepper can give a significant performance boost.
 
 ## When running many consecutive simulations, for example within an `EnsembleProblem` or loop, how can I update `JumpProblem`s?
 
@@ -22,8 +26,9 @@ internal aggregators for each new parameter value or initial condition.
 ## How can I define collections of many different jumps and pass them to `JumpProblem`?
 
 We can use `JumpSet`s to collect jumps together, and then pass them into
-`JumpProblem`s directly. For example, using the `MassActionJump` and
-`ConstantRateJump` defined earlier we can write
+`JumpProblem`s directly. For example, using a `MassActionJump` and
+`ConstantRateJump` defined in the [second tutorial](@ref ssa_tutorial), we can
+write
 
 ```julia
 jset = JumpSet(mass_act_jump, birth_jump)
@@ -42,8 +47,8 @@ vj1 = VariableRateJump(rate3, affect3!)
 vj2 = VariableRateJump(rate4, affect4!)
 vjtuple = (vj1, vj2)
 
-jset = JumpSet(; constant_jumps=cjvec, variable_jumps=vjtuple,
-                 massaction_jumps=mass_act_jump)
+jset = JumpSet(; constant_jumps = cjvec, variable_jumps = vjtuple,
+                 massaction_jumps = mass_act_jump)
 ```
 
 ## How can I set the random number generator used in the jump process sampling algorithms (SSAs)?
@@ -66,16 +71,19 @@ default. On versions below 1.7 it uses `Xoroshiro128Star`.
 ## What are these aggregators and aggregations in JumpProcesses?
 
 JumpProcesses provides a variety of methods for sampling the time the next
-`ConstantRateJump` or `MassActionJump` occurs, and which jump type happens at
-that time. These methods are examples of stochastic simulation algorithms
-(SSAs), also known as Gillespie methods, Doob's method, or Kinetic Monte Carlo
-methods. In the JumpProcesses terminology we call such methods "aggregators", and
-the cache structures that hold their basic data "aggregations". See [Constant
-Rate Jump Aggregators](@ref) for a list of the available SSA aggregators.
+`ConstantRateJump`, `MassActionJump`, or `VariableRateJump` occurs, and which
+jump type happens at that time. These methods are examples of stochastic
+simulation algorithms (SSAs), also known as Gillespie methods, Doob's method, or
+Kinetic Monte Carlo methods. These are all names for jump (or point) processes
+simulation methods used across the biology, chemistry, engineering, mathematics,
+and physics literature. In the JumpProcesses terminology we call such methods
+"aggregators", and the cache structures that hold their basic data
+"aggregations". See [Jump Aggregators for Exact Simulation](@ref) for a list of
+the available SSA aggregators.
 
 ## How should jumps be ordered in dependency graphs?
 Internally, JumpProcesses SSAs (aggregators) order all `MassActionJump`s first,
-then all `ConstantRateJumps`. i.e. in the example
+then all `ConstantRateJumps` and/or `VariableRateJumps`. i.e. in the example
 
 ```julia
 using JumpProcesses
@@ -99,15 +107,15 @@ The four jumps would be ordered by the first jump in `maj`, the second jump in
 `maj`, `cj1`, and finally `cj2`. Any user-generated dependency graphs should
 then follow this ordering when assigning an integer id to each jump.
 
-See also [Constant Rate Jump Aggregators Requiring Dependency Graphs](@ref) for
+See also [Jump Aggregators Requiring Dependency Graphs](@ref) for
 more on dependency graphs needed for the various SSAs.
 
-## How do I use callbacks with `ConstantRateJump` or `MassActionJump` systems?
+## How do I use callbacks with jump simulations?
 
-Callbacks can be used with `ConstantRateJump`s and `MassActionJump`s. When
-solving a pure jump system with `SSAStepper`, only discrete callbacks can be
-used (otherwise a different time stepper is needed). When using an ODE or SDE
-time stepper any callback should work.
+Callbacks can be used with `ConstantRateJump`s, `MassActionJump`s, and
+`VariableRateJump`s. When solving a pure jump system with `SSAStepper`, only
+discrete callbacks can be used (otherwise a different time stepper is needed).
+When using an ODE or SDE time stepper any callback should work.
 
 *Note, when modifying `u` or `p` within a callback, you must call
 [`reset_aggregated_jumps!`](@ref) after making updates.* This ensures that the

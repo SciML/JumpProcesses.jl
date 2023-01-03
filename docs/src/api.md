@@ -15,13 +15,16 @@ reset_aggregated_jumps!
 ConstantRateJump
 MassActionJump
 VariableRateJump
+RegularJump
 JumpSet
 ```
 
 ## Aggregators
 Aggregators are the underlying algorithms used for sampling
-[`MassActionJump`](@ref)s and [`ConstantRateJump`](@ref)s.
+[`ConstantRateJump`](@ref)s, [`MassActionJump`](@ref)s, and
+[`VariableRateJump`](@ref)s.
 ```@docs
+Coevolve
 Direct
 DirectCR
 FRM

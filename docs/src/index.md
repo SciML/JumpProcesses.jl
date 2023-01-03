@@ -1,9 +1,10 @@
 # JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions
 JumpProcesses.jl, formerly DiffEqJump.jl, provides methods for simulating jump
-processes, known as stochastic simulation algorithms (SSAs), Doob's method,
-Gillespie methods, or Kinetic Monte Carlo methods across different fields of
-science. It also enables the incorporation of jump processes into hybrid
-jump-ODE and jump-SDE models, including jump diffusions.
+(or point) processes. Across different fields of science such methods are also
+known as stochastic simulation algorithms (SSAs), Doob's method, Gillespie
+methods, or Kinetic Monte Carlo methods . It also enables the incorporation of
+jump processes into hybrid jump-ODE and jump-SDE models, including jump
+diffusions.
 
 JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
 and one of the core solver libraries included in
@@ -78,20 +79,21 @@ versioninfo() # hide
 ```
 ```@example
 using Pkg # hide
-Pkg.status(;mode = PKGMODE_MANIFEST) # hide
+Pkg.status(; mode = PKGMODE_MANIFEST) # hide
 ```
 ```@raw html
 </details>
 ```
 ```@raw html
-You can also download the 
+You can also download the
 <a href="
 ```
 ```@eval
 using TOML
-version = TOML.parse(read("../../Project.toml",String))["version"]
-name = TOML.parse(read("../../Project.toml",String))["name"]
-link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Manifest.toml"
+projtoml = joinpath("..", "..", "Project.toml")
+version = TOML.parse(read(projtoml, String))["version"]
+name = TOML.parse(read(projtoml, String))["name"]
+link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version * "/assets/Manifest.toml"
 ```
 ```@raw html
 ">manifest</a> file and the
@@ -99,9 +101,10 @@ link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/M
 ```
 ```@eval
 using TOML
-version = TOML.parse(read("../../Project.toml",String))["version"]
-name = TOML.parse(read("../../Project.toml",String))["name"]
-link = "https://github.com/SciML/"*name*".jl/tree/gh-pages/v"*version*"/assets/Project.toml"
+projtoml = joinpath("..", "..", "Project.toml")
+version = TOML.parse(read(projtoml, String))["version"]
+name = TOML.parse(read(projtoml, String))["name"]
+link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version * "/assets/Project.toml"
 ```
 ```@raw html
 ">project</a> file.

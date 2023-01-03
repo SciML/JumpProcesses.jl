@@ -1,12 +1,13 @@
 """
 $(TYPEDEF)
 
-Highly efficient integrator for pure jump problems that involve only
-`ConstantRateJump`s and/or `MassActionJump`s.
+Highly efficient integrator for pure jump problems that involve only `ConstantRateJump`s,
+`MassActionJump`s, and/or `VariableRateJump`s *with rate bounds*.
 
 ## Notes
-- Only works with `JumProblem`s defined from `DiscreteProblem`s.
-- Only works with collections of `ConstantRateJump`s and `MassActionJump`s.
+- Only works with `JumpProblem`s defined from `DiscreteProblem`s.
+- Only works with collections of `ConstantRateJump`s, `MassActionJump`s, and
+  `VariableRateJump`s with rate bounds.
 - Only supports `DiscreteCallback`s for events.
 
 ## Examples

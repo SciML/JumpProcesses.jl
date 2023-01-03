@@ -6,14 +6,15 @@ primarily in chemical or population process models, where several types of jumps
 may occur, can skip directly to the [second tutorial](@ref ssa_tutorial) for a
 tutorial covering similar material but focused on the SIR model.
 
-JumpProcesses allows the simulation of jump processes where the transition rate, i.e.
-intensity or propensity, can be a function of the current solution, current
+JumpProcesses allows the simulation of jump processes where the transition rate,
+i.e. intensity or propensity, can be a function of the current solution, current
 parameters, and current time. Throughout this tutorial these are denoted by `u`,
 `p` and `t`. Likewise, when a jump occurs any
 DifferentialEquations.jl-compatible change to the current system state, as
 encoded by a [DifferentialEquations.jl
 integrator](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/), is
-allowed. This includes changes to the current state or to parameter values.
+allowed. This includes changes to the current state or to parameter values (for
+example via a callback).
 
 This tutorial requires several packages, which can be added if not already
 installed via
@@ -29,7 +30,7 @@ default(; lw = 2)
 ```
 
 ## `ConstantRateJump`s
-Our first example will be to simulate a simple Poission counting process,
+Our first example will be to simulate a simple Poisson counting process,
 ``N(t)``, with a constant transition rate of λ. We can interpret this as a birth
 process where new individuals are created at the constant rate λ. ``N(t)`` then
 gives the current population size. In terms of a unit Poisson counting process,
@@ -61,7 +62,7 @@ sol = solve(jprob, SSAStepper())
 plot(sol, label="N(t)", xlabel="t", legend=:bottomright)
 ```
 
-We can define and simulate our jump process using JumpProcesses. We first load our
+We can define and simulate our jump process as follows. We first load our
 packages
 ```@example tut1
 using JumpProcesses, Plots
@@ -104,29 +105,28 @@ tspan = (0.0, 10.0)
 ```
 Finally, we construct the associated SciML problem types and generate one
 realization of the process. We first create a `DiscreteProblem` to encode that
-we are simulating a process that evolves in discrete time steps. Note, this
-currently requires that the process has constant transition rates *between*
-jumps
+we are simulating a process that evolves in discrete time steps.
 ```@example tut1
 dprob = DiscreteProblem(u₀, tspan, p)
 ```
 We next create a [`JumpProblem`](@ref) that wraps the discrete problem, and
-specifies which algorithm to use for determining next jump times (and in the
-case of multiple possible jumps the next jump type). Here we use the classical
-`Direct` method, proposed by Gillespie in the chemical reaction context, but
-going back to earlier work by Doob and others (and also known as Kinetic Monte
-Carlo in the physics literature)
+specifies which algorithm, called an aggregator in JumpProcesses, to use for
+determining next jump times (and in the case of multiple possible jumps the next
+jump type). Here we use the classical `Direct` method, proposed by Gillespie in
+the chemical reaction context, but going back to earlier work by Doob and others
+(and also known as Kinetic Monte Carlo in the physics literature)
 ```@example tut1
 # a jump problem, specifying we will use the Direct method to sample
 # jump times and events, and that our jump is encoded by crj
 jprob = JumpProblem(dprob, Direct(), crj)
 ```
-We are finally ready to simulate one realization of our jump process
+We are finally ready to simulate one realization of our jump process, selecting
+`SSAStepper` to handle time-stepping our system from jump to jump
 ```@example tut1
 # now we simulate the jump process in time, using the SSAStepper time-stepper
 sol = solve(jprob, SSAStepper())
 
-plot(sol, label="N(t)", xlabel="t", legend=:bottomright)
+plot(sol, labels = "N(t)", xlabel = "t", legend = :bottomright)
 ```
 
 ### More general `ConstantRateJump`s
@@ -157,11 +157,11 @@ second `ConstantRateJump`. We then construct the corresponding problems, passing
 both jumps to `JumpProblem`, and can solve as before
 ```@example tut1
 p = (λ = 2.0, μ = 1.5)
-u₀ = [0,0]   # (N(0), D(0))
+u₀ = [0, 0]   # (N(0), D(0))
 dprob = DiscreteProblem(u₀, tspan, p)
 jprob = JumpProblem(dprob, Direct(), crj, deathcrj)
 sol = solve(jprob, SSAStepper())
-plot(sol, label=["N(t)" "D(t)"], xlabel="t", legend=:topleft)
+plot(sol, labels = ["N(t)" "D(t)"], xlabel = "t", legend = :topleft)
 ```
 
 In the next tutorial we will also introduce [`MassActionJump`](@ref)s, which are
@@ -175,12 +175,13 @@ by adding or subtracting a constant vector from `u`.
 ## `VariableRateJump`s for processes that are not constant between jumps
 So far we have assumed that our jump processes have transition rates that are
 constant in between jumps. In many applications this may be a limiting
-assumption. To support such models JumpProcesses has the [`VariableRateJump`](@ref)
-type, which represents jump processes that have an arbitrary time dependence in
-the calculation of the transition rate, including transition rates that depend
-on states which can change in between `ConstantRateJump`s. Let's consider the
-previous example, but now let the birth rate be time dependent, ``b(t) = \lambda
-\left(\sin(\pi t / 2) + 1\right)``, so that our model becomes
+assumption. To support such models JumpProcesses has the
+[`VariableRateJump`](@ref) type, which represents jump processes that have an
+arbitrary time dependence in the calculation of the transition rate, including
+transition rates that depend on states which can change in between two jumps
+occurring. Let's consider the previous example, but now let the birth rate be
+time dependent, ``b(t) = \lambda \left(\sin(\pi t / 2) + 1\right)``, so that our
+model becomes
 ```math
 \begin{align*}
 N(t) &= Y_b\left(\int_0^t \left( \lambda \sin\left(\tfrac{\pi s}{2}\right) + 1 \right) \, d s\right) - Y_d \left(\int_0^t \mu N(s^-) \, ds \right), \\
@@ -188,28 +189,87 @@ D(t) &= Y_d \left(\int_0^t \mu N(s^-) \, ds \right).
 \end{align*}
 ```
 
-We'll then re-encode the first jump as a
-`VariableRateJump`
+
+The birth rate is cyclical, bounded between a lower-bound of ``λ`` and an
+upper-bound of ``2 λ``. We'll then re-encode the first (birth) jump as a
+`VariableRateJump`. Two types of `VariableRateJump`s are supported, general and
+bounded. The latter are generally more performant, but are also more restrictive
+in when they can be used. They also require specifying additional information
+beyond just `rate` and `affect!` functions.
+
+Let's see how to build a bounded `VariableRateJump` encoding our new birth
+process. We first specify the rate and affect functions, just like for a
+`ConstantRateJump`,
 ```@example tut1
 rate1(u,p,t) = p.λ * (sin(pi*t/2) + 1)
 affect1!(integrator) = (integrator.u[1] += 1)
-vrj = VariableRateJump(rate1, affect1!)
 ```
-Because this new jump can modify the value of `u[1]` between death events, and
-the death transition rate depends on this value, we must also update our death
-jump process to also be a `VariableRateJump`
+We next provide functions that determine a time interval over which the rate is
+bounded from above given `u`, `p` and `t`. From these we can construct the new
+bounded `VariableRateJump`:
+```@example tut1
+# We require that rate1(u,p,s) <= urate(u,p,s)
+# for t <= s <= t + rateinterval(u,p,t)
+rateinterval(u, p, t) = typemax(t)
+urate(u, p, t) = 2 * p.λ
+
+# Optionally, we can give a lower bound over the same interval.
+# This may boost computational performance.
+lrate(u, p, t) = p.λ
+
+# now we construct the bounded VariableRateJump
+vrj1 = VariableRateJump(rate1, affect1!; lrate, urate, rateinterval)
+```
+
+Finally, to efficiently simulate the new jump process we must also specify a
+dependency graph. This indicates when a given jump occurs, which jumps in the
+system need to have their rates and/or rate bounds recalculated (for example,
+due to depending on changed components in `u`). We also assume the convention
+that a given jump depends on itself. Internally, JumpProcesses preserves the
+relative ordering of jumps of each distinct type, but always reorders all
+`ConstantRateJump`s to appear before any `VariableRateJump`s. As such, the
+`ConstantRateJump` representing the death process will have internal index 1,
+and our new bounded `VariableRateJump` for birth will have internal index 2.
+Since birth modifies the population size `u[1]`, and death occurs at a rate
+proportional to `u[1]`, when birth occurs we need to recalculate both of rates.
+In contrast, death does not change `u[1]`, and so when death occurs we only need
+to recalculate the death rate. The graph below encodes the dependents of the
+death (`dep_graph[1]`) and birth (`dep_graph[2]`) jumps respectively
+```@example tut1
+dep_graph = [[1], [1,2]]
+```
+
+We can then construct the corresponding problem, passing both jumps to
+`JumpProblem` as well as the dependency graph. We must use an aggregator that
+supports bounded `VariableRateJump`s, in this case we choose the `Coevolve`
+aggregator.
+```@example tut1
+jprob = JumpProblem(dprob, Coevolve(), vrj1, deathcrj; dep_graph)
+sol = solve(jprob, SSAStepper())
+plot(sol, labels = ["N(t)" "D(t)"], xlabel = "t", legend = :topleft)
+```
+
+If we did not know the upper rate bound or rate interval functions for the
+time-dependent rate, we would have to use a continuous problem type and general
+`VariableRateJump` to correctly handle calculating the jump times. Under this
+assumption we would define a general `VariableRateJump` as following:
+```@example tut1
+vrj2 = VariableRateJump(rate1, affect1!)
+```
+
+Since the death rate now depends on a variable, `u[2]`, modified by a general
+`VariableRateJump` (i.e. one that is not bounded), we also need to redefine the
+death jump process as a general `VariableRateJump`
 ```@example tut1
 deathvrj = VariableRateJump(deathrate, deathaffect!)
 ```
-Note, if the death rate only depended on values that were unchanged by a
-variable rate jump, then it could have remained a `ConstantRateJump`. This would
-have been the case if, for example, it depended on `u[2]` instead of `u[1]`.
 
-To simulate our jump process we now need to use a continuous problem type to
-properly handle determining the jump times. We do this by constructing an
-ordinary differential equation problem, `ODEProblem`, but setting the ODE
-derivative to preserve the state (i.e. to zero). We are essentially defining a
-combined ODE-jump process, i.e. a [piecewise deterministic Markov
+To simulate our jump process we now need to construct a continuous problem type
+to couple the jumps to, for example an ordinary differential equation (ODE) or
+stochastic differential equation (SDE). Let's use an ODE, encoded via an
+`ODEProblem`. We simply set the ODE derivative to zero to preserve the state. We
+are essentially defining a combined ODE-jump process, i.e. a [piecewise
+deterministic Markov
 process](https://en.wikipedia.org/wiki/Piecewise-deterministic_Markov_process),
 but one where the ODE is trivial and does not change the state. To use this
 problem type and the ODE solvers we first load `OrdinaryDiffEq.jl` or
@@ -225,7 +285,7 @@ using OrdinaryDiffEq
 # or using DifferentialEquations
 ```
 We can then construct our ODE problem with a trivial ODE derivative component.
-Note, to work with the ODE solver time stepper we must change our initial
+Note, to work with the ODE solver time stepper we must also change our initial
 condition to be floating point valued
 ```@example tut1
 function f!(du, u, p, t)
@@ -234,14 +294,18 @@ function f!(du, u, p, t)
 end
 u₀ = [0.0, 0.0]
 oprob = ODEProblem(f!, u₀, tspan, p)
-jprob = JumpProblem(oprob, Direct(), vrj, deathvrj)
+jprob = JumpProblem(oprob, Direct(), vrj2, deathvrj)
 ```
-We simulate our jump process, using the `Tsit5` ODE solver as the time stepper in
-place of `SSAStepper`
+We can now simulate our jump process, using the `Tsit5` ODE solver as the time
+stepper in place of `SSAStepper`
 ```@example tut1
 sol = solve(jprob, Tsit5())
 plot(sol, label=["N(t)" "D(t)"], xlabel="t", legend=:topleft)
 ```
+
+For more details on when bounded vs. general `VariableRateJump`s can be used,
+see the [next tutorial](@ref ssa_tutorial) and the [Jump Problems](@ref
+jump_problem_type) documentation page.
 
 ## Having a Random Jump Distribution
 Suppose we want to simulate a compound Poisson process, ``G(t)``, where

@@ -50,6 +50,9 @@ $(FIELDS)
   the jump occurs.
 - `spatial_system`, for spatial problems the underlying spatial structure.
 - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
+- `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s
+  with a supporting aggregator (such as `Coevolve`). They will then be handled via the
+  continuous integration interace, and treated like general `VariableRateJump`s.
 
 Please see the [tutorial
 page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in the
@@ -166,7 +169,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                                       (false, true) : (true, true),
                      rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
                      spatial_system = nothing, hopping_constants = nothing,
-                     callback = nothing, kwargs...)
+                     callback = nothing, use_vrj_bounds = true, kwargs...)
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -182,48 +185,70 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     ## Spatial jumps handling
     if spatial_system !== nothing && hopping_constants !== nothing &&
-       !is_spatial(aggregator) # check if need to flatten
+       !is_spatial(aggregator)
+        (num_crjs(jumps) == num_vrjs(jumps) == 0) ||
+            error("Spatial aggregators only support MassActionJumps currently.")
         prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
     end
-    ## Constant Rate Handling
+
+    if is_spatial(aggregator)
+        (num_crjs(jumps) == num_vrjs(jumps) == 0) ||
+            error("Spatial aggregators only support MassActionJumps currently.")
+        kwargs = merge((; hopping_constants, spatial_system), kwargs)
+    end
+
+    ndiscjumps = get_num_majumps(maj) + num_crjs(jumps)
+
+    # separate bounded variable rate jumps *if* the aggregator can use them
+    if use_vrj_bounds && supports_variablerates(aggregator) && (num_bndvrjs(jumps) > 0)
+        bvrjs = filter(isbounded, jumps.variable_jumps)
+        cvrjs = filter(!isbounded, jumps.variable_jumps)
+        kwargs = merge((; variable_jumps = bvrjs), kwargs)
+        ndiscjumps += length(bvrjs)
+    else
+        bvrjs = nothing
+        cvrjs = jumps.variable_jumps
+    end
+
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
-    if (typeof(jumps.constant_jumps) <: Tuple{}) && (maj === nothing) &&
-       !is_spatial(aggregator) # check if there are no jumps
-        disc = nothing
+
+    # handle majs, crjs, and bounded vrjs
+    if (ndiscjumps == 0) && !is_spatial(aggregator)
+        disc_agg = nothing
         constant_jump_callback = CallbackSet()
     else
-        disc = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
-                         save_positions, rng; spatial_system = spatial_system,
-                         hopping_constants = hopping_constants, kwargs...)
-        constant_jump_callback = DiscreteCallback(disc)
+        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
+                             save_positions, rng; kwargs...)
+        constant_jump_callback = DiscreteCallback(disc_agg)
     end
 
-    iip = isinplace_jump(prob, jumps.regular_jump)
-
-    ## Variable Rate Handling
-    if typeof(jumps.variable_jumps) <: Tuple{}
+    # handle any remaining vrjs
+    if length(cvrjs) > 0
+        new_prob = extend_problem(prob, cvrjs; rng)
+        variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
+        cont_agg = cvrjs
+    else
         new_prob = prob
         variable_jump_callback = CallbackSet()
-    else
-        new_prob = extend_problem(prob, jumps; rng = rng)
-        variable_jump_callback = build_variable_callback(CallbackSet(), 0,
-                                                         jumps.variable_jumps...; rng = rng)
+        cont_agg = JumpSet().variable_jumps
     end
-    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
 
+    jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
+    iip = isinplace_jump(prob, jumps.regular_jump)
     solkwargs = make_kwarg(; callback)
+
     JumpProblem{iip, typeof(new_prob), typeof(aggregator),
-                typeof(jump_cbs), typeof(disc),
-                typeof(jumps.variable_jumps),
+                typeof(jump_cbs), typeof(disc_agg),
+                typeof(cont_agg),
                 typeof(jumps.regular_jump),
-                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc,
-                                                             jump_cbs, jumps.variable_jumps,
+                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc_agg,
+                                                             jump_cbs, cont_agg,
                                                              jumps.regular_jump, maj, rng,
                                                              solkwargs)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
-    error("VariableRateJumps require a continuous problem, like an ODE/SDE/DDE/DAE problem.")
+    error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
 
 function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
@@ -232,19 +257,19 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
     jump_f = let _f = _f
         function jump_f(du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
             _f(du.u, u.u, p, t)
-            update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+            update_jumps!(du, u, p, t, length(u.u), jumps...)
         end
     end
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
-                           [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
+                           [-randexp(rng, ttype) for i in 1:length(jumps)])
     remake(prob, f = ODEFunction{true}(jump_f), u0 = u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
     function jump_f(du, u, p, t)
         prob.f(du.u, u.u, p, t)
-        update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+        update_jumps!(du, u, p, t, length(u.u), jumps...)
     end
 
     if prob.noise_rate_prototype === nothing
@@ -259,30 +284,30 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
 
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
-                           [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
+                           [-randexp(rng, ttype) for i in 1:length(jumps)])
     remake(prob, f = SDEFunction{true}(jump_f, jump_g), g = jump_g, u0 = u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
     jump_f = function (du, u, h, p, t)
         prob.f(du.u, u.u, h, p, t)
-        update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+        update_jumps!(du, u, p, t, length(u.u), jumps...)
     end
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
-                           [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
-    ramake(prob, f = DDEFunction{true}(jump_f), u0 = u0)
+                           [-randexp(rng, ttype) for i in 1:length(jumps)])
+    remake(prob, f = DDEFunction{true}(jump_f), u0 = u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
 function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
     jump_f = function (out, du, u, p, t)
         prob.f(out.u, du.u, u.u, t)
-        update_jumps!(du, u, t, length(u.u), jumps.variable_jumps...)
+        update_jumps!(du, u, t, length(u.u), jumps...)
     end
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
-                           [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
+                           [-randexp(rng, ttype) for i in 1:length(jumps)])
     remake(prob, f = DAEFunction{true}(jump_f), u0 = u0)
 end
 
@@ -324,7 +349,7 @@ function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
     CallbackSet(cb, new_cb)
 end
 
-aggregator(jp::JumpProblem{P, A, C, J, J2}) where {P, A, C, J, J2} = A
+aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A
 
 @inline function extend_tstops!(tstops,
                                 jp::JumpProblem{P, A, C, J, J2}) where {P, A, C, J, J2}
@@ -358,10 +383,10 @@ end
 function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
     summary(io, A)
     println(io)
-    println(io, "Number of constant rate jumps: ",
+    println(io, "Number of jumps with discrete aggregation: ",
             A.discrete_jump_aggregation === nothing ? 0 :
             num_constant_rate_jumps(A.discrete_jump_aggregation))
-    println(io, "Number of variable rate jumps: ", length(A.variable_jumps))
+    println(io, "Number of jumps with continuous aggregation: ", length(A.variable_jumps))
     nmajs = (A.massaction_jump !== nothing) ? get_num_majumps(A.massaction_jump) : 0
     println(io, "Number of mass action jumps: ", nmajs)
     if A.regular_jump !== nothing

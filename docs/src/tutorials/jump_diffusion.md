@@ -120,6 +120,12 @@ plot(sol)
 In this way we have solve a mixed jump-ODE, i.e. a piecewise deterministic
 Markov process.
 
+Note that in this case, the rates of the `VariableRateJump`s depend on a
+variable that is driven by an `ODEProblem`, and thus they would not satisfy the
+conditions to be represented as bounded `VariableRateJump`s (and hence can not
+be simulated with the `Coevolve` aggregator).
+
+
 ## Jump Diffusion
 Now we will finally solve the jump diffusion problem. The steps are the same
 as before, except we now start with a `SDEProblem` instead of an `ODEProblem`.

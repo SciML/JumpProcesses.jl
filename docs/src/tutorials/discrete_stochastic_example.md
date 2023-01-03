@@ -489,12 +489,12 @@ infection then decreases exponentially to a basal level. In this case, we must
 keep track of the time of infection events. Let the history ``H(t)`` contain the
 timestamps of all ``I(t)`` active infections. The rate of infection is then
 ```math
-\beta S(t) I(t) + \alpha S(t) \sum_{t_i \in H(t)} \exp(-\gamma (t - t_i))
+\beta_1 S(t) I(t) + \alpha S(t) \sum_{t_i \in H(t)} \exp(-\gamma (t - t_i))
 ```
-where ``\beta`` is the basal rate of infection, ``\alpha`` is the spike in the
+where ``\beta_1`` is the basal rate of infection, ``\alpha`` is the spike in the
 rate of infection, and ``\gamma`` is the rate at which the spike decreases. Here
 we choose parameters such that infectivity rate due to a single infected
-individual returns to the basal rate after spiking to ``\beta + \alpha``. In
+individual returns to the basal rate after spiking to ``\beta_1 + \alpha``. In
 other words, we are modelling a situation in infected individuals gradually
 become less infectious prior to recovering. Our parameters are then
 

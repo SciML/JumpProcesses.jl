@@ -144,3 +144,32 @@ x₀ = 1.0 + 0.0im
 prob = ODEProblem(f4, [x₀], Δt)
 jumpProblem = JumpProblem(prob, Direct(), jump)
 sol = solve(jumpProblem, Tsit5())
+
+# test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
+# jumps
+let
+    maj_rate = [1.0]
+    react_stoich_ = [Vector{Pair{Int, Int}}()]
+    net_stoich_ = [[1 => 1]]
+    mass_action_jump_ = MassActionJump(maj_rate, react_stoich_, net_stoich_;
+                                       scale_rates = false)
+
+    affect! = function (integrator)
+        integrator.u[1] -= 1
+    end
+    cs_rate1(u, p, t) = 0.2 * u[1]
+    constant_rate_jump = ConstantRateJump(cs_rate1, affect!)
+    jumpset_ = JumpSet((), (constant_rate_jump,), nothing, mass_action_jump_)
+
+    u0 = [0]
+    tspan = (0.0, 30.0)
+    dprob_ = DiscreteProblem(u0, tspan)
+    alg = Coevolve()
+    @test_throws ErrorException JumpProblem(dprob_, alg, jumpset_,
+                                            save_positions = (false, false))
+
+    vrj = VariableRateJump(cs_rate1, affect!; urate = ((u, p, t) -> 1.0),
+                           rateinterval = ((u, p, t) -> 1.0))
+    @test_throws ErrorException JumpProblem(dprob_, alg, mass_action_jump_, vrj;
+                                            save_positions = (false, false))
+end

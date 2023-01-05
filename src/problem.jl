@@ -254,22 +254,46 @@ end
 function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
-    jump_f = let _f = _f
-        function jump_f(du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
-            _f(du.u, u.u, p, t)
-            update_jumps!(du, u, p, t, length(u.u), jumps...)
+    if isinplace(prob)
+        jump_f = let _f = _f
+            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
+                _f(du.u, u.u, p, t)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+            end
+        end
+    else
+        jump_f = let _f = _f
+            function (u::ExtendedJumpArray, p, t)
+                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                return du
+            end
         end
     end
+
     ttype = eltype(prob.tspan)
+    @show jumps
     u0 = ExtendedJumpArray(prob.u0,
-                           [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = ODEFunction{true}(jump_f), u0 = u0)
+                            [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
+    remake(prob, f = ODEFunction{isinplace(prob)}(jump_f), u0 = u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
-    function jump_f(du, u, p, t)
-        prob.f(du.u, u.u, p, t)
-        update_jumps!(du, u, p, t, length(u.u), jumps...)
+    if isinplace(prob)
+        jump_f = let _f = _f
+            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
+                _f(du.u, u.u, p, t)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+            end
+        end
+    else
+        jump_f = let _f = _f
+            function (u::ExtendedJumpArray, p, t)
+                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                return du
+            end
+        end
     end
 
     if prob.noise_rate_prototype === nothing
@@ -285,30 +309,56 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
                            [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = SDEFunction{true}(jump_f, jump_g), g = jump_g, u0 = u0)
+    remake(prob, f = SDEFunction{isinplace(prob)}(jump_f, jump_g), g = jump_g, u0 = u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
-    jump_f = function (du, u, h, p, t)
-        prob.f(du.u, u.u, h, p, t)
-        update_jumps!(du, u, p, t, length(u.u), jumps...)
+    if isinplace(prob)
+        jump_f = let _f = _f
+            function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
+                _f(du.u, u.u, h, p, t)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+            end
+        end
+    else
+        jump_f = let _f = _f
+            function (u::ExtendedJumpArray, h, p, t)
+                du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                return du
+            end
+        end
     end
+
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
                            [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = DDEFunction{true}(jump_f), u0 = u0)
+    remake(prob, f = DDEFunction{isinplace(prob)}(jump_f), u0 = u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
 function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
-    jump_f = function (out, du, u, p, t)
-        prob.f(out.u, du.u, u.u, t)
-        update_jumps!(du, u, t, length(u.u), jumps...)
+    if isinplace(prob)
+        jump_f = let _f = _f
+            function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
+                _f(out, du.u, u.u, h, p, t)
+                update_jumps!(out, u, p, t, length(u.u), jumps.variable_jumps...)
+            end
+        end
+    else
+        jump_f = let _f = _f
+            function (du, u::ExtendedJumpArray, h, p, t)
+                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
+                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                return du
+            end
+        end
     end
+
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
                            [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = DAEFunction{true}(jump_f), u0 = u0)
+    remake(prob, f = DAEFunction{isinplace(prob)}(jump_f), u0 = u0)
 end
 
 function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)

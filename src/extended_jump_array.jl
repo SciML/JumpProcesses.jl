@@ -189,3 +189,8 @@ unpack(x::ExtendedJumpArray, ::Val{:jump_u}) = x.jump_u
 end
 unpack_args(i, args::Tuple{Any}) = (unpack(args[1], i),)
 unpack_args(::Any, args::Tuple{}) = ()
+
+Base.:*(x::ExtendedJumpArray, y::Number) = ExtendedJumpArray(y .* x.u, y .* x.jump_u)
+Base.:*(y::Number, x::ExtendedJumpArray) = ExtendedJumpArray(y .* x.u, y .* x.jump_u)
+Base.:/(x::ExtendedJumpArray, y::Number) = ExtendedJumpArray(x.u ./ y, x.jump_u ./ y)
+Base.:+(x::ExtendedJumpArray, y::ExtendedJumpArray) = ExtendedJumpArray(x.u .+ y.u, x.jump_u .+ y.jump_u)

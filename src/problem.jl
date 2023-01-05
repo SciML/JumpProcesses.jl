@@ -273,7 +273,7 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
 
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
-                            [-randexp(rng, ttype) for i in 1:length(jumps)])
+                           [-randexp(rng, ttype) for i in 1:length(jumps)])
     remake(prob, f = ODEFunction{isinplace(prob)}(jump_f), u0 = u0)
 end
 

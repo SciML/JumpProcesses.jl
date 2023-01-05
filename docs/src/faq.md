@@ -36,7 +36,7 @@ jump_prob = JumpProblem(prob, Direct(), jset)
 sol = solve(jump_prob, SSAStepper())
 ```
 
-If you have many jumps in tuples or vectors it is easiest to use the keyword
+If you have many jumps in tuples or vectors, it is easiest to use the keyword
 argument-based constructor:
 ```julia
 cj1 = ConstantRateJump(rate1, affect1!)
@@ -65,7 +65,7 @@ jprob = JumpProblem(dprob, Direct(), maj,
 uses the `Xoroshiro128Star` generator from
 [RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
 
-On version 1.7 and up JumpProcesses uses Julia's builtin random number generator by
+On version 1.7 and up, JumpProcesses uses Julia's builtin random number generator by
 default. On versions below 1.7 it uses `Xoroshiro128Star`.
 
 ## What are these aggregators and aggregations in JumpProcesses?
@@ -76,14 +76,14 @@ jump type happens at that time. These methods are examples of stochastic
 simulation algorithms (SSAs), also known as Gillespie methods, Doob's method, or
 Kinetic Monte Carlo methods. These are all names for jump (or point) processes
 simulation methods used across the biology, chemistry, engineering, mathematics,
-and physics literature. In the JumpProcesses terminology we call such methods
+and physics literature. In the JumpProcesses terminology, we call such methods
 "aggregators", and the cache structures that hold their basic data
 "aggregations". See [Jump Aggregators for Exact Simulation](@ref) for a list of
 the available SSA aggregators.
 
 ## How should jumps be ordered in dependency graphs?
 Internally, JumpProcesses SSAs (aggregators) order all `MassActionJump`s first,
-then all `ConstantRateJumps` and/or `VariableRateJumps`. i.e. in the example
+then all `ConstantRateJumps` and/or `VariableRateJumps`. i.e., in the example
 
 ```julia
 using JumpProcesses
@@ -115,12 +115,12 @@ more on dependency graphs needed for the various SSAs.
 Callbacks can be used with `ConstantRateJump`s, `MassActionJump`s, and
 `VariableRateJump`s. When solving a pure jump system with `SSAStepper`, only
 discrete callbacks can be used (otherwise a different time stepper is needed).
-When using an ODE or SDE time stepper any callback should work.
+When using an ODE or SDE time stepper, any callback should work.
 
 *Note, when modifying `u` or `p` within a callback, you must call
 [`reset_aggregated_jumps!`](@ref) after making updates.* This ensures that the
 underlying jump simulation algorithms know to reinitialize their internal data
-structures. Leaving out this call will lead to incorrect behavior!
+structures. Omitting this call will lead to incorrect behavior!
 
 A simple example that uses a `MassActionJump` and changes the parameters at a
 specified time in the simulation using a `DiscreteCallback` is
@@ -151,10 +151,10 @@ of `u[1]`, giving
 
 ## How can I access earlier solution values in callbacks?
 When using an ODE or SDE time-stepper that conforms to the [integrator
-interface](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/) one
+interface](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/), one
 can simply use `integrator.uprev`. For efficiency reasons, the pure jump
 [`SSAStepper`](@ref) integrator does not have such a field. If one needs
-solution components at earlier times one can save them within the callback
+solution components at earlier times, one can save them within the callback
 condition by making a functor:
 ```julia
 # stores the previous value of u[2] and represents the callback functions

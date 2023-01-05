@@ -1,8 +1,8 @@
 # JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions
 JumpProcesses.jl, formerly DiffEqJump.jl, provides methods for simulating jump
-(or point) processes. Across different fields of science such methods are also
+(or point) processes. Across different fields of science, such methods are also
 known as stochastic simulation algorithms (SSAs), Doob's method, Gillespie
-methods, or Kinetic Monte Carlo methods . It also enables the incorporation of
+methods, or Kinetic Monte Carlo methods. It also enables the incorporation of
 jump processes into hybrid jump-ODE and jump-SDE models, including jump
 diffusions.
 
@@ -12,7 +12,7 @@ and one of the core solver libraries included in
 
 The documentation includes
 - [a tutorial on simulating basic Poisson processes](@ref poisson_proc_tutorial)
-- [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e. Gillespie methods)](@ref ssa_tutorial),
+- [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial),
 - [a tutorial on simulating jump-diffusion processes](@ref jump_diffusion_tutorial),
 - [a reference on the types of jumps and available simulation methods](@ref jump_problem_type),
 - [a reference on jump time stepping methods](@ref jump_solve)
@@ -24,14 +24,14 @@ There are two ways to install `JumpProcesses.jl`. First, users may install the m
 `DifferentialEquations.jl` package, which installs and wraps `OrdinaryDiffEq.jl`
 for solving ODEs, `StochasticDiffEq.jl` for solving SDEs, and `JumpProcesses.jl`,
 along with a number of other useful packages for solving models involving ODEs,
-SDEs and/or jump process. This single install will provide the user with all of
+SDEs and/or jump process. This single install will provide the user with all
 the facilities for developing and solving Jump problems.
 
 To install the `DifferentialEquations.jl` package, refer to the following link
 for complete [installation
 details](https://docs.sciml.ai/DiffEqDocs/stable).
 
-If the user wishes to separately install the `JumpProcesses.jl` library, which is a
+If the user wishes to install the `JumpProcesses.jl` library separately, which is a
 lighter dependency than `DifferentialEquations.jl`, then the following code will
 install `JumpProcesses.jl` using the Julia package manager:
 ```julia

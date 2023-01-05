@@ -18,13 +18,13 @@ use with exact simulation methods can be defined as `ConstantRateJump`s,
 τ-leaping methods should be defined as `RegularJump`s.
 
 There are special algorithms available for efficiently simulating an exact, pure
-`JumpProblem` (i.e. a `JumpProblem` over a `DiscreteProblem`).  `SSAStepper()`
+`JumpProblem` (i.e., a `JumpProblem` over a `DiscreteProblem`).  `SSAStepper()`
 is an efficient streamlined integrator for time stepping such problems from
 individual jump to jump. This integrator is named after Stochastic Simulation
 Algorithms (SSAs), commonly used naming in chemistry and biology applications
 for the class of exact jump process simulation algorithms. In turn, we denote by
 "aggregators" the algorithms that `SSAStepper` calls to calculate the next jump
-time and to execute a jump (i.e. change the system state appropriately). All
+time and to execute a jump (i.e., change the system state appropriately). All
 JumpProcesses aggregators can be used with `ConstantRateJump`s and
 `MassActionJump`s, with a subset of aggregators also working with bounded
  `VariableRateJump`s (see [the first tutorial](@ref poisson_proc_tutorial) for
@@ -35,7 +35,7 @@ performant `FunctionMap` time-stepper can be used.
 
 If there is a `RegularJump`, then inexact τ-leaping methods must be used. The
 current recommended method is `TauLeaping` if one needs adaptivity, events, etc.
-If ones only needs the most barebones fixed time-step leaping method, then
+If one only needs the most barebones fixed time-step leaping method, then
 `SimpleTauLeaping` can have performance benefits.
 
 ## Special Methods for Pure Jump Problems

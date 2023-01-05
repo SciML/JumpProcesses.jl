@@ -1,13 +1,13 @@
 # [Simple Poisson Processes in JumpProcesses] (@id poisson_proc_tutorial)
 
-In this tutorial we show how to simulate several Poisson jump processes, for
+In this tutorial, we show how to simulate several Poisson jump processes, for
 several types of intensities and jump distributions. Readers interested
 primarily in chemical or population process models, where several types of jumps
 may occur, can skip directly to the [second tutorial](@ref ssa_tutorial) for a
 tutorial covering similar material but focused on the SIR model.
 
 JumpProcesses allows the simulation of jump processes where the transition rate,
-i.e. intensity or propensity, can be a function of the current solution, current
+i.e., intensity or propensity, can be a function of the current solution, current
 parameters, and current time. Throughout this tutorial these are denoted by `u`,
 `p` and `t`. Likewise, when a jump occurs any
 DifferentialEquations.jl-compatible change to the current system state, as
@@ -43,7 +43,7 @@ with a constant rate of one.)
 
 In the remainder of this tutorial we will use
 *transition rate*, *rate*, *propensity*, and *intensity* interchangeably. Here
-is the full program listing we will subsequently explain line by line
+is the full program listing, which we will subsequently explain line by line
 ```julia
 using JumpProcesses, Plots
 
@@ -67,7 +67,7 @@ packages
 ```@example tut1
 using JumpProcesses, Plots
 ```
-To specify our jump process we need to define two functions. One that given the
+To specify our jump process, we need to define two functions. One that given the
 current state of the system, `u`, the parameters, `p`, and the time, `t`, can
 determine the current transition rate (intensity)
 ```@example tut1
@@ -80,11 +80,11 @@ occurred (at time `integrator.t`)
 ```@example tut1
 affect!(integrator) = (integrator.u[1] += 1)
 ```
-Here the convention is to take a [DifferentialEquations.jl
+Here, the convention is to take a [DifferentialEquations.jl
 integrator](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/),
-and directly modify the current solution value it stores. i.e. `integrator.u` is
+and directly modify the current solution value it stores. i.e., `integrator.u` is
 the current solution vector, with `integrator.u[1]` the first component of this
-vector. In our case we will only have one unknown, so this will be the current
+vector. In our case, we will only have one unknown, so this will be the current
 value of the counting process. As our jump process's transition rate is constant
 between jumps, we can use a [`ConstantRateJump`](@ref) to encode it
 ```@example tut1
@@ -133,7 +133,7 @@ plot(sol, labels = "N(t)", xlabel = "t", legend = :bottomright)
 The previous counting process could be interpreted as a birth process, where new
 individuals were created with a constant transition rate λ. Suppose we also
 allow individuals to be killed with a death rate of μ. The transition rate at
-time `t` for some individual to die, assuming the death of individuals are
+time `t` for some individual to die, assuming the deaths of individuals are
 independent, is just ``\mu N(t)``. Suppose we also wish to keep track of the
 number of deaths, ``D(t)``, that have occurred. We can store these as an
 auxiliary variable in `u[2]`. Our processes are then given mathematically by
@@ -152,7 +152,7 @@ deathrate(u,p,t) = p.μ * u[1]
 deathaffect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
 deathcrj = ConstantRateJump(deathrate, deathaffect!)
 ```
-As the death rate is constant *between* jumps we can encode this process as a
+As the death rate is constant *between* jumps, we can encode this process as a
 second `ConstantRateJump`. We then construct the corresponding problems, passing
 both jumps to `JumpProblem`, and can solve as before
 ```@example tut1
@@ -164,7 +164,7 @@ sol = solve(jprob, SSAStepper())
 plot(sol, labels = ["N(t)" "D(t)"], xlabel = "t", legend = :topleft)
 ```
 
-In the next tutorial we will also introduce [`MassActionJump`](@ref)s, which are
+In the next tutorial, we will also introduce [`MassActionJump`](@ref)s, which are
 a special type of [`ConstantRateJump`](@ref)s that require a more specialized
 form of transition rate and state update, but can offer better computational
 performance. They can encode any mass action reaction, as commonly arise in
@@ -173,14 +173,14 @@ chemical and population process models, and essentially require that
 by adding or subtracting a constant vector from `u`.
 
 ## `VariableRateJump`s for processes that are not constant between jumps
-So far we have assumed that our jump processes have transition rates that are
-constant in between jumps. In many applications this may be a limiting
-assumption. To support such models JumpProcesses has the
+So far, we have assumed that our jump processes have transition rates that are
+constant in between jumps. In many applications, this may be a limiting
+assumption. To support such models, JumpProcesses has the
 [`VariableRateJump`](@ref) type, which represents jump processes that have an
 arbitrary time dependence in the calculation of the transition rate, including
 transition rates that depend on states which can change in between two jumps
 occurring. Let's consider the previous example, but now let the birth rate be
-time dependent, ``b(t) = \lambda \left(\sin(\pi t / 2) + 1\right)``, so that our
+time-dependent, ``b(t) = \lambda \left(\sin(\pi t / 2) + 1\right)``, so that our
 model becomes
 ```math
 \begin{align*}
@@ -205,7 +205,7 @@ rate1(u,p,t) = p.λ * (sin(pi*t/2) + 1)
 affect1!(integrator) = (integrator.u[1] += 1)
 ```
 We next provide functions that determine a time interval over which the rate is
-bounded from above given `u`, `p` and `t`. From these we can construct the new
+bounded from above given `u`, `p` and `t`. From these, we can construct the new
 bounded `VariableRateJump`:
 ```@example tut1
 # We require that rate1(u,p,s) <= urate(u,p,s)
@@ -221,7 +221,7 @@ lrate(u, p, t) = p.λ
 vrj1 = VariableRateJump(rate1, affect1!; lrate, urate, rateinterval)
 ```
 
-Finally, to efficiently simulate the new jump process we must also specify a
+Finally, to efficiently simulate the new jump process, we must also specify a
 dependency graph. This indicates when a given jump occurs, which jumps in the
 system need to have their rates and/or rate bounds recalculated (for example,
 due to depending on changed components in `u`). We also assume the convention
@@ -231,10 +231,10 @@ relative ordering of jumps of each distinct type, but always reorders all
 `ConstantRateJump` representing the death process will have internal index 1,
 and our new bounded `VariableRateJump` for birth will have internal index 2.
 Since birth modifies the population size `u[1]`, and death occurs at a rate
-proportional to `u[1]`, when birth occurs we need to recalculate both of rates.
+proportional to `u[1]`, when birth occurs we need to recalculate both rates.
 In contrast, death does not change `u[1]`, and so when death occurs we only need
 to recalculate the death rate. The graph below encodes the dependents of the
-death (`dep_graph[1]`) and birth (`dep_graph[2]`) jumps respectively
+death (`dep_graph[1]`) and birth (`dep_graph[2]`) jumps, respectively
 ```@example tut1
 dep_graph = [[1], [1,2]]
 ```
@@ -252,27 +252,27 @@ plot(sol, labels = ["N(t)" "D(t)"], xlabel = "t", legend = :topleft)
 If we did not know the upper rate bound or rate interval functions for the
 time-dependent rate, we would have to use a continuous problem type and general
 `VariableRateJump` to correctly handle calculating the jump times. Under this
-assumption we would define a general `VariableRateJump` as following:
+assumption, we would define a general `VariableRateJump` as following:
 ```@example tut1
 vrj2 = VariableRateJump(rate1, affect1!)
 ```
 
 Since the death rate now depends on a variable, `u[2]`, modified by a general
-`VariableRateJump` (i.e. one that is not bounded), we also need to redefine the
+`VariableRateJump` (i.e., one that is not bounded), we also need to redefine the
 death jump process as a general `VariableRateJump`
 ```@example tut1
 deathvrj = VariableRateJump(deathrate, deathaffect!)
 ```
 
-To simulate our jump process we now need to construct a continuous problem type
+To simulate our jump process, we now need to construct a continuous problem type
 to couple the jumps to, for example an ordinary differential equation (ODE) or
 stochastic differential equation (SDE). Let's use an ODE, encoded via an
 `ODEProblem`. We simply set the ODE derivative to zero to preserve the state. We
-are essentially defining a combined ODE-jump process, i.e. a [piecewise
+are essentially defining a combined ODE-jump process, i.e., a [piecewise
 deterministic Markov
 process](https://en.wikipedia.org/wiki/Piecewise-deterministic_Markov_process),
 but one where the ODE is trivial and does not change the state. To use this
-problem type and the ODE solvers we first load `OrdinaryDiffEq.jl` or
+problem type and the ODE solvers, we first load `OrdinaryDiffEq.jl` or
 `DifferentialEquations.jl`. If neither is installed, we first
 ```julia
 using Pkg
@@ -297,7 +297,7 @@ oprob = ODEProblem(f!, u₀, tspan, p)
 jprob = JumpProblem(oprob, Direct(), vrj2, deathvrj)
 ```
 We can now simulate our jump process, using the `Tsit5` ODE solver as the time
-stepper in place of `SSAStepper`
+stepper, in place of `SSAStepper`
 ```@example tut1
 sol = solve(jprob, Tsit5())
 plot(sol, label=["N(t)" "D(t)"], xlabel="t", legend=:topleft)

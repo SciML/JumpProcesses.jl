@@ -39,11 +39,11 @@ jump events occur. These jumps can be specified as a [`ConstantRateJump`](@ref),
 [`MassActionJump`](@ref), or a [`VariableRateJump`](@ref).
 
 Each individual type of jump that can occur is represented through (implicitly
-or explicitly) specifying two pieces of information; a `rate` function (i.e.
+or explicitly) specifying two pieces of information; a `rate` function (i.e.,
 intensity or propensity) for the jump and an `affect!` function for the jump.
 The former gives the probability per time a particular jump can occur given the
 current state of the system, and hence determines the time at which jumps can
-happen. The later specifies the instantaneous change in the state of the system
+happen. The latter specifies the instantaneous change in the state of the system
 when the jump occurs.
 
 A specific jump type is a [`VariableRateJump`](@ref) if its rate function is
@@ -51,7 +51,7 @@ dependent on values which may change between the occurrence of any two jump
 events of the process. Examples include jumps where the rate is an explicit
 function of time, or depends on a state variable that is modified via continuous
 dynamics such as an ODE or SDE. Such "general" `VariableRateJump`s can be
-expensive to simulate because it is necessary to take into account the (possibly
+expensive to simulate because it is necessary to consider the (possibly
 continuous) changes in the rate function when calculating the next jump time.
 
 *Bounded* [`VariableRateJump`](@ref)s represent a special subset of
@@ -84,12 +84,12 @@ discrete steps through time, over which they simultaneously execute many jumps.
 These methods can be much faster as they do not need to simulate the realization
 of every individual jump event. τ-leaping methods trade accuracy for speed, and
 are best used when a set of jumps do not make significant changes to the
-processes' state and/or rates over the course of one time-step (i.e. during a
+processes' state and/or rates over the course of one time-step (i.e., during a
 leap interval). A single [`RegularJump`](@ref) is used to encode jumps for
 τ-leaping algorithms. While τ-leaping methods can be proven to converge in the
 limit that the time-step approaches zero, their accuracy can be highly dependent
 on the chosen time-step. As a rule of thumb, if changes to the state variable
-`u` during a time-step (i.e. leap interval) are "minimal" compared to size of
+`u` during a time-step (i.e., leap interval) are "minimal" compared to the size of
 the system, an τ-leaping method can often provide reasonable solution
 approximations.
 
@@ -145,7 +145,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs=nothi
   ``3A \overset{k}{\rightarrow} B`` the rate function would be
   `k*A*(A-1)*(A-2)/3!`. To *avoid* having the reaction rates rescaled (by `1/2`
   and `1/6` for these two examples), one can pass the `MassActionJump`
-  constructor the optional named parameter `scale_rates = false`, i.e. use
+  constructor the optional named parameter `scale_rates = false`, i.e., use
   ```julia
   MassActionJump(reactant_stoich, net_stoich; scale_rates = false, param_idxs)
   ```
@@ -158,7 +158,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs=nothi
   net_stoich = [[1 => 1]]
   jump = MassActionJump(reactant_stoich, net_stoich; param_idxs=[1])
   ```
-  Alternatively one can create an empty vector of pairs to represent the reaction:
+  Alternatively, one can create an empty vector of pairs to represent the reaction:
   ```julia
   p = [1.]
   reactant_stoich = [Vector{Pair{Int,Int}}()]
@@ -222,7 +222,7 @@ Note that
 - It is currently only possible to simulate `VariableRateJump`s with
   `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
   `Coevolve` aggregator.
-- When choosing a different aggregator than `Coevolve`, `SSAStepper` can not
+- When choosing a different aggregator than `Coevolve`, `SSAStepper` cannot
   currently be used, and the `JumpProblem` must be coupled to a continuous
   problem type such as an `ODEProblem` to handle time-stepping. The continuous
   time-stepper treats *all* `VariableRateJump`s as `ContinuousCallback`s, using
@@ -242,7 +242,7 @@ RegularJump(rate, c, numjumps; mark_dist = nothing)
   jump process
 - `c(du, u, p, t, counts, mark)` calculates the update given `counts` number of
   jumps for each jump process in the interval.
-- `numjumps` is the number of jump processes, i.e. the number of `rate`
+- `numjumps` is the number of jump processes, i.e., the number of `rate`
   equations and the number of `counts`.
 - `mark_dist` is the distribution for a mark.
 
@@ -300,16 +300,16 @@ aggregator requires various types of dependency graphs, see the next section):
   aggregator uses a different internal storage format for collections of
   `ConstantRateJumps`.
 - *`DirectCR`*: The Composition-Rejection Direct method of Slepoy et al [2]. For
-  large networks and linear chain-type networks it will often give better
+  large networks and linear chain-type networks, it will often give better
   performance than `Direct`.
 - *`SortingDirect`*: The Sorting Direct Method of McCollum et al [3]. It will
   usually offer performance as good as `Direct`, and for some systems can offer
   substantially better performance.
 - *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al [4,5]. With `RSSACR`,
-  for very large reaction networks it often offers the best performance of all
+  for very large reaction networks, it often offers the best performance of all
   methods.
 - *`RSSACR`*: The Rejection SSA (RSSA) with Composition-Rejection method of
-  Thanh et al [6]. With `RSSA`, for very large reaction networks it often offers
+  Thanh et al [6]. With `RSSA`, for very large reaction networks, it often offers
   the best performance of all methods.
 - `RDirect`: A variant of Gillespie's Direct method [1] that uses rejection to
   sample the next reaction.
@@ -317,7 +317,7 @@ aggregator requires various types of dependency graphs, see the next section):
   offer better performance and be preferred to `FRM`.
 - `FRMFW`: The Gillespie first reaction method SSA [1] with `FunctionWrappers`.
 - *`NRM`*: The Gibson-Bruck Next Reaction Method [7]. For some reaction network
-   structures this may offer better performance than `Direct` (for example,
+   structures, this may offer better performance than `Direct` (for example,
    large, linear chains of reactions).
 - *`Coevolve`*: An adaptation of the COEVOLVE algorithm of Farajtabar et al [8].
   Currently the only aggregator that also supports *bounded*
@@ -372,7 +372,7 @@ evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
 Italicized constant rate jump aggregators above require the user to pass a
 dependency graph to `JumpProblem`. `Coevolve`, `DirectCR`, `NRM`, and
  `SortingDirect` require a jump-jump dependency graph, passed through the named
-parameter `dep_graph`. i.e.
+parameter `dep_graph`. i.e.,
 ```julia
 JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)
 ```
@@ -388,7 +388,7 @@ when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
 `ConstantRateJump`s and bounded `VariableRateJump`s. General `VariableRateJump`s
 are not handled by aggregators, and so not included in the jump ordering for
 dependency graphs. Note that the relative order between `ConstantRateJump`s and
-relative order between bounded `VariableRateJump`s is preserved. In this way one
+relative order between bounded `VariableRateJump`s is preserved. In this way, one
 can precalculate the jump order to manually construct dependency graphs.
 
 `RSSA` and `RSSACR` require two different types of dependency graphs, passed
@@ -401,7 +401,7 @@ through the following `JumpProblem` kwargs:
    value, `u[i]`, altered when the jump occurs.
 
 For systems generated from a [Catalyst](https://docs.sciml.ai/Catalyst/stable/)
-`reaction_network` these will be auto-generated. Otherwise you must explicitly
+`reaction_network` these will be auto-generated. Otherwise, you must explicitly
 construct and pass in these mappings.
 
 ## Recommendations for exact methods
@@ -430,7 +430,7 @@ For systems with only `ConstantRateJump`s and `MassActionJump`s,
   often substantially outperform the other methods.
 
 For pure jump systems, time-step using `SSAStepper()` with a `DiscreteProblem`
-unless one has general (i.e. non-bounded) `VariableRateJump`s.
+unless one has general (i.e., non-bounded) `VariableRateJump`s.
 
 In general, for systems with sparse dependency graphs if `Direct` is slow, one
 of `SortingDirect`, `RSSA` or `RSSACR` will usually offer substantially better

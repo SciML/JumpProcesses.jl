@@ -151,14 +151,14 @@ function drift(x, p, t)
     return p * x
 end
 
-function rate(x, p, t)
+function rate2(x, p, t)
     return 3 * max(0.0, x[1])
 end
 
-function affect!(integrator)
+function affect!2(integrator)
     integrator.u ./= 2
 end
 x0 = rand(2)
 prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
-jump = VariableRateJump(rate, affect!)
+jump = VariableRateJump(rate2, affect!2)
 jump_prob = JumpProblem(prob, Direct(), jump)

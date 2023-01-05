@@ -278,6 +278,8 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
 end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
+    _f = SciMLBase.unwrapped_f(prob.f)
+
     if isinplace(prob)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
@@ -312,6 +314,8 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
+    _f = SciMLBase.unwrapped_f(prob.f)
+
     if isinplace(prob)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
@@ -337,6 +341,8 @@ end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
 function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
+    _f = SciMLBase.unwrapped_f(prob.f)
+
     if isinplace(prob)
         jump_f = let _f = _f
             function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)

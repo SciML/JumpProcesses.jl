@@ -14,7 +14,11 @@ A 5 by 5 Cartesian grid:
 | . | . | . | . | . |
 | A | . | . | . | . |
 
-Suppose we have a reversible binding system described by $$A+B \to C$$ at rate $$k_1$$ and $$C \to A+B$$ at rate $$k_2$$. Further suppose that all $$A$$ molecules start in the lower left corner, while all $$B$$ molecules start in the upper right corner of a 5 by 5 grid. There are no $$C$$ molecules at the start.
+Suppose we have a reversible binding system described by
+$$A+B \to C$$ at rate $$k_1$$ and $$C \to A+B$$ at rate $$k_2$$.
+Further, suppose that all $$A$$ molecules start in the lower-left corner,
+while all $$B$$ molecules start in the upper-right corner of a 5 by 5 grid.
+There are no $$C$$ molecules at the start.
 
 We first create the grid:
 
@@ -48,7 +52,7 @@ Now we can create the `DiscreteProblem`:
 prob = DiscreteProblem(starting_state, tspan, rates)
 ```
 
-Since both reactions are [massaction reactions](https://en.wikipedia.org/wiki/Law_of_mass_action), we put them together in a `MassActionJump`. In order to do that we create two stoichiometry vectors. The net stoichiometry vector describes which molecules change in number and how much after each reaction; for example, `[1 => -1]` is the first molecule disappearing. The reaction stoichiometry vector describes what the reactants of each reaction are; for example, `[1 => 1, 2 => 1]` would mean that the reactants are one molecule of type 1 and one molecule of type 2.
+Since both reactions are [massaction reactions](https://en.wikipedia.org/wiki/Law_of_mass_action), we put them together in a `MassActionJump`. In order to do that, we create two stoichiometry vectors. The net stoichiometry vector describes which molecules change in number and how much after each reaction; for example, `[1 => -1]` is the first molecule disappearing. The reaction stoichiometry vector describes what the reactants of each reaction are; for example, `[1 => 1, 2 => 1]` would mean that the reactants are one molecule of type 1, and one molecule of type 2.
 
 ```@example spatial
 netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
@@ -56,7 +60,7 @@ reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 ```
 
-The last thing to set up is the hopping constants -- the probability per time of an individual molecule of each species hopping from one site to another site. In practice this parameter, as well as reaction rates, are obtained empirically. Suppose that molecule $$C$$ cannot diffuse, while molecules $$A$$ and $$B$$ diffuse at probability per time 1 (i.e. the time of the diffusive hop is exponentially distributed with mean 1). Entry $$(s,i)$$ of `hopping_constants` is the hopping rate of species $$s$$ at site $$i$$ to any of its neighboring sites (diagonal hops are not allowed).
+The last thing to set up is the hopping constants -- the probability per time of an individual molecule of each species hopping from one site to another site. In practice, this parameter, as well as reaction rates, are obtained empirically. Suppose that molecule $$C$$ cannot diffuse, while molecules $$A$$ and $$B$$ diffuse at probability per time 1 (i.e., the time of the diffusive hop is exponentially distributed with mean 1). Entry $$(s,i)$$ of `hopping_constants` is the hopping rate of species $$s$$ at site $$i$$ to any of its neighboring sites (diagonal hops are not allowed).
 
 ```@example spatial
 hopping_constants = ones(num_species, num_nodes)
@@ -160,7 +164,7 @@ using Graphs
 graph = cycle_digraph(5) # directed cyclic graph on 5 nodes
 ```
 
-Now either `graph` or `grid` can be used as `spatial_system` in creation of the `JumpProblem`.
+Now, either `graph` or `grid` can be used as `spatial_system` in creation of the `JumpProblem`.
 
 ### Hopping rates
 
@@ -190,7 +194,7 @@ end
 hopping_constants=Pair(species_hop_constants, site_hop_constants)
 ```
 
-We must combine both vectors into a pair as in the last line above.
+We must combine both vectors into a pair, as in the last line above.
 
 Finally, to use in `hopping_constants` of form $$D_{s,i} * L_{i,j}$$ we construct a matrix instead of a vector for $$D_{s,j}$$.
 
@@ -203,13 +207,13 @@ end
 hopping_constants=Pair(species_hop_constants, site_hop_constants)
 ```
 
-We can use either of the four versions of `hopping_constants` to construct a `JumpProblem` with the same syntax as in the original example. The different forms of hopping rates are supported not only for convenience but also for better memory usage and performance. So it is recommended that the most specialized form of hopping rates is used.
+We can use either of the four versions of `hopping_constants` to construct a `JumpProblem` with the same syntax as in the original example. The different forms of hopping rates are supported not only for convenience, but also for better memory usage and performance. So it is recommended that the most specialized form of hopping rates is used.
 
 ### Solvers
 
 There are currently two specialized "spatial" solvers: `NSM` and `DirectCRDirect`. The former stands for Next Subvolume Method [^1]. The latter employs Composition-Rejection to sample the next site to fire, similar to the ordinary DirectCR method. For larger networks `DirectCRDirect` is expected to be faster. Both methods can be used interchangeably.
 
-Additionally, all standard solvers are supported as well, although they are expected to use more memory and be slower. They "flatten" the problem, i.e. turn all hops into reactions, resulting in a much larger system. For example, to use the Next Reaction Method (`NRM`), simply pass in `NRM()` instead of `NSM()` in the construction of the `JumpProblem`. Importantly, you *must* pass in `hopping_constants` in the `D_{s,i,j}` or `D_{s,i}` form to use any of the non-specialized solvers.
+Additionally, all standard solvers are supported as well, although they are expected to use more memory and be slower. They "flatten" the problem, i.e., turn all hops into reactions, resulting in a much larger system. For example, to use the Next Reaction Method (`NRM`), simply pass in `NRM()` instead of `NSM()` in the construction of the `JumpProblem`. Importantly, you *must* pass in `hopping_constants` in the `D_{s,i,j}` or `D_{s,i}` form to use any of the non-specialized solvers.
 
 ## References
 [^1]: Elf, Johan and Ehrenberg, Mäns. “Spontaneous separation of bi-stable biochemical systems into spatial domains of opposite phases”. In: _Systems biology_ 1.2 (2004), pp. 230–236.

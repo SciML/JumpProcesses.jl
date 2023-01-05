@@ -258,21 +258,20 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
                 du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
                 return du
             end
         end
     end
 
     ttype = eltype(prob.tspan)
-    @show jumps
     u0 = ExtendedJumpArray(prob.u0,
                             [-randexp(rng, ttype) for i in 1:length(jumps.variable_jumps)])
     remake(prob, f = ODEFunction{isinplace(prob)}(jump_f), u0 = u0)
@@ -283,14 +282,14 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
                 du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
                 return du
             end
         end
@@ -317,14 +316,14 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(du.u, u.u, h, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, h, p, t)
                 du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
                 return du
             end
         end
@@ -342,14 +341,14 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
         jump_f = let _f = _f
             function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(out, du.u, u.u, h, p, t)
-                update_jumps!(out, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(out, u, p, t, length(u.u), jumps...)
             end
         end
     else
         jump_f = let _f = _f
             function (du, u::ExtendedJumpArray, h, p, t)
                 out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps.variable_jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
                 return du
             end
         end

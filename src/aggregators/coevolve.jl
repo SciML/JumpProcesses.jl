@@ -27,7 +27,7 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
                                  rng::RNG; u::U, dep_graph = nothing, lrates, urates,
                                  rateintervals, haslratevec) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
+        if (get_num_majumps(maj) == 0) || !isempty(urates)
             error("To use Coevolve a dependency graph between jumps must be supplied.")
         else
             dg = make_dependency_graph(length(u), maj)

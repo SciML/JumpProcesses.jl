@@ -145,6 +145,24 @@ prob = ODEProblem(f4, [x₀], Δt)
 jumpProblem = JumpProblem(prob, Direct(), jump)
 sol = solve(jumpProblem, Tsit5())
 
+# Out of place test
+
+function drift(x, p, t)
+    return p * x
+end
+
+function rate2(x, p, t)
+    return 3 * max(0.0, x[1])
+end
+
+function affect!2(integrator)
+    integrator.u ./= 2
+end
+x0 = rand(2)
+prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
+jump = VariableRateJump(rate2, affect!2)
+jump_prob = JumpProblem(prob, Direct(), jump)
+
 # test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
 # jumps
 let

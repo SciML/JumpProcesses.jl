@@ -6,19 +6,37 @@ solve(prob::JumpProblem,alg;kwargs)
 
 ## Recommended Methods
 
-A `JumpProblem(prob,aggregator,jumps...)` comes in two forms. The first major
-form is if it does not have a `RegularJump`. In this case, it can be solved with
-any integrator on  `prob`. However, in the case of a pure `JumpProblem` (a
-`JumpProblem` over a  `DiscreteProblem`), there are special algorithms
-available.  The `SSAStepper()` is an efficient streamlined algorithm for running
-the  `aggregator` version of the SSA for pure `ConstantRateJump` and/or
-`MassActionJump` problems. However, it is not compatible with event handling. If
-events are necessary, then `FunctionMap` does well.
+`JumpProblem`s can be solved with two classes of methods, exact and inexact.
+Exact algorithms currently sample realizations of the jump processes in
+chronological order, executing individual jumps sequentially at randomly sampled
+times. In contrast, inexact (τ-leaping) methods are time-step based, executing
+multiple occurrences of jumps during each time-step. These methods can be much
+faster as they only simulate the total number of jumps over each leap interval,
+and thus do not need to simulate the realization of every single jump. Jumps for
+use with exact simulation methods can be defined as `ConstantRateJump`s,
+`MassActionJump`s, and/or `VariableRateJump`. Jumps for use with inexact
+τ-leaping methods should be defined as `RegularJump`s.
 
-If there is a `RegularJump`, then specific methods must be used. The current
-recommended method is `TauLeaping` if you need adaptivity, events, etc. If you
-just need the most barebones fixed time step leaping method, then `SimpleTauLeaping`
-can have performance benefits.
+There are special algorithms available for efficiently simulating an exact, pure
+`JumpProblem` (i.e., a `JumpProblem` over a `DiscreteProblem`).  `SSAStepper()`
+is an efficient streamlined integrator for time stepping such problems from
+individual jump to jump. This integrator is named after Stochastic Simulation
+Algorithms (SSAs), commonly used naming in chemistry and biology applications
+for the class of exact jump process simulation algorithms. In turn, we denote by
+"aggregators" the algorithms that `SSAStepper` calls to calculate the next jump
+time and to execute a jump (i.e., change the system state appropriately). All
+JumpProcesses aggregators can be used with `ConstantRateJump`s and
+`MassActionJump`s, with a subset of aggregators also working with bounded
+ `VariableRateJump`s (see [the first tutorial](@ref poisson_proc_tutorial) for
+the definition of bounded `VariableRateJump`s). Although `SSAStepper()` is
+usually faster, it only supports discrete events (`DiscreteCallback`s), for pure
+jump problems requiring continuous events (`ContinuousCallback`s) the less
+performant `FunctionMap` time-stepper can be used.
+
+If there is a `RegularJump`, then inexact τ-leaping methods must be used. The
+current recommended method is `TauLeaping` if one needs adaptivity, events, etc.
+If one only needs the most barebones fixed time-step leaping method, then
+`SimpleTauLeaping` can have performance benefits.
 
 ## Special Methods for Pure Jump Problems
 
@@ -28,9 +46,10 @@ algorithms are optimized for pure jump problems.
 
 ### JumpProcesses.jl
 
-- `SSAStepper`: a stepping algorithm for pure `ConstantRateJump` and/or
-  `MassActionJump` `JumpProblem`s. Supports handling of `DiscreteCallback`
-  and saving controls like `saveat`.
+- `SSAStepper`: a stepping integrator for `JumpProblem`s defined over
+  `DiscreteProblem`s involving `ConstantRateJump`s, `MassActionJump`s, and/or
+  bounded `VariableRateJump`s . Supports handling of `DiscreteCallback`s and
+  saving controls like `saveat`.
 
 ## RegularJump Compatible Methods
 

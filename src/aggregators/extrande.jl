@@ -32,10 +32,10 @@ end
 
 ############################# Required Functions ##############################
 function aggregate(aggregator::Extrande, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; bounded_va_jumps, kwargs...)
+                   ma_jumps, save_positions, rng; variable_jumps, kwargs...)
 
-    rates, affects! = get_jump_info_fwrappers(u, p, t, (constant_jumps..., bounded_va_jumps..., NullAffectJump))
-    rbnds, wnds = get_va_jump_bound_info_fwrapper(u, p, t, (constant_jumps..., bounded_va_jumps...,NullAffectJump))
+    rates, affects! = get_jump_info_fwrappers(u, p, t, (constant_jumps..., variable_jumps..., NullAffectJump))
+    rbnds, wnds = get_va_jump_bound_info_fwrapper(u, p, t, (constant_jumps..., variable_jumps...,NullAffectJump))
     build_jump_aggregation(ExtrandeJumpAggregation, u, p, t, end_time, ma_jumps,
                            rates, affects!, save_positions, rng; u=u, rate_bounds=rbnds, windows=wnds, kwargs...)
 end

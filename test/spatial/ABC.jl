@@ -46,7 +46,7 @@ function get_mean_end_state(jump_prob, Nsims)
 end
 
 # testing
-grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
+grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
                                         hopping_constants = hopping_constants,
                                         spatial_system = grid,

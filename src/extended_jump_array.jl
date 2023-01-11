@@ -4,7 +4,7 @@ $(TYPEDEF)
 Extended state definition used within integrators when there are
 `VariableRateJump`s in a system. For detailed examples and usage information see
 the
-- [Tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+- [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 ### Fields
 
@@ -189,3 +189,10 @@ unpack(x::ExtendedJumpArray, ::Val{:jump_u}) = x.jump_u
 end
 unpack_args(i, args::Tuple{Any}) = (unpack(args[1], i),)
 unpack_args(::Any, args::Tuple{}) = ()
+
+Base.:*(x::ExtendedJumpArray, y::Number) = ExtendedJumpArray(y .* x.u, y .* x.jump_u)
+Base.:*(y::Number, x::ExtendedJumpArray) = ExtendedJumpArray(y .* x.u, y .* x.jump_u)
+Base.:/(x::ExtendedJumpArray, y::Number) = ExtendedJumpArray(x.u ./ y, x.jump_u ./ y)
+function Base.:+(x::ExtendedJumpArray, y::ExtendedJumpArray)
+    ExtendedJumpArray(x.u .+ y.u, x.jump_u .+ y.jump_u)
+end

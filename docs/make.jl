@@ -1,5 +1,10 @@
 using Documenter, JumpProcesses
 
+docpath = Base.source_dir()
+assetpath = joinpath(docpath, "src", "assets")
+cp(joinpath(docpath, "Manifest.toml"), joinpath(assetpath, "Manifest.toml"), force = true)
+cp(joinpath(docpath, "Project.toml"), joinpath(assetpath, "Project.toml"), force = true)
+
 include("pages.jl")
 
 mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/require", "[tex]/mathtools"]),
@@ -19,7 +24,7 @@ makedocs(sitename = "JumpProcesses.jl",
          doctest = false,
          format = Documenter.HTML(; analytics = "UA-90474609-3",
                                   assets = ["assets/favicon.ico"],
-                                  canonical = "https://jump.sciml.ai/stable/",
+                                  canonical = "https://docs.sciml.ai/JumpProcesses/",
                                   prettyurls = (get(ENV, "CI", nothing) == "true"),
                                   mathengine),
          pages = pages)

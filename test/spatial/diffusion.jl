@@ -55,12 +55,12 @@ Bt = B'
 analytic_solution(t) = B * diagm(ℯ .^ (t * evals)) * Bt * reshape(prob.u0, num_nodes, 1)
 
 num_time_points = 10
-Nsims = 10000
-rel_tol = 0.01
+Nsims = 50000
+rel_tol = 0.02
 times = 0.0:(tf / num_time_points):tf
 
 algs = [NSM(), DirectCRDirect()]
-grids = [CartesianGridRej(dims), CartesianGridIter(dims), Graphs.grid(dims)]
+grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps,
                                         hopping_constants = hopping_constants,
                                         spatial_system = grid,
@@ -80,7 +80,7 @@ for alg in algs
                       spatial_system = grids[1], save_positions = (false, false)))
     push!(jump_problems,
           JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # hop rates of form L_{s,i,j}
@@ -96,7 +96,7 @@ for alg in algs
                       spatial_system = grids[1], save_positions = (false, false)))
     push!(jump_problems,
           JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # hop rates of form D_s * L_{i,j}
@@ -113,7 +113,7 @@ for alg in algs
     push!(jump_problems,
           JumpProblem(prob, alg, majumps,
                       hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # hop rates of form D_{s,i} * L_{i,j}
@@ -130,7 +130,7 @@ for alg in algs
     push!(jump_problems,
           JumpProblem(prob, alg, majumps,
                       hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[3], save_positions = (false, false)))
+                      spatial_system = grids[end], save_positions = (false, false)))
 end
 
 # testing
@@ -143,7 +143,7 @@ for (j, spatial_jump_prob) in enumerate(jump_problems)
     end
 end
 
-# testing non-uniform hopping rates
+# testing non-uniform hopping rates. Only hopping up or left.
 dims = (2, 2)
 num_nodes = prod(dims)
 grid = Graphs.grid(dims)
@@ -153,7 +153,7 @@ for ci in CartesianIndices(hopping_constants)
     hopping_constants[species, site] = zeros(outdegree(grid, site))
     for (n, nb) in enumerate(neighbors(grid, site))
         if nb < site
-            hopping_constants[species, site][n] = 1.0
+            hopping_constants[species, site][n] = 10.0
         end
     end
 end

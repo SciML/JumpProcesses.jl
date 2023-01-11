@@ -8,6 +8,7 @@ using DataStructures, PoissonRandom, Random, ArrayInterfaceCore
 using FunctionWrappers, UnPack
 using Graphs
 using SciMLBase: SciMLBase
+using Base.FastMath: add_fast
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
@@ -50,6 +51,7 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 include("aggregators/extrande.jl")
+include("aggregators/coevolve.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -72,8 +74,8 @@ include("coupling.jl")
 include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 
-export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump,
-       JumpSet
+export ConstantRateJump, VariableRateJump, RegularJump,
+       MassActionJump, JumpSet
 
 export JumpProblem
 
@@ -84,6 +86,7 @@ export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
 export Extrande
+export Coevolve
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 
@@ -94,7 +97,7 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # spatial structs and functions
-export CartesianGrid, CartesianGridRej, CartesianGridIter
+export CartesianGrid, CartesianGridRej
 export SpatialMassActionJump
 export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect

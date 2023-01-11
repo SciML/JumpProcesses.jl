@@ -109,7 +109,7 @@ struct CartesianGridRej{N, T}
     dims::NTuple{N, Int}
 
     "number of neighbor for each site"
-    nums_neighbors::Vector{Int}
+    nums_neighbors::Vector{Int8}
     CI::CartesianIndices{N, T}
     LI::LinearIndices{N, T}
 
@@ -127,7 +127,7 @@ function CartesianGridRej(dims::Tuple)
     CI = CartesianIndices(dims)
     LI = LinearIndices(dims)
     offsets = potential_offsets(dim)
-    nums_neighbors = [count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
+    nums_neighbors = Int8[count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
     CartesianGridRej(dims, nums_neighbors, CI, LI, offsets)
 end
 CartesianGridRej(dims) = CartesianGridRej(Tuple(dims))
@@ -144,31 +144,7 @@ function rand_nbr(rng, grid::CartesianGridRej, site::Int)
     end
 end
 
-# neighbor sampling is iterator-based
-struct CartesianGridIter{N, T}
-    dims::NTuple{N, Int}
-    nums_neighbors::Vector{Int}
-    CI::CartesianIndices{N, T}
-    LI::LinearIndices{N, T}
-    offsets::Vector{CartesianIndex{N}}
-end
-function CartesianGridIter(dims::Tuple)
-    dim = length(dims)
-    CI = CartesianIndices(dims)
-    LI = LinearIndices(dims)
-    offsets = potential_offsets(dim)
-    nums_neighbors = [count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
-    CartesianGridIter(dims, nums_neighbors, CI, LI, offsets)
-end
-CartesianGridIter(dims) = CartesianGridIter(Tuple(dims))
-function CartesianGridIter(dimension, linear_size::Int)
-    CartesianGridIter([linear_size for i in 1:dimension])
-end
-function rand_nbr(rng, grid::CartesianGridIter, site::Int)
-    nth_nbr(grid, site, rand(rng, 1:outdegree(grid, site)))
-end
-
 function Base.show(io::IO, ::MIME"text/plain",
-                   grid::Union{CartesianGridRej, CartesianGridIter})
+                   grid::CartesianGridRej)
     println(io, "A Cartesian grid with dimensions $(grid.dims)")
 end

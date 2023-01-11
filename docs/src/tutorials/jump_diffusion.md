@@ -2,7 +2,7 @@
 
 !!! note
 
-    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/dev/modules/DiffEqDocs/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/dev/modules/DiffEqDocs/).
+    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 Jump Diffusion equations are stochastic differential equations with discontinuous
 jumps. These can be written as:
@@ -11,12 +11,12 @@ jumps. These can be written as:
 du = f(u,p,t)dt + \sum_{j}g_j(u,p,t)dW_j(t) + \sum_{i}h_i(u,p,t)dN_i(t)
 ```
 where ``N_i`` is a Poisson-counter which denotes jumps of size ``h_i``. In this
-tutorial we will show how to solve problems with even more general jumps. In the
+tutorial, we will show how to solve problems with even more general jumps. In the
 special case that ``g_j = 0`` for all ``j``, we'll call the resulting jump-ODE a
 [piecewise deterministic Markov
 process](https://en.wikipedia.org/wiki/Piecewise-deterministic_Markov_process).
 
-Before running this tutorial please install the following packages if they are
+Before running this tutorial, please install the following packages if they are
 not already installed
 ```julia
 using Pkg
@@ -58,7 +58,7 @@ prob = ODEProblem(f, [0.2], (0.0, 10.0))
 ```
 Notice that, even though our equation is scalar, we define it using the in-place
 array form. Variable rate jump equations will require this form. Note that for
-this tutorial we solve a one-dimensional problem, but the same syntax applies
+this tutorial, we solve a one-dimensional problem, but the same syntax applies
 for solving a system of differential equations with multiple jumps.
 
 Now we define our `rate` equation for our jump. Since it's just the constant
@@ -67,9 +67,9 @@ value 2, we do:
 rate(u, p, t) = 2
 ```
 Now we define the `affect!` of the jump. This is the same as an `affect!` from a
-[`DiscreteCallback`](https://docs.sciml.ai/dev/modules/DiffEqDocs/features/callback_functions/),
+[`DiscreteCallback`](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
 and thus acts directly on the
-[integrator](https://docs.sciml.ai/dev/modules/DiffEqDocs/basics/integrator/).
+[integrator](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/).
 Therefore, to make it halve the current value of `u`, we do:
 ```@example tut3
 function affect!(integrator)
@@ -117,8 +117,14 @@ which we once again solve using an ODE solver:
 sol = solve(jump_prob, Tsit5())
 plot(sol)
 ```
-In this way we have solve a mixed jump-ODE, i.e. a piecewise deterministic
+In this way we have solved a mixed jump-ODE, i.e., a piecewise deterministic
 Markov process.
+
+Note that in this case, the rates of the `VariableRateJump`s depend on a
+variable that is driven by an `ODEProblem`, and thus they would not satisfy the
+conditions to be represented as bounded `VariableRateJump`s (and hence cannot
+be simulated with the `Coevolve` aggregator).
+
 
 ## Jump Diffusion
 Now we will finally solve the jump diffusion problem. The steps are the same

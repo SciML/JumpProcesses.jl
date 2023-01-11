@@ -1,12 +1,13 @@
 """
 $(TYPEDEF)
 
-Highly efficient integrator for pure jump problems that involve only
-`ConstantRateJump`s and/or `MassActionJump`s.
+Highly efficient integrator for pure jump problems that involve only `ConstantRateJump`s,
+`MassActionJump`s, and/or `VariableRateJump`s *with rate bounds*.
 
 ## Notes
-- Only works with `JumProblem`s defined from `DiscreteProblem`s.
-- Only works with collections of `ConstantRateJump`s and `MassActionJump`s.
+- Only works with `JumpProblem`s defined from `DiscreteProblem`s.
+- Only works with collections of `ConstantRateJump`s, `MassActionJump`s, and
+  `VariableRateJump`s with rate bounds.
 - Only supports `DiscreteCallback`s for events.
 
 ## Examples
@@ -35,7 +36,7 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2)
 sol = solve(jump_prob, SSAStepper())
 ```
 see the
-[tutorial](https://jump.sciml.ai/stable/tutorials/discrete_stochastic_example/)
+[tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 for details.
 """
 struct SSAStepper <: DiffEqBase.DEAlgorithm end
@@ -102,7 +103,7 @@ function DiffEqBase.__solve(jump_prob::JumpProblem,
     integrator.sol
 end
 
-function DiffEqBase.solve!(integrator)
+function DiffEqBase.solve!(integrator::SSAIntegrator)
     end_time = integrator.sol.prob.tspan[2]
     while should_continue_solve(integrator) # It stops before adding a tstop over
         step!(integrator)
@@ -304,7 +305,7 @@ function reset_aggregated_jumps!(integrator::SSAIntegrator, uprev = nothing)
     nothing
 end
 
-function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = :Terminated)
+function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = ReturnCode.Terminated)
     integrator.keep_stepping = false
     integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, retcode)
     nothing

@@ -20,9 +20,13 @@ end
 function cat_problems(prob::DiffEqBase.AbstractODEProblem,
                       prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
+
+    _f = SciMLBase.unwrapped_f(prob.f)
+    _f_control = SciMLBase.unwrapped_f(prob_control.f)
+
     new_f = function (du, u, p, t)
-        prob.f(@view(du[1:l]), u.u, p, t)
-        prob_control.f(@view(du[(l + 1):(2 * l)]), u.u_control, p, t)
+        _f(@view(du[1:l]), u.u, p, t)
+        _f_control(@view(du[(l + 1):(2 * l)]), u.u_control, p, t)
     end
     u0_coupled = CoupledArray(prob.u0, prob_control.u0, true)
     ODEProblem(new_f, u0_coupled, prob.tspan, prob.p)
@@ -33,9 +37,13 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractOD
     if !(typeof(prob.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
         @warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
     end
+
+    _f = SciMLBase.unwrapped_f(prob.f)
+    _f_control = SciMLBase.unwrapped_f(prob_control.f)
+
     new_f = function (du, u, p, t)
-        prob.f(@view(du[1:l]), u.u, p, t)
-        prob_control.f(@view(du[(l + 1):(2 * l)]), u.u_control, p, t)
+        _f(@view(du[1:l]), u.u, p, t)
+        _f_control(@view(du[(l + 1):(2 * l)]), u.u_control, p, t)
     end
     u0_coupled = CoupledArray(prob.u0, prob_control.u0, true)
     ODEProblem(new_f, u0_coupled, prob.tspan, prob.p)
@@ -59,9 +67,13 @@ end
 function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
                       prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0)
+
+    _f = SciMLBase.unwrapped_f(prob.f)
+    _f_control = SciMLBase.unwrapped_f(prob_control.f)
+
     new_f = function (du, u, p, t)
-        prob.f(@view(du[1:l]), u.u, p, t)
-        prob_control.f(@view(du[(l + 1):(2 * l)]), u.u_control, p, t)
+        _f(@view(du[1:l]), u.u, p, t)
+        _f_control(@view(du[(l + 1):(2 * l)]), u.u_control, p, t)
     end
     new_g = function (du, u, p, t)
         prob.g(@view(du[1:l]), u.u, p, t)

@@ -448,4 +448,3 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
 end
 
 TreeViews.hastreeview(x::JumpProblem) = true
-

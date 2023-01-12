@@ -707,19 +707,22 @@ end
 
 function rate_window_function(jump)
     # Assumes that if no window is given the rate bound is valid for all times. 
-    return !(jump.rateinterval isa Nothing) ? jump.rateinterval : (u,p,t) -> Inf
+    return !(jump.rateinterval isa Nothing) ? jump.rateinterval : (u, p, t) -> Inf
 end
 
-function get_va_jump_bound_info_fwrapper(u,p,t,jumps)
-  RateWrapper   = FunctionWrappers.FunctionWrapper{typeof(t),Tuple{typeof(u), typeof(p), typeof(t)}}
+function get_va_jump_bound_info_fwrapper(u, p, t, jumps)
+    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
+                                                   Tuple{typeof(u), typeof(p), typeof(t)}}
 
-  if (jumps !== nothing) && !isempty(jumps)
-    rates    = [j isa VariableRateJump ? RateWrapper(j.urate) : RateWrapper(j.rate) for j in jumps]
-    wnds    = [j isa VariableRateJump ? RateWrapper(rate_window_function(j)) : RateWrapper((u,p,t) -> Inf) for j in jumps]
-  else
-    rates    = Vector{RateWrapper}()
-    wnds = Vector{RateWrapper}()
-  end
+    if (jumps !== nothing) && !isempty(jumps)
+        rates = [j isa VariableRateJump ? RateWrapper(j.urate) : RateWrapper(j.rate)
+                 for j in jumps]
+        wnds = [j isa VariableRateJump ? RateWrapper(rate_window_function(j)) :
+                RateWrapper((u, p, t) -> Inf) for j in jumps]
+    else
+        rates = Vector{RateWrapper}()
+        wnds = Vector{RateWrapper}()
+    end
 
-  rates, wnds
+    rates, wnds
 end

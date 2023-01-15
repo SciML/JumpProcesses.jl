@@ -731,7 +731,7 @@ Jump](@ref).
 
 ## RegularJumps and τ-Leaping
 The previous parts described how to use `ConstantRateJump`s, `MassActionJump`s,
-and `VariableRateJump`s, however, in many cases one does not require the
+and `VariableRateJump`s. However, in many cases one does not require the
 exactness of stepping to every jump time. Instead, regular jumping (i.e.,
 τ-leaping) allows pooling jumps together, and performing larger updates in a
 statistically-correct but more efficient manner. The trade-off is the

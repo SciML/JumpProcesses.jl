@@ -5,7 +5,7 @@
 """
 Gillespie's Direct method. `ConstantRateJump` rates and affects are stored in
 tuples. Fastest for a small (total) number of `ConstantRateJump`s or
-`MassActionJump`s (~10). For larger numbers of possible jumps use other
+`MassActionJump`s (~10). For larger numbers of possible jumps, use other
 methods.
 
 Daniel T. Gillespie, A general method for numerically simulating the stochastic
@@ -71,7 +71,7 @@ struct RSSA <: AbstractAggregatorAlgorithm end
 
 """
 The Rejection SSA Composition-Rejection method. Often the best performer for
-systems with tens of thousands of jumps and sparse depedency graphs.
+systems with tens of thousands of jumps and sparse dependency graphs.
 
 V. H. Thanh, R. Zunino, and C. Priami, Efficient constant-time complexity
 algorithm for stochastic simulation of large reaction networks, IEEE/ACM
@@ -120,7 +120,7 @@ systems with many species and many channels, Journal of Physical Chemistry A,
 struct NRM <: AbstractAggregatorAlgorithm end
 
 """
-An adaptaton of the COEVOLVE algorithm for simulating any compound jump process
+An adaptation of the COEVOLVE algorithm for simulating any compound jump process
 that evolves through time. This method handles variable intensity rates with
 user-defined bounds and inter-dependent processes. It reduces to NRM when rates
 are constant.

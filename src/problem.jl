@@ -44,15 +44,15 @@ then be passed within a single [`JumpSet`](@ref) or as subsequent sequential arg
 $(FIELDS)
 
 ## Keyword Arguments
-- `rng`, the random number generator to use. On 1.7 and up defaults to Julia's builtin
+- `rng`, the random number generator to use. On 1.7 and up defaults to Julia's built-in
   generator, below 1.7 uses RandomNumbers.jl's `Xorshifts.Xoroshiro128Star(rand(UInt64))`.
-- `save_positions=(true,true)`, specifies whether to save the system's state (before,after)
+- `save_positions=(true,true)`, specifies whether to save the system's state (before, after)
   the jump occurs.
 - `spatial_system`, for spatial problems the underlying spatial structure.
 - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
 - `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s
   with a supporting aggregator (such as `Coevolve`). They will then be handled via the
-  continuous integration interace, and treated like general `VariableRateJump`s.
+  continuous integration interface, and treated like general `VariableRateJump`s.
 
 Please see the [tutorial
 page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in the

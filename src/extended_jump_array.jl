@@ -2,7 +2,7 @@
 $(TYPEDEF)
 
 Extended state definition used within integrators when there are
-`VariableRateJump`s in a system. For detailed examples and usage information see
+`VariableRateJump`s in a system. For detailed examples and usage information, see
 the
 - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 

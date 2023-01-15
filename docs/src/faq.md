@@ -65,7 +65,7 @@ jprob = JumpProblem(dprob, Direct(), maj,
 uses the `Xoroshiro128Star` generator from
 [RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
 
-On version 1.7 and up, JumpProcesses uses Julia's builtin random number generator by
+On version 1.7 and up, JumpProcesses uses Julia's built-in random number generator by
 default. On versions below 1.7 it uses `Xoroshiro128Star`.
 
 ## What are these aggregators and aggregations in JumpProcesses?

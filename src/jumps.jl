@@ -4,7 +4,7 @@ $(TYPEDEF)
 Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
 does not *explicitly* depend on time. More precisely, one where the rate
 function is constant *between* the occurrence of jumps. For detailed examples
-and usage information see the
+and usage information, see the
 - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 ## Fields
@@ -12,7 +12,7 @@ and usage information see the
 $(FIELDS)
 
 ## Examples
-Suppose `u[1]` gives the amount of particles and `p[1]` the probability per time
+Suppose `u[1]` gives the number of particles and `p[1]` the probability per time
 each particle can decay away. A corresponding `ConstantRateJump` for this jump
 process is
 ```julia
@@ -35,11 +35,11 @@ $(TYPEDEF)
 
 Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that may
 explicitly depend on time. More precisely, one where the rate function is allowed to change
-*between* the occurrence of jumps. For detailed examples and usage information see the
+*between* the occurrence of jumps. For detailed examples and usage information, see the
 - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 Note that two types of `VariableRateJump`s are currently supported, with different
-performance charactertistics.
+performance characteritistics.
 - A general `VariableRateJump` or `VariableRateJump` will refer to one in which only `rate`
   and `affect` functions are specified.
 
@@ -74,8 +74,8 @@ p, t)` require that
 - For `s` in `[t, t + rateinterval(u, p, t)]`, we have that `lrate(u, p, t) <= rate(u, p, s)
   <= urate(u, p, t)`.
 - It is ok if these bounds would be violated during the time window due to another
-  `ConstantRateJump`, `MassActionJump` or bounded `VariableRateJump` occurring, however,
-  they must remaing valid if `u` changes for any other reason (for example, due to
+  `ConstantRateJump`, `MassActionJump` or bounded `VariableRateJump` occurring. However,
+  they must remain valid if `u` changes for any other reason (for example, due to
   continuous dynamics like ODEs, SDEs, or general `VariableRateJump`s).
 
 ## Fields
@@ -83,7 +83,7 @@ p, t)` require that
 $(FIELDS)
 
 ## Examples
-Suppose `u[1]` gives the amount of particles and `t*p[1]` the probability per time each
+Suppose `u[1]` gives the number of particles and `t*p[1]` the probability per time each
 particle can decay away. A corresponding `VariableRateJump` for this jump process is
 ```julia
 rate(u,p,t) = t*p[1]*u[1]
@@ -227,7 +227,7 @@ $(TYPEDEF)
 
 Optimized representation for `ConstantRateJump`s that can be represented in mass
 action form, offering improved performance within jump algorithms compared to
-`ConstantRateJump`. For detailed examples and usage information see the
+`ConstantRateJump`. For detailed examples and usage information, see the
 - [Main
   Docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump)
 - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
@@ -277,7 +277,7 @@ jprob = JumpProblem(prob, Direct(), maj)
 ```
 
 ## Notes
-- By default reaction rates are rescaled when constructing the `MassActionJump`
+- By default, reaction rates are rescaled when constructing the `MassActionJump`
   as explained in the [main
   docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump).
   Disable this with the kwarg `scale_rates=false`.

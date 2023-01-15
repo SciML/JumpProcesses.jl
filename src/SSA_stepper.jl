@@ -58,9 +58,9 @@ mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <
     u::uType
     """The current solution time."""
     t::tType
-    """The previous time a jump occured."""
+    """The previous time a jump occurred."""
     tprev::tType
-    """The direction time is changing in (must be positive indicating time is increasing)"""
+    """The direction time is changing in (must be positive, indicating time is increasing)"""
     tdir::tdirType
     """The current parameters."""
     p::P
@@ -73,7 +73,7 @@ mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <
     cb::CB
     """Times to save the solution at."""
     saveat::SA
-    """Whether to save everytime a jump occurs."""
+    """Whether to save every time a jump occurs."""
     save_everystep::Bool
     """Whether to save at the final step."""
     save_end::Bool

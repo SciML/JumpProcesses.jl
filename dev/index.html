@@ -4,26 +4,26 @@
   gtag('js', new Date());
   gtag('config', 'UA-90474609-3', {'page_path': location.pathname + location.search + location.hash});
 </script><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://docs.sciml.ai/JumpProcesses/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="JumpProcesses.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>JumpProcesses.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Contributing-and-Getting-Help"><span>Contributing and Getting Help</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses</a></li><li><a class="tocitem" href="tutorials/discrete_stochastic_example/">Continuous-Time Jump Processes and Gillespie Methods</a></li><li><a class="tocitem" href="tutorials/jump_diffusion/">Piecewise Deterministic Markov Processes and Jump Diffusion Equations</a></li><li><a class="tocitem" href="tutorials/spatial/">Spatial SSAs with JumpProcesses.jl</a></li></ul></li><li><a class="tocitem" href="faq/">FAQ</a></li><li><span class="tocitem">Type Documentation</span><ul><li><a class="tocitem" href="jump_types/">Jump types and JumpProblem</a></li><li><a class="tocitem" href="jump_solve/">Jump solvers</a></li></ul></li><li><a class="tocitem" href="api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/SciML/JumpProcesses.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions"><a class="docs-heading-anchor" href="#JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions">JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a><a id="JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions-1"></a><a class="docs-heading-anchor-permalink" href="#JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions" title="Permalink"></a></h1><p>JumpProcesses.jl, formerly DiffEqJump.jl, provides methods for simulating jump (or point) processes. Across different fields of science, such methods are also known as stochastic simulation algorithms (SSAs), Doob&#39;s method, Gillespie methods, or Kinetic Monte Carlo methods. It also enables the incorporation of jump processes into hybrid jump-ODE and jump-SDE models, including jump diffusions.</p><p>JumpProcesses is a component package in the <a href="https://sciml.ai/">SciML</a> ecosystem, and one of the core solver libraries included in <a href="https://docs.sciml.ai/DiffEqDocs/stable/">DifferentialEquations.jl</a>.</p><p>The documentation includes</p><ul><li><a href="tutorials/simple_poisson_process/#poisson_proc_tutorial">a tutorial on simulating basic Poisson processes</a></li><li><a href="tutorials/discrete_stochastic_example/#ssa_tutorial">a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e., Gillespie methods)</a>,</li><li><a href="tutorials/jump_diffusion/#jump_diffusion_tutorial">a tutorial on simulating jump-diffusion processes</a>,</li><li><a href="jump_types/#jump_problem_type">a reference on the types of jumps and available simulation methods</a>,</li><li><a href="jump_solve/#jump_solve">a reference on jump time stepping methods</a></li><li>a <a href="faq/#FAQ">FAQ</a> with information on changing parameters between simulations and using callbacks.</li><li>the <a href="api/#JumpProcesses.jl-API">JumpProcesses.jl API</a> documentation.</li></ul><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>There are two ways to install <code>JumpProcesses.jl</code>. First, users may install the meta <code>DifferentialEquations.jl</code> package, which installs and wraps <code>OrdinaryDiffEq.jl</code> for solving ODEs, <code>StochasticDiffEq.jl</code> for solving SDEs, and <code>JumpProcesses.jl</code>, along with a number of other useful packages for solving models involving ODEs, SDEs and/or jump process. This single install will provide the user with all the facilities for developing and solving Jump problems.</p><p>To install the <code>DifferentialEquations.jl</code> package, refer to the following link for complete <a href="https://docs.sciml.ai/DiffEqDocs/stable">installation details</a>.</p><p>If the user wishes to install the <code>JumpProcesses.jl</code> library separately, which is a lighter dependency than <code>DifferentialEquations.jl</code>, then the following code will install <code>JumpProcesses.jl</code> using the Julia package manager:</p><pre><code class="language-julia hljs">using Pkg
-Pkg.add(&quot;JumpProcesses&quot;)</code></pre><h2 id="Contributing-and-Getting-Help"><a class="docs-heading-anchor" href="#Contributing-and-Getting-Help">Contributing and Getting Help</a><a id="Contributing-and-Getting-Help-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing-and-Getting-Help" title="Permalink"></a></h2><ul><li>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</li><li>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</li><li>There are a few community forums for getting help and asking questions:<ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>The <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also the <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/JumpProcesses.jl/JumpProcesses.jl/docs/Project.toml`
+Pkg.add(&quot;JumpProcesses&quot;)</code></pre><h2 id="Contributing-and-Getting-Help"><a class="docs-heading-anchor" href="#Contributing-and-Getting-Help">Contributing and Getting Help</a><a id="Contributing-and-Getting-Help-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing-and-Getting-Help" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums for getting help and asking questions:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>The <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also the <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/JumpProcesses.jl/JumpProcesses.jl/docs/Project.toml`
   [479239e8] Catalyst v12.3.1
   [0c46a032] DifferentialEquations v7.6.0
   [e30172f5] Documenter v0.27.23
   [ccbc3e58] JumpProcesses v9.3.1 `~/work/JumpProcesses.jl/JumpProcesses.jl`
-  [1dea7af3] OrdinaryDiffEq v6.36.2
-  [91a5bcdd] Plots v1.38.1
-  [789caeaf] StochasticDiffEq v6.57.4</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.8.4
-Commit 00177ebc4fc (2022-12-23 21:32 UTC)
+  [1dea7af3] OrdinaryDiffEq v6.38.0
+  [91a5bcdd] Plots v1.38.2
+  [789caeaf] StochasticDiffEq v6.57.4</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.8.5
+Commit 17cfb8e65ea (2023-01-08 06:45 UTC)
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 2 × Intel(R) Xeon(R) CPU E5-2673 v3 @ 2.40GHz
+  CPU: 2 × Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-13.0.1 (ORCJIT, haswell)
+  LLVM: libLLVM-13.0.1 (ORCJIT, icelake-server)
   Threads: 1 on 2 virtual cores</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/JumpProcesses.jl/JumpProcesses.jl/docs/Manifest.toml`
   [a4c015fc] ANSIColoredPrinters v0.0.1
-  [c3fe647b] AbstractAlgebra v0.27.7
-  [1520ce14] AbstractTrees v0.4.3
-  [79e6a3ab] Adapt v3.4.0
+  [c3fe647b] AbstractAlgebra v0.27.8
+  [1520ce14] AbstractTrees v0.4.4
+  [79e6a3ab] Adapt v3.5.0
   [dce04be8] ArgCheck v2.3.0
   [ec485272] ArnoldiMethod v0.2.0
   [4fba245c] ArrayInterface v6.0.24
@@ -42,11 +42,11 @@ Platform Info:
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
   [764a87c0] BoundaryValueDiffEq v2.11.0
   [fa961155] CEnum v0.4.2
-⌅ [2a0fbf3d] CPUSummary v0.1.30
+  [2a0fbf3d] CPUSummary v0.2.1
   [00ebfdb7] CSTParser v3.3.6
   [49dc2e85] Calculus v0.5.1
   [479239e8] Catalyst v12.3.1
-  [d360d2e6] ChainRulesCore v1.15.6
+  [d360d2e6] ChainRulesCore v1.15.7
   [9e997f8a] ChangesOfVariables v0.1.4
   [fb6a15b2] CloseOpenIntervals v0.1.11
   [944b1d66] CodecZlib v0.7.0
@@ -55,7 +55,7 @@ Platform Info:
   [c3611d14] ColorVectorSpace v0.9.10
   [5ae59095] Colors v0.12.10
   [861a8166] Combinatorics v1.0.2
-  [a80b9123] CommonMark v0.8.7
+  [a80b9123] CommonMark v0.8.10
   [38540f10] CommonSolve v0.2.3
   [bbf7d656] CommonSubexpressions v0.3.0
   [34da2185] Compat v4.5.0
@@ -71,14 +71,14 @@ Platform Info:
   [244e2a9f] DefineSingletons v0.1.2
   [bcd4f6db] DelayDiffEq v5.40.5
   [b429d917] DensityInterface v0.4.0
-  [2b5f629d] DiffEqBase v6.113.0
+  [2b5f629d] DiffEqBase v6.114.1
   [459566f4] DiffEqCallbacks v2.24.3
-  [77a26b50] DiffEqNoiseProcess v5.15.0
+  [77a26b50] DiffEqNoiseProcess v5.15.2
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.12.2
   [0c46a032] DifferentialEquations v7.6.0
   [b4f34e82] Distances v0.10.7
-  [31c24e10] Distributions v0.25.79
+  [31c24e10] Distributions v0.25.80
   [ffbed154] DocStringExtensions v0.9.3
   [e30172f5] Documenter v0.27.23
 ⌅ [5b8099bc] DomainSets v0.5.15
@@ -98,7 +98,7 @@ Platform Info:
   [f6369f11] ForwardDiff v0.10.34
   [069b7b12] FunctionWrappers v1.1.3
   [77dc65aa] FunctionWrappersWrappers v0.1.1
-  [46192b85] GPUArraysCore v0.1.2
+  [46192b85] GPUArraysCore v0.1.3
   [28b8d3ca] GR v0.71.3
   [c145ed77] GenericSchur v0.5.3
   [c27321d9] Glob v1.3.0
@@ -106,7 +106,7 @@ Platform Info:
   [42e2da0e] Grisu v1.0.2
   [0b43b601] Groebner v0.2.11
   [d5909c97] GroupsCore v0.4.0
-  [cd3eb016] HTTP v1.6.3
+  [cd3eb016] HTTP v1.7.3
   [3e5b6fbb] HostCPUFeatures v0.1.13
   [34004b35] HypergeometricFunctions v0.3.11
   [b5f81e59] IOCapture v0.2.2
@@ -123,22 +123,22 @@ Platform Info:
   [1019f520] JLFzf v0.1.5
   [692b3bcd] JLLWrappers v1.4.1
   [682c06a0] JSON v0.21.3
-  [98e50ef6] JuliaFormatter v1.0.18
+  [98e50ef6] JuliaFormatter v1.0.19
   [ccbc3e58] JumpProcesses v9.3.1 `~/work/JumpProcesses.jl/JumpProcesses.jl`
   [ef3ab10e] KLU v0.4.0
   [ba0b0d4f] Krylov v0.9.0
   [0b1a1467] KrylovKit v0.6.0
   [b964fa9f] LaTeXStrings v1.3.0
   [2ee39098] LabelledArrays v1.12.5
-  [984bce1d] LambertW v0.4.5
-  [23fbe1c1] Latexify v0.15.17
+  [984bce1d] LambertW v0.4.6
+  [23fbe1c1] Latexify v0.15.18
   [10f19ff3] LayoutPointers v0.1.12
   [2d8b4e74] LevyArea v1.0.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v1.33.0
+  [7ed4a6bd] LinearSolve v1.33.1
   [2ab3a3ac] LogExpFunctions v0.3.19
   [e6f89c97] LoggingExtras v1.0.0
-  [bdcacae8] LoopVectorization v0.12.146
+  [bdcacae8] LoopVectorization v0.12.147
   [1914dd2f] MacroTools v0.5.10
   [d125e4d3] ManualMemory v0.1.8
   [739be429] MbedTLS v1.1.7
@@ -146,41 +146,41 @@ Platform Info:
   [e9d8d322] Metatheory v1.3.5
   [128add7d] MicroCollections v0.1.3
   [e1d29d7a] Missings v1.1.0
-  [961ee093] ModelingToolkit v8.40.0
+  [961ee093] ModelingToolkit v8.42.0
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.4.6
   [d8a4904e] MutableArithmetics v1.1.0
   [d41bc354] NLSolversBase v7.8.3
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.1
-  [8913a72c] NonlinearSolve v1.1.1
+  [8913a72c] NonlinearSolve v1.2.0
   [6fe1bfb0] OffsetArrays v1.12.8
-  [4d8831e6] OpenSSL v1.3.2
+  [4d8831e6] OpenSSL v1.3.3
   [429524aa] Optim v1.7.4
   [bac558e1] OrderedCollections v1.4.1
-  [1dea7af3] OrdinaryDiffEq v6.36.2
+  [1dea7af3] OrdinaryDiffEq v6.38.0
   [90014a1f] PDMats v0.11.16
   [d96e819e] Parameters v0.12.3
-  [69de0a69] Parsers v2.5.2
+  [69de0a69] Parsers v2.5.3
   [b98c9c47] Pipe v1.3.0
   [ccf2f8ad] PlotThemes v3.1.0
   [995b91a9] PlotUtils v1.3.2
-  [91a5bcdd] Plots v1.38.1
+  [91a5bcdd] Plots v1.38.2
   [e409e4f3] PoissonRandom v0.4.3
-⌅ [f517fe37] Polyester v0.6.20
-⌅ [1d0040c9] PolyesterWeave v0.1.13
+  [f517fe37] Polyester v0.7.1
+  [1d0040c9] PolyesterWeave v0.2.0
   [85a6dd25] PositiveFactorizations v0.2.4
   [d236fae5] PreallocationTools v0.4.8
   [21216c6a] Preferences v1.3.0
   [27ebfcd6] Primes v0.5.3
-  [1fd47b50] QuadGK v2.6.0
+  [1fd47b50] QuadGK v2.7.0
   [74087812] Random123 v1.6.0
   [fb686558] RandomExtensions v0.4.3
   [e6cf234a] RandomNumbers v1.5.3
-  [3cdcf5f2] RecipesBase v1.3.2
+  [3cdcf5f2] RecipesBase v1.3.3
   [01d81517] RecipesPipeline v0.6.11
-  [731186ca] RecursiveArrayTools v2.34.1
-  [f2c3362d] RecursiveFactorization v0.2.13
+  [731186ca] RecursiveArrayTools v2.35.0
+  [f2c3362d] RecursiveFactorization v0.2.17
   [189a3867] Reexport v1.2.2
   [42d2dcc6] Referenceables v0.1.2
   [05181044] RelocatableFolders v1.0.0
@@ -192,17 +192,17 @@ Platform Info:
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.37
   [0bca4576] SciMLBase v1.81.0
-  [e9a6253c] SciMLNLSolve v0.1.1
+  [e9a6253c] SciMLNLSolve v0.1.3
   [6c6a2e73] Scratch v1.1.1
   [efcf1570] Setfield v1.1.1
   [992d4aef] Showoff v1.0.3
   [777ac1f9] SimpleBufferStream v1.1.0
-  [727e6d20] SimpleNonlinearSolve v0.1.4
+  [727e6d20] SimpleNonlinearSolve v0.1.8
   [699a6c99] SimpleTraits v0.9.4
-  [66db9d55] SnoopPrecompile v1.0.1
+  [66db9d55] SnoopPrecompile v1.0.3
   [a2af1166] SortingAlgorithms v1.1.0
   [47a9eef4] SparseDiffTools v1.30.0
-  [e56a9233] Sparspak v0.3.3
+  [e56a9233] Sparspak v0.3.7
   [276daf66] SpecialFunctions v2.1.7
   [171d559e] SplittablesBase v0.1.15
   [aedffcd0] Static v0.8.3
@@ -214,10 +214,10 @@ Platform Info:
   [9672c7b4] SteadyStateDiffEq v1.11.0
   [789caeaf] StochasticDiffEq v6.57.4
   [7792a7ef] StrideArraysCore v0.4.5
-  [c3572dad] Sundials v4.11.4
+  [c3572dad] Sundials v4.12.0
   [2efcf032] SymbolicIndexingInterface v0.2.1
-  [d1185830] SymbolicUtils v0.19.11
-  [0c5d862f] Symbolics v4.14.0
+⌅ [d1185830] SymbolicUtils v0.19.11
+⌅ [0c5d862f] Symbolics v4.14.0
   [3783bdb8] TableTraits v1.0.1
   [bd369af6] Tables v1.10.0
   [62fd8b95] TensorCore v0.1.1
@@ -226,7 +226,7 @@ Platform Info:
   [ac1d9e8a] ThreadsX v0.1.11
   [a759f4b9] TimerOutputs v0.5.22
   [0796e94c] Tokenize v0.5.25
-  [3bb67fe8] TranscodingStreams v0.9.10
+  [3bb67fe8] TranscodingStreams v0.9.11
   [28d57a85] Transducers v0.4.75
   [a2a6695c] TreeViews v0.3.0
   [d5829a12] TriangularSolve v0.1.17
@@ -356,4 +356,4 @@ Platform Info:
   [3f19e933] p7zip_jll v17.4.0+0
 Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`</code></pre></details>You can also download the
 <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.3.1/assets/Manifest.toml">manifest</a> file and the
-<a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.3.1/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 6 January 2023 16:57">Friday 6 January 2023</span>. Using Julia version 1.8.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.3.1/assets/Project.toml">project</a> file.</article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Monday 23 January 2023 08:02">Monday 23 January 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

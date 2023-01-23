@@ -108,72 +108,82 @@ The constructor for a [`ConstantRateJump`](@ref) is:
 ConstantRateJump(rate, affect!)
 ```
 
-- `rate(u, p, t)` is a function which calculates the rate given the current
-  state `u`, parameters `p`, and time `t`.
-- `affect!(integrator)` is the effect on the equation using the integrator
-  interface. It encodes how the state should change due to *one* occurrence of
-  the jump.
+  - `rate(u, p, t)` is a function which calculates the rate given the current
+    state `u`, parameters `p`, and time `t`.
+  - `affect!(integrator)` is the effect on the equation using the integrator
+    interface. It encodes how the state should change due to *one* occurrence of
+    the jump.
 
 #### Defining a Mass Action Jump
 
 The constructor for a [`MassActionJump`](@ref) is:
+
 ```julia
-MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs=nothing)
+MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = nothing)
 ```
-- `reactant_stoich` is a vector whose `k`th entry is the reactant stoichiometry
-  of the `k`th reaction. The reactant stoichiometry for an individual reaction
-  is assumed to be represented as a vector of `Pair`s, mapping species integer
-  id to stoichiometric coefficient.
-- `net_stoich` is assumed to have the same type as `reactant_stoich`; a
-  vector whose `k`th entry is the net stoichiometry of the `k`th reaction. The
-  net stoichiometry for an individual reaction is again represented as a vector
-  of `Pair`s, mapping species id to the net change in the species when the
-  reaction occurs.
-- `scale_rates` is an optional parameter that specifies whether the rate
-  constants correspond to stochastic rate constants in the sense used by
-  Gillespie, and hence need to be rescaled. *The default, `scale_rates = true`,
-  corresponds to rescaling the passed in rate constants.* See below.
-- `param_idxs` is a vector of the indices within the parameter vector, `p`, that
-  correspond to the rate constant for each jump.
+
+  - `reactant_stoich` is a vector whose `k`th entry is the reactant stoichiometry
+    of the `k`th reaction. The reactant stoichiometry for an individual reaction
+    is assumed to be represented as a vector of `Pair`s, mapping species integer
+    id to stoichiometric coefficient.
+  - `net_stoich` is assumed to have the same type as `reactant_stoich`; a
+    vector whose `k`th entry is the net stoichiometry of the `k`th reaction. The
+    net stoichiometry for an individual reaction is again represented as a vector
+    of `Pair`s, mapping species id to the net change in the species when the
+    reaction occurs.
+  - `scale_rates` is an optional parameter that specifies whether the rate
+    constants correspond to stochastic rate constants in the sense used by
+    Gillespie, and hence need to be rescaled. *The default, `scale_rates = true`,
+    corresponds to rescaling the passed in rate constants.* See below.
+  - `param_idxs` is a vector of the indices within the parameter vector, `p`, that
+    correspond to the rate constant for each jump.
 
 **Notes for Mass Action Jumps**
-- When using `MassActionJump` the default behavior is to assume rate constants
-  correspond to stochastic rate constants in the sense used by Gillespie (J.
-  Comp. Phys., 1976, 22 (4)). This means that for a reaction such as ``2A
-  \overset{k}{\rightarrow} B``, the jump rate function constructed by
-  `MassActionJump` would be `k*A*(A-1)/2!`. For a trimolecular reaction like
-  ``3A \overset{k}{\rightarrow} B`` the rate function would be
-  `k*A*(A-1)*(A-2)/3!`. To *avoid* having the reaction rates rescaled (by `1/2`
-  and `1/6` for these two examples), one can pass the `MassActionJump`
-  constructor the optional named parameter `scale_rates = false`, i.e., use
-  ```julia
-  MassActionJump(reactant_stoich, net_stoich; scale_rates = false, param_idxs)
-  ```
-- Zero order reactions can be passed as `reactant_stoich`s in one of two ways.
-  Consider the ``\varnothing \overset{k}{\rightarrow} A`` reaction with rate
-  `k=1`:
-  ```julia
-  p = [1.]
-  reactant_stoich = [[0 => 1]]
-  net_stoich = [[1 => 1]]
-  jump = MassActionJump(reactant_stoich, net_stoich; param_idxs=[1])
-  ```
-  Alternatively, one can create an empty vector of pairs to represent the reaction:
-  ```julia
-  p = [1.]
-  reactant_stoich = [Vector{Pair{Int,Int}}()]
-  net_stoich = [[1 => 1]]
-  jump = MassActionJump(reactant_stoich, net_stoich; param_idxs=[1])
-  ```
-- For performance reasons, it is recommended to order species indices in
-  stoichiometry vectors from smallest to largest. That is
-  ```julia
-  reactant_stoich = [[1 => 2, 3 => 1, 4 => 2], [2 => 2, 3 => 2]]
-  ```
-  is preferred over
-  ```julia
-  reactant_stoich = [[3 => 1, 1 => 2, 4 => 2], [3 => 2, 2 => 2]]
-  ```
+
+  - When using `MassActionJump` the default behavior is to assume rate constants
+    correspond to stochastic rate constants in the sense used by Gillespie (J.
+    Comp. Phys., 1976, 22 (4)). This means that for a reaction such as ``2A \overset{k}{\rightarrow} B``, the jump rate function constructed by
+    `MassActionJump` would be `k*A*(A-1)/2!`. For a trimolecular reaction like
+    ``3A \overset{k}{\rightarrow} B`` the rate function would be
+    `k*A*(A-1)*(A-2)/3!`. To *avoid* having the reaction rates rescaled (by `1/2`
+    and `1/6` for these two examples), one can pass the `MassActionJump`
+    constructor the optional named parameter `scale_rates = false`, i.e., use
+    
+    ```julia
+    MassActionJump(reactant_stoich, net_stoich; scale_rates = false, param_idxs)
+    ```
+
+  - Zero order reactions can be passed as `reactant_stoich`s in one of two ways.
+    Consider the ``\varnothing \overset{k}{\rightarrow} A`` reaction with rate
+    `k=1`:
+    
+    ```julia
+    p = [1.0]
+    reactant_stoich = [[0 => 1]]
+    net_stoich = [[1 => 1]]
+    jump = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1])
+    ```
+    
+    Alternatively, one can create an empty vector of pairs to represent the reaction:
+    
+    ```julia
+    p = [1.0]
+    reactant_stoich = [Vector{Pair{Int, Int}}()]
+    net_stoich = [[1 => 1]]
+    jump = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1])
+    ```
+  - For performance reasons, it is recommended to order species indices in
+    stoichiometry vectors from smallest to largest. That is
+    
+    ```julia
+    reactant_stoich = [[1 => 2, 3 => 1, 4 => 2], [2 => 2, 3 => 2]]
+    ```
+    
+    is preferred over
+    
+    ```julia
+    reactant_stoich = [[3 => 1, 1 => 2, 4 => 2], [3 => 2, 2 => 2]]
+    ```
 
 #### Defining a Variable Rate Jump
 
@@ -182,25 +192,25 @@ The constructor for a [`VariableRateJump`](@ref) is:
 ```julia
 VariableRateJump(rate, affect!;
                  lrate = nothing, urate = nothing, rateinterval = nothing,
-                 idxs = nothing, rootfind = true, save_positions = (true,true),
+                 idxs = nothing, rootfind = true, save_positions = (true, true),
                  interp_points = 10, abstol = 1e-12, reltol = 0)
 ```
 
-- `rate(u, p, t)` is a function which calculates the rate given the current
-  state `u`, parameters `p`, and time `t`.
-- `affect!(integrator)` is the effect on the equation using the integrator
-  interface. It encodes how the state should change due to *one* occurrence of
-  the jump.
+  - `rate(u, p, t)` is a function which calculates the rate given the current
+    state `u`, parameters `p`, and time `t`.
+  - `affect!(integrator)` is the effect on the equation using the integrator
+    interface. It encodes how the state should change due to *one* occurrence of
+    the jump.
 
 To define a bounded `VariableRateJump`, which can be simulated more efficiently
 with bounded `VariableRateJump` supporting aggregators such as `Coevolve`, one
 must also specify
-- `urate(u, p, t)`, a function which computes an upper bound for the rate in the
-  interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and
-  parameters `p`.
-- `rateinterval(u, p, t)`, a function which computes a time interval `t` to `t +
-  rateinterval(u, p, t)` given state `u` and parameters `p` over which the
-  `urate` bound will hold (and `lrate` bound if provided, see below).
+
+  - `urate(u, p, t)`, a function which computes an upper bound for the rate in the
+    interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and
+    parameters `p`.
+  - `rateinterval(u, p, t)`, a function which computes a time interval `t` to `t + rateinterval(u, p, t)` given state `u` and parameters `p` over which the
+    `urate` bound will hold (and `lrate` bound if provided, see below).
 
 Note that it is ok if the `urate` bound would be violated within the
 `rateinterval` due to a change in `u` arising from another `ConstantRateJump`,
@@ -213,22 +223,23 @@ classified as a general `VariableRateJump` and properly handled.
 
 For increased performance, one can also specify a lower bound that should be
 valid over the same `rateinterval`
-- `lrate(u, p, t)`, a function which computes a lower bound for the rate in the
-  interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and
-  parameters `p`. `lrate` should remain valid under the same conditions as
-  `urate`.
+
+  - `lrate(u, p, t)`, a function which computes a lower bound for the rate in the
+    interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and
+    parameters `p`. `lrate` should remain valid under the same conditions as
+    `urate`.
 
 Note that
-- It is currently only possible to simulate `VariableRateJump`s with
-  `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
-  `Coevolve` aggregator.
-- When choosing a different aggregator than `Coevolve`, `SSAStepper` cannot
-  currently be used, and the `JumpProblem` must be coupled to a continuous
-  problem type such as an `ODEProblem` to handle time-stepping. The continuous
-  time-stepper treats *all* `VariableRateJump`s as `ContinuousCallback`s, using
-  the `rate(u, p, t)` function to construct the `condition` function that
-  triggers a callback.
 
+  - It is currently only possible to simulate `VariableRateJump`s with
+    `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
+    `Coevolve` aggregator.
+  - When choosing a different aggregator than `Coevolve`, `SSAStepper` cannot
+    currently be used, and the `JumpProblem` must be coupled to a continuous
+    problem type such as an `ODEProblem` to handle time-stepping. The continuous
+    time-stepper treats *all* `VariableRateJump`s as `ContinuousCallback`s, using
+    the `rate(u, p, t)` function to construct the `condition` function that
+    triggers a callback.
 
 #### Defining a Regular Jump
 
@@ -238,13 +249,13 @@ The constructor for a [`RegularJump`](@ref) is:
 RegularJump(rate, c, numjumps; mark_dist = nothing)
 ```
 
-- `rate(out, u, p, t)` is the function which computes the rate for every regular
-  jump process
-- `c(du, u, p, t, counts, mark)` calculates the update given `counts` number of
-  jumps for each jump process in the interval.
-- `numjumps` is the number of jump processes, i.e., the number of `rate`
-  equations and the number of `counts`.
-- `mark_dist` is the distribution for a mark.
+  - `rate(out, u, p, t)` is the function which computes the rate for every regular
+    jump process
+  - `c(du, u, p, t, counts, mark)` calculates the update given `counts` number of
+    jumps for each jump process in the interval.
+  - `numjumps` is the number of jump processes, i.e., the number of `rate`
+    equations and the number of `counts`.
+  - `mark_dist` is the distribution for a mark.
 
 ## Defining a Jump Problem
 
@@ -256,7 +267,8 @@ is:
 
 ```julia
 JumpProblem(prob, aggregator, jumps::JumpSet;
-            save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false,true) : (true,true))
+            save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false, true) :
+                             (true, true))
 ```
 
 The aggregator is the method for simulating `ConstantRateJump`s,
@@ -295,34 +307,34 @@ time-step based (inexact) τ-leaping methods.
 The current aggregators are (note that an italicized name indicates the
 aggregator requires various types of dependency graphs, see the next section):
 
-- `Direct`: The Gillespie Direct method SSA [1].
-- `DirectFW`: the Gillespie Direct method SSA [1] with `FunctionWrappers`. This
-  aggregator uses a different internal storage format for collections of
-  `ConstantRateJumps`.
-- *`DirectCR`*: The Composition-Rejection Direct method of Slepoy et al [2]. For
-  large networks and linear chain-type networks, it will often give better
-  performance than `Direct`.
-- *`SortingDirect`*: The Sorting Direct Method of McCollum et al [3]. It will
-  usually offer performance as good as `Direct`, and for some systems can offer
-  substantially better performance.
-- *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al [4,5]. With `RSSACR`,
-  for very large reaction networks, it often offers the best performance of all
-  methods.
-- *`RSSACR`*: The Rejection SSA (RSSA) with Composition-Rejection method of
-  Thanh et al [6]. With `RSSA`, for very large reaction networks, it often offers
-  the best performance of all methods.
-- `RDirect`: A variant of Gillespie's Direct method [1] that uses rejection to
-  sample the next reaction.
-- `FRM`: The Gillespie first reaction method SSA [1]. `Direct` should generally
-  offer better performance and be preferred to `FRM`.
-- `FRMFW`: The Gillespie first reaction method SSA [1] with `FunctionWrappers`.
-- *`NRM`*: The Gibson-Bruck Next Reaction Method [7]. For some reaction network
-   structures, this may offer better performance than `Direct` (for example,
-   large, linear chains of reactions).
-- *`Coevolve`*: An adaptation of the COEVOLVE algorithm of Farajtabar et al [8].
-  Currently the only aggregator that also supports *bounded*
-  `VariableRateJump`s. Essentially reduces to `NRM` in handling
-  `ConstantRateJump`s and `MassActionJump`s.
+  - `Direct`: The Gillespie Direct method SSA [1].
+  - `DirectFW`: the Gillespie Direct method SSA [1] with `FunctionWrappers`. This
+    aggregator uses a different internal storage format for collections of
+    `ConstantRateJumps`.
+  - *`DirectCR`*: The Composition-Rejection Direct method of Slepoy et al [2]. For
+    large networks and linear chain-type networks, it will often give better
+    performance than `Direct`.
+  - *`SortingDirect`*: The Sorting Direct Method of McCollum et al [3]. It will
+    usually offer performance as good as `Direct`, and for some systems can offer
+    substantially better performance.
+  - *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al [4,5]. With `RSSACR`,
+    for very large reaction networks, it often offers the best performance of all
+    methods.
+  - *`RSSACR`*: The Rejection SSA (RSSA) with Composition-Rejection method of
+    Thanh et al [6]. With `RSSA`, for very large reaction networks, it often offers
+    the best performance of all methods.
+  - `RDirect`: A variant of Gillespie's Direct method [1] that uses rejection to
+    sample the next reaction.
+  - `FRM`: The Gillespie first reaction method SSA [1]. `Direct` should generally
+    offer better performance and be preferred to `FRM`.
+  - `FRMFW`: The Gillespie first reaction method SSA [1] with `FunctionWrappers`.
+  - *`NRM`*: The Gibson-Bruck Next Reaction Method [7]. For some reaction network
+    structures, this may offer better performance than `Direct` (for example,
+    large, linear chains of reactions).
+  - *`Coevolve`*: An adaptation of the COEVOLVE algorithm of Farajtabar et al [8].
+    Currently the only aggregator that also supports *bounded*
+    `VariableRateJump`s. Essentially reduces to `NRM` in handling
+    `ConstantRateJump`s and `MassActionJump`s.
 
 To pass the aggregator, pass the instantiation of the type. For example:
 
@@ -369,13 +381,16 @@ evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
 10.5555/3122009.3122050.
 
 ## Jump Aggregators Requiring Dependency Graphs
+
 Italicized constant rate jump aggregators above require the user to pass a
 dependency graph to `JumpProblem`. `Coevolve`, `DirectCR`, `NRM`, and
- `SortingDirect` require a jump-jump dependency graph, passed through the named
+`SortingDirect` require a jump-jump dependency graph, passed through the named
 parameter `dep_graph`. i.e.,
+
 ```julia
 JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)
 ```
+
 For systems with only `MassActionJump`s, or those generated from a
 [Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this
 graph will be auto-generated. Otherwise, you must construct the dependency graph
@@ -393,41 +408,45 @@ can precalculate the jump order to manually construct dependency graphs.
 
 `RSSA` and `RSSACR` require two different types of dependency graphs, passed
 through the following `JumpProblem` kwargs:
-- `vartojumps_map` - A `Vector{Vector{Int}}` mapping each variable index, `i`,
-  to a set of jump indices. The jump indices correspond to jumps with rate
-  functions that depend on the value of `u[i]`.
--  `jumptovars_map` - A `Vector{Vector{Int}}`  mapping each jump index to a set
-   of variable indices. The corresponding variables are those that have their
-   value, `u[i]`, altered when the jump occurs.
+
+  - `vartojumps_map` - A `Vector{Vector{Int}}` mapping each variable index, `i`,
+    to a set of jump indices. The jump indices correspond to jumps with rate
+    functions that depend on the value of `u[i]`.
+  - `jumptovars_map` - A `Vector{Vector{Int}}`  mapping each jump index to a set
+    of variable indices. The corresponding variables are those that have their
+    value, `u[i]`, altered when the jump occurs.
 
 For systems generated from a [Catalyst](https://docs.sciml.ai/Catalyst/stable/)
 `reaction_network` these will be auto-generated. Otherwise, you must explicitly
 construct and pass in these mappings.
 
 ## Recommendations for exact methods
+
 For representing and aggregating jumps
-- Use a `MassActionJump` to handle all jumps that can be represented as mass
-  action reactions with constant rate between jumps. This will generally offer
-  the fastest performance.
-- Use `ConstantRateJump`s for any remaining jumps with a constant rate between
-  jumps.
-- Use `VariableRateJump`s for any remaining jumps with variable rate between
-  jumps. If possible, construct a bounded [`VariableRateJump`](@ref) as
-  described above and in the doc string. The tighter and easier to compute the
-  bounds are, the faster the resulting simulation will be. Use the `Coevolve`
-  aggregator to ensure such jumps are handled via the more efficient aggregator
-  interface.
+
+  - Use a `MassActionJump` to handle all jumps that can be represented as mass
+    action reactions with constant rate between jumps. This will generally offer
+    the fastest performance.
+  - Use `ConstantRateJump`s for any remaining jumps with a constant rate between
+    jumps.
+  - Use `VariableRateJump`s for any remaining jumps with variable rate between
+    jumps. If possible, construct a bounded [`VariableRateJump`](@ref) as
+    described above and in the doc string. The tighter and easier to compute the
+    bounds are, the faster the resulting simulation will be. Use the `Coevolve`
+    aggregator to ensure such jumps are handled via the more efficient aggregator
+    interface.
 
 For systems with only `ConstantRateJump`s and `MassActionJump`s,
-- For a small number of jumps, < ~10, `Direct` will often perform as well as the
-  other aggregators.
-- For > ~10 jumps `SortingDirect` will often offer better performance than
-  `Direct`.
-- For large numbers of jumps with sparse chain like structures and similar jump
-  rates, for example continuous time random walks, `RSSACR`, `DirectCR` and then
-  `NRM` often have the best performance.
-- For very large networks, with many updates per jump, `RSSA` and `RSSACR` will
-  often substantially outperform the other methods.
+
+  - For a small number of jumps, < ~10, `Direct` will often perform as well as the
+    other aggregators.
+  - For > ~10 jumps `SortingDirect` will often offer better performance than
+    `Direct`.
+  - For large numbers of jumps with sparse chain like structures and similar jump
+    rates, for example continuous time random walks, `RSSACR`, `DirectCR` and then
+    `NRM` often have the best performance.
+  - For very large networks, with many updates per jump, `RSSA` and `RSSACR` will
+    often substantially outperform the other methods.
 
 For pure jump systems, time-step using `SSAStepper()` with a `DiscreteProblem`
 unless one has general (i.e., non-bounded) `VariableRateJump`s.
@@ -439,6 +458,7 @@ performance. See
 benchmarks on several example networks.
 
 ## Remaking `JumpProblem`s
+
 When running many simulations, it can often be convenient to update the initial
 condition or simulation parameters without having to create and initialize a new
 `JumpProblem`. In such situations `remake` can be used to change the initial
@@ -448,45 +468,53 @@ components of the SSA aggregators. As such, only the new problem generated by
 `remake` should be used for subsequent simulations.
 
 As an example, consider the following SIR model:
+
 ```julia
 rate1(u, p, t) = p[1] * u[1] * u[2]
 function affect1!(integrator)
-  integrator.u[1] -= 1
-  integrator.u[2] += 1
+    integrator.u[1] -= 1
+    integrator.u[2] += 1
 end
 jump = ConstantRateJump(rate1, affect1!)
 
-rate2(u,p,t) = p[2] * u[2]
+rate2(u, p, t) = p[2] * u[2]
 function affect2!(integrator)
-  integrator.u[2] -= 1
-  integrator.u[3] += 1
+    integrator.u[2] -= 1
+    integrator.u[3] += 1
 end
 jump2 = ConstantRateJump(rate2, affect2!)
-u0    = [999, 1, 0]
-p     = (0.1/1000, 0.01)
+u0 = [999, 1, 0]
+p = (0.1 / 1000, 0.01)
 tspan = (0.0, 250.0)
 dprob = DiscreteProblem(u0, tspan, p)
 jprob = JumpProblem(dprob, Direct(), jump, jump2)
-sol   = solve(jprob, SSAStepper())
+sol = solve(jprob, SSAStepper())
 ```
+
 We can change any of `u0`, `p` and/or `tspan` by either making a new
 `DiscreteProblem`
+
 ```julia
-u02    = [10, 1, 0]
-p2     = (.1/1000, 0.0)
+u02 = [10, 1, 0]
+p2 = (0.1 / 1000, 0.0)
 tspan2 = (0.0, 2500.0)
 dprob2 = DiscreteProblem(u02, tspan2, p2)
 jprob2 = remake(jprob, prob = dprob2)
-sol2   = solve(jprob2, SSAStepper())
+sol2 = solve(jprob2, SSAStepper())
 ```
+
 or by directly remaking with the new parameters
+
 ```julia
 jprob2 = remake(jprob, u0 = u02, p = p2, tspan = tspan2)
-sol2   = solve(jprob2, SSAStepper())
+sol2 = solve(jprob2, SSAStepper())
 ```
+
 To avoid ambiguities, the following will give an error
+
 ```julia
 jprob2 = remake(jprob, prob = dprob2, u0 = u02)
 ```
+
 as will trying to update either `p` or `tspan` while passing a new
 `DiscreteProblem` using the `prob` kwarg.

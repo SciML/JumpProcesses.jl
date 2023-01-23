@@ -1,7 +1,7 @@
 # [Jump Problem and Jump Diffusion Solvers](@id jump_solve)
 
 ```julia
-solve(prob::JumpProblem,alg;kwargs)
+solve(prob::JumpProblem, alg; kwargs)
 ```
 
 ## Recommended Methods
@@ -27,7 +27,7 @@ for the class of exact jump process simulation algorithms. In turn, we denote by
 time and to execute a jump (i.e., change the system state appropriately). All
 JumpProcesses aggregators can be used with `ConstantRateJump`s and
 `MassActionJump`s, with a subset of aggregators also working with bounded
- `VariableRateJump`s (see [the first tutorial](@ref poisson_proc_tutorial) for
+`VariableRateJump`s (see [the first tutorial](@ref poisson_proc_tutorial) for
 the definition of bounded `VariableRateJump`s). Although `SSAStepper()` is
 usually faster, it only supports discrete events (`DiscreteCallback`s), for pure
 jump problems requiring continuous events (`ContinuousCallback`s) the less
@@ -46,10 +46,10 @@ algorithms are optimized for pure jump problems.
 
 ### JumpProcesses.jl
 
-- `SSAStepper`: a stepping integrator for `JumpProblem`s defined over
-  `DiscreteProblem`s involving `ConstantRateJump`s, `MassActionJump`s, and/or
-  bounded `VariableRateJump`s . Supports handling of `DiscreteCallback`s and
-  saving controls like `saveat`.
+  - `SSAStepper`: a stepping integrator for `JumpProblem`s defined over
+    `DiscreteProblem`s involving `ConstantRateJump`s, `MassActionJump`s, and/or
+    bounded `VariableRateJump`s . Supports handling of `DiscreteCallback`s and
+    saving controls like `saveat`.
 
 ## RegularJump Compatible Methods
 
@@ -58,13 +58,13 @@ algorithms are optimized for pure jump problems.
 These methods support mixing with event handling, other jump types, and all of
 the features of the normal differential equation solvers.
 
-- `TauLeaping`: an adaptive tau-leaping algorithm with post-leap estimates.
+  - `TauLeaping`: an adaptive tau-leaping algorithm with post-leap estimates.
 
 ### JumpProcesses.jl
 
-- `SimpleTauLeaping`: a tau-leaping algorithm for pure `RegularJump` `JumpProblem`s.
-  Requires a choice of `dt`.
-- `RegularSSA`: a version of SSA for pure `RegularJump` `JumpProblem`s.
+  - `SimpleTauLeaping`: a tau-leaping algorithm for pure `RegularJump` `JumpProblem`s.
+    Requires a choice of `dt`.
+  - `RegularSSA`: a version of SSA for pure `RegularJump` `JumpProblem`s.
 
 ## Regular Jump Diffusion Compatible Methods
 
@@ -73,5 +73,5 @@ and the jump process has designed a regular jump.
 
 ### StochasticDiffEq.jl
 
-- `EM`: Explicit Euler-Maruyama.
-- `ImplicitEM`: Implicit Euler-Maruyama. See the SDE solvers page for more details.
+  - `EM`: Explicit Euler-Maruyama.
+  - `ImplicitEM`: Implicit Euler-Maruyama. See the SDE solvers page for more details.

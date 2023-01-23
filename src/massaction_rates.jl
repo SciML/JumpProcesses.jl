@@ -102,7 +102,9 @@ function var_to_jumps_map(numspec, ma_jumps::AbstractMassActionJump)
     spec_to_dep_rxs
 end
 
-"make a map from reactions to dependent species"
+"""
+make a map from reactions to dependent species
+"""
 function jump_to_vars_map(majumps)
     [[s for (s, c) in majumps.net_stoch[i]] for i in 1:get_num_majumps(majumps)]
 end

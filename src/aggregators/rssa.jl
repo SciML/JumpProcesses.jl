@@ -141,7 +141,9 @@ end
 
 ######################## SSA specific helper routines #########################
 
-"Update rates"
+"""
+Update rates
+"""
 @inline function update_rates!(p::RSSAJumpAggregation, u, params, t)
     # update bracketing intervals
     ubnds = p.cur_u_bnds

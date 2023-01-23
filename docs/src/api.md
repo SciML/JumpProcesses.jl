@@ -1,9 +1,11 @@
 # JumpProcesses.jl API
+
 ```@meta
 CurrentModule = JumpProcesses
 ```
 
 ## Core Types
+
 ```@docs
 JumpProblem
 SSAStepper
@@ -11,6 +13,7 @@ reset_aggregated_jumps!
 ```
 
 ## Types of Jumps
+
 ```@docs
 ConstantRateJump
 MassActionJump
@@ -20,9 +23,11 @@ JumpSet
 ```
 
 ## Aggregators
+
 Aggregators are the underlying algorithms used for sampling
 [`ConstantRateJump`](@ref)s, [`MassActionJump`](@ref)s, and
 [`VariableRateJump`](@ref)s.
+
 ```@docs
 Coevolve
 Direct
@@ -36,6 +41,7 @@ SortingDirect
 ```
 
 # Private API Functions
+
 ```@docs
 ExtendedJumpArray
 SSAIntegrator

@@ -1,6 +1,7 @@
 # FAQ
 
 ## My simulation is really slow and/or using a lot of memory, what can I do?
+
 Exact methods simulate every jump, and by default save the state before and
 after each jump. To reduce memory use, use `save_positions = (false, false)` in
 the `JumpProblem` constructor as described [earlier](@ref save_positions_docs)
@@ -38,6 +39,7 @@ sol = solve(jump_prob, SSAStepper())
 
 If you have many jumps in tuples or vectors, it is easiest to use the keyword
 argument-based constructor:
+
 ```julia
 cj1 = ConstantRateJump(rate1, affect1!)
 cj2 = ConstantRateJump(rate2, affect2!)
@@ -48,7 +50,7 @@ vj2 = VariableRateJump(rate4, affect4!)
 vjtuple = (vj1, vj2)
 
 jset = JumpSet(; constant_jumps = cjvec, variable_jumps = vjtuple,
-                 massaction_jumps = mass_act_jump)
+               massaction_jumps = mass_act_jump)
 ```
 
 ## How can I set the random number generator used in the jump process sampling algorithms (SSAs)?
@@ -62,6 +64,7 @@ using RandomNumbers
 jprob = JumpProblem(dprob, Direct(), maj,
                     rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
 ```
+
 uses the `Xoroshiro128Star` generator from
 [RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
 
@@ -82,6 +85,7 @@ and physics literature. In the JumpProcesses terminology, we call such methods
 the available SSA aggregators.
 
 ## How should jumps be ordered in dependency graphs?
+
 Internally, JumpProcesses SSAs (aggregators) order all `MassActionJump`s first,
 then all `ConstantRateJumps` and/or `VariableRateJumps`. i.e., in the example
 
@@ -90,7 +94,7 @@ using JumpProcesses
 rs = [[1 => 1], [2 => 1]]
 ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
 p = [1.0, 0.0]
-maj = MassActionJump(rs, ns; param_idxs=[1, 2])
+maj = MassActionJump(rs, ns; param_idxs = [1, 2])
 rate1(u, p, t) = u[1]
 function affect1!(integrator)
     u[1] -= 1
@@ -101,8 +105,9 @@ function affect2!(integrator)
     u[2] -= 1
 end
 cj2 = ConstantRateJump(rate2, affect2)
-jset = JumpSet(; constant_jumps=[cj1, cj2], massaction_jump=maj)
+jset = JumpSet(; constant_jumps = [cj1, cj2], massaction_jump = maj)
 ```
+
 The four jumps would be ordered by the first jump in `maj`, the second jump in
 `maj`, `cj1`, and finally `cj2`. Any user-generated dependency graphs should
 then follow this ordering when assigning an integer id to each jump.
@@ -124,12 +129,13 @@ structures. Omitting this call will lead to incorrect behavior!
 
 A simple example that uses a `MassActionJump` and changes the parameters at a
 specified time in the simulation using a `DiscreteCallback` is
+
 ```julia
 using JumpProcesses
 rs = [[1 => 1], [2 => 1]]
 ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
 p = [1.0, 0.0]
-maj = MassActionJump(rs, ns; param_idxs=[1, 2])
+maj = MassActionJump(rs, ns; param_idxs = [1, 2])
 u₀ = [100, 0]
 tspan = (0.0, 40.0)
 dprob = DiscreteProblem(u₀, tspan, p)
@@ -141,25 +147,28 @@ function paffect!(integrator)
     reset_aggregated_jumps!(integrator)
     nothing
 end
-sol = solve(jprob, SSAStepper(), tstops=[20.0], callback=DiscreteCallback(pcondit, paffect!))
+sol = solve(jprob, SSAStepper(), tstops = [20.0],
+            callback = DiscreteCallback(pcondit, paffect!))
 ```
+
 Here at time `20.0` we turn off production of `u[2]` while activating production
 of `u[1]`, giving
 
 ![callback_gillespie](assets/callback_gillespie.png)
 
-
 ## How can I access earlier solution values in callbacks?
+
 When using an ODE or SDE time-stepper that conforms to the [integrator
 interface](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/), one
 can simply use `integrator.uprev`. For efficiency reasons, the pure jump
 [`SSAStepper`](@ref) integrator does not have such a field. If one needs
 solution components at earlier times, one can save them within the callback
 condition by making a functor:
+
 ```julia
 # stores the previous value of u[2] and represents the callback functions
 mutable struct UprevCondition{T}
-     u2::T
+    u2::T
 end
 
 # condition

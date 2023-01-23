@@ -433,11 +433,12 @@ function Base.merge(pmap1::MassActionJumpParamMapper{Int},
 end
 
 """
-  update_parameters!(maj::MassActionJump, newparams; scale_rates=true)
+update_parameters!(maj::MassActionJump, newparams; scale_rates=true)
 
 Updates the passed in MassActionJump with the parameter values in `newparams`.
 
 Notes:
+
   - Requires the jump to have been constructed with a user-passed `param_idxs` or `param_mapper`.
   - `scale_rates=true` will scale the parameter representing the jump rate by an
     appropriate combinatoric factor. i.e for 3A --> B at rate k it will scale

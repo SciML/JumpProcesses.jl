@@ -2,21 +2,24 @@
 An aggregator interface for SSA-like algorithms.
 
 ### Required Fields
-- `next_jump`          # the next jump to execute
-- `prev_jump`          # the previous jump that was executed
-- `next_jump_time`     # the time of the next jump
-- `end_time`           # the time to stop a simulation
-- `cur_rates`          # vector of current propensity values
-- `sum_rate`           # sum of current propensity values
-- `ma_jumps`           # any MassActionJumps for the system (scalar form)
-- `rates`              # vector of rate functions for ConstantRateJumps
-- `affects!`           # vector of affect functions for ConstantRateJumps
-- `save_positions`     # tuple for whether to save the jumps before and/or after event
-- `rng`                # random number generator
+
+  - `next_jump`          # the next jump to execute
+  - `prev_jump`          # the previous jump that was executed
+  - `next_jump_time`     # the time of the next jump
+  - `end_time`           # the time to stop a simulation
+  - `cur_rates`          # vector of current propensity values
+  - `sum_rate`           # sum of current propensity values
+  - `ma_jumps`           # any MassActionJumps for the system (scalar form)
+  - `rates`              # vector of rate functions for ConstantRateJumps
+  - `affects!`           # vector of affect functions for ConstantRateJumps
+  - `save_positions`     # tuple for whether to save the jumps before and/or after event
+  - `rng`                # random number generator
 
 ### Optional fields:
-- `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should
-                       # be updated when rx i occurs.    
+
+  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should
+
+    # be updated when rx i occurs.
 """
 abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 
@@ -140,10 +143,11 @@ end
 """
     update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
 
-Recalculate jump rates for jumps that depend on the just executed jump. 
+Recalculate jump rates for jumps that depend on the just executed jump.
 
-Notes: 
-    - Intended for methods that have a dependency graph, i.e. define `p.dep_gr`.
+Notes:
+
+  - Intended for methods that have a dependency graph, i.e. define `p.dep_gr`.
 """
 function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
@@ -206,10 +210,11 @@ Perform linear search for `r` over iterator. Output index j s.t. sum(array[1:j-1
 < r <= sum(array[1:j]), where array=collect(iterator)
 
 Notes:
-- The iterator must have all positive numbers
-- Returns index zero if the search is unsuccessful. Assumes this corresponds to
-  the case of an infinite next reaction time and so the jump index does not
-  matter.
+
+  - The iterator must have all positive numbers
+  - Returns index zero if the search is unsuccessful. Assumes this corresponds to
+    the case of an infinite next reaction time and so the jump index does not
+    matter.
 """
 @inline function linear_search(iterator, r)
     jidx = 0

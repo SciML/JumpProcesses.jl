@@ -50,7 +50,9 @@ end
     end
 end
 
-"get brackets for reaction rx by first checking if the reaction is a massaction reaction"
+"""
+get brackets for reaction rx by first checking if the reaction is a massaction reaction
+"""
 @inline function get_jump_brackets(rx, p::AbstractSSAJumpAggregator, params, t)
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)

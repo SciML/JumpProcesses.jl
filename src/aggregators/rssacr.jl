@@ -160,7 +160,9 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
 end
 
 ######################## SSA specific helper routines #########################
-"update bracketing for species that depend on the just executed jump"
+"""
+update bracketing for species that depend on the just executed jump
+"""
 @inline function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
     # update bracketing intervals
     ubnds = p.cur_u_bnds

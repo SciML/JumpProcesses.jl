@@ -69,7 +69,9 @@ function initialize!(p::RDirectJumpAggregation, integrator, u, params, t)
     nothing
 end
 
-"execute one jump, changing the system state and updating rates"
+"""
+execute one jump, changing the system state and updating rates
+"""
 function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     # execute jump
     u = update_state!(p, integrator, u)
@@ -79,7 +81,9 @@ function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     nothing
 end
 
-"calculate the next jump / jump time"
+"""
+calculate the next jump / jump time
+"""
 function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     # if no more events possible there is nothing to do
     sum_rate = p.sum_rate

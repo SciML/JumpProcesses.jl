@@ -6,13 +6,13 @@ This tutorial shows how to use spatial solvers.
 
 A 5 by 5 Cartesian grid:
 
-| <!-- -->  | <!-- -->  | <!-- -->  |  <!-- --> | <!-- -->  |
-|---|---|---|---|---|
-| . | . | . | . | B |
-| . | . | . | . | . |
-| . | . | . | . | . |
-| . | . | . | . | . |
-| A | . | . | . | . |
+| <!-- --> | <!-- --> | <!-- --> | <!-- --> | <!-- --> |
+|:-------- |:-------- |:-------- |:-------- |:-------- |
+| .        | .        | .        | .        | B        |
+| .        | .        | .        | .        | .        |
+| .        | .        | .        | .        | .        |
+| .        | .        | .        | .        | .        |
+| A        | .        | .        | .        | .        |
 
 Suppose we have a reversible binding system described by
 $$A+B \to C$$ at rate $$k_1$$ and $$C \to A+B$$ at rate $$k_2$$.
@@ -24,7 +24,7 @@ We first create the grid:
 
 ```@example spatial
 using JumpProcesses
-dims = (5,5)
+dims = (5, 5)
 num_nodes = prod(dims) # number of sites
 grid = CartesianGrid(dims) # or use Graphs.grid(dims)
 ```
@@ -34,8 +34,8 @@ Now we set the initial state of the simulation. It has to be a matrix with entry
 ```@example spatial
 num_species = 3
 starting_state = zeros(Int, num_species, num_nodes)
-starting_state[1,1] = 25
-starting_state[2,end] = 25
+starting_state[1, 1] = 25
+starting_state[2, end] = 25
 starting_state
 ```
 
@@ -55,8 +55,8 @@ prob = DiscreteProblem(starting_state, tspan, rates)
 Since both reactions are [massaction reactions](https://en.wikipedia.org/wiki/Law_of_mass_action), we put them together in a `MassActionJump`. In order to do that, we create two stoichiometry vectors. The net stoichiometry vector describes which molecules change in number and how much after each reaction; for example, `[1 => -1]` is the first molecule disappearing. The reaction stoichiometry vector describes what the reactants of each reaction are; for example, `[1 => 1, 2 => 1]` would mean that the reactants are one molecule of type 1, and one molecule of type 2.
 
 ```@example spatial
-netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
-reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
+netstoch = [[1 => -1, 2 => -1, 3 => 1], [1 => 1, 2 => 1, 3 => -1]]
+reactstoch = [[1 => 1, 2 => 1], [3 => 1]]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 ```
 
@@ -72,7 +72,8 @@ We are now ready to set up the `JumpProblem` with the Next Subvolume Method.
 
 ```@example spatial
 alg = NSM()
-jump_prob = JumpProblem(prob, alg, majumps, hopping_constants=hopping_constants, spatial_system = grid, save_positions=(true, false))
+jump_prob = JumpProblem(prob, alg, majumps, hopping_constants = hopping_constants,
+                        spatial_system = grid, save_positions = (true, false))
 ```
 
 The `save_positions` keyword tells the solver to save the positions just before the jumps. To solve the jump problem do
@@ -88,21 +89,24 @@ Visualizing solutions of spatial jump problems is best done with animations.
 ```@example spatial
 using Plots
 is_static(spec) = (spec == 3) # true if spec does not hop
-"get frame k"
+"""
+get frame k
+"""
 function get_frame(k, sol, linear_size, labels, title)
     num_species = length(labels)
-    h = 1/linear_size
+    h = 1 / linear_size
     t = sol.t[k]
     state = sol.u[k]
-    xlim=(0,1+3h/2); ylim=(0,1+3h/2);
-    plt = plot(xlim=xlim, ylim=ylim, title = "$title, $(round(t, sigdigits=3)) seconds")
+    xlim = (0, 1 + 3h / 2)
+    ylim = (0, 1 + 3h / 2)
+    plt = plot(xlim = xlim, ylim = ylim, title = "$title, $(round(t, sigdigits=3)) seconds")
 
     species_seriess_x = [[] for i in 1:num_species]
     species_seriess_y = [[] for i in 1:num_species]
     CI = CartesianIndices((linear_size, linear_size))
     for ci in CartesianIndices(state)
         species, site = Tuple(ci)
-        x,y = Tuple(CI[site])
+        x, y = Tuple(CI[site])
         num_molecules = state[ci]
         sizehint!(species_seriess_x[species], num_molecules)
         sizehint!(species_seriess_y[species], num_molecules)
@@ -114,31 +118,35 @@ function get_frame(k, sol, linear_size, labels, title)
             randsy = zeros(num_molecules)
         end
         for k in 1:num_molecules
-            push!(species_seriess_x[species], x*h - h/4 + 0.5h*randsx[k])
-            push!(species_seriess_y[species], y*h - h/4 + 0.5h*randsy[k])
+            push!(species_seriess_x[species], x * h - h / 4 + 0.5h * randsx[k])
+            push!(species_seriess_y[species], y * h - h / 4 + 0.5h * randsy[k])
         end
     end
     for species in 1:num_species
-        scatter!(plt, species_seriess_x[species], species_seriess_y[species], label = labels[species], marker = 6)
+        scatter!(plt, species_seriess_x[species], species_seriess_y[species],
+                 label = labels[species], marker = 6)
     end
-    xticks!(plt, range(xlim...,length = linear_size+1))
-    yticks!(plt, range(ylim...,length = linear_size+1))
+    xticks!(plt, range(xlim..., length = linear_size + 1))
+    yticks!(plt, range(ylim..., length = linear_size + 1))
     xgrid!(plt, 1, 0.7)
     ygrid!(plt, 1, 0.7)
     return plt
 end
 
-"make an animation of solution sol in 2 dimensions"
+"""
+make an animation of solution sol in 2 dimensions
+"""
 function animate_2d(sol, linear_size; species_labels, title, verbose = true)
     num_frames = length(sol.t)
-    anim = @animate for k=1:num_frames
+    anim = @animate for k in 1:num_frames
         verbose && println("Making frame $k")
         get_frame(k, sol, linear_size, species_labels, title)
     end
     anim
 end
 # animate
-anim=animate_2d(solution, 5, species_labels = ["A", "B", "C"], title = "A + B <--> C", verbose = false)
+anim = animate_2d(solution, 5, species_labels = ["A", "B", "C"], title = "A + B <--> C",
+                  verbose = false)
 fps = 5
 gif(anim, fps = fps)
 ```
@@ -152,12 +160,12 @@ Now suppose we want to make some changes to the reversible binding model above. 
 If our mesh is a grid (1D, 2D and 3D are supported), we can create the mesh as follows.
 
 ```@example spatial
-dims = (2,3,4) # can pass in a 1-Tuple, a 2-Tuple or a 3-Tuple
+dims = (2, 3, 4) # can pass in a 1-Tuple, a 2-Tuple or a 3-Tuple
 num_nodes = prod(dims)
 grid = CartesianGrid(dims)
 ```
 
-The interface is the same as for [`Graphs.grid`](https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/#Graphs.SimpleGraphs.grid-Union{Tuple{AbstractVector{T}},%20Tuple{T}}%20where%20T%3C:Integer). If we want to use an unstructured mesh, we can simply use any `AbstractGraph` from `Graphs` as follows:
+The interface is the same as for [`Graphs.grid`](https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/#Graphs.SimpleGraphs.grid-Union%7BTuple%7BAbstractVector%7BT%7D%7D,%20Tuple%7BT%7D%7D%20where%20T%3C:Integer). If we want to use an unstructured mesh, we can simply use any `AbstractGraph` from `Graphs` as follows:
 
 ```@example spatial
 using Graphs
@@ -191,7 +199,7 @@ site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = ones(outdegree(grid, site))
 end
-hopping_constants=Pair(species_hop_constants, site_hop_constants)
+hopping_constants = Pair(species_hop_constants, site_hop_constants)
 ```
 
 We must combine both vectors into a pair, as in the last line above.
@@ -204,7 +212,7 @@ site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
 for site in 1:num_nodes
     site_hop_constants[site] = ones(outdegree(grid, site))
 end
-hopping_constants=Pair(species_hop_constants, site_hop_constants)
+hopping_constants = Pair(species_hop_constants, site_hop_constants)
 ```
 
 We can use either of the four versions of `hopping_constants` to construct a `JumpProblem` with the same syntax as in the original example. The different forms of hopping rates are supported not only for convenience, but also for better memory usage and performance. So it is recommended that the most specialized form of hopping rates is used.
@@ -216,4 +224,5 @@ There are currently two specialized "spatial" solvers: `NSM` and `DirectCRDirect
 Additionally, all standard solvers are supported as well, although they are expected to use more memory and be slower. They "flatten" the problem, i.e., turn all hops into reactions, resulting in a much larger system. For example, to use the Next Reaction Method (`NRM`), simply pass in `NRM()` instead of `NSM()` in the construction of the `JumpProblem`. Importantly, you *must* pass in `hopping_constants` in the `D_{s,i,j}` or `D_{s,i}` form to use any of the non-specialized solvers.
 
 ## References
+
 [^1]: Elf, Johan and Ehrenberg, Mäns. “Spontaneous separation of bi-stable biochemical systems into spatial domains of opposite phases”. In: _Systems biology_ 1.2 (2004), pp. 230–236.

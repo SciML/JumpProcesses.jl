@@ -100,7 +100,7 @@ function ArrayInterfaceCore.zeromatrix(A::ExtendedJumpArray)
     u = [vec(A.u); vec(A.jump_u)]
     u .* u' .* false
 end
-function LinearAlgebra.ldiv!(A, b::ExtendedJumpArray)
+function LinearAlgebra.ldiv!(A::LinearAlgebra.LU, b::ExtendedJumpArray)
     LinearAlgebra.ldiv!(A, [vec(b.u); vec(b.jump_u)])
 end
 

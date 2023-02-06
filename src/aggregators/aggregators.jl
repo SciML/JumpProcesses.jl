@@ -132,6 +132,17 @@ evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
 """
 struct Coevolve <: AbstractAggregatorAlgorithm end
 
+
+struct CHV{T,S} <: AbstractAggregatorAlgorithm where {T <: AbstractAggregatorAlgorithm, S <: Number}
+    agg::T
+    nullrate::S
+end
+
+function CHV(agg::T; nullrate = 0.0) where {T <: AbstractAggregatorAlgorithm}
+    is_spatial(agg) && error("CHV can not currently be used with spatial aggregators.")
+    CHV{T, typeof(rate)}(agg, rate)
+end
+
 # spatial methods
 
 """
@@ -181,6 +192,7 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 # true if aggregator supports variable rates
 supports_variablerates(aggregator::AbstractAggregatorAlgorithm) = false
 supports_variablerates(aggregator::Coevolve) = true
+supports_variablerates(aggregator::CHV) = true
 
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true

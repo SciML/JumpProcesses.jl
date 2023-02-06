@@ -38,6 +38,7 @@ end
 
 include("jumps.jl")
 include("massaction_rates.jl")
+include("extended_jump_array.jl")
 include("aggregators/aggregators.jl")
 include("aggregators/ssajump.jl")
 include("aggregators/direct.jl")
@@ -51,6 +52,7 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 include("aggregators/coevolve.jl")
+include("aggregators/chv.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -65,7 +67,6 @@ include("spatial/directcrdirect.jl")
 
 include("aggregators/aggregated_api.jl")
 
-include("extended_jump_array.jl")
 include("problem.jl")
 include("solve.jl")
 include("coupled_array.jl")

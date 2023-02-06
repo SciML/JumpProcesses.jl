@@ -197,8 +197,16 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     ndiscjumps = get_num_majumps(maj) + num_crjs(jumps)
 
-    # separate bounded variable rate jumps *if* the aggregator can use them
-    if use_vrj_bounds && supports_variablerates(aggregator) && (num_bndvrjs(jumps) > 0)
+    # CHV does not use bounded jumps and wraps another aggregator for non-vrjs
+    if aggregator isa CHV
+        use_vrj_bounds = false
+        inner_agg = aggregator.agg
+    else
+        inner_agg = aggregator
+    end
+
+    # separate bounded variable rate jumps *if* the inner_agg can use them
+    if use_vrj_bounds && supports_variablerates(inner_agg) && (num_bndvrjs(jumps) > 0)
         bvrjs = filter(isbounded, jumps.variable_jumps)
         cvrjs = filter(!isbounded, jumps.variable_jumps)
         kwargs = merge((; variable_jumps = bvrjs), kwargs)
@@ -211,18 +219,18 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
 
     # handle majs, crjs, and bounded vrjs
-    if (ndiscjumps == 0) && !is_spatial(aggregator)
+    if (ndiscjumps == 0) && !is_spatial(inner_agg)
         disc_agg = nothing
         constant_jump_callback = CallbackSet()
     else
-        disc_agg = aggregate(aggregator, u, prob.p, t, end_time, jumps.constant_jumps, maj,
+        disc_agg = aggregate(inner_agg, u, prob.p, t, end_time, jumps.constant_jumps, maj,
                              save_positions, rng; kwargs...)
         constant_jump_callback = DiscreteCallback(disc_agg)
     end
 
     # handle any remaining vrjs
     if length(cvrjs) > 0
-        new_prob = extend_problem(prob, cvrjs; rng)
+        new_prob = extend_problem(prob, aggregator, cvrjs; rng)
         variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
         cont_agg = cvrjs
     else
@@ -235,21 +243,23 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     iip = isinplace_jump(prob, jumps.regular_jump)
     solkwargs = make_kwarg(; callback)
 
-    JumpProblem{iip, typeof(new_prob), typeof(aggregator),
+    JumpProblem{iip, typeof(new_prob), typeof(inner_agg),
                 typeof(jump_cbs), typeof(disc_agg),
                 typeof(cont_agg),
                 typeof(jumps.regular_jump),
-                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc_agg,
+                typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, inner_agg, disc_agg,
                                                              jump_cbs, cont_agg,
                                                              jumps.regular_jump, maj, rng,
                                                              solkwargs)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, agg, jumps;
+                        rng = DEFAULT_RNG)
     error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
 
-function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::DiffEqBase.AbstractODEProblem,
+                        agg::AbstractAggregatorAlgorithm, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
@@ -275,7 +285,8 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
     remake(prob, f = ODEFunction{isinplace(prob)}(jump_f), u0 = u0)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::DiffEqBase.AbstractSDEProblem,
+                        agg::AbstractAggregatorAlgorithm, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
@@ -311,7 +322,8 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
     remake(prob, f = SDEFunction{isinplace(prob)}(jump_f, jump_g), g = jump_g, u0 = u0)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::DiffEqBase.AbstractDDEProblem,
+                        agg::AbstractAggregatorAlgorithm, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
@@ -338,7 +350,8 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
-function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::DiffEqBase.AbstractDAEProblem,
+                        agg::AbstractAggregatorAlgorithm, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)

@@ -196,6 +196,3 @@ supports_variablerates(aggregator::Extrande) = true
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
-
-is_ficticious(aggregator::AbstractAggregatorAlgorithm) = false
-is_ficticious(aggregator::Extrande) = true

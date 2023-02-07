@@ -37,11 +37,12 @@ end
 ############################# Required Functions ##############################
 function aggregate(aggregator::Extrande, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; variable_jumps = (), kwargs...)
+    ma_jumps_ = !isnothing(ma_jumps) ? ma_jumps : ()
     rates, affects! = get_jump_info_fwrappers(u, p, t,
-                                              (constant_jumps..., variable_jumps...,
+                                              (constant_jumps..., variable_jumps..., ma_jumps_...,
                                                NullAffectJump))
     rbnds, wnds = get_va_jump_bound_info_fwrapper(u, p, t,
-                                                  (constant_jumps..., variable_jumps...,
+                                                  (constant_jumps..., variable_jumps..., ma_jumps_...,
                                                    NullAffectJump))
     build_jump_aggregation(ExtrandeJumpAggregation, u, p, t, end_time, ma_jumps,
                            rates, affects!, save_positions, rng; u = u, rate_bounds = rbnds,
@@ -61,21 +62,6 @@ end
     nothing
 end
 
-@fastmath function next_ma_jump(p::ExtrandeJumpAggregation, u, params, t)
-    ttnj = typemax(typeof(t))
-    nextrx = zero(Int)
-    majumps = p.ma_jumps
-    @inbounds for i in 1:get_num_majumps(majumps)
-        p.cur_rates[i] = evalrxrate(u, i, majumps)
-        dt = randexp(p.rng) / p.cur_rates[i]
-        if dt < ttnj
-            ttnj = dt
-            nextrx = i
-        end
-    end
-    nextrx, ttnj
-end
-
 @fastmath function next_extrande_jump(p::ExtrandeJumpAggregation, u, params, t)
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
@@ -83,22 +69,18 @@ end
     Bmax = typemax(typeof(t))
 
     # Calculate the total rate bound and the largest common validity window.
-    Ws = zeros(typeof(t), length(p.wds))
-    Bs = zeros(typeof(t), length(p.rate_bnds))
     if !isempty(p.rate_bnds)
-        idx = get_num_majumps(p.ma_jumps) + 1
+        Bmax = typeof(t)(0.)
         @inbounds for i in 1:length(p.wds)
-            Ws[i] = p.wds[i](u, params, t)
-            Bs[i] = p.rate_bnds[i](u, params, t)
+            Wmin = min(Wmin, p.wds[i](u, params, t))
+            Bmax += p.rate_bnds[i](u, params, t)
         end
-        Wmin = minimum(Ws)
-        Bmax = sum(Bs)
     end
 
     # Rejection sampling.
     if !isempty(p.rates)
         nextrx = length(p.rates)
-        idx = get_num_majumps(p.ma_jumps) + 1
+        idx = 1 
         prop_ttnj = randexp(p.rng) / Bmax
         if prop_ttnj < Wmin
             fill_cur_rates(u, params, prop_ttnj + t, p.cur_rates, idx, p.rates...)
@@ -113,7 +95,10 @@ end
             UBmax = rand(p.rng) * Bmax
             ttnj = prop_ttnj
             if p.cur_rates[end] ≥ UBmax
-                @inbounds nextrx = findfirst(x -> x ≥ UBmax, p.cur_rates)
+                nextrx = 1
+                @inbounds while p.cur_rates[nextrx] < UBmax
+                    nextrx += 1
+                end
             end
         else
             ttnj = Wmin
@@ -124,17 +109,9 @@ end
 end
 
 function generate_jumps!(p::ExtrandeJumpAggregation, integrator, u, params, t)
-    nextmaj, ttnmaj = next_ma_jump(p, u, params, t)
     nextexj, ttnexj = next_extrande_jump(p, u, params, t)
-
-    # execute reaction with minimal time
-    if ttnmaj < ttnexj
-        p.next_jump = nextmaj
-        p.next_jump_time = t + ttnmaj
-    else
-        p.next_jump = nextexj
-        p.next_jump_time = t + ttnexj
-    end
+    p.next_jump = nextexj
+    p.next_jump_time = t + ttnexj
 
     nothing
 end

@@ -39,10 +39,12 @@ function aggregate(aggregator::Extrande, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; variable_jumps = (), kwargs...)
     ma_jumps_ = !isnothing(ma_jumps) ? ma_jumps : ()
     rates, affects! = get_jump_info_fwrappers(u, p, t,
-                                              (constant_jumps..., variable_jumps..., ma_jumps_...,
+                                              (constant_jumps..., variable_jumps...,
+                                               ma_jumps_...,
                                                NullAffectJump))
     rbnds, wnds = get_va_jump_bound_info_fwrapper(u, p, t,
-                                                  (constant_jumps..., variable_jumps..., ma_jumps_...,
+                                                  (constant_jumps..., variable_jumps...,
+                                                   ma_jumps_...,
                                                    NullAffectJump))
     build_jump_aggregation(ExtrandeJumpAggregation, u, p, t, end_time, ma_jumps,
                            rates, affects!, save_positions, rng; u = u, rate_bounds = rbnds,
@@ -70,7 +72,7 @@ end
 
     # Calculate the total rate bound and the largest common validity window.
     if !isempty(p.rate_bnds)
-        Bmax = typeof(t)(0.)
+        Bmax = typeof(t)(0.0)
         @inbounds for i in 1:length(p.wds)
             Wmin = min(Wmin, p.wds[i](u, params, t))
             Bmax += p.rate_bnds[i](u, params, t)
@@ -80,7 +82,7 @@ end
     # Rejection sampling.
     if !isempty(p.rates)
         nextrx = length(p.rates)
-        idx = 1 
+        idx = 1
         prop_ttnj = randexp(p.rng) / Bmax
         if prop_ttnj < Wmin
             fill_cur_rates(u, params, prop_ttnj + t, p.cur_rates, idx, p.rates...)

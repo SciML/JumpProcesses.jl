@@ -62,3 +62,13 @@ ode_sol = solve(ode_prob, Tsit5())
 
 # Test extrande against the ODE mean.
 @test prod(isapprox.(means, getindex.(ode_sol(test_times).u, 1), rtol = 1e-3))
+
+# Make sure interfaces correctly with Mass Action Jumps.
+reactant_stoich = [[1 => 1]]
+net_stoich = [[1 => -1]]
+majd = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1])
+bmajd_prob = ODEProblem(f, u0, (0.0, 2pi), [0.08])
+jump_bmajd_prob = JumpProblem(bmajd_prob, Extrande(), jumpb, majd)
+
+means_mass_action = runsimulations(jump_bmajd_prob, test_times)
+@test prod(isapprox.(means_mass_action, getindex.(ode_sol(test_times).u, 1), rtol = 1e-3))

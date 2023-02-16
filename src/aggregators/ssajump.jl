@@ -174,7 +174,7 @@ Execute `p.next_jump`.
     @unpack ma_jumps, next_jump = p
     num_ma_rates = get_num_majumps(ma_jumps)
     if next_jump <= num_ma_rates # is next jump a mass action jump
-        if u isa SVector
+        if u isa StaticArraysCore.SVector
             integrator.u = executerx(u, next_jump, ma_jumps)
         else
             @inbounds executerx!(u, next_jump, ma_jumps)

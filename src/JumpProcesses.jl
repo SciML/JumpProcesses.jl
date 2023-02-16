@@ -16,7 +16,7 @@ import DataStructures: update!
 import Graphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
-using StaticArrays, Base.Threads
+using StaticArraysCore, Base.Threads
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end

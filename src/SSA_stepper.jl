@@ -126,6 +126,8 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     end
 
     DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)
+    
+    integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
 end
 
 function DiffEqBase.__init(jump_prob::JumpProblem,

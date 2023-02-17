@@ -1,4 +1,4 @@
-using JumpProcesses, DiffEqBase
+using JumpProcesses, DiffEqBase, SciMLBase
 using Test
 using StableRNGs
 rng = StableRNG(12345)
@@ -25,6 +25,7 @@ integrator.u[1]
 # test different saving behaviors
 
 sol = solve(jump_prob, SSAStepper())
+@test SciMLBase.successful_retcode(sol)
 @test sol.t[begin] == 0.0
 @test sol.t[end] == 3.0
 

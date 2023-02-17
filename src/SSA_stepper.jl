@@ -126,9 +126,9 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     end
 
     DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)
-    
+
     if integrator.sol.retcode === ReturnCode.Default
-      integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
+        integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
     end
 end
 

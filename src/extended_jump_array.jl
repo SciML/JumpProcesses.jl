@@ -96,7 +96,7 @@ function Base.similar(A::ExtendedJumpArray, ::Type{S},
 end
 
 # Stiff ODE solver
-function ArrayInterfaceCore.zeromatrix(A::ExtendedJumpArray)
+function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
     u = [vec(A.u); vec(A.jump_u)]
     u .* u' .* false
 end

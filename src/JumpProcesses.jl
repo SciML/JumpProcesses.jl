@@ -4,7 +4,7 @@ using Reexport
 @reexport using DiffEqBase
 
 using RandomNumbers, TreeViews, LinearAlgebra, Markdown, DocStringExtensions
-using DataStructures, PoissonRandom, Random, ArrayInterfaceCore
+using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs
 using SciMLBase: SciMLBase

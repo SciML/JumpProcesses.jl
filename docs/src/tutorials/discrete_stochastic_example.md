@@ -21,7 +21,6 @@ chemical kinetics (i.e., Gillespie) models. It is not necessary to have read the
     τ-leaping methods.
 
 !!! note
-
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 We begin by demonstrating how to build jump processes using

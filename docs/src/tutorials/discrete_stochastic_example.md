@@ -187,7 +187,7 @@ using Catalyst
 sir_model = @reaction_network begin
     β, S + I --> 2I
     ν, I --> R
-end β ν
+end
 ```
 
 To build a pure jump process model of the reaction system, where the state is

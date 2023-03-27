@@ -1,0 +1,24 @@
+# tex scaffolding
+*.aux
+*.bbl
+*.blg
+*.bcf
+*.fdb_latexmk
+*.fls
+*.log
+*.pdf
+*.run.xml
+*.synctex.gz
+*.toc
+*.out
+svg-inkscape
+
+_minted-main
+
+# julia scaffolding
+LocalPreferences.toml
+
+# overrides
+!/assets
+!logojuliacon.pdf
+!/logs/*.log

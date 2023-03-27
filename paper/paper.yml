@@ -1,0 +1,34 @@
+title: "Extending JumpProcess.jl for fast point process simulation with time-varying intensities"
+keywords:
+  - Julia
+  - Simulation
+  - Jump process
+  - Point process
+authors:
+  - name: Guilherme Augusto Zagatti
+    orcid: 0000-0003-1323-532X
+    corresponding: true
+    affiliation: 1
+  - name: Samuel A. Isaacson
+    orcid: 0000-0002-7543-8619
+    affiliation: 3
+  - name: Christopher Rackauckas
+    orcid: 0000-0001-5850-0663
+    affiliation: 4
+  - name: See-Kiong Ng
+    orcid: 0000-0001-6565-7511
+    affiliation: 1, 2
+  - name: Stéphane Bressan
+    orcid: 0000-0001-5536-3296
+    affiliation: 1, 2
+affiliations:
+  - name: Institute of Data Science, National University of Singapore, Singapore
+    index: 1
+  - name: School of Computing, National University of Singapore, Singapore
+    index: 2
+  - name: Department of Mathematics and Statistics, Boston University
+    index: 3
+  - name: Computer Science and AI Laboratory (CSAIL), Massachusetts Institute of Technology
+    index: 4
+date: 27 May 2023
+bibliography: references.bib

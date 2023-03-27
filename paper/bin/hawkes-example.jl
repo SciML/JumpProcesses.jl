@@ -7,31 +7,29 @@ import Cairo, Fontconfig
 
 # initialize PGFPlotsX backend and avoid creating empty document warning
 with(:pgfplotsx) do
-  plot()
+    plot()
 end
 
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = (
-    (Coevolve(), false),
-    (Direct(), false),
-    (Coevolve(), true),
-    (Direct(), true),
-    (PyTick(), true),
-    (PDMPCHV(), true),
-)
+algorithms = ((Coevolve(), false),
+              (Direct(), false),
+              (Coevolve(), true),
+              (Direct(), true),
+              (PyTick(), true),
+              (PDMPCHV(), true))
 
 V = 10
 G = erdos_renyi(V, 0.2, seed = 9103)
-g = [neighbors(G, i) for i = 1:nv(G)]
+g = [neighbors(G, i) for i in 1:nv(G)]
 
 gcolors = append!(palette(:default)[1:3], fill(colorant"black", V - 3))
 svg = gplot(G, nodefillc = gcolors, edgelinewidth = 0.5)
 draw(PDF("$(assets)/mediumG.pdf", 3.75cm, 3.75cm), svg)
 
 tspan = (0.0, 50.0)
-u = [0.0 for i = 1:nv(G)]
+u = [0.0 for i in 1:nv(G)]
 p = (0.5, 0.1, 2.0)
 Λ = hawkes_Λ(g, p)
 
@@ -52,7 +50,7 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
             ϕ = zeros(eltype(tspan), nv(G))
             _p = (p[1], p[2], p[3], h, ϕ, urate)
         else
-            h = [eltype(tspan)[] for _ = 1:nv(G)]
+            h = [eltype(tspan)[] for _ in 1:nv(G)]
             urate = zeros(eltype(tspan), nv(G))
             _p = (p[1], p[2], p[3], h, urate)
         end
@@ -88,15 +86,11 @@ end
 @info "Plotting examples for comparison."
 let fig = []
     for (i, (algo, use_recursion)) in enumerate(algorithms)
-        push!(
-            fig,
-            plot(
-                ts[i],
-                Ns[i],
-                title = "$algo, use_recursion = $(use_recursion)",
-                legend = false,
-            ),
-        )
+        push!(fig,
+              plot(ts[i],
+                   Ns[i],
+                   title = "$algo, use_recursion = $(use_recursion)",
+                   legend = false))
     end
     fig = plot(fig..., layout = (3, 2))
     savefig(fig, "$(assets)/hawkes-examples.png")
@@ -105,33 +99,27 @@ end
 @info "Plotting Coevolve examples for paper."
 let sol = sols[1]
     with(:pgfplotsx) do
-        fig = barcodeplot(
-            histories(sol)[1:3],
-            xlims = (0, 20),
-            legend = false,
-            markersize = 2,
-            xlabel = "t",
-            ylabel = "node index";
-            pgfkw...,
-        )
+        fig = barcodeplot(histories(sol)[1:3],
+                          xlims = (0, 20),
+                          legend = false,
+                          markersize = 2,
+                          xlabel = "t",
+                          ylabel = "node index";
+                          pgfkw...)
         savefig(fig, "$(assets)/hawkes-barcode.pdf")
     end
 end
 
 let sol = sols[1]
     with(:pgfplotsx) do
-        fig = plot(
-            conditional_rate(
-                hawkes_rate_closure(u, g),
-                sol;
-                saveat = 0.01,
-                ixs = [1, 2, 3],
-            ),
-            xlims = (0.0, 20.0),
-            legend = false,
-            ylabel = "conditional rate";
-            pgfkw...,
-        )
+        fig = plot(conditional_rate(hawkes_rate_closure(u, g),
+                                    sol;
+                                    saveat = 0.01,
+                                    ixs = [1, 2, 3]),
+                   xlims = (0.0, 20.0),
+                   legend = false,
+                   ylabel = "conditional rate";
+                   pgfkw...)
         savefig(fig, "$(assets)/hawkes-intensity.pdf")
     end
 end
@@ -151,14 +139,14 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
             urate = zeros(eltype(tspan), nv(G))
             _p = (p[1], p[2], p[3], h, urate, ϕ)
         else
-            h = [eltype(tspan)[] for _ = 1:nv(G)]
+            h = [eltype(tspan)[] for _ in 1:nv(G)]
             urate = zeros(eltype(tspan), nv(G))
             _p = (p[1], p[2], p[3], h, urate)
         end
     end
     jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion)
     runs = Vector{Vector{Vector{Number}}}(undef, 250)
-    for n = 1:length(runs)
+    for n in 1:length(runs)
         if typeof(algo) <: PyTick
             jump_prob.reset()
             jump_prob.simulate()
@@ -186,7 +174,6 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
     end
 
     qqs[i] = qq(runs, Λ)
-
 end
 
 @info "Producing QQ plots."
@@ -202,14 +189,12 @@ end
 let fig, pgfkw = copy(pgfkw)
     pgfkw[:size] = (175, 175)
     with(:pgfplotsx) do
-        fig = qqplot(
-            qqs[1]...,
-            legend = false,
-            aspect_ratio = :equal,
-            markersize = 1.0,
-            alpha = 0.75;
-            pgfkw...,
-        )
+        fig = qqplot(qqs[1]...,
+                     legend = false,
+                     aspect_ratio = :equal,
+                     markersize = 1.0,
+                     alpha = 0.75;
+                     pgfkw...)
         savefig(fig, "$(assets)/hawkes-qqplot.pdf")
     end
 end

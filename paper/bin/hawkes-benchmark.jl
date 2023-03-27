@@ -7,14 +7,12 @@ using Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = (
-    (Coevolve(), false),
-    (Direct(), false),
-    (Coevolve(), true),
-    (Direct(), true),
-    (PyTick(), true),
-    (PDMPCHV(), true),
-)
+algorithms = ((Coevolve(), false),
+              (Direct(), false),
+              (Coevolve(), true),
+              (Direct(), true),
+              (PyTick(), true),
+              (PDMPCHV(), true))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -29,8 +27,8 @@ for (algo, use_recursion) in algorithms
     push!(bs, Vector{BenchmarkTools.Trial}())
     _bs = bs[end]
     for (i, G) in enumerate(Gs)
-        g = [neighbors(G, i) for i = 1:nv(G)]
-        u = [0.0 for i = 1:nv(G)]
+        g = [neighbors(G, i) for i in 1:nv(G)]
+        u = [0.0 for i in 1:nv(G)]
         if typeof(algo) <: PyTick
             _p = (p[1], p[2], p[3])
         elseif typeof(algo) <: PDMPCHV
@@ -42,7 +40,7 @@ for (algo, use_recursion) in algorithms
                 global ϕ = zeros(eltype(tspan), nv(G))
                 _p = (p[1], p[2], p[3], h, urate, ϕ)
             else
-                global h = [eltype(tspan)[] for _ = 1:nv(G)]
+                global h = [eltype(tspan)[] for _ in 1:nv(G)]
                 global urate = zeros(eltype(tspan), nv(G))
                 _p = (p[1], p[2], p[3], h, urate)
             end
@@ -50,13 +48,11 @@ for (algo, use_recursion) in algorithms
         global jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion)
         trial = try
             if typeof(algo) <: PyTick
-                @benchmark(
-                    jump_prob.simulate(),
-                    setup = (jump_prob.reset()),
-                    samples = 50,
-                    evals = 1,
-                    seconds = 10,
-                )
+                @benchmark(jump_prob.simulate(),
+                           setup=(jump_prob.reset()),
+                           samples=50,
+                           evals=1,
+                           seconds=10,)
             else
                 global stepper = if typeof(algo) <: Coevolve
                     SSAStepper()
@@ -66,54 +62,45 @@ for (algo, use_recursion) in algorithms
                     Tsit5()
                 end
                 if typeof(algo) <: PDMPCHV
-                    @benchmark(
-                        solve(jump_prob, stepper),
-                        setup = (),
-                        samples = 50,
-                        evals = 1,
-                        seconds = 10,
-                    )
+                    @benchmark(solve(jump_prob, stepper),
+                               setup=(),
+                               samples=50,
+                               evals=1,
+                               seconds=10,)
                 else
                     if use_recursion
-                        @benchmark(
-                            solve(jump_prob, stepper),
-                            setup = (h .= 0; urate .= 0; ϕ .= 0),
-                            samples = 50,
-                            evals = 1,
-                            seconds = 10,
-                        )
+                        @benchmark(solve(jump_prob, stepper),
+                                   setup=(h .= 0; urate .= 0; ϕ .= 0),
+                                   samples=50,
+                                   evals=1,
+                                   seconds=10,)
                     else
-                        @benchmark(
-                            solve(jump_prob, stepper),
-                            setup = (reset_history!(h); urate .= 0),
-                            samples = 50,
-                            evals = 1,
-                            seconds = 10,
-                        )
+                        @benchmark(solve(jump_prob, stepper),
+                                   setup=(reset_history!(h); urate .= 0),
+                                   samples=50,
+                                   evals=1,
+                                   seconds=10,)
                     end
                 end
             end
         catch e
-            BenchmarkTools.Trial(
-                BenchmarkTools.Parameters(samples = 50, evals = 1, seconds = 10),
-            )
+            BenchmarkTools.Trial(BenchmarkTools.Parameters(samples = 50, evals = 1,
+                                                           seconds = 10))
         end
         push!(_bs, trial)
         if (nv(G) == 1 || nv(G) % 10 == 0)
-            median_time =
-                length(trial) > 0 ? "$(BenchmarkTools.prettytime(median(trial.times)))" :
-                "nan"
+            median_time = length(trial) > 0 ?
+                          "$(BenchmarkTools.prettytime(median(trial.times)))" :
+                          "nan"
             @info "\tV = $(nv(G)), length = $(length(trial.times)), median time = $median_time"
         end
     end
 end
 
-fig = plot(
-    yscale = :log10,
-    xlabel = "V",
-    ylabel = "Time (ns)",
-    legend_position = :outertopright,
-)
+fig = plot(yscale = :log10,
+           xlabel = "V",
+           ylabel = "Time (ns)",
+           legend_position = :outertopright)
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     _bs, _Vs = [], []
     for (j, b) in enumerate(bs[i])

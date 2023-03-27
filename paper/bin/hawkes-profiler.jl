@@ -19,8 +19,8 @@ Profile.init(delay = 1e-9)
 for (algo, use_recursion) in algorithms
     for (label, G) in Gs
         @info "Profiling $algo, $label."
-        g = [neighbors(G, i) for i = 1:nv(G)]
-        u = [0.0 for i = 1:nv(G)]
+        g = [neighbors(G, i) for i in 1:nv(G)]
+        u = [0.0 for i in 1:nv(G)]
         if typeof(algo) <: PDMPCHV
             _p = (p[1], p[2], p[3], nothing, nothing, g)
         else
@@ -40,7 +40,7 @@ for (algo, use_recursion) in algorithms
         solve(jump_prob, stepper)
         now = time()
         Profile.clear()
-        for _ = 1:50
+        for _ in 1:50
             if ~(typeof(algo) <: PDMPCHV)
                 h .= 0
                 urate .= 0
@@ -48,11 +48,10 @@ for (algo, use_recursion) in algorithms
             end
             @profile solve(jump_prob, stepper)
         end
-        duration = @sprintf "%.0f" (time() - now) * 1e3 / 50
-        ProfileSVG.save(
-            joinpath(assets, "hawkes-profile-$(string(algo)[1:end-2])-$label.svg"),
-            title = "Profile $algo, $label ($(nv(G)) nodes, $(duration) ms/rep)",
-        )
+        duration = @sprintf "%.0f" (time() - now) * 1e3/50
+        ProfileSVG.save(joinpath(assets,
+                                 "hawkes-profile-$(string(algo)[1:end-2])-$label.svg"),
+                        title = "Profile $algo, $label ($(nv(G)) nodes, $(duration) ms/rep)")
         @info "Took $(duration) ms/rep."
         Profile.clear()
     end

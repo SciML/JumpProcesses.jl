@@ -6,15 +6,15 @@ function reset_history!(h; start_time = nothing)
     if start_time === nothing
         start_time = -Inf
     end
-    @inbounds for i = 1:length(h)
+    @inbounds for i in 1:length(h)
         hi = h[i]
         ix = 0
         if eltype(hi) <: Tuple
-            while ((ix + 1) <= length(hi)) && hi[ix+1][1] <= start_time
+            while ((ix + 1) <= length(hi)) && hi[ix + 1][1] <= start_time
                 ix += 1
             end
         else
-            while ((ix + 1) <= length(hi)) && hi[ix+1] <= start_time
+            while ((ix + 1) <= length(hi)) && hi[ix + 1] <= start_time
                 ix += 1
             end
         end
@@ -37,15 +37,15 @@ function histories(u, t)
     _u = permutedims(reduce(hcat, u))
     k = size(_u)[2]
     # computes a mask that show when total counts change
-    mask = cat(fill(0.0, 1, k), _u[2:end, :] .- _u[1:end-1, :], dims = 1) .≈ 1
+    mask = cat(fill(0.0, 1, k), _u[2:end, :] .- _u[1:(end - 1), :], dims = 1) .≈ 1
     h = Vector{typeof(t)}(undef, k)
-    @inbounds for i = 1:k
+    @inbounds for i in 1:k
         h[i] = t[mask[:, i]]
     end
     return h
 end
 
-function histories(sol::S) where {S<:ODESolution}
+function histories(sol::S) where {S <: ODESolution}
     # get u and permute the dimensions to get a matrix n x k with n obsevations and k processes.
     if typeof(sol.u[1]) <: ExtendedJumpArray
         u = map((u) -> u.u, sol.u)
@@ -55,7 +55,7 @@ function histories(sol::S) where {S<:ODESolution}
     return histories(u, sol.t)
 end
 
-function histories(sol::S) where {S<:PDMP.PDMPResult}
+function histories(sol::S) where {S <: PDMP.PDMPResult}
     return histories(sol.xd.u, sol.time)
 end
 
@@ -84,20 +84,20 @@ function conditional_rate(rate_closures, sol, h; saveat = nothing, ixs = nothing
         _saveat = sol.t
     end
     p = sol.prob.p
-    _h = [eltype(h)(undef, 0) for _ = 1:length(h)]
+    _h = [eltype(h)(undef, 0) for _ in 1:length(h)]
     hixs = zeros(Int, length(h))
-    condrates = Array{Array{eltype(_saveat),1},1}()
+    condrates = Array{Array{eltype(_saveat), 1}, 1}()
     for t in _saveat
-        @inbounds for i = 1:length(h)
+        @inbounds for i in 1:length(h)
             hi = h[i]
             ix = hixs[i]
-            while ((ix + 1) <= length(hi)) && hi[ix+1] <= t
+            while ((ix + 1) <= length(hi)) && hi[ix + 1] <= t
                 ix += 1
             end
             _h[i] = ix == 0 ? [] : hi[1:ix]
         end
         u = sol(t)
-        condrate = Array{typeof(t),1}()
+        condrate = Array{typeof(t), 1}()
         @inbounds for i in ixs
             rate = rate_closures[i](_h)
             _rate = rate(u, p, t)
@@ -105,16 +105,15 @@ function conditional_rate(rate_closures, sol, h; saveat = nothing, ixs = nothing
         end
         push!(condrates, condrate)
     end
-    return DiffEqBase.build_solution(
-        sol.prob,
-        sol.alg,
-        _saveat,
-        condrates,
-        dense = false,
-        calculate_error = false,
-        destats = DiffEqBase.DEStats(0),
-        interp = DiffEqBase.ConstantInterpolation(_saveat, condrates),
-    )
+    return DiffEqBase.build_solution(sol.prob,
+                                     sol.alg,
+                                     _saveat,
+                                     condrates,
+                                     dense = false,
+                                     calculate_error = false,
+                                     destats = DiffEqBase.DEStats(0),
+                                     interp = DiffEqBase.ConstantInterpolation(_saveat,
+                                                                               condrates))
 end
 
 function conditional_rate(rate_closures, sol; saveat = nothing, ixs = nothing)
@@ -145,41 +144,41 @@ The compensator `Λ` can either be an homogeneous compensator function that
 equally applies to all the processes in `hs`. Alternatively, it accepts a
 vector of compensator that applies to each process.
 """
-function apply_Λ(hs::V, Λ) where {V<:Vector{<:Number}}
+function apply_Λ(hs::V, Λ) where {V <: Vector{<:Number}}
     _hs = similar(hs)
-    @inbounds for n = 1:length(hs)
+    @inbounds for n in 1:length(hs)
         _hs[n] = Λ(hs[n], hs)
     end
     return _hs
 end
 
-function apply_Λ(k::Int, hs::V, Λ::A) where {V<:Vector{<:Vector{<:Number}},A<:Array}
+function apply_Λ(k::Int, hs::V, Λ::A) where {V <: Vector{<:Vector{<:Number}}, A <: Array}
     @inbounds hsk = hs[k]
     @inbounds Λk = Λ[k]
     _hs = similar(hsk)
-    @inbounds for n = 1:length(hsk)
+    @inbounds for n in 1:length(hsk)
         _hs[n] = Λk(hsk[n], hs)
     end
     return _hs
 end
 
-function apply_Λ(hs::V, Λ) where {V<:Vector{<:Vector{<:Number}}}
+function apply_Λ(hs::V, Λ) where {V <: Vector{<:Vector{<:Number}}}
     _hs = similar(hs)
-    @inbounds for k = 1:length(_hs)
+    @inbounds for k in 1:length(_hs)
         _hs[k] = apply_Λ(hs[k], Λ)
     end
     return _hs
 end
 
-function apply_Λ(hs::V, Λ::A) where {V<:Vector{<:Vector{<:Number}},A<:Array}
+function apply_Λ(hs::V, Λ::A) where {V <: Vector{<:Vector{<:Number}}, A <: Array}
     _hs = similar(hs)
-    @inbounds for k = 1:length(_hs)
+    @inbounds for k in 1:length(_hs)
         _hs[k] = apply_Λ(k, hs, Λ)
     end
     return _hs
 end
 
-function apply_Λ(hs::V, Λ) where {V<:Vector{<:Vector{<:Vector{<:Number}}}}
+function apply_Λ(hs::V, Λ) where {V <: Vector{<:Vector{<:Vector{<:Number}}}}
     return map((_hs) -> apply_Λ(_hs, Λ), hs)
 end
 
@@ -199,10 +198,10 @@ function qq(hs, Λ, quant = 0.01:0.01:0.99)
     _hs = apply_Λ(hs, Λ)
     T = typeof(hs[1][1][1])
     Δs = Vector{Vector{T}}(undef, length(hs[1]))
-    for k = 1:length(Δs)
+    for k in 1:length(Δs)
         _Δs = Vector{Vector{T}}(undef, length(hs))
-        for i = 1:length(_Δs)
-            _Δs[i] = _hs[i][k][2:end] .- _hs[i][k][1:end-1]
+        for i in 1:length(_Δs)
+            _Δs[i] = _hs[i][k][2:end] .- _hs[i][k][1:(end - 1)]
         end
         Δs[k] = reduce(vcat, _Δs)
     end

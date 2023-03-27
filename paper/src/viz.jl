@@ -1,12 +1,10 @@
 half_page = (350, 175)
-pgfkw = Dict(
-    :size => half_page,
-    :fontfamily => "times-serif",
-    :titlefontsize => 7,
-    :tickfontsize => 6,
-    :labelfontsize => 7,
-    :legendfontsize => 7,
-)
+pgfkw = Dict(:size => half_page,
+             :fontfamily => "times-serif",
+             :titlefontsize => 7,
+             :tickfontsize => 6,
+             :labelfontsize => 7,
+             :legendfontsize => 7)
 
 @userplot QQPlot
 @recipe function f(x::QQPlot)
@@ -31,7 +29,7 @@ pgfkw = Dict(
         markerstrokealpha --> 0
         markersize --> 1.5
         size --> (400, 500)
-        label --> permutedims(["quantiles $i" for i = 1:length(empirical_quant)])
+        label --> permutedims(["quantiles $i" for i in 1:length(empirical_quant)])
         expected_quant, empirical_quant
     end
 end
@@ -49,8 +47,6 @@ end
     markershape --> :circle
     ylims --> (0.0, k + 1.0)
     for (i, h) in enumerate(histories)
-        @series begin
-            histories[i], y[i]
-        end
+        @series begin histories[i], y[i] end
     end
 end

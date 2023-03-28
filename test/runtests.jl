@@ -13,6 +13,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
+    @time @safetestset "Direct allocations test" begin include("allocations.jl") end
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
     @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
@@ -22,7 +23,6 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Remake tests" begin include("remake_test.jl") end
     @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
     @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end
-    @time @safetestset "Direct allocations test" begin include("allocations.jl") end
     @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
     @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
     @time @safetestset "Topology" begin include("spatial/topology.jl") end

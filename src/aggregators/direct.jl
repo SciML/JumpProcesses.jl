@@ -137,7 +137,8 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
     sum_rate, randexp(p.rng) / sum_rate
 end
 
-@generated function update_state!(p::DirectJumpAggregation{T, S, F1, F2}, integrator, u) where {T, S, F1 <: Tuple, F2 <: Tuple}
+@generated function update_state!(p::DirectJumpAggregation{T, S, F1, F2}, integrator,
+                                  u) where {T, S, F1 <: Tuple, F2 <: Tuple}
     quote
         @unpack ma_jumps, next_jump = p
         num_ma_rates = get_num_majumps(ma_jumps)
@@ -149,7 +150,7 @@ end
             end
         else
             idx = next_jump - num_ma_rates
-            Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds p.affects![i](integrator)) i -> (@inbounds p.affects![fieldcount(F2)](integrator))
+            Base.Cartesian.@nif $(fieldcount(F2)) i->(i == idx) i->(@inbounds p.affects![i](integrator)) i->(@inbounds p.affects![fieldcount(F2)](integrator))
         end
 
         # save jump that was just executed

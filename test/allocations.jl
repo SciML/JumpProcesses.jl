@@ -6,7 +6,7 @@ let
     save_positions = (false, false)
 
     β = 0.1 / 1000.0
-    ν = 0.01;
+    ν = 0.01
     p = (β, ν, 1.0)
     rate1(u, p, t) = p[1] * u[1] * u[2]  # β*S*I
     function affect1!(integrator)
@@ -49,17 +49,17 @@ let
 end
 
 let
-    function rate(η,X,Y,K)
+    function rate(η, X, Y, K)
         return (η / K) * (K - (X + Y))
     end
 
     function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false))
-        r1(u,p,t) = rate(p[1],u[1],u[2],p[2])*u[1]
-        r2(u,p,t) = rate(p[1],u[2],u[1],p[2])*u[2]
-        r3(u,p,t) = p[3]*u[1]
-        r4(u,p,t) = p[3]*u[2]
-        r5(u,p,t) = p[4]*u[1]*u[2]
-        r6(u,p,t) = p[5]*u[2]
+        r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
+        r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
+        r3(u, p, t) = p[3] * u[1]
+        r4(u, p, t) = p[3] * u[2]
+        r5(u, p, t) = p[4] * u[1] * u[2]
+        r6(u, p, t) = p[5] * u[2]
         aff1!(integrator) = integrator.u[1] += 1
         aff2!(integrator) = integrator.u[2] += 1
         aff3!(integrator) = integrator.u[1] -= 1
@@ -78,11 +78,12 @@ let
         tspan = (0.0, T)
 
         dprob = DiscreteProblem(u0, tspan, p)
-        jprob = JumpProblem(
-            dprob, alg,
-            ConstantRateJump(r1,aff1!), ConstantRateJump(r2,aff2!), ConstantRateJump(r3,aff3!),
-            ConstantRateJump(r4,aff4!), ConstantRateJump(r5,aff5!), ConstantRateJump(r6,aff6!);
-            save_positions)
+        jprob = JumpProblem(dprob, alg,
+                            ConstantRateJump(r1, aff1!), ConstantRateJump(r2, aff2!),
+                            ConstantRateJump(r3, aff3!),
+                            ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
+                            ConstantRateJump(r6, aff6!);
+                            save_positions)
         return jprob
     end
 

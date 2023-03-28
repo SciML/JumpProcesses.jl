@@ -1,5 +1,7 @@
 using Test, JumpProcesses
 
+# tests for https://github.com/SciML/JumpProcesses.jl/issues/305
+
 let
     save_positions = (false, false)
 

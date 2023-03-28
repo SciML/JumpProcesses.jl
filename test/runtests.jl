@@ -22,6 +22,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Remake tests" begin include("remake_test.jl") end
     @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
     @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end
+    @time @safetestset "Direct allocations test" begin include("allocations.jl") end
     @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
     @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
     @time @safetestset "Topology" begin include("spatial/topology.jl") end

@@ -13,7 +13,7 @@ doprint = false
 doplot = false
 
 methods = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
-           NRM(), RSSA(), DirectCR(), Coevolve())
+           NRM(), RSSA(), DirectCR(), Coevolve(), Extrande())
 
 # one reaction case, mass action jump, vector of data
 rate = [2.0]

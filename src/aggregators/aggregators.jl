@@ -157,8 +157,18 @@ algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
+"""
+The Extrande method for simulating variable rate jumps with user-defined bounds
+on jumps rates and validity intervals via rejection.
+
+Stochastic Simulation of Biomolecular Networks in Dynamic Environments, Voliotis
+M, Thomas P, Grima R, Bowsher CG, PLOS Computational Biology 12(6): e1004923.
+(2016); doi.org/10.1371/journal.pcbi.1004923
+"""
+struct Extrande <: AbstractAggregatorAlgorithm end
+
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve())
+                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), Extrande())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -181,6 +191,7 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 # true if aggregator supports variable rates
 supports_variablerates(aggregator::AbstractAggregatorAlgorithm) = false
 supports_variablerates(aggregator::Coevolve) = true
+supports_variablerates(aggregator::Extrande) = true
 
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true

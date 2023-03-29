@@ -105,7 +105,7 @@ h = [Float64[]]
 
 Eλ, Varλ = expected_stats_hawkes_problem(p, tspan)
 
-algs = (Direct(), Coevolve(), Coevolve())
+algs = (Direct(), Coevolve(), Coevolve(), Extrande())
 uselrate = zeros(Bool, length(algs))
 uselrate[3] = true
 Nsims = 250
@@ -122,7 +122,7 @@ for (i, alg) in enumerate(algs)
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
-    if typeof(alg) <: Coevolve
+    if typeof(alg) <: Union{Coevolve, Extrande}
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
     else
         cols = length(sols[1].u[1].u)

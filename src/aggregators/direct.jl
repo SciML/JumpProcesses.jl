@@ -67,7 +67,7 @@ end
 
 # tuple-based constant jumps
 function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                           t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
+                           t) where {T, S, F1 <: Tuple, F2, RNG}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -109,7 +109,7 @@ end
 
 # function wrapper-based constant jumps
 function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                           t) where {T, S, F1 <: AbstractArray, F2 <: AbstractArray, RNG}
+                           t) where {T, S, F1 <: AbstractArray, F2, RNG}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -135,4 +135,26 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
 
     @inbounds sum_rate = cur_rates[end]
     sum_rate, randexp(p.rng) / sum_rate
+end
+
+@generated function update_state!(p::DirectJumpAggregation{T, S, F1, F2}, integrator,
+                                  u) where {T, S, F1 <: Tuple, F2 <: Tuple}
+    quote
+        @unpack ma_jumps, next_jump = p
+        num_ma_rates = get_num_majumps(ma_jumps)
+        if next_jump <= num_ma_rates # is next jump a mass action jump
+            if u isa SVector
+                integrator.u = executerx(u, next_jump, ma_jumps)
+            else
+                @inbounds executerx!(u, next_jump, ma_jumps)
+            end
+        else
+            idx = next_jump - num_ma_rates
+            Base.Cartesian.@nif $(fieldcount(F2)) i->(i == idx) i->(@inbounds p.affects![i](integrator)) i->(@inbounds p.affects![fieldcount(F2)](integrator))
+        end
+
+        # save jump that was just executed
+        p.prev_jump = next_jump
+        return integrator.u
+    end
 end

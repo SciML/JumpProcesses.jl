@@ -1,0 +1,287 @@
+% MY CONFIGURATION
+% this package assumes Lua(La)Tex throughout
+% see: https://tex.stackexchange.com/questions/28642/frequently-loaded-packages-differences-between-pdflatex-and-lualatex
+\ProvidesPackage{Config}[Custom configuration.]
+
+%
+% TYPES
+%
+\RequirePackage{fontspec}     % advanced font selection, unified interface for OTF, TTF, AAT
+\RequirePackage{unicode-math} % unicode mathematics support
+\RequirePackage{csquotes}     % context sensitive quotation
+\RequirePackage{microtype}   % micro-typographic (character protrusion, font expansion, etc) enhacements
+
+% see: https://www.overleaf.com/learn/latex/Questions/Which_OTF_or_TTF_fonts_are_supported_via_fontspec%3F
+\setmainfont{Linux Libertine O}
+\setmathfont{XITS Math}
+
+%
+% SPACING
+%
+\RequirePackage{indentfirst} % indent first paragraph after section header
+
+% see: https://www.overleaf.com/learn/latex/Articles/How_to_change_paragraph_spacing_in_LaTeX#The_fundamentals:_parameter_commands_and_examples
+% see: https://tex.stackexchange.com/questions/300340/topsep-itemsep-partopsep-parsep-what-do-they-each-mean-and-what-about
+% paragraph related parameters
+\setlength\parindent{0pt}                      % amount of indentation to the first line of paragraph
+\setlength\parskip{1em plus 0.1em minus 0.2em} % inter-paragraphing "flexible" spacing
+\setlength\topsep{0pt}                         % glue space between first list item and preceding paragraph
+\setlength\partopsep{0pt plus 0pt minus 0pt}   % extra glue space added to \topsep when environment starts a new paragraph
+
+%
+% MARKUP
+%
+\RequirePackage{color}                       % foreground and background color management
+\PassOptionsToPackage{dvipsnames,svgnames}{xcolor} % driver-independent color extensions
+\PassOptionsToPackage{unicode}{hyperref}     % handle cross-referencing commands to produce hypertext links
+\RequirePackage{bookmark}                    % alternative outline organization for hyperref
+
+\newcommand{\hlred}[2][Lavender]{{\sethlcolor{#1}\hl{#2}}}
+\newcommand{\hlblue}[2][SkyBlue]{{\sethlcolor{#1}\hl{#2}}}
+\newcommand{\hlyellow}[2][GreenYellow]{{\sethlcolor{#1}\hl{#2}}}
+\newcommand{\hlgreen}[2][YellowGreen]{{\sethlcolor{#1}\hl{#2}}}
+
+% hyperlink formatting
+\hypersetup{
+    pdfborder={1 1 1},
+    urlbordercolor={1 1 1},
+    citebordercolor={1 1 1},
+    linkbordercolor={0 0 0},
+    frenchlinks=true,
+}
+
+%
+% REFERENCES
+%
+\RequirePackage[
+  backend=biber,
+  style=ieee,
+  citestyle=numeric,
+  giveninits=true,
+  sorting=nyt,
+  maxbibnames=99,
+  dashed=false,
+  doi=false]{biblatex} % reimplementation of bibliographic facilities; requires the biber backend
+
+\DeclareFieldFormat*{title}{``#1''\newunitpunct} % move comma outside the quotation mark
+
+%
+% TABLES
+%
+\RequirePackage{tabulary}  % tabular with variable width columns balanced
+\RequirePackage{longtable} % allow tables to flow over page boundaries
+\RequirePackage{booktabs}  % behind-the-scenes optimisation for publication quality tables
+\RequirePackage{hhline}    % better horizontal lines in tabulars and arrays
+\RequirePackage{array}     % extensions to the array and tabular environments
+
+\setlength{\LTpre}{0pt}    % vertical spacing
+\setlength{\LTpost}{-15pt} % vertical spacing
+
+% TODO: what's happening
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+%
+% LISTS
+%
+\RequirePackage{enumitem} % control layout of lists
+
+%
+% SECTIONS
+%
+\RequirePackage{appendix} % extra control for appendices
+
+% TODO: what's happening
+\renewcommand{\sectionautorefname}{\S}
+\let\subsectionautorefname\sectionautorefname
+\let\subsubsectionautorefname\sectionautorefname
+\renewcommand{\chapterautorefname}{Chapter}
+
+% section numbering
+\setcounter{secnumdepth}{3} % depth of section numbering
+\setcounter{tocdepth}{2} % depth of table of content numbering
+
+%
+% SOURCE CODE
+%
+
+% see: https://www.overleaf.com/learn/latex/Code_listing
+\RequirePackage{listings} % typeset source code listings
+
+\renewcommand{\lstlistingname}{Code}
+% \lstset{aboveskip=3em,belowskip=3em}
+\lstset{frame=none,
+    float,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\bfseries,
+    numbers=none,
+    showstringspaces=false,
+    xleftmargin=1em,
+    escapeinside={(*@}{@*)},
+    captionpos=b,
+}
+
+%
+% MATHS
+%
+\RequirePackage{amsmath} % AMS mathematical facilities
+\RequirePackage{amsthm} % typestting theorems, AMS style
+\RequirePackage{mathtools} % mathematical tools to use with amsmath
+\RequirePackage{stackengine} % for decent underbars
+
+% prefer numbered equations
+\renewcommand{\[}{\begin{equation}}
+\renewcommand{\]}{\end{equation}}
+
+% decent underbars
+\newcommand\ubar[1]{\stackunder[1.2pt]{\(#1\)}{\rule{.8ex}{.075ex}}}
+
+% TODO: what's the default? Is it that bad?
+\let\originaleqref\eqref
+\renewcommand{\eqref}{Equation~\ref}
+
+\newtheoremstyle{bfnote}%
+    {1em plus 0.1em minus 0.2em}{0pt}%
+    {\itshape}{}%
+    {\bfseries}{.}%
+    { }%
+    {\thmname{#1}\thmnumber{ #2}\thmnote{ (#3)}}
+\theoremstyle{bfnote}
+\newtheorem{defn}{Definition} \newcommand{\defnautorefname}{Definition}
+\newtheorem{rul}{Rule} \newcommand{\rulautorefname}{Rule}
+\newtheorem{thm}{Theorem} \newcommand{\thmautorefname}{Theorem}
+\newtheorem{lemma}{Lemma} \newcommand{\lemmaautorefname}{Lemma}
+\newtheorem{coroll}{Corollary} \newcommand{\corollautorefname}{Corollary}
+
+% TODO: do I really need these? maybe it should be defined per document
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclarePairedDelimiter{\vbar}{\vert}{\vert}
+\DeclarePairedDelimiter{\vbarbar}{\Vert}{\Vert}
+\DeclarePairedDelimiter{\parenLR}{\lparen}{\rparen}
+\DeclarePairedDelimiter{\brackLR}{\lbrack}{\rbrack}
+\DeclarePairedDelimiter{\braceLR}{\lbrace}{\rbrace}
+\DeclarePairedDelimiter{\angleLR}{\langle}{\rangle}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\ind}{\perp\!\!\!\!\perp}
+
+\numberwithin{equation}{section}
+\numberwithin{defn}{section}
+\numberwithin{thm}{section}
+
+%
+% ALGORITHMS
+%
+\RequirePackage{algorithm} % floating algorithm environment with algorithmic keywords
+% TODO: decide which one and move on
+% \RequirePackage{alg}
+\RequirePackage{algpseudocode} % from algorithmicx,
+
+\algrenewcommand{\algorithmiccomment}[1]{\hskip3em{\color{gray}{\textit{\# #1}}}}
+% \RequirePackage{program}
+% \RequirePackage[linesnumbered,boxruled,vlined]{algorithm2e}
+% \SetAlgorithmName{Algorithm}{Algorithm}{Algorithm}
+% \newcommand{\AlgoFontSize}{\small} % \scriptsize \footnotesize \small \normalsize
+% \SetCommentSty{textnormal}
+% \SetNlSty{}{}{:}
+% \SetAlgoNlRelativeSize{0}
+% \SetKwInput{KwGlobal}{Global}
+% \SetKwInput{KwPrecondition}{Precondition}
+% \SetKwProg{Proc}{Procedure}{:}{}
+% \SetKwProg{Func}{Function}{:}{}
+% \SetKw{And}{and}
+% \SetKw{Or}{or}
+% \SetKw{To}{to}
+% \SetKw{DownTo}{downto}
+% \SetKw{Break}{break}
+% \SetKw{Continue}{continue}
+% \SetKw{SuchThat}{\textit{s.t.}}
+% \SetKw{WithRespectTo}{\textit{wrt}}
+% \SetKw{Iff}{\textit{iff.}}
+% \SetKw{MaxOf}{\textit{max of}}
+% \SetKw{MinOf}{\textit{min of}}
+% \SetKwBlock{Match}{match}{}{}
+
+%
+% ASSETS
+%
+% TODO: add tikz stuff only on standalone figures
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{positioning}
+\usetikzlibrary{backgrounds}
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{fillbetween}
+\usepgfplotslibrary{groupplots}
+\usepgfplotslibrary{polar}
+\usepgfplotslibrary{smithchart}
+\usepgfplotslibrary{statistics}
+\usepgfplotslibrary{dateplot}
+\usepgfplotslibrary{ternary}
+\usepgfplotslibrary{patchplots}
+\pgfplotsset{%
+layers/standard/.define layer set={%
+    background,axis background,axis grid,axis ticks,axis lines,axis tick labels,pre main,main,axis descriptions,axis foreground%
+}{%
+    grid style= {/pgfplots/on layer=axis grid},%
+    tick style= {/pgfplots/on layer=axis ticks},%
+    axis line style= {/pgfplots/on layer=axis lines},%
+    label style= {/pgfplots/on layer=axis descriptions},%
+    legend style= {/pgfplots/on layer=axis descriptions},%
+    title style= {/pgfplots/on layer=axis descriptions},%
+    colorbar style= {/pgfplots/on layer=axis descriptions},%
+    ticklabel style= {/pgfplots/on layer=axis tick labels},%
+    axis background@ style={/pgfplots/on layer=axis background},%
+    3d box foreground style={/pgfplots/on layer=axis foreground},%
+    },
+}
+\RequirePackage{caption}
+\captionsetup{font=footnotesize}
+\RequirePackage[caption=false,font=footnotesize]{subfig}
+\RequirePackage{svg}
+\svgsetup{inkscapearea=page, inkscapelatex=false}
+\RequirePackage{pdfpages}
+
+% handy commands for image/figure insertion
+\newcommand*{\BeforeCaptionVSpace}{1ex}
+\newcommand*{\BeforeSubCaptionVSpace}{0.75ex}
+
+%
+% MISC
+%
+
+% common abbreviations
+\newcommand{\etal}{\textit{et al}.}
+\newcommand{\ie}{\textit{i}.\textit{e}.}
+\newcommand{\eg}{\textit{e}.\textit{g}.}
+
+% break texttt
+% see: https://tex.stackexchange.com/questions/219445/line-break-in-texttt
+\catcode`_=12 %
+\renewcommand{\texttt}[1]{%
+  \begingroup
+  \ttfamily
+  \begingroup\lccode`~=`/\lowercase{\endgroup\def~}{/\discretionary{}{}{}}%
+  \begingroup\lccode`~=`[\lowercase{\endgroup\def~}{[\discretionary{}{}{}}%
+  \begingroup\lccode`~=`.\lowercase{\endgroup\def~}{.\discretionary{}{}{}}%
+  \begingroup\lccode`~=`_\lowercase{\endgroup\def~}{_\discretionary{}{}{}}%
+  \catcode`/=\active\catcode`[=\active\catcode`.=\active\catcode`_=\active
+  \scantokens{#1\noexpand}%
+  \endgroup
+}
+\catcode`_=8 %
+
+% todo reminders
+\newcommand{\todo}[1]{{\bfseries {\color{red}{!!! TODO: #1}}}}
+
+% bibliography
+\bibliography{references}
+
+% standalone switch
+\newif\ifstandalone
+\standalonetrue
+
+\endinput

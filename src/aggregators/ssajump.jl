@@ -51,6 +51,7 @@ end
 
 # setting up a new simulation
 function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
+    concretize_affects!(p, integrator)
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)
     u_modified!(integrator, false)
@@ -170,7 +171,7 @@ end
 
 Execute `p.next_jump`.
 """
-@inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u)
+@inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u, affects!)
     @unpack ma_jumps, next_jump = p
     num_ma_rates = get_num_majumps(ma_jumps)
     if next_jump <= num_ma_rates # is next jump a mass action jump
@@ -181,13 +182,39 @@ Execute `p.next_jump`.
         end
     else
         idx = next_jump - num_ma_rates
-        @inbounds p.affects![idx](integrator)
+        @inbounds affects![idx](integrator)
     end
 
     # save jump that was just executed
     p.prev_jump = next_jump
     return integrator.u
 end
+
+@generated function update_state!(p::AbstractSSAJumpAggregator, integrator, u,
+                                  affects!::T) where {T <: Tuple}
+    quote
+        @unpack ma_jumps, next_jump = p
+        num_ma_rates = get_num_majumps(ma_jumps)
+        if next_jump <= num_ma_rates # is next jump a mass action jump
+            if u isa SVector
+                integrator.u = executerx(u, next_jump, ma_jumps)
+            else
+                @inbounds executerx!(u, next_jump, ma_jumps)
+            end
+        else
+            idx = next_jump - num_ma_rates
+            Base.Cartesian.@nif $(fieldcount(T)) i->(i == idx) i->(@inbounds affects![i](integrator)) i->(@inbounds affects![fieldcount(T)](integrator))
+        end
+
+        # save jump that was just executed
+        p.prev_jump = next_jump
+        return integrator.u
+    end
+end
+
+@inline update_state!(p::AbstractSSAJumpAggregator, integrator, u) =
+    update_state!(p, integrator, u, p.affects!)
+
 
 """
     nomorejumps!(p, sum_rate) :: Bool
@@ -252,3 +279,5 @@ Perform rejection sampling test (used in RSSA methods).
     end
     return true
 end
+
+concretize_affects!(p::AbstractSSAJumpAggregator, integrator) = nothing

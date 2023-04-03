@@ -14,8 +14,43 @@ end
 function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
                                rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
                                kwargs...) where {T, S, F1, F2, RNG}
-    DirectJumpAggregation{T, S, F1, F2, RNG}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
-                                             rng)
+    affecttype = F2 <: Tuple ? F2 : Any
+    DirectJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr, maj, rs,
+                                                     affs!, sps, rng)
+end
+
+######################### dispatches for type stablity #######################
+
+@inline function concretize_affects!(p::DirectJumpAggregation, ::I) where {I <: DiffEqBase.DEIntegrator}
+    if p.affects! isa Vector{Any}
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
+        p.affects! = AffectWrapper[AffectWrapper(aff) for aff in p.affects!]
+    end
+    nothing
+end
+
+@inline function concretize_affects!(p::DirectJumpAggregation{T, S, F1, F2}, ::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+    nothing
+end
+
+# executing jump at the next jump time
+function (p::DirectJumpAggregation)(integrator::I) where {I <: DiffEqBase.DEIntegrator}
+    affects! = p.affects!
+    if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    else
+        error("Error, invalid affects! type in $(typeof(p))")
+    end
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+function (p::DirectJumpAggregation{T,S,F1,F2})(integrator::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
 end
 
 ############################# Required Functions #############################
@@ -36,7 +71,7 @@ function aggregate(aggregator::DirectFW, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
-    rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
+    rates, affects! = get_jump_info_fwrappers_direct(u, p, t, constant_jumps)
 
     build_jump_aggregation(DirectJumpAggregation, u, p, t, end_time, ma_jumps,
                            rates, affects!, save_positions, rng; kwargs...)
@@ -50,8 +85,8 @@ function initialize!(p::DirectJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
-    update_state!(p, integrator, u)
+@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t, affects!)
+    update_state!(p, integrator, u, affects!)
     nothing
 end
 
@@ -66,8 +101,8 @@ end
 ######################## SSA specific helper routines ########################
 
 # tuple-based constant jumps
-function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                           t) where {T, S, F1 <: Tuple, F2, RNG}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
+                           t) where {T, S, F1 <: Tuple}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -108,8 +143,8 @@ end
 end
 
 # function wrapper-based constant jumps
-function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                           t) where {T, S, F1 <: AbstractArray, F2, RNG}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
+                           t) where {T, S, F1 <: AbstractArray}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -135,26 +170,4 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, param
 
     @inbounds sum_rate = cur_rates[end]
     sum_rate, randexp(p.rng) / sum_rate
-end
-
-@generated function update_state!(p::DirectJumpAggregation{T, S, F1, F2}, integrator,
-                                  u) where {T, S, F1 <: Tuple, F2 <: Tuple}
-    quote
-        @unpack ma_jumps, next_jump = p
-        num_ma_rates = get_num_majumps(ma_jumps)
-        if next_jump <= num_ma_rates # is next jump a mass action jump
-            if u isa SVector
-                integrator.u = executerx(u, next_jump, ma_jumps)
-            else
-                @inbounds executerx!(u, next_jump, ma_jumps)
-            end
-        else
-            idx = next_jump - num_ma_rates
-            Base.Cartesian.@nif $(fieldcount(F2)) i->(i == idx) i->(@inbounds p.affects![i](integrator)) i->(@inbounds p.affects![fieldcount(F2)](integrator))
-        end
-
-        # save jump that was just executed
-        p.prev_jump = next_jump
-        return integrator.u
-    end
 end

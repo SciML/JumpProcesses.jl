@@ -66,12 +66,12 @@ end
 end
 
 # executing jump at the next jump time
-function (p::AbstractSSAJumpAggregator)(integrator::DiffEqBase.DEIntegrator)
+function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: DiffEqBase.DEIntegrator}
     affects! = p.affects!
     if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
         execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
     else
-        error("Error, invalid affects! type in $(typeof(p))")
+        error("Error, invalid affects! type. Expected a vector of function wrappers and got $(typeof(affects!))")
     end
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)

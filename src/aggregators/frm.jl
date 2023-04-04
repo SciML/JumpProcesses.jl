@@ -112,9 +112,8 @@ function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, pa
 end
 
 # function wrapper-based constant jumps
-function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                                 t) where {T, S, F1 <: AbstractArray, F2 <: AbstractArray,
-                                           RNG}
+function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1}, u, params,
+                                 t) where {T, S, F1 <: AbstractArray}
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)

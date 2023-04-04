@@ -121,7 +121,7 @@ end
 
 # when setindex! is used.
 function Base.setindex!(prob::JumpProblem, args...; kwargs...)
-    ___internal_setindex!(prob.prob, args...; kwargs...)
+   SciMLBase.___internal_setindex!(prob.prob, args...; kwargs...)
     if using_params(prob.massaction_jump)
         update_parameters!(prob.massaction_jump, prob.prob.p)
     end

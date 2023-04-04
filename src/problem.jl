@@ -119,6 +119,12 @@ function DiffEqBase.remake(thing::JumpProblem; kwargs...)
       thing.kwargs)
 end
 
+# when setindex! is used.
+function Base.setindex!(prob::JumpProblem, args...; kwargs...)
+    ___internal_setindex!(prob.prob, args...; kwargs...)
+    update_parameters!(prob.massaction_jump, prob.dprob.p; kwargs...)
+end
+
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
 JumpProblem(prob::JumpProblem) = prob
 

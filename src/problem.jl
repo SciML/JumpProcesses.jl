@@ -128,7 +128,9 @@ function Base.setindex!(prob::JumpProblem, args...; kwargs...)
 end
 
 # when getindex is used.
-Base.getindex(prob::JumpProblem, args...; kwargs...) = Base.getindex(prob.prob, args...; kwargs...)
+function Base.getindex(prob::JumpProblem, args...; kwargs...)
+    Base.getindex(prob.prob, args...; kwargs...)
+end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
 JumpProblem(prob::JumpProblem) = prob

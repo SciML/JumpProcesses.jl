@@ -31,5 +31,5 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
     @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
     @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
-    @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end    
+    @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
 end

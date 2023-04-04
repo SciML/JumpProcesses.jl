@@ -122,8 +122,13 @@ end
 # when setindex! is used.
 function Base.setindex!(prob::JumpProblem, args...; kwargs...)
     ___internal_setindex!(prob.prob, args...; kwargs...)
-    update_parameters!(prob.massaction_jump, prob.dprob.p; kwargs...)
+    if using_params(prob.massaction_jump)
+        update_parameters!(prob.massaction_jump, prob.prob.p)
+    end
 end
+
+# when getindex is used.
+Base.getindex(prob::JumpProblem, args...; kwargs...) = Base.getindex(prob.prob, args...; kwargs...)
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
 JumpProblem(prob::JumpProblem) = prob

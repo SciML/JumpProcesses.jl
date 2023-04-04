@@ -691,22 +691,6 @@ end
 function get_jump_info_fwrappers(u, p, t, constant_jumps)
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
-    AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
-
-    if (constant_jumps !== nothing) && !isempty(constant_jumps)
-        rates = [RateWrapper(c.rate) for c in constant_jumps]
-        affects! = [AffectWrapper(x -> (c.affect!(x); nothing)) for c in constant_jumps]
-    else
-        rates = Vector{RateWrapper}()
-        affects! = Vector{AffectWrapper}()
-    end
-
-    rates, affects!
-end
-
-function get_jump_info_fwrappers_direct(u, p, t, constant_jumps)
-    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
-                                                   Tuple{typeof(u), typeof(p), typeof(t)}}
 
     if (constant_jumps !== nothing) && !isempty(constant_jumps)
         rates = [RateWrapper(c.rate) for c in constant_jumps]

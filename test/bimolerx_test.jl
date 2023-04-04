@@ -14,8 +14,7 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
-           NRM(), RSSA(), DirectCR(), Coevolve())
+SSAalgs = JumpProcesses.JUMP_AGGREGATORS
 
 Nsims = 32000
 tf = 0.01

@@ -3,8 +3,9 @@
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{J, T, RX, HOP, RNG, DEPGR, VJMAP, JVMAP, PQ, SS} <:
-               AbstractSSAJumpAggregator
+mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, JVMAP,
+                                  PQ, SS} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -53,9 +54,16 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop
 
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{J, T, RX, HOP, RNG, typeof(dg), typeof(vtoj_map), typeof(jtov_map),
-                       typeof(pq), SS}(nj, nj, njt, et, rx_rates, hop_rates, sps, rng, dg,
-                                       vtoj_map, jtov_map, pq, spatial_system, num_specs)
+    NSMJumpAggregation{T, Nothing, Nothing, Nothing, RNG, J, RX, HOP, typeof(dg),
+                       typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS}(nj, nj, njt, et,
+                                                                           rx_rates,
+                                                                           hop_rates,
+                                                                           sps, rng, dg,
+                                                                           vtoj_map,
+                                                                           jtov_map,
+                                                                           pq,
+                                                                           spatial_system,
+                                                                           num_specs)
 end
 
 ############################# Required Functions ##############################
@@ -98,7 +106,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
     update_state!(p, integrator)
 

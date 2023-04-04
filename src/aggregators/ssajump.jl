@@ -21,7 +21,7 @@ An aggregator interface for SSA-like algorithms.
 
     # be updated when rx i occurs.
 """
-abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
+abstract type AbstractSSAJumpAggregator{T, S, F1, F2, RNG} <: AbstractJumpAggregator end
 
 function DiscreteCallback(c::AbstractSSAJumpAggregator)
     DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
@@ -36,16 +36,18 @@ end
 # execute_jumps!
 # generate_jumps!
 
-# condition for jump to occur
-@inline function (p::AbstractSSAJumpAggregator)(u, t, integrator)
-    p.next_jump_time == t
+@inline function concretize_affects!(p::AbstractSSAJumpAggregator,
+                                     ::I) where {I <: DiffEqBase.DEIntegrator}
+    if p.affects! isa Vector{Any}
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
+        p.affects! = AffectWrapper[AffectWrapper(aff) for aff in p.affects!]
+    end
+    nothing
 end
 
-# executing jump at the next jump time
-function (p::AbstractSSAJumpAggregator)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
+@inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
+                                     ::I) where {T, S, F1, F2 <: Tuple,
+                                                 I <: DiffEqBase.DEIntegrator}
     nothing
 end
 
@@ -55,6 +57,31 @@ function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)
     u_modified!(integrator, false)
+    nothing
+end
+
+# condition for jump to occur
+@inline function (p::AbstractSSAJumpAggregator)(u, t, integrator)
+    p.next_jump_time == t
+end
+
+# executing jump at the next jump time
+function (p::AbstractSSAJumpAggregator)(integrator::DiffEqBase.DEIntegrator)
+    affects! = p.affects!
+    if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    else
+        error("Error, invalid affects! type in $(typeof(p))")
+    end
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+function (p::AbstractSSAJumpAggregator{T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where {T, S, F1, F2 <: Tuple}
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
 
@@ -212,10 +239,6 @@ end
     end
 end
 
-@inline update_state!(p::AbstractSSAJumpAggregator, integrator, u) =
-    update_state!(p, integrator, u, p.affects!)
-
-
 """
     nomorejumps!(p, sum_rate) :: Bool
 
@@ -279,5 +302,3 @@ Perform rejection sampling test (used in RSSA methods).
     end
     return true
 end
-
-concretize_affects!(p::AbstractSSAJumpAggregator, integrator) = nothing

@@ -1,4 +1,5 @@
-mutable struct DirectJumpAggregation{T, S, F1, F2, RNG} <: AbstractSSAJumpAggregator
+mutable struct DirectJumpAggregation{T, S, F1, F2, RNG} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -19,40 +20,6 @@ function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, ma
                                                      affs!, sps, rng)
 end
 
-######################### dispatches for type stablity #######################
-
-@inline function concretize_affects!(p::DirectJumpAggregation, ::I) where {I <: DiffEqBase.DEIntegrator}
-    if p.affects! isa Vector{Any}
-        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
-        p.affects! = AffectWrapper[AffectWrapper(aff) for aff in p.affects!]
-    end
-    nothing
-end
-
-@inline function concretize_affects!(p::DirectJumpAggregation{T, S, F1, F2}, ::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
-    nothing
-end
-
-# executing jump at the next jump time
-function (p::DirectJumpAggregation)(integrator::I) where {I <: DiffEqBase.DEIntegrator}
-    affects! = p.affects!
-    if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
-        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
-    else
-        error("Error, invalid affects! type in $(typeof(p))")
-    end
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
-function (p::DirectJumpAggregation{T,S,F1,F2})(integrator::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
-end
-
 ############################# Required Functions #############################
 
 # creating the JumpAggregation structure (tuple-based constant jumps)
@@ -71,7 +38,7 @@ function aggregate(aggregator::DirectFW, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
-    rates, affects! = get_jump_info_fwrappers_direct(u, p, t, constant_jumps)
+    rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(DirectJumpAggregation, u, p, t, end_time, ma_jumps,
                            rates, affects!, save_positions, rng; kwargs...)

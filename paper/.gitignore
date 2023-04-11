@@ -20,5 +20,6 @@ LocalPreferences.toml
 
 # overrides
 !/assets
+!/assets/*
 !logojuliacon.pdf
 !/logs/*.log

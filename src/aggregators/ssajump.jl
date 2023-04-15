@@ -17,9 +17,7 @@ An aggregator interface for SSA-like algorithms.
 
 ### Optional fields:
 
-  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should
-
-    # be updated when rx i occurs.
+  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should be updated when rx i occurs.
 """
 abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
 

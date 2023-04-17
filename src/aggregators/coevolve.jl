@@ -206,18 +206,22 @@ end
 end
 
 function next_time(p::CoevolveJumpAggregation, u, params, t, i)
-    @unpack next_jump, end_time, cur_rates, ma_jumps, rates, rng, pq, urates = p
+    @unpack next_jump, cur_rates, ma_jumps, rates, rng, pq, urates = p
     num_majumps = get_num_majumps(ma_jumps)
     num_cjumps = length(urates) - length(rates)
     uidx = i - num_majumps
     lidx = uidx - num_cjumps
     urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
-    last_urate = cur_rates[i]
-    if i != p.next_jump && last_urate > zero(t)
-        s = urate == zero(t) ? typemax(t) : last_urate / urate * (pq[i] - t)
-    else
-        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+    # we can only re-use the rng in the case of contstant rates because the rng
+    # used to compute the next candidate time has not been accepted or rejected
+    if i != next_jump && lidx <= 0
+        last_urate = cur_rates[i]
+        if last_urate > zero(t)
+            s = urate == zero(t) ? typemax(t) : last_urate / urate * (pq[i] - t)
+            return next_candidate_time!(p, u, params, t, s, lidx), urate
+        end
     end
+    s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
     return next_candidate_time!(p, u, params, t, s, lidx), urate
 end
 
@@ -234,12 +238,12 @@ function next_candidate_time!(p::CoevolveJumpAggregation, u, params, t, s, lidx)
         return t
     end
     t = t + s
-    if t >= end_time
-        # we set the lrate to typemax(t) to indicate rejection due to candidate being larger than tstop
-        @inbounds cur_lrates[lidx] = typemax(t)
-    else
+    if t < end_time
         lrate = haslratevec[lidx] ? get_lrate(p, lidx, u, params, t) : zero(t)
         @inbounds cur_lrates[lidx] = lrate
+    else
+        # no need to compute the lower bound when time is past the end time
+        @inbounds cur_lrates[lidx] = typemax(t)
     end
     return t
 end

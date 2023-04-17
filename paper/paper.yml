@@ -15,6 +15,8 @@ authors:
   - name: Christopher Rackauckas
     orcid: 0000-0001-5850-0663
     affiliation: 4
+  - name: Vasily Ilin
+    affiliation: 5
   - name: See-Kiong Ng
     orcid: 0000-0001-6565-7511
     affiliation: 1, 2
@@ -30,5 +32,7 @@ affiliations:
     index: 3
   - name: Computer Science and AI Laboratory (CSAIL), Massachusetts Institute of Technology
     index: 4
+  - name: Department of Mathematics, University of Washington
+    index: 5
 date: 27 May 2023
 bibliography: references.bib

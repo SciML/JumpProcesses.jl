@@ -51,7 +51,7 @@ Solution objects for pure jump problems solved via `SSAStepper`.
 $(FIELDS)
 """
 mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <:
-               DiffEqBase.DEIntegrator{SSAStepper, Nothing, uType, tType}
+               AbstractSSAIntegrator{SSAStepper, Nothing, uType, tType}
     """The underlying `prob.f` function. Not currently used."""
     f::F
     """The current solution values."""

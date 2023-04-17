@@ -21,13 +21,15 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     rateintervals::F1                 # vector of interval length functions
     haslratevec::Vector{Bool}         # vector of whether an lrate was provided for this vrj
     cur_lrates::Vector{T}             # the last computed lower rate for each rate
+    save_everyjump::Bool              # whether to save every jump
 end
 
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
                                  maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
                                  rng::RNG; u::U, dep_graph = nothing, lrates, urates,
                                  rateintervals, haslratevec,
-                                 cur_lrates::Vector{T}) where {T, S, F1, F2, RNG, U}
+                                 cur_lrates::Vector{T},
+                                 save_everyjump::Bool) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(urates)
             error("To use Coevolve a dependency graph between jumps must be supplied.")
@@ -51,7 +53,7 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
     CoevolveJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
                             typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
                                         dg, pq, lrates, urates, rateintervals, haslratevec,
-                                        cur_lrates)
+                                        cur_lrates, save_everyjump)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
@@ -99,10 +101,11 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     sum_rate = nothing
     next_jump = 0
     next_jump_time = typemax(t)
+    save_everyjump = any(save_positions)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                             ma_jumps, rates, affects!, save_positions, rng;
                             u, dep_graph, lrates, urates, rateintervals, haslratevec,
-                            cur_lrates)
+                            cur_lrates, save_everyjump)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -115,7 +118,9 @@ end
 
 # execute one jump, changing the system state
 function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
-    @unpack next_jump, ma_jumps = p
+    @unpack next_jump, ma_jumps, save_everyjump = p
+
+    toggle_save_everystep!(p, integrator)
 
     num_majumps = get_num_majumps(ma_jumps)
 
@@ -132,8 +137,8 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
         uidx = next_jump - num_majumps
         lidx = uidx - num_cjumps
         if lidx > 0
-            urate = cur_rates[next_jump]
-            lrate = cur_lrates[lidx]
+            @inbounds urate = cur_rates[next_jump]
+            @inbounds lrate = cur_lrates[lidx]
             s = -1
             if lrate == typemax(t)
                 urate = get_urate(p, uidx, u, params, t)
@@ -149,10 +154,12 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
             elseif lrate > urate
                 error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(next_jump), but lower bound = $(lrate) > upper bound = $(urate)")
             end
-            if s > 0
+            if s >= 0
                 t = next_candidate_time!(p, u, params, t, s, lidx)
                 update!(p.pq, next_jump, t)
                 @inbounds cur_rates[next_jump] = urate
+                # do not save step when candidate time is rejected
+                toggle_save_everystep!(p, integrator; value = false)
                 return nothing
             end
         end
@@ -167,9 +174,23 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     nothing
 end
 
+function toggle_save_everystep!(p::CoevolveJumpAggregation, integrator::T;
+                                value = p.save_everyjump) where {T <: AbstractSSAIntegrator}
+    integrator.save_everystep = value
+end
+
+function toggle_save_everystep!(p::CoevolveJumpAggregation, integrator;
+                                value = p.save_everyjump)
+    nothing
+end
+
 # calculate the next jump / jump time
 function generate_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.next_jump_time, p.next_jump = top_with_handle(p.pq)
+    if p.next_jump_time > p.end_time
+        # restore the option to original value
+        toggle_save_everystep!(p, integrator)
+    end
     nothing
 end
 

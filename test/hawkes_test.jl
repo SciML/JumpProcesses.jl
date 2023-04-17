@@ -60,7 +60,8 @@ function hawkes_jump(u, g, h; uselrate = true)
     return [hawkes_jump(i, g, h; uselrate) for i in 1:length(u)]
 end
 
-function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
+function hawkes_problem(p, agg::Union{Coevolve, CoevolveSynced}; u = [0.0],
+                        tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]], h = [[]], uselrate = true)
     dprob = DiscreteProblem(u, tspan, p)
@@ -105,14 +106,14 @@ h = [Float64[]]
 
 Eλ, Varλ = expected_stats_hawkes_problem(p, tspan)
 
-algs = (Direct(), Coevolve(), Coevolve())
+algs = (Direct(), Coevolve(), Coevolve(), CoevolveSynced(), CoevolveSynced())
 uselrate = zeros(Bool, length(algs))
 uselrate[3] = true
 Nsims = 250
 
 for (i, alg) in enumerate(algs)
     jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[i])
-    if typeof(alg) <: Coevolve
+    if typeof(alg) <: Union{Coevolve, CoevolveSynced}
         stepper = SSAStepper()
     else
         stepper = Tsit5()
@@ -122,7 +123,7 @@ for (i, alg) in enumerate(algs)
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
-    if typeof(alg) <: Coevolve
+    if typeof(alg) <: Union{Coevolve, CoevolveSynced}
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
     else
         cols = length(sols[1].u[1].u)
@@ -132,11 +133,11 @@ for (i, alg) in enumerate(algs)
     @test isapprox(var(λs), Varλ; atol = 0.001)
 end
 
-# test stepping Coevolve with continuous integrator and bounded jumps
-let
+# test stepping Coevolve/CoevolveSynced with continuous integrator and bounded jumps
+for alg in (Coevolve(), CoevolveSynced())
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, Coevolve(), jumps...; dep_graph = g, rng)
+    jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng)
     @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
     sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims
@@ -149,10 +150,10 @@ let
 end
 
 # test disabling bounded jumps and using continuous integrator
-let
+for alg in (Coevolve(), CoevolveSynced())
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, Coevolve(), jumps...; dep_graph = g, rng,
+    jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng,
                         use_vrj_bounds = false)
     @test length(jprob.variable_jumps) == 1
     sols = Vector{ODESolution}(undef, Nsims)

@@ -596,12 +596,13 @@ jump4 = ConstantRateJump(rate4, affect4!)
 With the jumps defined, we can build a
 [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
 Bounded `VariableRateJump`s over a `DiscreteProblem` can currently only be
-simulated with the `Coevolve` aggregator. The aggregator requires a dependency
-graph to indicate when a given jump occurs which other jumps in the system
-should have their rate recalculated (i.e., their rate depends on states modified
-by one occurrence of the first jump). This ensures that rates, rate bounds, and
-rate intervals are recalculated when invalidated due to changes in `u`. For the
-current example, both processes mutually affect each other, so we have
+simulated with the `Coevolve` or `CoevolveSynced` aggregators. Both aggregators
+requires a dependency graph to indicate when a given jump occurs which other
+jumps in the system should have their rate recalculated (i.e., their rate
+depends on states modified by one occurrence of the first jump). This ensures
+that rates, rate bounds, and rate intervals are recalculated when invalidated
+due to changes in `u`. For the current example, both processes mutually affect
+each other, so we have
 
 ```@example tut2
 dep_graph = [[1, 2], [1, 2]]
@@ -628,11 +629,11 @@ We see that the time-dependent infection rate leads to a lower peak of the
 infection throughout the population.
 
 Note that bounded `VariableRateJump`s over `DiscreteProblem`s can be quite
-general, but it is not possible to handle rates that change according to an
-ODE/SDE modified variable. A rate such as `p[2]*u[1]*u[4]` when `u[4]` is the
-solution of a continuous problem such as an ODE or SDE can only be handled using
-a general `VariableRateJump` within a continuous integrator as discussed
-[below](@ref VariableRateJumpSect).
+general. However, when handling rates that change according to an ODE/SDE
+modified variable we will need a continuous integrator as discussed
+[below](@ref VariableRateJumpSect). One example of such a rate is
+`p[2]*u[1]*u[4]` when `u[4]` is the solution of a continuous problem such as an
+ODE or SDE.
 
 ## [Reducing Memory Use: Controlling Saving Behavior](@id save_positions_docs)
 
@@ -701,7 +702,7 @@ plot(sol; label = ["S(t)" "I(t)" "R(t)"])
 ```
 
 Note that we can combine `MassActionJump`s, `ConstantRateJump`s and bounded
-`VariableRateJump`s using the `Coevolve` aggregator.
+`VariableRateJump`s using the `Coevolve` or `CoevolveSynced` aggregators.
 
 ## Adding Jumps to a Differential Equation
 
@@ -713,7 +714,7 @@ only acts on some new 4th component:
 ```@example tut2
 using OrdinaryDiffEq
 function f(du, u, p, t)
-    du[4] = u[2] * u[3] / 100000 - u[1] * u[4] / 100000
+    du[4] = u[2] * u[3] / 1e5 - u[1] * u[4] / 1e5
     nothing
 end
 u₀ = [999.0, 10.0, 0.0, 100.0]
@@ -758,10 +759,10 @@ jump5 = VariableRateJump(rate5, affect5!)
 ```
 
 Notice, since `rate5` depends on a variable that evolves continuously, and hence
-is not constant between jumps, *we must use a general `VariableRateJump` without
-upper/lower bounds*.
+is not constant between jumps, *we must either use a general `VariableRateJump` without
+upper/lower bounds or a bounded `VariableRateJump`*.
 
-Solving the equation is exactly the same:
+In the general case, solving the equation is exactly the same:
 
 ```@example tut2
 u₀ = [999.0, 10.0, 0.0, 1.0]
@@ -773,6 +774,63 @@ plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
 
 *Note that general `VariableRateJump`s require using a continuous problem, like
 an ODE/SDE/DDE/DAE problem, and using floating point initial conditions.*
+
+Alternatively, the case of bounded `VariableRateJump` requires some maths.
+First, we need to obtain the upper bounds of `rate5` at time `t` given `u`.
+Note that `rate5` evolves according to `u[4]` which is a separable first order
+differential equation of the form ``x' = b - a x`` with general solution:
+
+```math
+x(t) = - \frac{e^{-a t - c_1 a}}{a} + \frac{b}{a}
+```
+
+This is bounded by ``b / a`` which is too high for our purposes since it would
+lead to a high rate of rejection during sampling. However, since the function
+is increasing we can compute the upper bound given an interval ``\Delta t``
+as following:
+
+```math
+\bar{x}(s) = x(t) \, e^{-a (t + \Delta t)} + \frac{b}{a} (1 - e^{- a (t + \Delta t)}) \text{ , } \forall s \in [t, t + \Delta t]
+```
+
+However, when ``a = 0`` the differential equation becomes ``x' = b`` whose solution is ``x(t) = b t``. In which case, we obtain a different upper bound given by:
+
+```math
+\bar{x}(s) = x(t) + b * (t + \Delta t) \text{ , } \forall s \in [t, t + \Delta t]
+```
+
+These expressions allow us to write the upper-bound and the rate interval in Julia.
+
+```@example tut2
+function urate2(u, p, t)
+    if u[1] > 0
+        1e-2 * max(u[4], (u[4]*exp(-1*u[1]/1e5) + (u[2]*u[3]/u[1])*(1 - exp(-1*u[1]/1e5))))
+    else
+        1e-2 * (u[4] + 1*u[2]*u[3] / 1e5)
+    end
+end
+rateinterval2(u, p, t) = 1
+```
+
+We can then formulate the jump problem. The only aggregator that supports
+bounded `VariableRateJump`s is `CoevolveSynced`. We formulate and solve the
+jump problem with this aggregator. `CoevolveSynced` can be formulated as either
+a discrete or continuous problem. In this case, we must formulate the problem
+as continuous as it depends on a continuous variable.
+
+```@example tut2
+jump6 = VariableRateJump(rate5, affect5!; urate=urate2, rateinterval=rateinterval2)
+dep_graph2 = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
+jump_prob = JumpProblem(prob, CoevolveSynced(), jump, jump2, jump6; dep_graph = dep_graph2)
+sol = solve(jump_prob, Tsit5())
+plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
+```
+
+We obtain the same solution as with `Direct`, but `CoevolveSynced` runs faster
+because it doesn't need to compute the derivative of `rate5`. Each aggregator
+faces a different trade-off, so the the choice of best aggregator will depend
+on the problem at hand. `CoevolveSynced` requires a good understanding of the
+equations involved, passing a wrong boundary can result in silent bugs.
 
 Lastly, we are not restricted to ODEs. For example, we can solve the same jump
 problem except with multiplicative noise on `u[4]` by using an `SDEProblem`

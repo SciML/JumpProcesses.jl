@@ -51,6 +51,9 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
                                         dg, pq, lrates, urates, rateintervals, haslratevec)
 end
 
+# display
+num_constant_rate_jumps(aggregator::CoevolveJumpAggregation) = length(aggregator.urates)
+
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; dep_graph = nothing,
@@ -185,6 +188,9 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
             if lrate < urate
                 # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
                 v = rand(rng) * urate
+                # TODO: Should we add a check that urate > get_rate(p, lidx, u, params, t)?
+                #       This is an easy mistake to make that can create silent
+                #       bugs, but there might be a decrease in performance.
                 # first inequality is less expensive and short-circuits the evaluation
                 if (v > lrate) && (v > get_rate(p, lidx, u, params, _t))
                     t = _t

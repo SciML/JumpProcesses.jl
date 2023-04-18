@@ -59,7 +59,9 @@ function CoevolveSyncedJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, s
 end
 
 # display
-num_constant_rate_jumps(aggregator::CoevolveSyncedJumpAggregation) = length(aggregator.urates)
+function num_constant_rate_jumps(aggregator::CoevolveSyncedJumpAggregation)
+    length(aggregator.urates)
+end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::CoevolveSynced, u, p, t, end_time, constant_jumps,

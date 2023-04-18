@@ -804,9 +804,11 @@ These expressions allow us to write the upper-bound and the rate interval in Jul
 ```@example tut2
 function urate2(u, p, t)
     if u[1] > 0
-        1e-2 * max(u[4], (u[4]*exp(-1*u[1]/1e5) + (u[2]*u[3]/u[1])*(1 - exp(-1*u[1]/1e5))))
+        1e-2 * max(u[4],
+            (u[4] * exp(-1 * u[1] / 1e5) +
+             (u[2] * u[3] / u[1]) * (1 - exp(-1 * u[1] / 1e5))))
     else
-        1e-2 * (u[4] + 1*u[2]*u[3] / 1e5)
+        1e-2 * (u[4] + 1 * u[2] * u[3] / 1e5)
     end
 end
 rateinterval2(u, p, t) = 1
@@ -819,7 +821,7 @@ a discrete or continuous problem. In this case, we must formulate the problem
 as continuous as it depends on a continuous variable.
 
 ```@example tut2
-jump6 = VariableRateJump(rate5, affect5!; urate=urate2, rateinterval=rateinterval2)
+jump6 = VariableRateJump(rate5, affect5!; urate = urate2, rateinterval = rateinterval2)
 dep_graph2 = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
 jump_prob = JumpProblem(prob, CoevolveSynced(), jump, jump2, jump6; dep_graph = dep_graph2)
 sol = solve(jump_prob, Tsit5())

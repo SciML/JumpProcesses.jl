@@ -153,13 +153,19 @@ function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params,
             elseif lrate < urate
                 # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
                 v = rand(rng) * urate
-                # TODO: Should we add a check that urate > get_rate(p, lidx, u, params, t)?
-                #       This is an easy mistake to make that can create silent
-                #       bugs, but there might be a decrease in performance.
                 # first inequality is less expensive and short-circuits the evaluation
-                if (v > lrate) && (v > get_rate(p, lidx, u, params, t))
-                    urate = get_urate(p, uidx, u, params, t)
-                    s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+                if (v > lrate)
+                    # TODO: Should we add a check that urate > get_rate(p, lidx, u, params, t)?
+                    #       This is an easy mistake to make that can create silent
+                    #       bugs, but there might be a decrease in performance.
+                    rate = get_rate(p, lidx, u, params, t)
+                    if rate > urate
+                        error("rate = $(rate) > upper bound = $(urate) which is not allowed at t = $(t) and i = $(next_jump).")
+                    end
+                    if v > rate
+                        urate = get_urate(p, uidx, u, params, t)
+                        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+                    end
                 end
             elseif lrate > urate
                 error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(next_jump), but lower bound = $(lrate) > upper bound = $(urate)")

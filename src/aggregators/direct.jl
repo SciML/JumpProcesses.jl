@@ -52,7 +52,8 @@ function initialize!(p::DirectJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t, affects!)
+@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t,
+                                affects!)
     update_state!(p, integrator, u, affects!)
     nothing
 end

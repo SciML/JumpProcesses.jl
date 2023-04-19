@@ -78,7 +78,8 @@ function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: DiffEqBase.DE
     nothing
 end
 
-function (p::AbstractSSAJumpAggregator{T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where {T, S, F1, F2 <: Union{Tuple, Nothing}}
+function (p::AbstractSSAJumpAggregator{T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where
+    {T, S, F1, F2 <: Union{Tuple, Nothing}}
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)

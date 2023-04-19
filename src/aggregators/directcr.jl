@@ -12,7 +12,7 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 mutable struct DirectCRJumpAggregation{T, S, F1, F2, RNG, DEPGR, U <: PriorityTable,
                                        W <: Function} <:
-                                       AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T

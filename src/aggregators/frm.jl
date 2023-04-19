@@ -1,4 +1,5 @@
-mutable struct FRMJumpAggregation{T, S, F1, F2, RNG} <: AbstractSSAJumpAggregator
+mutable struct FRMJumpAggregation{T, S, F1, F2, RNG} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -14,8 +15,9 @@ end
 function FRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1,
                             affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
                             kwargs...) where {T, S, F1, F2, RNG}
-    FRMJumpAggregation{T, S, F1, F2, RNG}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
-                                          rng)
+    affecttype = F2 <: Tuple ? F2 : Any
+    FRMJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr, maj, rs,
+                                                  affs!, sps, rng)
 end
 
 ############################# Required Functions #############################
@@ -50,9 +52,9 @@ function initialize!(p::FRMJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-@inline function execute_jumps!(p::FRMJumpAggregation, integrator, u, params, t)
+@inline function execute_jumps!(p::FRMJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    update_state!(p, integrator, u)
+    update_state!(p, integrator, u, affects!)
     nothing
 end
 
@@ -110,9 +112,8 @@ function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, pa
 end
 
 # function wrapper-based constant jumps
-function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                                 t) where {T, S, F1 <: AbstractArray, F2 <: AbstractArray,
-                                           RNG}
+function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1}, u, params,
+                                 t) where {T, S, F1 <: AbstractArray}
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)

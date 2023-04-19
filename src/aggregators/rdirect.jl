@@ -2,7 +2,8 @@
 Direct with rejection sampling
 """
 
-mutable struct RDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <: AbstractSSAJumpAggregator
+mutable struct RDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -40,10 +41,12 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     end
 
     max_rate = maximum(crs)
-    return RDirectJumpAggregation{T, S, F1, F2, RNG, typeof(dg)}(nj, nj, njt, et, crs, sr,
-                                                                 maj, rs, affs!, sps, rng,
-                                                                 dg, max_rate, 0,
-                                                                 counter_threshold)
+    affecttype = F2 <: Tuple ? F2 : Any
+    return RDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
+                                                                         crs, sr, maj, rs,
+                                                                         affs!, sps, rng,
+                                                                         dg, max_rate, 0,
+                                                                         counter_threshold)
 end
 
 ############################# Required Functions #############################
@@ -72,9 +75,9 @@ end
 """
 execute one jump, changing the system state and updating rates
 """
-function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
 
     # update rates
     update_dependent_rates!(p, u, params, t)

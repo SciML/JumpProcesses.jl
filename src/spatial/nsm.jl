@@ -12,8 +12,8 @@ mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, J
     end_time::T
     rx_rates::RX
     hop_rates::HOP
-    # rates::F1 #rates for constant-rate jumps
-    # affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 #rates for constant-rate jumps
+    affects!::F2 #affects! function determines the effect of constant-rate jumps
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -58,6 +58,8 @@ function NSMJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop
                        typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS}(nj, nj, njt, et,
                                                                            rx_rates,
                                                                            hop_rates,
+                                                                           nothing,
+                                                                           nothing,
                                                                            sps, rng, dg,
                                                                            vtoj_map,
                                                                            jtov_map,

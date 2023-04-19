@@ -16,8 +16,8 @@ mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPG
     rx_rates::RX
     hop_rates::HOP
     site_rates::Vector{T}
-    # rates::F1 #rates for constant-rate jumps
-    # affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 #rates for constant-rate jumps
+    affects!::F2 #affects! function determines the effect of constant-rate jumps
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -73,7 +73,8 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
                                   typeof(dg), typeof(vtoj_map),
                                   typeof(jtov_map), SS, typeof(rt),
                                   typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
-                                                       site_rates, sps, rng, dg, vtoj_map,
+                                                       site_rates, nothing, nothing, sps,
+                                                       rng, dg, vtoj_map,
                                                        jtov_map, spatial_system, num_specs,
                                                        rt, ratetogroup)
 end

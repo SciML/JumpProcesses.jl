@@ -2,7 +2,7 @@
 Queue method. This method handles variable intensity rates.
 """
 mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
-               AbstractSSAJumpAggregator
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
     next_jump_time::T                 # the time of the next jump
@@ -46,7 +46,8 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
     end
 
     pq = MutableBinaryMinHeap{T}()
-    CoevolveJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
+    affecttype = F2 <: Tuple ? F2 : Any
+    CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
                             typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
                                         dg, pq, lrates, urates, rateintervals, haslratevec)
 end
@@ -58,14 +59,13 @@ num_constant_rate_jumps(aggregator::CoevolveJumpAggregation) = length(aggregator
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; dep_graph = nothing,
                    variable_jumps = nothing, kwargs...)
-    AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
 
     ncrjs = (constant_jumps === nothing) ? 0 : length(constant_jumps)
     nvrjs = (variable_jumps === nothing) ? 0 : length(variable_jumps)
     nrjs = ncrjs + nvrjs
-    affects! = Vector{AffectWrapper}(undef, nrjs)
+    affects! = Vector{Any}(undef, nrjs)
     rates = Vector{RateWrapper}(undef, nvrjs)
     lrates = similar(rates)
     rateintervals = similar(rates)
@@ -75,7 +75,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     idx = 1
     if constant_jumps !== nothing
         for crj in constant_jumps
-            affects![idx] = AffectWrapper(integ -> (crj.affect!(integ); nothing))
+            affects![idx] = integ -> (crj.affect!(integ); nothing)
             urates[idx] = RateWrapper(crj.rate)
             idx += 1
         end
@@ -83,7 +83,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
 
     if variable_jumps !== nothing
         for (i, vrj) in enumerate(variable_jumps)
-            affects![idx] = AffectWrapper(integ -> (vrj.affect!(integ); nothing))
+            affects![idx] = integ -> (vrj.affect!(integ); nothing)
             urates[idx] = RateWrapper(vrj.urate)
             idx += 1
             rates[i] = RateWrapper(vrj.rate)
@@ -112,9 +112,10 @@ function initialize!(p::CoevolveJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
+
     # update current jump rates and times
     update_dependent_rates!(p, u, params, t)
     nothing

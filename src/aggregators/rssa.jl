@@ -5,7 +5,7 @@
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
 mutable struct RSSAJumpAggregation{T, T2, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V} <:
-               AbstractSSAJumpAggregator
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -65,11 +65,14 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     ulow = @view cs_bnds[1, :]
     uhigh = @view cs_bnds[2, :]
 
-    RSSAJumpAggregation{T, eltype(U), S, F1, F2, RNG, typeof(vtoj_map), typeof(jtov_map),
-                        typeof(bd), typeof(ulow)}(nj, nj, njt, et, crl_bnds, crh_bnds, sr,
-                                                  cs_bnds, maj, rs,
-                                                  affs!, sps, rng, vtoj_map, jtov_map, bd,
-                                                  ulow, uhigh)
+    affecttype = F2 <: Tuple ? F2 : Any
+    RSSAJumpAggregation{T, eltype(U), S, F1, affecttype, RNG, typeof(vtoj_map),
+                        typeof(jtov_map), typeof(bd), typeof(ulow)}(nj, nj, njt, et,
+                                                                    crl_bnds, crh_bnds, sr,
+                                                                    cs_bnds, maj, rs,
+                                                                    affs!, sps, rng,
+                                                                    vtoj_map, jtov_map, bd,
+                                                                    ulow, uhigh)
 end
 
 ############################# Required Functions ##############################
@@ -95,9 +98,9 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
     update_rates!(p, u, params, t)
     nothing
 end

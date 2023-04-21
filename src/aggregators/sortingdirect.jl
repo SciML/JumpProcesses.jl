@@ -3,7 +3,7 @@
 # Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
 mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
-               AbstractSSAJumpAggregator
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -41,9 +41,12 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
-    SortingDirectJumpAggregation{T, S, F1, F2, RNG, typeof(dg)}(nj, nj, njt, et, crs, sr,
-                                                                maj, rs, affs!, sps, rng,
-                                                                dg, jtoidx, zero(Int))
+    affecttype = F2 <: Tuple ? F2 : Any
+    SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
+                                                                        crs, sr, maj, rs,
+                                                                        affs!, sps, rng,
+                                                                        dg, jtoidx,
+                                                                        zero(Int))
 end
 
 ############################# Required Functions ##############################
@@ -69,9 +72,9 @@ function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
 
     # update search order
     jso = p.jump_search_order

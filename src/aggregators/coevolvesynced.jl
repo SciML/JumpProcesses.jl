@@ -149,18 +149,20 @@ function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params,
             s = -1
             if lrate == typemax(t)
                 urate = get_urate(p, uidx, u, params, t)
+                if urate < zero(t)
+                    error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
+                end
                 s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
             elseif lrate < urate
                 # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
                 v = rand(rng) * urate
                 # first inequality is less expensive and short-circuits the evaluation
                 if (v > lrate)
-                    # TODO: Should we add a check that urate > get_rate(p, lidx, u, params, t)?
-                    #       This is an easy mistake to make that can create silent
-                    #       bugs, but there might be a decrease in performance.
                     rate = get_rate(p, lidx, u, params, t)
-                    if rate > urate
-                        error("rate = $(rate) > upper bound = $(urate) which is not allowed at t = $(t) and i = $(next_jump).")
+                    if rate < 0
+                        error("rate = $(rate) < 0 for jump = $(next_jump) at t = $(t) which is not allowed.")
+                    elseif rate > urate
+                        error("rate = $(rate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
                     end
                     if v > rate
                         urate = get_urate(p, uidx, u, params, t)
@@ -168,7 +170,7 @@ function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params,
                     end
                 end
             elseif lrate > urate
-                error("The lower bound should be lower than the upper bound rate for t = $(t) and i = $(next_jump), but lower bound = $(lrate) > upper bound = $(urate)")
+                error("lrate = $(lrate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
             end
             if s >= 0
                 t = next_candidate_time!(p, u, params, t, s, lidx)
@@ -249,6 +251,10 @@ function next_time(p::CoevolveSyncedJumpAggregation, u, params, t, i)
     uidx = i - num_majumps
     lidx = uidx - num_cjumps
     urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
+    if urate < zero(t)
+        error("urate = ", urate, " < 0 for jump = ", i, " at t = ", t,
+              " which is not allowed.")
+    end
     # we can only re-use the rng in the case of contstant rates because the rng
     # used to compute the next candidate time has not been accepted or rejected
     if i != next_jump && lidx <= 0

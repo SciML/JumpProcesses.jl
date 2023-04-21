@@ -130,9 +130,9 @@ end
 ######################## SSA specific helper routines ########################
 function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]
-    @unpack cur_rates, end_time, pq = p
+    @unpack cur_rates, pq = p
     for (ix, i) in enumerate(deps)
-        ti, last_urate_i = next_time(p, u, params, t, i, end_time)
+        ti, last_urate_i = next_time(p, u, params, t, i)
         update!(pq, i, ti)
         @inbounds cur_rates[i] = last_urate_i
     end
@@ -159,25 +159,26 @@ end
     @inbounds return p.rates[lidx](u, params, t)
 end
 
-function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) where {T}
-    @unpack rng, haslratevec = p
-    num_majumps = get_num_majumps(p.ma_jumps)
-    num_cjumps = length(p.urates) - length(p.rates)
+function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i) where {T}
+    @unpack next_jump, cur_rates, ma_jumps, rates, rng, pq, urates = p
+    num_majumps = get_num_majumps(ma_jumps)
+    num_cjumps = length(urates) - length(rates)
     uidx = i - num_majumps
     lidx = uidx - num_cjumps
     urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
     if urate < zero(t)
         error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
     end
-    last_urate = p.cur_rates[i]
-    if i != p.next_jump && last_urate > zero(t)
-        s = urate == zero(t) ? typemax(t) : last_urate / urate * (p.pq[i] - t)
+    last_urate = cur_rates[i]
+    if i != next_jump && last_urate > zero(t)
+        s = urate == zero(t) ? typemax(t) : last_urate / urate * (pq[i] - t)
     else
         s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
     end
     _t = t + s
     if lidx > 0
-        while t < tstop
+        @unpack end_time, haslratevec = p
+        while t < end_time
             rateinterval = get_rateinterval(p, lidx, u, params, t)
             if s > rateinterval
                 t = t + rateinterval
@@ -189,7 +190,7 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i, tstop::T) whe
                 _t = t + s
                 continue
             end
-            (_t >= tstop) && break
+            (_t >= end_time) && break
             lrate = haslratevec[lidx] ? get_lrate(p, lidx, u, params, t) : zero(t)
             if lrate < urate
                 # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
@@ -223,12 +224,11 @@ end
 
 # reevaulate all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t)
-    @unpack end_time = p
     num_jumps = get_num_majumps(p.ma_jumps) + length(p.urates)
     p.cur_rates = zeros(typeof(t), num_jumps)
     jump_times = Vector{typeof(t)}(undef, num_jumps)
     @inbounds for i in 1:num_jumps
-        jump_times[i], p.cur_rates[i] = next_time(p, u, params, t, i, end_time)
+        jump_times[i], p.cur_rates[i] = next_time(p, u, params, t, i)
     end
     p.pq = MutableBinaryMinHeap(jump_times)
     nothing

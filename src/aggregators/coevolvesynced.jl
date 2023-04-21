@@ -2,7 +2,7 @@
 Queue method. This method handles variable intensity rates.
 """
 mutable struct CoevolveSyncedJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
-               AbstractSSAJumpAggregator
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
     next_jump_time::T                 # the time of the next jump
@@ -50,12 +50,10 @@ function CoevolveSyncedJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, s
     end
 
     pq = MutableBinaryMinHeap{T}()
-    CoevolveSyncedJumpAggregation{T, S, F1, F2, RNG, typeof(dg),
-                                  typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
-                                              rng,
-                                              dg, pq, lrates, urates, rateintervals,
-                                              haslratevec,
-                                              cur_lrates, save_everyjump)
+    affecttype = F2 <: Tuple ? F2 : Any
+    CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
+                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
+                                        dg, pq, lrates, urates, rateintervals, haslratevec)
 end
 
 # display
@@ -67,14 +65,13 @@ end
 function aggregate(aggregator::CoevolveSynced, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; dep_graph = nothing,
                    variable_jumps = nothing, kwargs...)
-    AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
                                                    Tuple{typeof(u), typeof(p), typeof(t)}}
 
     ncrjs = (constant_jumps === nothing) ? 0 : length(constant_jumps)
     nvrjs = (variable_jumps === nothing) ? 0 : length(variable_jumps)
     nrjs = ncrjs + nvrjs
-    affects! = Vector{AffectWrapper}(undef, nrjs)
+    affects! = Vector{Any}(undef, nrjs)
     rates = Vector{RateWrapper}(undef, nvrjs)
     lrates = similar(rates)
     rateintervals = similar(rates)
@@ -84,7 +81,7 @@ function aggregate(aggregator::CoevolveSynced, u, p, t, end_time, constant_jumps
     idx = 1
     if constant_jumps !== nothing
         for crj in constant_jumps
-            affects![idx] = AffectWrapper(integ -> (crj.affect!(integ); nothing))
+            affects![idx] = integ -> (crj.affect!(integ); nothing)
             urates[idx] = RateWrapper(crj.rate)
             idx += 1
         end
@@ -92,7 +89,7 @@ function aggregate(aggregator::CoevolveSynced, u, p, t, end_time, constant_jumps
 
     if variable_jumps !== nothing
         for (i, vrj) in enumerate(variable_jumps)
-            affects![idx] = AffectWrapper(integ -> (vrj.affect!(integ); nothing))
+            affects![idx] = integ -> (vrj.affect!(integ); nothing)
             urates[idx] = RateWrapper(vrj.urate)
             idx += 1
             rates[i] = RateWrapper(vrj.rate)
@@ -252,8 +249,7 @@ function next_time(p::CoevolveSyncedJumpAggregation, u, params, t, i)
     lidx = uidx - num_cjumps
     urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
     if urate < zero(t)
-        error("urate = ", urate, " < 0 for jump = ", i, " at t = ", t,
-              " which is not allowed.")
+        error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
     end
     # we can only re-use the rng in the case of contstant rates because the rng
     # used to compute the next candidate time has not been accepted or rejected

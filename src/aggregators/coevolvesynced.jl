@@ -187,7 +187,7 @@ function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params,
     p.prev_jump = next_jump
 
     # update current jump rates and times
-    update_dependent_rates!(p, u, params, t)
+    update_dependent_rates!(p, integrator.u, params, t)
 
     nothing
 end

@@ -51,9 +51,11 @@ function CoevolveSyncedJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, s
 
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
-    CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
-                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
-                                        dg, pq, lrates, urates, rateintervals, haslratevec)
+    CoevolveSyncedJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
+                                  typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
+                                              rng,
+                                              dg, pq, lrates, urates, rateintervals,
+                                              haslratevec, cur_lrates, save_everyjump)
 end
 
 # display
@@ -121,7 +123,8 @@ function initialize!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t,
+                        affects!)
     @unpack next_jump, ma_jumps, save_everyjump = p
 
     toggle_save_everystep!(p, integrator)

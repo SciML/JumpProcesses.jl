@@ -161,7 +161,8 @@ end
 """
 update bracketing for species that depend on the just executed jump
 """
-@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::AbstractVector,
+                                         params, t)
     # update bracketing intervals
     @unpack ulow, uhigh = p
     crhigh = p.cur_rate_high
@@ -172,6 +173,34 @@ update bracketing for species that depend on the just executed jump
         if uval == zero(uval) || uval < ulow[uidx] || uval > uhigh[uidx]
             # update u bracketing interval
             ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+
+            # for each dependent jump, update jump rate brackets
+            for jidx in p.vartojumps_map[uidx]
+                oldrate = crhigh[jidx]
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+
+                # update the priority table
+                update!(p.rt, jidx, oldrate, crhigh[jidx])
+            end
+        end
+    end
+
+    p.sum_rate = groupsum(p.rt)
+    nothing
+end
+
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::SVector, params, t)
+    # update bracketing intervals
+    crhigh = p.cur_rate_high
+
+    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+        uval = u[uidx]
+        # if new u value is outside the bracketing interval
+        if uval == zero(uval) || uval < p.ulow[uidx] || uval > p.uhigh[uidx]
+            # update u bracketing interval
+            ulow, uhigh = get_spec_brackets(p.bracket_data, uidx, uval)
+            p.ulow = setindex(p.ulow, ulow, uidx)
+            p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]

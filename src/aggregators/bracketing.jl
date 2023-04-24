@@ -64,13 +64,27 @@ get brackets for reaction rx by first checking if the reaction is a massaction r
     end
 end
 
-# set up bracketing
-function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
-    # species bracketing interval
+function update_u_brackets!(p::AbstractSSAJumpAggregator, u::AbstractVector)
     @unpack ulow, uhigh = p
     @inbounds for (i, uval) in enumerate(u)
         ulow[i], uhigh[i] = get_spec_brackets(p.bracket_data, i, uval)
     end
+    nothing
+end
+
+function update_u_brackets!(p::AbstractSSAJumpAggregator, u::SVector)
+    @inbounds for (i, uval) in enumerate(u)
+        ulow, uhigh = get_spec_brackets(p.bracket_data, i, uval)
+        p.ulow = setindex(p.ulow, ulow, i)
+        p.uhigh = setindex(p.uhigh, uhigh, i)
+    end
+    nothing
+end
+
+# set up bracketing
+function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
+    # species bracketing interval
+    update_u_brackets!(p, u)
 
     # reaction rate bracketing interval
     # mass action jumps

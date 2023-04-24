@@ -142,7 +142,7 @@ end
 """
 Update rates
 """
-@inline function update_rates!(p::RSSAJumpAggregation, u, params, t)
+@inline function update_rates!(p::RSSAJumpAggregation, u::AbstractVector, params, t)
     # update bracketing intervals
     @unpack ulow, uhigh = p
     sum_rate = p.sum_rate
@@ -155,6 +155,32 @@ Update rates
         if uval == zero(uval) || uval < ulow[uidx] || uval > uhigh[uidx]
             # update u bracketing interval
             ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+
+            # for each dependent jump, update jump rate brackets
+            for jidx in p.vartojumps_map[uidx]
+                sum_rate -= crhigh[jidx]
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+                sum_rate += crhigh[jidx]
+            end
+        end
+    end
+    p.sum_rate = sum_rate
+end
+
+@inline function update_rates!(p::RSSAJumpAggregation, u::SVector, params, t)
+    # update bracketing intervals
+    sum_rate = p.sum_rate
+    crhigh = p.cur_rate_high
+
+    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+        uval = u[uidx]
+
+        # if new u value is outside the bracketing interval
+        if uval == zero(uval) || uval < p.ulow[uidx] || uval > p.uhigh[uidx]
+            # update u bracketing interval
+            ulow, uhigh = get_spec_brackets(p.bracket_data, uidx, uval)
+            p.ulow = setindex(p.ulow, ulow, uidx)
+            p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]

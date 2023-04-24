@@ -81,8 +81,8 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
 
     affecttype = F2 <: Tuple ? F2 : Any
     RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, U, typeof(vtoj_map),
-                          typeof(jtov_map), typeof(bd), typeof(rt), typeof(ratetogroup)}(
-                                               nj, nj, njt, et, crl_bnds, crh_bnds,
+                          typeof(jtov_map), typeof(bd), typeof(rt),
+                          typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
                                                sum_rate, maj, rs, affs!, sps, rng, vtoj_map,
                                                jtov_map, bd, ulow, uhigh, minrate, maxrate,
                                                rt, ratetogroup)

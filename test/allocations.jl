@@ -54,7 +54,7 @@ let
     end
 
     function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false),
-                        graphkwargs = (;))
+                      graphkwargs = (;))
         r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
         r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
         r3(u, p, t) = p[3] * u[1]
@@ -88,12 +88,12 @@ let
         return jprob
     end
 
-    idxs1 = [1,2,3,4]
-    idxs2 = [1,2,4,5,6]
+    idxs1 = [1, 2, 3, 4]
+    idxs2 = [1, 2, 4, 5, 6]
     idxs = collect(1:6)
     dep_graph = [copy(idxs1), copy(idxs2), copy(idxs1), copy(idxs2), copy(idxs), copy(idxs)]
     vartojumps_map = [copy(idxs1), copy(idxs2)]
-    jumptovars_map = [[1], [2], [1], [2], [1,2], [1,2]]
+    jumptovars_map = [[1], [2], [1], [2], [1, 2], [1, 2]]
     graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS

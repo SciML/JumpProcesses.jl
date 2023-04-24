@@ -67,9 +67,9 @@ end
 # set up bracketing
 function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     # species bracketing interval
-    ubnds = p.cur_u_bnds
+    @unpack ulow, uhigh = p
     @inbounds for (i, uval) in enumerate(u)
-        ubnds[1, i], ubnds[2, i] = get_spec_brackets(p.bracket_data, i, uval)
+        ulow[i], uhigh[i] = get_spec_brackets(p.bracket_data, i, uval)
     end
 
     # reaction rate bracketing interval

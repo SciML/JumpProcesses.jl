@@ -4,7 +4,7 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD, T2V,
+mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD,
                                      P <: PriorityTable, W <: Function} <:
                AbstractSSAJumpAggregator{F, S, F1, F2, RNG}
     next_jump::Int
@@ -22,13 +22,12 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD, T2V
     vartojumps_map::VJMAP
     jumptovars_map::JVMAP
     bracket_data::BD
-    ulow::T2V
-    uhigh::T2V
+    ulow::U
+    uhigh::U
     minrate::F
     maxrate::F   # initial maxrate only, table can increase beyond it!
     rt::P #rate table
     ratetogroup::W
-    cur_u_bnds::Matrix{U} # current bounds on state u
 end
 
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
@@ -67,9 +66,8 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
 
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh
-    cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
-    ulow = @view cs_bnds[1, :]
-    uhigh = @view cs_bnds[2, :]
+    ulow = similar(u)
+    uhigh = similar(u)
 
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
@@ -82,12 +80,12 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     rt = PriorityTable(ratetogroup, zeros(F, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, eltype(U), typeof(vtoj_map),
-                          typeof(jtov_map), typeof(bd), typeof(ulow), typeof(rt),
-                          typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
+    RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, U, typeof(vtoj_map),
+                          typeof(jtov_map), typeof(bd), typeof(rt), typeof(ratetogroup)}(
+                                               nj, nj, njt, et, crl_bnds, crh_bnds,
                                                sum_rate, maj, rs, affs!, sps, rng, vtoj_map,
                                                jtov_map, bd, ulow, uhigh, minrate, maxrate,
-                                               rt, ratetogroup, cs_bnds)
+                                               rt, ratetogroup)
 end
 
 ############################# Required Functions ##############################
@@ -165,15 +163,15 @@ update bracketing for species that depend on the just executed jump
 """
 @inline function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
     # update bracketing intervals
-    ubnds = p.cur_u_bnds
+    @unpack ulow, uhigh = p
     crhigh = p.cur_rate_high
 
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
         # if new u value is outside the bracketing interval
-        if uval == zero(uval) || uval < ubnds[1, uidx] || uval > ubnds[2, uidx]
+        if uval == zero(uval) || uval < ulow[uidx] || uval > uhigh[uidx]
             # update u bracketing interval
-            ubnds[1, uidx], ubnds[2, uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+            ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]

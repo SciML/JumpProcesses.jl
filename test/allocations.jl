@@ -53,7 +53,8 @@ let
         return (η / K) * (K - (X + Y))
     end
 
-    function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false))
+    function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false),
+                        graphkwargs = (;))
         r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
         r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
         r3(u, p, t) = p[3] * u[1]
@@ -83,17 +84,28 @@ let
                             ConstantRateJump(r3, aff3!),
                             ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
                             ConstantRateJump(r6, aff6!);
-                            save_positions)
+                            save_positions, graphkwargs...)
         return jprob
     end
 
-    jprob1 = makeprob(; T = 10.0)
-    jprob2 = makeprob(; T = 100.0)
-    stepper = SSAStepper()
-    sol1 = solve(jprob1, stepper)
-    al1 = @allocated solve(jprob1, stepper)
-    sol2 = solve(jprob2, SSAStepper())
-    al2 = @allocated solve(jprob2, stepper)
+    idxs1 = [1,2,3,4]
+    idxs2 = [1,2,4,5,6]
+    idxs = collect(1:6)
+    dep_graph = [copy(idxs1), copy(idxs2), copy(idxs1), copy(idxs2), copy(idxs), copy(idxs)]
+    vartojumps_map = [copy(idxs1), copy(idxs2)]
+    jumptovars_map = [[1], [2], [1], [2], [1,2], [1,2]]
+    graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
 
-    @test al1 == al2
+    @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
+        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs)
+        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs)
+        stepper = SSAStepper()
+        sol1 = solve(jprob1, stepper)
+        al1 = @allocated solve(jprob1, stepper)
+        sol2 = solve(jprob2, SSAStepper())
+        al2 = @allocated solve(jprob2, stepper)
+        @test al1 == al2
+    end
 end
+
+nothing

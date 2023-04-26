@@ -109,6 +109,7 @@ Eλ, Varλ = expected_stats_hawkes_problem(p, tspan)
 algs = (Direct(), Coevolve(), Coevolve(), CoevolveSynced(), CoevolveSynced())
 uselrate = zeros(Bool, length(algs))
 uselrate[3] = true
+uselrate[5] = true
 Nsims = 250
 
 for (i, alg) in enumerate(algs)

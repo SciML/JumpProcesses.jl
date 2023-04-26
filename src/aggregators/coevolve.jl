@@ -131,9 +131,9 @@ function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]
     @unpack cur_rates, pq = p
     for (ix, i) in enumerate(deps)
-        ti, last_urate_i = next_time(p, u, params, t, i)
+        ti, urate_i = next_time(p, u, params, t, i)
         update!(pq, i, ti)
-        @inbounds cur_rates[i] = last_urate_i
+        @inbounds cur_rates[i] = urate_i
     end
     nothing
 end
@@ -221,7 +221,7 @@ function next_time(p::CoevolveJumpAggregation{T}, u, params, t, i) where {T}
     return _t, urate
 end
 
-# reevaulate all rates, recalculate all jump times, and reinit the priority queue
+# re-evaluates all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t)
     num_jumps = get_num_majumps(p.ma_jumps) + length(p.urates)
     p.cur_rates = zeros(typeof(t), num_jumps)

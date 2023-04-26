@@ -22,6 +22,8 @@ abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
+abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
+              DiffEqBase.DEIntegrator{Alg, IIP, U, T} end
 
 import Base.Threads
 @static if VERSION < v"1.3"

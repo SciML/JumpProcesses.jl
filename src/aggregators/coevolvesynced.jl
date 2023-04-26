@@ -67,6 +67,34 @@ function (p::CoevolveSyncedJumpAggregation)(u, t, integrator)
         accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t)
 end
 
+# executing jump at the next jump time
+function (p::CoevolveSyncedJumpAggregation)(integrator::I) where {I <:
+                                                                  AbstractSSAIntegrator}
+    if !accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t)
+        return nothing
+    end
+    affects! = p.affects!
+    if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    else
+        error("Error, invalid affects! type. Expected a vector of function wrappers and got $(typeof(affects!))")
+    end
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+function (p::CoevolveSyncedJumpAggregation{T, S, F1, F2})(integrator::AbstractSSAIntegrator) where
+    {T, S, F1, F2 <: Union{Tuple, Nothing}}
+    if !accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t)
+        return nothing
+    end
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::CoevolveSynced, u, p, t, end_time, constant_jumps,
                    ma_jumps, save_positions, rng; dep_graph = nothing,
@@ -129,9 +157,9 @@ end
 function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t,
                         affects!)
     # execute jump
-    u = update_state!(p, integrator, u, affects!)
+    update_state!(p, integrator, u, affects!)
     # update current jump rates and times
-    update_dependent_rates!(p, u, params, t)
+    update_dependent_rates!(p, integrator.u, integrator.p, t)
     nothing
 end
 
@@ -144,6 +172,8 @@ end
 ######################## SSA specific helper routines ########################
 function accept_next_jump!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t)
     @unpack next_jump, ma_jumps = p
+
+    num_majumps = get_num_majumps(ma_jumps)
 
     if next_jump <= num_majumps
         return true
@@ -198,7 +228,9 @@ function accept_next_jump!(p::CoevolveSyncedJumpAggregation, integrator, u, para
     @inbounds cur_rates[next_jump] = urate
 
     p.prev_jump = next_jump
-    register_next_jump_time!(integrator, p, t)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    u_modified!(integrator, false)
 
     return false
 end
@@ -207,9 +239,9 @@ function update_dependent_rates!(p::CoevolveSyncedJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]
     @unpack cur_rates, pq = p
     for (ix, i) in enumerate(deps)
-        ti, last_urate_i = next_time(p, u, params, t, i)
+        ti, urate_i = next_time(p, u, params, t, i)
         update!(pq, i, ti)
-        @inbounds cur_rates[i] = last_urate_i
+        @inbounds cur_rates[i] = urate_i
     end
     nothing
 end
@@ -280,7 +312,7 @@ function next_candidate_time!(p::CoevolveSyncedJumpAggregation, u, params, t, s,
     return t
 end
 
-# reevaulate all rates, recalculate all jump times, and reinit the priority queue
+# re-evaluates all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::CoevolveSyncedJumpAggregation, u, params, t)
     num_jumps = get_num_majumps(p.ma_jumps) + length(p.urates)
     p.cur_rates = zeros(typeof(t), num_jumps)

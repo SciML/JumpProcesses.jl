@@ -115,7 +115,6 @@ end
 function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
     u = update_state!(p, integrator, u, affects!)
-
     # update current jump rates and times
     update_dependent_rates!(p, u, params, t)
     nothing

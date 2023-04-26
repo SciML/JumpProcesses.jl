@@ -21,15 +21,13 @@ mutable struct CoevolveSyncedJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     rateintervals::F1                 # vector of interval length functions
     haslratevec::Vector{Bool}         # vector of whether an lrate was provided for this vrj
     cur_lrates::Vector{T}             # the last computed lower rate for each rate
-    save_everyjump::Bool              # whether to save every jump
 end
 
 function CoevolveSyncedJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
                                        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
                                        rng::RNG; u::U, dep_graph = nothing, lrates, urates,
                                        rateintervals, haslratevec,
-                                       cur_lrates::Vector{T},
-                                       save_everyjump::Bool) where {T, S, F1, F2, RNG, U}
+                                       cur_lrates::Vector{T}) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(urates)
             error("To use CoevolveSynced a dependency graph between jumps must be supplied.")
@@ -55,12 +53,18 @@ function CoevolveSyncedJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, s
                                   typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
                                               rng,
                                               dg, pq, lrates, urates, rateintervals,
-                                              haslratevec, cur_lrates, save_everyjump)
+                                              haslratevec, cur_lrates)
 end
 
 # display
 function num_constant_rate_jumps(aggregator::CoevolveSyncedJumpAggregation)
     length(aggregator.urates)
+end
+
+# condition for jump to occur
+function (p::CoevolveSyncedJumpAggregation)(u, t, integrator)
+    p.next_jump_time == t &&
+        accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
@@ -107,11 +111,10 @@ function aggregate(aggregator::CoevolveSynced, u, p, t, end_time, constant_jumps
     sum_rate = nothing
     next_jump = 0
     next_jump_time = typemax(t)
-    save_everyjump = any(save_positions)
     CoevolveSyncedJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
                                   ma_jumps, rates, affects!, save_positions, rng;
                                   u, dep_graph, lrates, urates, rateintervals, haslratevec,
-                                  cur_lrates, save_everyjump)
+                                  cur_lrates)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -125,94 +128,81 @@ end
 # execute one jump, changing the system state
 function execute_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t,
                         affects!)
-    @unpack next_jump, ma_jumps, save_everyjump = p
-
-    toggle_save_everystep!(p, integrator)
-
-    num_majumps = get_num_majumps(ma_jumps)
-
     # execute jump
-    if next_jump <= num_majumps # is next jump a mass action jump
-        if u isa SVector
-            integrator.u = executerx(u, next_jump, ma_jumps)
-        else
-            @inbounds executerx!(u, next_jump, ma_jumps)
-        end
-    else
-        @unpack cur_rates, rates, rng, urates, cur_lrates = p
-        num_cjumps = length(urates) - length(rates)
-        uidx = next_jump - num_majumps
-        lidx = uidx - num_cjumps
-        if lidx > 0
-            @inbounds urate = cur_rates[next_jump]
-            @inbounds lrate = cur_lrates[lidx]
-            s = -1
-            if lrate == typemax(t)
-                urate = get_urate(p, uidx, u, params, t)
-                if urate < zero(t)
-                    error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
-                end
-                s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
-            elseif lrate < urate
-                # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
-                v = rand(rng) * urate
-                # first inequality is less expensive and short-circuits the evaluation
-                if (v > lrate)
-                    rate = get_rate(p, lidx, u, params, t)
-                    if rate < 0
-                        error("rate = $(rate) < 0 for jump = $(next_jump) at t = $(t) which is not allowed.")
-                    elseif rate > urate
-                        error("rate = $(rate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
-                    end
-                    if v > rate
-                        urate = get_urate(p, uidx, u, params, t)
-                        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
-                    end
-                end
-            elseif lrate > urate
-                error("lrate = $(lrate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
-            end
-            if s >= 0
-                t = next_candidate_time!(p, u, params, t, s, lidx)
-                update!(p.pq, next_jump, t)
-                @inbounds cur_rates[next_jump] = urate
-                # do not save step when candidate time is rejected
-                toggle_save_everystep!(p, integrator; value = false)
-                return nothing
-            end
-        end
-        @inbounds p.affects![uidx](integrator)
-    end
-
-    p.prev_jump = next_jump
-
+    u = update_state!(p, integrator, u, affects!)
     # update current jump rates and times
-    update_dependent_rates!(p, integrator.u, integrator.p, t)
-
-    nothing
-end
-
-function toggle_save_everystep!(p::CoevolveSyncedJumpAggregation, integrator::T;
-                                value = p.save_everyjump) where {T <: AbstractSSAIntegrator}
-    integrator.save_everystep = value
-end
-
-function toggle_save_everystep!(p::CoevolveSyncedJumpAggregation, integrator;
-                                value = p.save_everyjump)
+    update_dependent_rates!(p, u, params, t)
     nothing
 end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t)
     p.next_jump_time, p.next_jump = top_with_handle(p.pq)
-    if p.next_jump_time > p.end_time
-        # restore the option to original value
-        toggle_save_everystep!(p, integrator)
-    end
     nothing
 end
 
 ######################## SSA specific helper routines ########################
+function accept_next_jump!(p::CoevolveSyncedJumpAggregation, integrator, u, params, t)
+    @unpack next_jump, ma_jumps = p
+
+    if next_jump <= num_majumps
+        return true
+    end
+
+    @unpack cur_rates, rates, rng, urates, cur_lrates = p
+    num_cjumps = length(urates) - length(rates)
+    uidx = next_jump - num_majumps
+    lidx = uidx - num_cjumps
+
+    if lidx <= 0
+        return true
+    end
+
+    @inbounds urate = cur_rates[next_jump]
+    @inbounds lrate = cur_lrates[lidx]
+
+    s = -1
+
+    if lrate == typemax(t)
+        urate = get_urate(p, uidx, u, params, t)
+        if urate < zero(t)
+            error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
+        end
+        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+    elseif lrate < urate
+        # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
+        v = rand(rng) * urate
+        # first inequality is less expensive and short-circuits the evaluation
+        if (v > lrate)
+            rate = get_rate(p, lidx, u, params, t)
+            if rate < 0
+                error("rate = $(rate) < 0 for jump = $(next_jump) at t = $(t) which is not allowed.")
+            elseif rate > urate
+                error("rate = $(rate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
+            end
+            if v > rate
+                urate = get_urate(p, uidx, u, params, t)
+                s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+            end
+        end
+    elseif lrate > urate
+        error("lrate = $(lrate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
+    end
+
+    if s < 0
+        return true
+    end
+
+    t = next_candidate_time!(p, u, params, t, s, lidx)
+    update!(p.pq, next_jump, t)
+    @inbounds cur_rates[next_jump] = urate
+
+    p.prev_jump = next_jump
+    register_next_jump_time!(integrator, p, t)
+
+    return false
+end
+
 function update_dependent_rates!(p::CoevolveSyncedJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]
     @unpack cur_rates, pq = p

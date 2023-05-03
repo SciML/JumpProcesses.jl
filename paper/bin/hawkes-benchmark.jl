@@ -100,7 +100,7 @@ end
 fig = plot(yscale = :log10,
            xlabel = "V",
            ylabel = "Time (ns)",
-           legend_position = :outertopright)
+           legend_position = :outertopright);
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     _bs, _Vs = [], []
     for (j, b) in enumerate(bs[i])

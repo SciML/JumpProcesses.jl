@@ -49,14 +49,21 @@ function hawkes_rate_closure(u, g)
     return [(h) -> hawkes_rate(i, g, h) for i in 1:length(u)]
 end
 
-function hawkes_jump(u, g; use_recursion = false)
-    return [hawkes_jump(i, g; use_recursion) for i in 1:length(u)]
+function hawkes_jump(u, g; use_recursion = false, track_attempts = false)
+    return [hawkes_jump(i, g; use_recursion, track_attempts) for i in 1:length(u)]
 end
 
-function hawkes_jump(i::Int, g; use_recursion = false)
+function hawkes_jump(i::Int, g; use_recursion = false, track_attempts = false)
     rate = hawkes_rate(i, g; use_recursion)
-    urate = rate
-    @inbounds rateinterval(u, p, t) = p[5][i] == p[1] ? typemax(t) : 1 / (2 * p[5][i])
+    if track_attempts
+        function urate(u, p, t)
+            p[end][i] += 1
+            return rate(u, p, t)
+        end
+    else
+        urate = rate
+    end
+    @inbounds rateinterval(u, p, t) = p[5][i] == p[1] ? typemax(t) : 2 / p[5][i]
     @inbounds lrate(u, p, t) = p[1]
     @inbounds function affect_recursion!(integrator)
         λ, α, β, h, _, ϕ = integrator.p
@@ -110,22 +117,24 @@ function hawkes_problem(p,
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = false)
+                        use_recursion = false,
+                        track_attempts = false)
     oprob = ODEProblem(f!, u, tspan, p)
-    jumps = hawkes_jump(u, g; use_recursion)
+    jumps = hawkes_jump(u, g; use_recursion, track_attempts)
     jprob = JumpProblem(oprob, agg, jumps...; save_positions = save_positions)
     return jprob
 end
 
 function hawkes_problem(p,
-                        agg::Coevolve;
+                        agg::Union{Coevolve, CoevolveSynced};
                         u = [0.0],
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = false)
+                        use_recursion = false,
+                        track_attempts = false)
     dprob = DiscreteProblem(u, tspan, p)
-    jumps = hawkes_jump(u, g; use_recursion)
+    jumps = hawkes_jump(u, g; use_recursion, track_attempts)
     jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g,
                         save_positions = save_positions)
     return jprob
@@ -137,7 +146,8 @@ function hawkes_problem(p,
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = true)
+                        use_recursion = true,
+                        track_attempts = false)
     λ, α, β = p
     SimuHawkesSumExpKernels = pyimport("tick.hawkes")[:SimuHawkesSumExpKernels]
     jprob = SimuHawkesSumExpKernels(baseline = fill(λ, length(u)),
@@ -179,7 +189,8 @@ function hawkes_problem(p,
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = true)
+                        use_recursion = true,
+                        track_attempts = false)
     xd0 = Array{Int}(u)
     xc0 = [p[1] for i in 1:length(u)]
     nu = one(eltype(xd0)) * I(length(xd0))

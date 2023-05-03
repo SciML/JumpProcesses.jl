@@ -6,7 +6,7 @@ using PiecewiseDeterministicMarkovProcesses: CHV
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = ((Coevolve(), true), (PDMPCHV(), true))
+algorithms = ((Coevolve(), true), (PDMPCHV(), true), (CoevolveSynced(), true))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)

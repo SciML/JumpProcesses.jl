@@ -22,6 +22,8 @@ abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
+abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
+              DiffEqBase.DEIntegrator{Alg, IIP, U, T} end
 
 import Base.Threads
 @static if VERSION < v"1.3"
@@ -51,6 +53,7 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 include("aggregators/coevolve.jl")
+include("aggregators/coevolvesynced.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -84,7 +87,7 @@ export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
 export FRM, FRMFW, NRM
 export RSSACR, RDirect
-export Coevolve
+export Coevolve, CoevolveSynced
 
 export get_num_majumps, needs_depgraph, needs_vartojumps_map
 

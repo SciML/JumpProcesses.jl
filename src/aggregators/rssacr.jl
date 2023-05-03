@@ -4,9 +4,9 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct RSSACRJumpAggregation{F, U, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V,
+mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD, T2V,
                                      P <: PriorityTable, W <: Function} <:
-               AbstractSSAJumpAggregator
+               AbstractSSAJumpAggregator{F, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::F
@@ -32,8 +32,7 @@ mutable struct RSSACRJumpAggregation{F, U, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V
 end
 
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
-                               rs::F1,
-                               affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG; u::U,
+                               rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG; u::U,
                                vartojumps_map = nothing, jumptovars_map = nothing,
                                bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
                                maxrate = convert(F, Inf),
@@ -82,7 +81,8 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(F, 1), minrate, 2 * minrate)
 
-    RSSACRJumpAggregation{typeof(njt), eltype(U), S, F1, F2, RNG, typeof(vtoj_map),
+    affecttype = F2 <: Tuple ? F2 : Any
+    RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, eltype(U), typeof(vtoj_map),
                           typeof(jtov_map), typeof(bd), typeof(ulow), typeof(rt),
                           typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
                                                sum_rate, maj, rs, affs!, sps, rng, vtoj_map,
@@ -119,9 +119,9 @@ function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
 
     # update rates
     update_dependent_rates!(p, u, params, t)

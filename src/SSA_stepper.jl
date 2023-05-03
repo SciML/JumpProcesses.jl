@@ -51,7 +51,7 @@ Solution objects for pure jump problems solved via `SSAStepper`.
 $(FIELDS)
 """
 mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <:
-               DiffEqBase.DEIntegrator{SSAStepper, Nothing, uType, tType}
+               AbstractSSAIntegrator{SSAStepper, Nothing, uType, tType}
     """The underlying `prob.f` function. Not currently used."""
     f::F
     """The current solution values."""
@@ -258,8 +258,13 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     # FP error means the new time may equal the old if the next jump time is
     # sufficiently small, hence we add this check to execute jumps until
     # this is no longer true.
+    integrator.u_modified = true
     while integrator.t == integrator.tstop
         doaffect && integrator.cb.affect!(integrator)
+    end
+
+    if !integrator.u_modified
+        return nothing
     end
 
     if !(typeof(integrator.opts.callback.discrete_callbacks) <: Tuple{})

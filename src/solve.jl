@@ -22,12 +22,14 @@ function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
 
     # DDEProblems do not have a recompile_flag argument
     if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
+        # callback comes after jump consistent with SSAStepper
         integrator = init(jump_prob.prob, alg, timeseries, ts, ks;
-                          callback = CallbackSet(callback, jump_prob.jump_callback),
+                          callback = CallbackSet(jump_prob.jump_callback, callback),
                           kwargs...)
     else
+        # callback comes after jump consistent with SSAStepper
         integrator = init(jump_prob.prob, alg, timeseries, ts, ks, recompile;
-                          callback = CallbackSet(callback, jump_prob.jump_callback),
+                          callback = CallbackSet(jump_prob.jump_callback, callback),
                           kwargs...)
     end
 end

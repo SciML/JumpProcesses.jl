@@ -5,9 +5,10 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct DirectCRDirectJumpAggregation{J, T, RX, HOP, RNG, DEPGR, VJMAP, JVMAP, SS,
-                                             U <: PriorityTable, W <: Function} <:
-               AbstractSSAJumpAggregator
+mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR,
+                                             VJMAP, JVMAP, SS, U <: PriorityTable,
+                                             W <: Function} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -15,8 +16,8 @@ mutable struct DirectCRDirectJumpAggregation{J, T, RX, HOP, RNG, DEPGR, VJMAP, J
     rx_rates::RX
     hop_rates::HOP
     site_rates::Vector{T}
-    # rates::F1 #rates for constant-rate jumps
-    # affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 #rates for constant-rate jumps
+    affects!::F2 #affects! function determines the effect of constant-rate jumps
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -68,11 +69,12 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    DirectCRDirectJumpAggregation{J, T, RX, HOP, RNG,
+    DirectCRDirectJumpAggregation{T, Nothing, Nothing, Nothing, RNG, J, RX, HOP,
                                   typeof(dg), typeof(vtoj_map),
                                   typeof(jtov_map), SS, typeof(rt),
                                   typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
-                                                       site_rates, sps, rng, dg, vtoj_map,
+                                                       site_rates, nothing, nothing, sps,
+                                                       rng, dg, vtoj_map,
                                                        jtov_map, spatial_system, num_specs,
                                                        rt, ratetogroup)
 end
@@ -119,7 +121,8 @@ function generate_jumps!(p::DirectCRDirectJumpAggregation, integrator, params, u
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::DirectCRDirectJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::DirectCRDirectJumpAggregation, integrator, u, params, t,
+                        affects!)
     # execute jump
     update_state!(p, integrator)
 

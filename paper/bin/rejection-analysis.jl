@@ -73,5 +73,7 @@ plot!([nv(G) for G in Gs], mean_rejections.CoevolveSynced, label = "CoevolveSync
 
 plot(title = "1 .- mean_jump ./ mean_attemps");
 yaxis!([0, 1.05]);
-plot!([nv(G) for G in Gs], 1 .- mean_jumps.Coevolve ./ mean_attempts.Coevolve, label = "Coevolve");
-plot!([nv(G) for G in Gs], 1 .- mean_jumps.CoevolveSynced ./ mean_attempts.CoevolveSynced, label = "CoevolveSynced")
+plot!([nv(G) for G in Gs], 1 .- mean_jumps.Coevolve ./ mean_attempts.Coevolve,
+      label = "Coevolve");
+plot!([nv(G) for G in Gs], 1 .- mean_jumps.CoevolveSynced ./ mean_attempts.CoevolveSynced,
+      label = "CoevolveSynced")

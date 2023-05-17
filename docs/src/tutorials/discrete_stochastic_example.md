@@ -735,12 +735,13 @@ plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
 Note, when using `ConstantRateJump`s, `MassActionJump`s, and bounded
-`VariableRateJump`s, the ODE derivative function `f(du, u, p, t)` should not
-modify any states in `du` that the corresponding jump rate functions depend on.
-However, the opposite where jumps modify the ODE variables is allowed. If one
-needs to change a component of `u` in the ODE for which a rate function is
-dependent, then one must use a general `VariableRateJump` as described in the
-next section.
+`VariableRateJump`s, the ODE derivative function `f(du, u, p, t)` can modify
+any states in `du` that the corresponding jump rate functions depend on. Any
+jump that depends on a continuous variable will trigger a recomputation of the
+derivative by setting `u_modified` to `true`. However, ensure that all bounds
+including continuous variables are also respected over `rateinverval`. If one
+cannot ensure the bounds hold, then one must use a general `VariableRateJump`
+as described in the next section. See the [next Section](@ref VariableRateJumpSect] for more details.
 
 ## [Adding a general VariableRateJump that Depends on a Continuously Evolving Variable](@id VariableRateJumpSect)
 

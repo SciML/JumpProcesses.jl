@@ -13,7 +13,7 @@ doprintmeans = false
 
 # SSAs to test
 SSAalgs = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
-           NRM(), RSSA(), DirectCR(), Coevolve(), CoevolveSynced())
+           NRM(), RSSA(), DirectCR(), Coevolve())
 
 # numerical parameters
 Nsims = 8000

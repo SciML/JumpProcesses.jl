@@ -60,7 +60,7 @@ function hawkes_jump(u, g, h; uselrate = true)
     return [hawkes_jump(i, g, h; uselrate) for i in 1:length(u)]
 end
 
-function hawkes_problem(p, agg::Union{Coevolve, CoevolveSynced}; u = [0.0],
+function hawkes_problem(p, agg::Union{Coevolve}; u = [0.0],
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]], h = [[]], uselrate = true)
@@ -106,15 +106,14 @@ h = [Float64[]]
 
 Eλ, Varλ = expected_stats_hawkes_problem(p, tspan)
 
-algs = (Direct(), Coevolve(), Coevolve(), CoevolveSynced(), CoevolveSynced())
+algs = (Direct(), Coevolve(), Coevolve())
 uselrate = zeros(Bool, length(algs))
 uselrate[3] = true
-uselrate[5] = true
 Nsims = 250
 
 for (i, alg) in enumerate(algs)
     jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[i])
-    if typeof(alg) <: Union{Coevolve, CoevolveSynced}
+    if typeof(alg) <: Union{Coevolve}
         stepper = SSAStepper()
     else
         stepper = Tsit5()
@@ -124,7 +123,7 @@ for (i, alg) in enumerate(algs)
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
-    if typeof(alg) <: Union{Coevolve, CoevolveSynced}
+    if typeof(alg) <: Union{Coevolve}
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
     else
         cols = length(sols[1].u[1].u)
@@ -134,8 +133,8 @@ for (i, alg) in enumerate(algs)
     @test isapprox(var(λs), Varλ; atol = 0.001)
 end
 
-# test stepping Coevolve/CoevolveSynced with continuous integrator and bounded jumps
-for alg in (Coevolve(), CoevolveSynced())
+# test stepping Coevolve with continuous integrator and bounded jumps
+for alg in (Coevolve(),)
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
     jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng)
@@ -151,7 +150,7 @@ for alg in (Coevolve(), CoevolveSynced())
 end
 
 # test disabling bounded jumps and using continuous integrator
-for alg in (Coevolve(), CoevolveSynced())
+for alg in (Coevolve(),)
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
     jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng,

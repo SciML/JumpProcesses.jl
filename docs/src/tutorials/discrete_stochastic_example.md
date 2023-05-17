@@ -596,13 +596,13 @@ jump4 = ConstantRateJump(rate4, affect4!)
 With the jumps defined, we can build a
 [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
 Bounded `VariableRateJump`s over a `DiscreteProblem` can currently only be
-simulated with the `Coevolve` or `CoevolveSynced` aggregators. Both aggregators
-requires a dependency graph to indicate when a given jump occurs which other
-jumps in the system should have their rate recalculated (i.e., their rate
-depends on states modified by one occurrence of the first jump). This ensures
-that rates, rate bounds, and rate intervals are recalculated when invalidated
-due to changes in `u`. For the current example, both processes mutually affect
-each other, so we have
+simulated with the `Coevolve` aggregators. Both aggregators requires a
+dependency graph to indicate when a given jump occurs which other jumps in the
+system should have their rate recalculated (i.e., their rate depends on states
+modified by one occurrence of the first jump). This ensures that rates, rate
+bounds, and rate intervals are recalculated when invalidated due to changes in
+`u`. For the current example, both processes mutually affect each other, so we
+have
 
 ```@example tut2
 dep_graph = [[1, 2], [1, 2]]
@@ -702,7 +702,7 @@ plot(sol; label = ["S(t)" "I(t)" "R(t)"])
 ```
 
 Note that we can combine `MassActionJump`s, `ConstantRateJump`s and bounded
-`VariableRateJump`s using the `Coevolve` or `CoevolveSynced` aggregators.
+`VariableRateJump`s using the `Coevolve` aggregators.
 
 ## Adding Jumps to a Differential Equation
 
@@ -815,23 +815,23 @@ rateinterval2(u, p, t) = 1
 ```
 
 We can then formulate the jump problem. The only aggregator that supports
-bounded `VariableRateJump`s is `CoevolveSynced`. We formulate and solve the
-jump problem with this aggregator. `CoevolveSynced` can be formulated as either
+bounded `VariableRateJump`s is `Coevolve`. We formulate and solve the
+jump problem with this aggregator. `Coevolve` can be formulated as either
 a discrete or continuous problem. In this case, we must formulate the problem
 as continuous as it depends on a continuous variable.
 
 ```@example tut2
 jump6 = VariableRateJump(rate5, affect5!; urate = urate2, rateinterval = rateinterval2)
 dep_graph2 = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
-jump_prob = JumpProblem(prob, CoevolveSynced(), jump, jump2, jump6; dep_graph = dep_graph2)
+jump_prob = JumpProblem(prob, Coevolve(), jump, jump2, jump6; dep_graph = dep_graph2)
 sol = solve(jump_prob, Tsit5())
 plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
-We obtain the same solution as with `Direct`, but `CoevolveSynced` runs faster
+We obtain the same solution as with `Direct`, but `Coevolve` runs faster
 because it doesn't need to compute the derivative of `rate5`. Each aggregator
 faces a different trade-off, so the the choice of best aggregator will depend
-on the problem at hand. `CoevolveSynced` requires a good understanding of the
+on the problem at hand. `Coevolve` requires a good understanding of the
 equations involved, passing a wrong boundary can result in silent bugs.
 
 Lastly, we are not restricted to ODEs. For example, we can solve the same jump

@@ -163,7 +163,7 @@ prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
 jump = VariableRateJump(rate2, affect!2)
 jump_prob = JumpProblem(prob, Direct(), jump)
 
-# test to check lack of dependency graphs is caught in Coevolve/CoevolveSynced for systems with non-maj
+# test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
 # jumps
 let
     maj_rate = [1.0]
@@ -179,7 +179,7 @@ let
     constant_rate_jump = ConstantRateJump(cs_rate1, affect!)
     jumpset_ = JumpSet((), (constant_rate_jump,), nothing, mass_action_jump_)
 
-    for alg in (Coevolve(), CoevolveSynced())
+    for alg in (Coevolve(),)
         u0 = [0]
         tspan = (0.0, 30.0)
         dprob_ = DiscreteProblem(u0, tspan)

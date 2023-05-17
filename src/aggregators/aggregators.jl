@@ -120,10 +120,12 @@ systems with many species and many channels, Journal of Physical Chemistry A,
 struct NRM <: AbstractAggregatorAlgorithm end
 
 """
-An adaptation of the COEVOLVE algorithm for simulating any compound jump process
-that evolves through time. This method handles variable intensity rates with
-user-defined bounds and inter-dependent processes. It reduces to NRM when rates
-are constant.
+An improvement of the COEVOLVE algorithm for simulating any compound jump
+process that evolves through time. This method handles variable intensity
+rates with user-defined bounds and inter-dependent processes. It reduces to
+NRM when rates are constant. As opposed to COEVOLVE, this method syncs the
+thinning procedure with the stepper which allows it to handle dependencies on
+continuous dynamics.
 
 M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L. Song,
 COEVOLVE: a joint point process model for information diffusion and network
@@ -131,15 +133,6 @@ evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
 10.5555/3122009.3122050.
 """
 struct Coevolve <: AbstractAggregatorAlgorithm end
-
-"""
-A modification of the COEVOLVE algorithm for simulating any compound jump
-process that evolves through time. As opposed to `Coevolve`, this method
-syncs the thinning procedure with the stepper which allows it to handle
-dependencies on continuous dynamics. It reduces to NRM when rates are
-constant.
-"""
-struct CoevolveSynced <: AbstractAggregatorAlgorithm end
 
 # spatial methods
 
@@ -167,7 +160,7 @@ algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CoevolveSynced())
+                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -179,7 +172,6 @@ needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
 needs_depgraph(aggregator::RDirect) = true
 needs_depgraph(aggregator::Coevolve) = true
-needs_depgraph(aggregator::CoevolveSynced) = true
 
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from
@@ -191,7 +183,6 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 # true if aggregator supports variable rates
 supports_variablerates(aggregator::AbstractAggregatorAlgorithm) = false
 supports_variablerates(aggregator::Coevolve) = true
-supports_variablerates(aggregator::CoevolveSynced) = true
 
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true

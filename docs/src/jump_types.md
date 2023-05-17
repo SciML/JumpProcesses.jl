@@ -212,15 +212,6 @@ must also specify
   - `rateinterval(u, p, t)`, a function which computes a time interval `t` to `t + rateinterval(u, p, t)` given state `u` and parameters `p` over which the
     `urate` bound will hold (and `lrate` bound if provided, see below).
 
-Note that it is ok if the `urate` bound would be violated within the
-`rateinterval` due to a change in `u` arising from another `ConstantRateJump`,
-`MassActionJump` or *bounded* `VariableRateJump` being executed, as the chosen
-aggregator will then handle recalculating the rate bound and interval. *However,
-if the bound could be violated within the time interval due to a change in `u`
-arising from continuous dynamics such as a coupled ODE, SDE, or a general
-`VariableRateJump`, bounds should not be given.* This ensures the jump is
-classified as a general `VariableRateJump` and properly handled.
-
 For increased performance, one can also specify a lower bound that should be
 valid over the same `rateinterval`
 
@@ -233,13 +224,17 @@ Note that
 
   - It is currently only possible to simulate `VariableRateJump`s with
     `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
-    `Coevolve` aggregator.
-  - When choosing a different aggregator than `Coevolve`, `SSAStepper` cannot
-    currently be used, and the `JumpProblem` must be coupled to a continuous
-    problem type such as an `ODEProblem` to handle time-stepping. The continuous
-    time-stepper treats *all* `VariableRateJump`s as `ContinuousCallback`s, using
-    the `rate(u, p, t)` function to construct the `condition` function that
-    triggers a callback.
+    `Coevolve` aggregator. 
+  - When coupling `Coevolve` with a continuous problem type such as an
+    `ODEProblem` ensure that the bounds are satisfied given changes in `u` over
+    `rateinterval`. `Coevolve` handles jumps in the same way whether it is
+    using the `SSAStepper` or other continuous steppers.
+  - On the other hand, when choosing a different aggregator than `Coevolve`,
+    `SSAStepper` cannot currently be used, and the `JumpProblem` must be
+    coupled to a continuous problem type such as an `ODEProblem` to handle
+    time-stepping. The continuous time-stepper treats *all* `VariableRateJump`s
+    as `ContinuousCallback`s, using the `rate(u, p, t)` function to construct
+    the `condition` function that triggers a callback.
 
 #### Defining a Regular Jump
 
@@ -331,10 +326,12 @@ aggregator requires various types of dependency graphs, see the next section):
   - *`NRM`*: The Gibson-Bruck Next Reaction Method [7]. For some reaction network
     structures, this may offer better performance than `Direct` (for example,
     large, linear chains of reactions).
-  - *`Coevolve`*: An adaptation of the COEVOLVE algorithm of Farajtabar et al [8].
-    Currently the only aggregator that also supports *bounded*
-    `VariableRateJump`s. Essentially reduces to `NRM` in handling
-    `ConstantRateJump`s and `MassActionJump`s.
+  - *`Coevolve`*: An improvement of the COEVOLVE algorithm of Farajtabar et al
+    [8]. Currently the only aggregator that also supports *bounded*
+    `VariableRateJump`s. It reduces to NRM when rates are constant. As opposed
+    to COEVOLVE, this method syncs the thinning procedure with the stepper
+    which allows it to handle dependencies on continuous dynamics. Essentially
+    reduces to `NRM` in handling `ConstantRateJump`s and `MassActionJump`s.
 
 To pass the aggregator, pass the instantiation of the type. For example:
 
@@ -431,10 +428,12 @@ For representing and aggregating jumps
     jumps.
   - Use `VariableRateJump`s for any remaining jumps with variable rate between
     jumps. If possible, construct a bounded [`VariableRateJump`](@ref) as
-    described above and in the doc string. The tighter and easier to compute the
-    bounds are, the faster the resulting simulation will be. Use the `Coevolve`
-    aggregator to ensure such jumps are handled via the more efficient aggregator
-    interface.
+    described above and in the doc string. The tighter and easier to compute
+    the bounds are, the faster the resulting simulation will be. Use the
+    `Coevolve` aggregator to ensure such jumps are handled via the more
+    efficient aggregator interface. `Coevolve` handles continuous steppers so
+    can be coupled with a continuous problem type such as an `ODEProblem` as
+    long as the bounds are satisfied given changes in `u` over `rateinterval`.
 
 For systems with only `ConstantRateJump`s and `MassActionJump`s,
 

@@ -224,7 +224,7 @@ Note that
 
   - It is currently only possible to simulate `VariableRateJump`s with
     `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
-    `Coevolve` aggregator. 
+    `Coevolve` aggregator.
   - When coupling `Coevolve` with a continuous problem type such as an
     `ODEProblem` ensure that the bounds are satisfied given changes in `u` over
     `rateinterval`. `Coevolve` handles jumps in the same way whether it is

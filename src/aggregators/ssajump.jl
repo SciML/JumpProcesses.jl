@@ -49,7 +49,8 @@ end
 
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator,
                                      ::I) where {I <: DiffEqBase.DEIntegrator}
-    if !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+    if (p.affects! isa Vector) &&
+            !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
         p.affects! = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in p.affects!]
     end

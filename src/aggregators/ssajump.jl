@@ -34,11 +34,22 @@ end
 # execute_jumps!
 # generate_jumps!
 
+@inline function makewrapper(::Type{T}, aff) where T
+    # rewrap existing wrappers
+    if aff isa FunctionWrappers.FunctionWrapper
+        T(aff.obj[])
+    elseif aff isa Function
+        T(aff)
+    else
+        error("Invalid type of affect function, $(typeof(aff)), expected a Function or FunctionWrapper.")
+    end
+end
+
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator,
                                      ::I) where {I <: DiffEqBase.DEIntegrator}
-    if p.affects! isa Vector{Any}
+    if !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
-        p.affects! = AffectWrapper[AffectWrapper(aff) for aff in p.affects!]
+        p.affects! = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in p.affects!]
     end
     nothing
 end

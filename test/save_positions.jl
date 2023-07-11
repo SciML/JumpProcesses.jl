@@ -21,5 +21,5 @@ for alg in (Coevolve(), Coevolve())
     jumpproblem = JumpProblem(oprob, alg, jump; dep_graph = [[1]],
                               save_positions = (false, true))
     sol = solve(jumpproblem, Tsit5(); save_everystep = false)
-    @test all(sol.t == [0.0, 30.0])
+    @test sol.t == [0.0, 30.0]
 end

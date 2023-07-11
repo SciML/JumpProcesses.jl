@@ -1,10 +1,6 @@
 using Test, JumpProcesses
 using StableRNGs
 
-# note this test appears to be sensitive to the seed for some algorithms (RSSACR)
-# this appears due to dynamic allocations within the priority table as the timescale changes
-# due to the need to add buckets in some groups.
-
 # tests for https://github.com/SciML/JumpProcesses.jl/issues/305
 
 let
@@ -103,11 +99,13 @@ let
     graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
-        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs, rng = StableRNG(5))
+        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs, rng = StableRNG(1234))
         stepper = SSAStepper()
         sol1 = solve(jprob1, stepper)
+        sol1 = solve(jprob1, stepper)
         al1 = @allocated solve(jprob1, stepper)
-        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs, rng = StableRNG(5))
+        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs, rng = StableRNG(1234))
+        sol2 = solve(jprob2, stepper)
         sol2 = solve(jprob2, stepper)
         al2 = @allocated solve(jprob2, stepper)
         @test al1 == al2

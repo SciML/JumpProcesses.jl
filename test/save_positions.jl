@@ -13,7 +13,7 @@ for alg in (Coevolve(), Coevolve())
     jumpproblem = JumpProblem(dprob, alg, jump; dep_graph = [[1]],
                               save_positions = (false, true))
     sol = solve(jumpproblem, SSAStepper())
-    @test all(sol.t .== [0.0, 30.0])
+    @test sol.t == [0.0, 30.0]
 
     oprob = ODEProblem((du, u, p, t) -> 0, u0, tspan)
     jump = VariableRateJump((u, p, t) -> 0, (integrator) -> integrator.u[1] += 1;

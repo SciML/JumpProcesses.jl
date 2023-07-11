@@ -219,9 +219,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
         error("lrate = $(lrate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
     end
 
-    if s < 0
-        return true
-    end
+    (s < 0) && return true
 
     t = next_candidate_time!(p, u, params, t, s, lidx)
     update!(p.pq, next_jump, t)

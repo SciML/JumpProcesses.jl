@@ -175,9 +175,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
 
     num_majumps = get_num_majumps(ma_jumps)
 
-    if next_jump <= num_majumps
-        return true
-    end
+    (next_jump <= num_majumps) && return true
 
     @unpack cur_rates, rates, rng, urates, cur_lrates = p
     num_cjumps = length(urates) - length(rates)

@@ -187,7 +187,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     @inbounds urate = cur_rates[next_jump]
     @inbounds lrate = cur_lrates[lidx]
 
-    s = -1
+    s = -one(t)
 
     if lrate == typemax(t)
         urate = get_urate(p, uidx, u, params, t)

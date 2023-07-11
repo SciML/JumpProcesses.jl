@@ -184,9 +184,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     uidx = next_jump - num_majumps
     lidx = uidx - num_cjumps
 
-    if lidx <= 0
-        return true
-    end
+    (lidx <= 0) && return true
 
     @inbounds urate = cur_rates[next_jump]
     @inbounds lrate = cur_lrates[lidx]

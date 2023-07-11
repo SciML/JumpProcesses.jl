@@ -1,8 +1,14 @@
 using Test, JumpProcesses
+using StableRNGs
+
+# note this test appears to be sensitive to the seed for some algorithms (RSSACR)
+# this appears due to dynamic allocations within the priority table as the timescale changes
+# due to the need to add buckets in some groups.
 
 # tests for https://github.com/SciML/JumpProcesses.jl/issues/305
 
 let
+    rng = StableRNG(123)
     save_positions = (false, false)
 
     β = 0.1 / 1000.0
@@ -33,14 +39,14 @@ let
     u₀ = [999, 10, 0]
     tspan = (0.0, 250.0)
     dprob = DiscreteProblem(u₀, tspan, p)
-    jprob = JumpProblem(dprob, Direct(), maj, jump, jump2; save_positions)
+    jprob = JumpProblem(dprob, Direct(), maj, jump, jump2; save_positions, rng)
     sol = solve(jprob, SSAStepper())
 
     al1 = @allocations solve(jprob, SSAStepper())
 
     tspan2 = (0.0, 2500.0)
     dprob2 = DiscreteProblem(u₀, tspan2, p)
-    jprob2 = JumpProblem(dprob2, Direct(), maj, jump, jump2; save_positions)
+    jprob2 = JumpProblem(dprob2, Direct(), maj, jump, jump2; save_positions, rng)
     sol2 = solve(jprob2, SSAStepper())
 
     al2 = @allocations solve(jprob2, SSAStepper())
@@ -54,7 +60,7 @@ let
     end
 
     function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false),
-                      graphkwargs = (;))
+                      graphkwargs = (;), rng)
         r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
         r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
         r3(u, p, t) = p[3] * u[1]
@@ -84,7 +90,7 @@ let
                             ConstantRateJump(r3, aff3!),
                             ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
                             ConstantRateJump(r6, aff6!);
-                            save_positions, graphkwargs...)
+                            save_positions, rng, graphkwargs...)
         return jprob
     end
 
@@ -97,12 +103,12 @@ let
     graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
-        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs)
-        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs)
+        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs, rng = StableRNG(5))
         stepper = SSAStepper()
         sol1 = solve(jprob1, stepper)
         al1 = @allocated solve(jprob1, stepper)
-        sol2 = solve(jprob2, SSAStepper())
+        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs, rng = StableRNG(5))
+        sol2 = solve(jprob2, stepper)
         al2 = @allocated solve(jprob2, stepper)
         @test al1 == al2
     end

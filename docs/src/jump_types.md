@@ -328,7 +328,7 @@ aggregator requires various types of dependency graphs, see the next section):
     large, linear chains of reactions).
   - *`Coevolve`*: An improvement of the COEVOLVE algorithm of Farajtabar et al
     [8]. Currently the only aggregator that also supports *bounded*
-    `VariableRateJump`s. It reduces to NRM when rates are constant. As opposed
+    `VariableRateJump`s. As opposed
     to COEVOLVE, this method syncs the thinning procedure with the stepper
     which allows it to handle dependencies on continuous dynamics. Essentially
     reduces to `NRM` in handling `ConstantRateJump`s and `MassActionJump`s.

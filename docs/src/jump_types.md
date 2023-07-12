@@ -223,25 +223,32 @@ valid over the same `rateinterval`
 Note that
 
   - It is currently only possible to simulate `VariableRateJump`s with
-    `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
+    `SSAStepper` when using systems with bounded `VariableRateJump`s and the
     `Coevolve` aggregator.
-  - When coupling `Coevolve` with a continuous problem such as an `ODEProblem`
-    *ensure that given `t` the bounds will hold for the duration of
-    `rateinterval(t)` for the full coupled system's dynamics or the algorithm
-    will not give correct samples*. Note, that in some circumstances with complex
-    model of many variables it can be difficult to determine good a priori bounds
-    on the ODE variables. Moreover, the numerical and analytical solutions are
-    generally not guaranteed to satisfy the same bounds, but in most cases the
-    bounds should be close enough. Thus, approach complex models with care. For
-    debugging purposes one might want to add safety checks in the bound
-    functions. `Coevolve` handles jumps in the same way whether it is using the
-    `SSAStepper` or other continuous steppers.
-  - On the other hand, when choosing a different aggregator than `Coevolve`,
-    `SSAStepper` cannot currently be used, and the `JumpProblem` must be
-    coupled to a continuous problem type such as an `ODEProblem` to handle
-    time-stepping. The continuous time-stepper treats *all* `VariableRateJump`s
-    as `ContinuousCallback`s, using the `rate(u, p, t)` function to construct
-    the `condition` function that triggers a callback.
+  - Any `JumpProblem` with `VariableRateJump` that *does not use* the
+    `Coevolve` aggregator  must be coupled to a continuous problem type such as
+    an `ODEProblem` to handle time-stepping. Continuous time-stepper will ignore
+    the provided aggregator and treat *all* `VariableRateJump`s as
+    `ContinuousCallback`s, using the `rate(u, p, t)` function to construct the
+    `condition` function that triggers a callback.
+  - When using `Coevolve` with a `JumpProblem` coupled to a continuous problem
+    such as an `ODEProblem`, the aggregator will handle the jumps in same way
+    that it does with `SSAStepper`. However, *ensure that given `t` the bounds
+    will hold for the duration of `rateinterval(t)` for the full coupled system's
+    dynamics or the algorithm will not give correct samples*. Numerical and
+    analytical solutions are generally not guaranteed to satisfy the same bounds,
+    especially in large complicated models. Consider adding some slack on the
+    bounds and approach complex models with care. In most simple cases the bounds
+    should be close enough. For debugging purposes one might want to add safety
+    checks in the bound functions.
+  - In some circumstances with complex model of many variables it can be
+    difficult to determine good a priori bounds on the ODE variables. For some
+    discussion on the bound setting problem see [1].
+
+[1] V. Lemaire, M. Thieullen and N. Thomas, Exact Simulation of the Jump
+Times of a Class of Piecewise Deterministic Markov Processes, Journal of
+Scientific Computing, 75 (3), 1776-1807 (2018).
+doi:10.1007/s10915-017-0607-4.
 
 #### Defining a Regular Jump
 
@@ -349,7 +356,7 @@ JumpProblem(prob, Direct(), jump1, jump2)
 will build a problem where the jumps are simulated using Gillespie's Direct SSA
 method.
 
-[1] Daniel T. Gillespie, A general method for numerically simulating the stochastic
+[1] D. T. Gillespie, A general method for numerically simulating the stochastic
 time evolution of coupled chemical reactions, Journal of Computational Physics,
 22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
 

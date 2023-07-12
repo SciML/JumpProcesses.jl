@@ -596,13 +596,12 @@ jump4 = ConstantRateJump(rate4, affect4!)
 With the jumps defined, we can build a
 [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
 Bounded `VariableRateJump`s over a `DiscreteProblem` can currently only be
-simulated with the `Coevolve` aggregators. Both aggregators requires a
-dependency graph to indicate when a given jump occurs which other jumps in the
-system should have their rate recalculated (i.e., their rate depends on states
-modified by one occurrence of the first jump). This ensures that rates, rate
-bounds, and rate intervals are recalculated when invalidated due to changes in
-`u`. For the current example, both processes mutually affect each other, so we
-have
+simulated with `Coevolve`. The aggregator requires a dependency graph to
+indicate when a given jump occurs and which other jumps in the system should
+have their rate recalculated (i.e., their rate depends on states modified by
+one occurrence of the first jump). This ensures that rates, rate bounds, and
+rate intervals are recalculated when invalidated due to changes in `u`. For the
+current example, both processes mutually affect each other, so we have
 
 ```@example tut2
 dep_graph = [[1, 2], [1, 2]]
@@ -630,10 +629,12 @@ infection throughout the population.
 
 Note that bounded `VariableRateJump`s over `DiscreteProblem`s can be quite
 general. However, when handling rates that change according to an ODE/SDE
-modified variable we will need a continuous integrator as discussed
-[below](@ref VariableRateJumpSect). One example of such a rate is
-`p[2]*u[1]*u[4]` when `u[4]` is the solution of a continuous problem such as an
-ODE or SDE.
+modified variable we will need a continuous integrator. One example is
+discussed [below](@ref VariableRateJumpSect) in which we have a new reaction
+added to the model with rate `p[2]*u[1]*u[4]` where `u[4]` is the solution of
+an ODE. In such models, you will also need to be more careful in setting
+boundary conditions as they must be valid for the full coupled system's
+dynamics.
 
 ## [Reducing Memory Use: Controlling Saving Behavior](@id save_positions_docs)
 
@@ -734,14 +735,14 @@ sol = solve(jump_prob, Tsit5())
 plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
-Note, when using `ConstantRateJump`s, `MassActionJump`s, and bounded
-`VariableRateJump`s, the ODE derivative function `f(du, u, p, t)` can modify
-any states in `du` that the corresponding jump rate functions depend on. Any
-jump that depends on a continuous variable will trigger a recomputation of the
-derivative by setting `u_modified` to `true`. However, ensure that all bounds
-including continuous variables are also respected over `rateinverval`. If one
-cannot ensure the bounds hold, then one must use a general `VariableRateJump`
-as described in the next section. See the [next Section](@ref VariableRateJumpSect] for more details.
+Note that in general, the ODE derivative `f(du, u, p, t)` could modify any
+element in `du` which the jump rate functios depend on. In this section, `f(du,
+u, p, t)` does not modify the jump rates so it is safe to couple them with any
+type of jump and use any type of aggregator. However, the implementation does
+not enforce this requirement, so one must be careful. Alternatively, when
+`f(du, u, p, t)` *does* modify variables that affect the jump rate, we have to
+implement another strategy as described in the next [next Section](@ref
+VariableRateJumpSect].
 
 ## [Adding a general VariableRateJump that Depends on a Continuously Evolving Variable](@id VariableRateJumpSect)
 
@@ -800,7 +801,14 @@ However, when ``a = 0`` the differential equation becomes ``x' = b`` whose solut
 \bar{x}(s) = x(t) + b * (t + \Delta t) \text{ , } \forall s \in [t, t + \Delta t]
 ```
 
-These expressions allow us to write the upper-bound and the rate interval in Julia.
+These expressions allow us to write the upper-bound and the rate interval in
+Julia. In this example we use analytical boundaries for *illustration
+purposes*. However, in some circumstances with complex model of many variables
+it can be difficult to determine good a priori bounds on the ODE variables.
+Moreover, numerical and analytical solutions are generally not guaranteed to
+strictly satisfy the same bounds. In most cases the bounds should be close
+enough. Thus, consider adding some slack on the bounds and approach complex
+models with care.
 
 ```@example tut2
 function urate2(u, p, t)

@@ -148,7 +148,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = not
     `k*A*(A-1)*(A-2)/3!`. To *avoid* having the reaction rates rescaled (by `1/2`
     and `1/6` for these two examples), one can pass the `MassActionJump`
     constructor the optional named parameter `scale_rates = false`, i.e., use
-    
+
     ```julia
     MassActionJump(reactant_stoich, net_stoich; scale_rates = false, param_idxs)
     ```
@@ -156,16 +156,16 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = not
   - Zero order reactions can be passed as `reactant_stoich`s in one of two ways.
     Consider the ``\varnothing \overset{k}{\rightarrow} A`` reaction with rate
     `k=1`:
-    
+
     ```julia
     p = [1.0]
     reactant_stoich = [[0 => 1]]
     net_stoich = [[1 => 1]]
     jump = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1])
     ```
-    
+
     Alternatively, one can create an empty vector of pairs to represent the reaction:
-    
+
     ```julia
     p = [1.0]
     reactant_stoich = [Vector{Pair{Int, Int}}()]
@@ -174,13 +174,13 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = not
     ```
   - For performance reasons, it is recommended to order species indices in
     stoichiometry vectors from smallest to largest. That is
-    
+
     ```julia
     reactant_stoich = [[1 => 2, 3 => 1, 4 => 2], [2 => 2, 3 => 2]]
     ```
-    
+
     is preferred over
-    
+
     ```julia
     reactant_stoich = [[3 => 1, 1 => 2, 4 => 2], [3 => 2, 2 => 2]]
     ```
@@ -225,10 +225,17 @@ Note that
   - It is currently only possible to simulate `VariableRateJump`s with
     `SSAStepper` when using systems with only bounded `VariableRateJump`s and the
     `Coevolve` aggregator.
-  - When coupling `Coevolve` with a continuous problem type such as an
-    `ODEProblem` ensure that the bounds are satisfied given changes in `u` over
-    `rateinterval`. `Coevolve` handles jumps in the same way whether it is
-    using the `SSAStepper` or other continuous steppers.
+  - When coupling `Coevolve` with a continuous problem such as an `ODEProblem`
+    *ensure that given `t` the bounds will hold for the duration of
+    `rateinterval(t)` for the full coupled system's dynamics or the algorithm
+    will not give correct samples*. Note, that in some circumstances with complex
+    model of many variables it can be difficult to determine good a priori bounds
+    on the ODE variables. Moreover, the numerical and analytical solutions are
+    generally not guaranteed to satisfy the same bounds, but in most cases the
+    bounds should be close enough. Thus, approach complex models with care. For
+    debugging purposes one might want to add safety checks in the bound
+    functions. `Coevolve` handles jumps in the same way whether it is using the
+    `SSAStepper` or other continuous steppers.
   - On the other hand, when choosing a different aggregator than `Coevolve`,
     `SSAStepper` cannot currently be used, and the `JumpProblem` must be
     coupled to a continuous problem type such as an `ODEProblem` to handle

@@ -50,9 +50,9 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
     CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
-                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
-                                        rng,
-                                        dg, pq, lrates, urates, rateintervals,
+                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj,
+                                        rs, affs!, sps, rng, dg, pq,
+                                        lrates, urates, rateintervals,
                                         haslratevec, cur_lrates)
 end
 

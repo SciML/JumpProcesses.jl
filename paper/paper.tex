@@ -57,7 +57,7 @@ In this paper, we bridge the gap between simulation methods developed in statist
 
 The evolutionary point process is a stochastic collection of marked points over a one-dimensional support. They are exhaustively described in~\cite{daley2003}. The likelihood of any evolutionary point process is fully characterized by its conditional intensity,
 \begin{equation}\label{eq:lambda}
-  \lambda^\ast (t) \equiv \lambda(t \mid H_{t^-} ) = \frac{p^\ast(t)}{1 - \int_{t^-}^t p^\ast(u) \, du},
+  \lambda^\ast (t) \equiv \lambda(t \mid H_{t^-} ) = \frac{p^\ast(t)}{1 - \int_{t^-}^{t_n} p^\ast(u) \, du},
 \end{equation}
 and conditional mark distribution, \( f^*(k | t) \) --- see~Chapter 7~\cite{daley2003}. \comment{S: \st{What does $p(t \mid H_{t^-})$ mean here? Are you sure about this formula? Do you mean the density for the next event time divided by one minus the associated CDF?}} Here \( H_{t^-} = \{ (t_n, k_n) \mid 0 \leq t_n \leq t \} \) denotes the internal history of the process up to but not including \( t \), the superscript \( \ast \) denotes the conditioning of any function on \( H_{t^-} \), and \( p^\ast(t) \) is the density function corresponding to the probability of an event taking place at time \( t \) given \( H_{t^-} \). We can interpret the conditional intensity as the likelihood of observing a point in the next infinitesimal unit of time, given that no point has occurred since the last observed point in \( H_{t^-} \). Lastly, the mark distribution denotes the density function corresponding to the probability of observing mark \( k \) given the occurrence of an event at time \( t \) and internal history \( H_{t^-} \).  \comment{G: There was indeed a mistake in the denominator. I hope that I have also clarified the notation.}
 

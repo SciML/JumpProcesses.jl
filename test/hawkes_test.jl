@@ -134,7 +134,7 @@ for (i, alg) in enumerate(algs)
 end
 
 # test stepping Coevolve with continuous integrator and bounded jumps
-for alg in (Coevolve(),)
+let alg=Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
     jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng)
@@ -150,7 +150,7 @@ for alg in (Coevolve(),)
 end
 
 # test disabling bounded jumps and using continuous integrator
-for alg in (Coevolve(),)
+let alg=Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
     jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng,

@@ -13,6 +13,7 @@ using Base.FastMath: add_fast
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
+import Graphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads

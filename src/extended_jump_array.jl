@@ -91,7 +91,7 @@ end
 
 # Ignore axes
 function Base.similar(A::ExtendedJumpArray, ::Type{S},
-                      axes::Tuple{Base.OneTo{Int}}) where {S}
+    axes::Tuple{Base.OneTo{Int}}) where {S}
     ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
 end
 
@@ -124,19 +124,19 @@ end
 
 # promotion rules
 @inline function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle{AStyle},
-                                          ::ExtendedJumpArrayStyle{BStyle}) where {AStyle,
-                                                                                   BStyle}
+    ::ExtendedJumpArrayStyle{BStyle}) where {AStyle,
+    BStyle}
     ExtendedJumpArrayStyle(Broadcast.BroadcastStyle(AStyle(), BStyle()))
 end
 function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle{Style},
-                                  ::Broadcast.DefaultArrayStyle{0}) where {
-                                                                           Style <:
-                                                                           Broadcast.BroadcastStyle
-                                                                           }
+    ::Broadcast.DefaultArrayStyle{0}) where {
+    Style <:
+    Broadcast.BroadcastStyle,
+}
     ExtendedJumpArrayStyle{Style}()
 end
 function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle,
-                                  ::Broadcast.DefaultArrayStyle{N}) where {N}
+    ::Broadcast.DefaultArrayStyle{N}) where {N}
     Broadcast.DefaultArrayStyle{N}()
 end
 
@@ -146,27 +146,29 @@ combine_styles(args::Tuple{}) = Broadcast.DefaultArrayStyle{0}()
 end
 @inline function combine_styles(args::Tuple{Any, Any})
     Broadcast.result_style(Broadcast.BroadcastStyle(args[1]),
-                           Broadcast.BroadcastStyle(args[2]))
+        Broadcast.BroadcastStyle(args[2]))
 end
 @inline function combine_styles(args::Tuple)
     Broadcast.result_style(Broadcast.BroadcastStyle(args[1]),
-                           combine_styles(Base.tail(args)))
+        combine_styles(Base.tail(args)))
 end
 
 function Broadcast.BroadcastStyle(::Type{ExtendedJumpArray{T, S}}) where {T, S}
     ExtendedJumpArrayStyle(Broadcast.result_style(Broadcast.BroadcastStyle(T)))
 end
 
-@inline function Base.copy(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where {
-                                                                                            Style
-                                                                                            }
+@inline function Base.copy(bc::Broadcast.Broadcasted{
+    ExtendedJumpArrayStyle{Style},
+}) where {
+    Style,
+}
     ExtendedJumpArray(copy(unpack(bc, Val(:u))), copy(unpack(bc, Val(:jump_u))))
 end
 
 @inline function Base.copyto!(dest::ExtendedJumpArray,
-                              bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where {
-                                                                                               Style
-                                                                                               }
+    bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where {
+    Style,
+}
     copyto!(dest.u, unpack(bc, Val(:u)))
     copyto!(dest.jump_u, unpack(bc, Val(:jump_u)))
     dest
@@ -177,7 +179,7 @@ end
     Broadcast.Broadcasted{Style}(bc.f, unpack_args(i, bc.args))
 end
 @inline function unpack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}},
-                        i) where {Style}
+    i) where {Style}
     Broadcast.Broadcasted{Style}(bc.f, unpack_args(i, bc.args))
 end
 unpack(x, ::Any) = x

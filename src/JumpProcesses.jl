@@ -74,7 +74,7 @@ include("SSA_stepper.jl")
 include("simple_regular_solve.jl")
 
 export ConstantRateJump, VariableRateJump, RegularJump,
-       MassActionJump, JumpSet
+    MassActionJump, JumpSet
 
 export JumpProblem
 

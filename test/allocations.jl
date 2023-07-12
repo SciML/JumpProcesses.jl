@@ -56,7 +56,7 @@ let
     end
 
     function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false),
-                      graphkwargs = (;), rng)
+        graphkwargs = (;), rng)
         r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
         r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
         r3(u, p, t) = p[3] * u[1]
@@ -82,11 +82,11 @@ let
 
         dprob = DiscreteProblem(u0, tspan, p)
         jprob = JumpProblem(dprob, alg,
-                            ConstantRateJump(r1, aff1!), ConstantRateJump(r2, aff2!),
-                            ConstantRateJump(r3, aff3!),
-                            ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
-                            ConstantRateJump(r6, aff6!);
-                            save_positions, rng, graphkwargs...)
+            ConstantRateJump(r1, aff1!), ConstantRateJump(r2, aff2!),
+            ConstantRateJump(r3, aff3!),
+            ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
+            ConstantRateJump(r6, aff6!);
+            save_positions, rng, graphkwargs...)
         return jprob
     end
 

@@ -191,9 +191,9 @@ The constructor for a [`VariableRateJump`](@ref) is:
 
 ```julia
 VariableRateJump(rate, affect!;
-                 lrate = nothing, urate = nothing, rateinterval = nothing,
-                 idxs = nothing, rootfind = true, save_positions = (true, true),
-                 interp_points = 10, abstol = 1e-12, reltol = 0)
+    lrate = nothing, urate = nothing, rateinterval = nothing,
+    idxs = nothing, rootfind = true, save_positions = (true, true),
+    interp_points = 10, abstol = 1e-12, reltol = 0)
 ```
 
   - `rate(u, p, t)` is a function which calculates the rate given the current
@@ -267,8 +267,8 @@ is:
 
 ```julia
 JumpProblem(prob, aggregator, jumps::JumpSet;
-            save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false, true) :
-                             (true, true))
+    save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false, true) :
+                     (true, true))
 ```
 
 The aggregator is the method for simulating `ConstantRateJump`s,

@@ -23,9 +23,9 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
 end
 
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
-                                 maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                                 rng::RNG; u::U, dep_graph = nothing, lrates, urates,
-                                 rateintervals, haslratevec) where {T, S, F1, F2, RNG, U}
+    maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+    rng::RNG; u::U, dep_graph = nothing, lrates, urates,
+    rateintervals, haslratevec) where {T, S, F1, F2, RNG, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(urates)
             error("To use Coevolve a dependency graph between jumps must be supplied.")
@@ -48,16 +48,16 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
     CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
-                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
-                                        dg, pq, lrates, urates, rateintervals, haslratevec)
+        typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps, rng,
+        dg, pq, lrates, urates, rateintervals, haslratevec)
 end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; dep_graph = nothing,
-                   variable_jumps = nothing, kwargs...)
+    ma_jumps, save_positions, rng; dep_graph = nothing,
+    variable_jumps = nothing, kwargs...)
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
-                                                   Tuple{typeof(u), typeof(p), typeof(t)}}
+        Tuple{typeof(u), typeof(p), typeof(t)}}
 
     ncrjs = (constant_jumps === nothing) ? 0 : length(constant_jumps)
     nvrjs = (variable_jumps === nothing) ? 0 : length(variable_jumps)
@@ -96,8 +96,8 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     next_jump = 0
     next_jump_time = typemax(t)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-                            ma_jumps, rates, affects!, save_positions, rng;
-                            u, dep_graph, lrates, urates, rateintervals, haslratevec)
+        ma_jumps, rates, affects!, save_positions, rng;
+        u, dep_graph, lrates, urates, rateintervals, haslratevec)
 end
 
 # set up a new simulation and calculate the first jump / jump time

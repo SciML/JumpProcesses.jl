@@ -12,4 +12,4 @@ dprob = DiscreteProblem(u0, tspan, params)
 jprob = JumpProblem(dprob, Direct(), maj; rng = rng)
 solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads(); trajectories = 10)
 solve(EnsembleProblem(jprob; safetycopy = true), SSAStepper(), EnsembleThreads();
-      trajectories = 10)
+    trajectories = 10)

@@ -53,16 +53,16 @@ end
 update rates of all reactions in rxs at site
 """
 function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, u,
-                          site) where {F, M <: MassActionJump}
+    site) where {F, M <: MassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx,
-                             evalrxrate((@view u[:, site]), rx, ma_jumps))
+            evalrxrate((@view u[:, site]), rx, ma_jumps))
     end
 end
 
 function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, u,
-                          site) where {F, M <: SpatialMassActionJump}
+    site) where {F, M <: SpatialMassActionJump}
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate(u, rx, ma_jumps, site))
@@ -76,7 +76,7 @@ sample a reaction at site, return reaction index
 """
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
     linear_search((@view rx_rates.rates[:, site]),
-                  rand(rng) * total_site_rx_rate(rx_rates, site))
+        rand(rng) * total_site_rx_rate(rx_rates, site))
 end
 
 # helper functions

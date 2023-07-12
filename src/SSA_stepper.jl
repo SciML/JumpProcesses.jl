@@ -96,8 +96,8 @@ function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
 end
 
 function DiffEqBase.__solve(jump_prob::JumpProblem,
-                            alg::SSAStepper;
-                            kwargs...)
+    alg::SSAStepper;
+    kwargs...)
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -133,15 +133,15 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
 end
 
 function DiffEqBase.__init(jump_prob::JumpProblem,
-                           alg::SSAStepper;
-                           save_start = true,
-                           save_end = true,
-                           seed = nothing,
-                           alias_jump = Threads.threadid() == 1,
-                           saveat = nothing,
-                           callback = nothing,
-                           tstops = eltype(jump_prob.prob.tspan)[],
-                           numsteps_hint = 100)
+    alg::SSAStepper;
+    save_start = true,
+    save_end = true,
+    seed = nothing,
+    alias_jump = Threads.threadid() == 1,
+    saveat = nothing,
+    callback = nothing,
+    tstops = eltype(jump_prob.prob.tspan)[],
+    numsteps_hint = 100)
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
@@ -172,9 +172,9 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     end
 
     sol = DiffEqBase.build_solution(prob, alg, t, u, dense = false,
-                                    calculate_error = false,
-                                    stats = DiffEqBase.Stats(0),
-                                    interp = DiffEqBase.ConstantInterpolation(t, u))
+        calculate_error = false,
+        stats = DiffEqBase.Stats(0),
+        interp = DiffEqBase.ConstantInterpolation(t, u))
     save_everystep = any(cb.save_positions)
 
     if typeof(saveat) <: Number
@@ -205,8 +205,8 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         error("The time interval to solve over is non-increasing, i.e. tspan[2] <= tspan[1]. This is not allowed for pure jump problem.")
 
     integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
-                               prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
-                               save_end, cur_saveat, opts, tstops, 1, false, true)
+        prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
+        save_end, cur_saveat, opts, tstops, 1, false, true)
     cb.initialize(cb, integrator.u, prob.tspan[1], integrator)
     DiffEqBase.initialize!(opts.callback, integrator.u, prob.tspan[1], integrator)
     integrator
@@ -223,7 +223,7 @@ end
 # The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator
 # such that we can achieve maximum performance
 @inline function register_next_jump_time!(integrator::SSAIntegrator,
-                                          p::AbstractSSAJumpAggregator, t)
+    p::AbstractSSAJumpAggregator, t)
     integrator.tstop = p.next_jump_time
     nothing
 end
@@ -264,7 +264,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
     if !(typeof(integrator.opts.callback.discrete_callbacks) <: Tuple{})
         discrete_modified, saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,
-                                                                             integrator.opts.callback.discrete_callbacks...)
+            integrator.opts.callback.discrete_callbacks...)
     else
         saved_in_cb = false
     end

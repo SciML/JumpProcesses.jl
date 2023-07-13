@@ -50,9 +50,9 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
     CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
-                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
-                                        rng,
-                                        dg, pq, lrates, urates, rateintervals,
+                            typeof(pq)}(nj, nj, njt, et, crs, sr, maj,
+                                        rs, affs!, sps, rng, dg, pq,
+                                        lrates, urates, rateintervals,
                                         haslratevec, cur_lrates)
 end
 
@@ -175,29 +175,22 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
 
     num_majumps = get_num_majumps(ma_jumps)
 
-    if next_jump <= num_majumps
-        return true
-    end
+    (next_jump <= num_majumps) && return true
 
     @unpack cur_rates, rates, rng, urates, cur_lrates = p
     num_cjumps = length(urates) - length(rates)
     uidx = next_jump - num_majumps
     lidx = uidx - num_cjumps
 
-    if lidx <= 0
-        return true
-    end
+    (lidx <= 0) && return true
 
     @inbounds urate = cur_rates[next_jump]
     @inbounds lrate = cur_lrates[lidx]
 
-    s = -1
+    s = -one(t)
 
     if lrate == typemax(t)
         urate = get_urate(p, uidx, u, params, t)
-        if urate < zero(t)
-            error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
-        end
         s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
     elseif lrate < urate
         # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
@@ -205,23 +198,14 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
         # first inequality is less expensive and short-circuits the evaluation
         if (v > lrate)
             rate = get_rate(p, lidx, u, params, t)
-            if rate < 0
-                error("rate = $(rate) < 0 for jump = $(next_jump) at t = $(t) which is not allowed.")
-            elseif rate > urate
-                error("rate = $(rate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
-            end
             if v > rate
                 urate = get_urate(p, uidx, u, params, t)
                 s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
             end
         end
-    elseif lrate > urate
-        error("lrate = $(lrate) > urate = $(urate) for jump = $(next_jump) at t = $(t) which is not allowed.")
     end
 
-    if s < 0
-        return true
-    end
+    (s < 0) && return true
 
     t = next_candidate_time!(p, u, params, t, s, lidx)
     update!(p.pq, next_jump, t)
@@ -273,10 +257,7 @@ function next_time(p::CoevolveJumpAggregation, u, params, t, i)
     uidx = i - num_majumps
     lidx = uidx - num_cjumps
     urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
-    if urate < zero(t)
-        error("urate = $(urate) < 0 for jump = $(i) at t = $(t) which is not allowed.")
-    end
-    # we can only re-use the rng in the case of contstant rates because the rng
+    # we can only re-use the rng in the case of constant rates because the rng
     # used to compute the next candidate time has not been accepted or rejected
     if i != next_jump && lidx <= 0
         last_urate = cur_rates[i]

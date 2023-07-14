@@ -633,7 +633,7 @@ modified variable we will need a continuous integrator. One example is
 discussed [below](@ref VariableRateJumpSect) in which we have a new reaction
 added to the model with rate `p[2]*u[1]*u[4]` where `u[4]` is the solution of
 an ODE. In such models, you will also need to be more careful in setting
-boundary conditions as they must be valid for the full coupled system's
+rate bounds as they must be valid for the full coupled system's
 dynamics.
 
 ## [Reducing Memory Use: Controlling Saving Behavior](@id save_positions_docs)

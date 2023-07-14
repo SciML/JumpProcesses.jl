@@ -736,7 +736,7 @@ plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```
 
 Note that in general, the ODE derivative `f(du, u, p, t)` could modify any
-element in `du` which the jump rate functios depend on. In this section, `f(du,
+element in `du` which the jump rate functions depend on. In this section, `f(du,
 u, p, t)` does not modify the jump rates so it is safe to couple them with any
 type of jump and use any type of aggregator. However, the implementation does
 not enforce this requirement, so one must be careful. Alternatively, when

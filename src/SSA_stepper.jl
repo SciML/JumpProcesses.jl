@@ -264,6 +264,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     end
 
     jump_modified_u = integrator.u_modified
+
     if !(typeof(integrator.opts.callback.discrete_callbacks) <: Tuple{})
         discrete_modified, saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,
                                                                              integrator.opts.callback.discrete_callbacks...)
@@ -271,7 +272,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         saved_in_cb = false
     end
 
-    !saved_in_cb && savevalues!(integrator)
+    !saved_in_cb && jump_modified_u && savevalues!(integrator)
 
     nothing
 end

@@ -49,7 +49,15 @@ algorithms are optimized for pure jump problems.
   - `SSAStepper`: a stepping integrator for `JumpProblem`s defined over
     `DiscreteProblem`s involving `ConstantRateJump`s, `MassActionJump`s, and/or
     bounded `VariableRateJump`s . Supports handling of `DiscreteCallback`s and
-    saving controls like `saveat`.
+    saving controls like `saveat`. However, note that only a limited subset of
+    the output controls from the common solver and `DiscreteCallback` are
+    supported. In particular, to save every jump the options `save_positions =
+    (false, true)`, `save_positions = (true, false)` or `save_positions = (true,
+    true)` are equivalent and saves only after the jump has occurred. The option
+    `save_everystep` from the common solver is silently ignored without any
+    effect on saving behaviour. Finally, `saveat` behaves the same way as in the
+    common solver.
+
 
 ## RegularJump Compatible Methods
 

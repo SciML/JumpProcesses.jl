@@ -60,7 +60,8 @@ function hawkes_jump(u, g, h; uselrate = true)
     return [hawkes_jump(i, g, h; uselrate) for i in 1:length(u)]
 end
 
-function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
+function hawkes_problem(p, agg::Coevolve; u = [0.0],
+                        tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]], h = [[]], uselrate = true)
     dprob = DiscreteProblem(u, tspan, p)
@@ -133,10 +134,10 @@ for (i, alg) in enumerate(algs)
 end
 
 # test stepping Coevolve with continuous integrator and bounded jumps
-let
+let alg = Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, Coevolve(), jumps...; dep_graph = g, rng)
+    jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng)
     @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
     sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims
@@ -149,10 +150,10 @@ let
 end
 
 # test disabling bounded jumps and using continuous integrator
-let
+let alg = Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, Coevolve(), jumps...; dep_graph = g, rng,
+    jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng,
                         use_vrj_bounds = false)
     @test length(jprob.variable_jumps) == 1
     sols = Vector{ODESolution}(undef, Nsims)

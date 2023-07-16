@@ -8,7 +8,17 @@ Highly efficient integrator for pure jump problems that involve only `ConstantRa
 - Only works with `JumpProblem`s defined from `DiscreteProblem`s.
 - Only works with collections of `ConstantRateJump`s, `MassActionJump`s, and
   `VariableRateJump`s with rate bounds.
-- Only supports `DiscreteCallback`s for events.
+- Only supports `DiscreteCallback`s for events, which are executed for every step
+  taken by `SSAStepper`. `Coevolve` may take a number of time steps larger
+  than the number of jumps when simulating `VariableRateJump`s. All the other
+  aggregators take a number of steps equal to the number of jumps.
+- Only supports a limited subset of the output controls from the common solver
+  and `DiscreteCallback`. In particular, the options `save_positions = (false,
+  true)`, `save_positions = (true, false)` or `save_positions = (true, true)` are
+  equivalent and will save every jump after it has occurred. Alternatively, the
+  option `save_everystep` from the common solver is silently ignored without any
+  effect on saving behaviour. Finally, `saveat` behaves the same way as in the
+  common solver.
 
 ## Examples
 SIR model:
@@ -51,7 +61,7 @@ Solution objects for pure jump problems solved via `SSAStepper`.
 $(FIELDS)
 """
 mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <:
-               DiffEqBase.DEIntegrator{SSAStepper, Nothing, uType, tType}
+               AbstractSSAIntegrator{SSAStepper, Nothing, uType, tType}
     """The underlying `prob.f` function. Not currently used."""
     f::F
     """The current solution values."""
@@ -258,9 +268,12 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     # FP error means the new time may equal the old if the next jump time is
     # sufficiently small, hence we add this check to execute jumps until
     # this is no longer true.
+    integrator.u_modified = true
     while integrator.t == integrator.tstop
         doaffect && integrator.cb.affect!(integrator)
     end
+
+    jump_modified_u = integrator.u_modified
 
     if !(typeof(integrator.opts.callback.discrete_callbacks) <: Tuple{})
         discrete_modified, saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,
@@ -269,7 +282,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
         saved_in_cb = false
     end
 
-    !saved_in_cb && savevalues!(integrator)
+    !saved_in_cb && jump_modified_u && savevalues!(integrator)
 
     nothing
 end

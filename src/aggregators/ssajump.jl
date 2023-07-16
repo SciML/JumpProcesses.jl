@@ -17,9 +17,7 @@ An aggregator interface for SSA-like algorithms.
 
 ### Optional fields:
 
-  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should
-
-    # be updated when rx i occurs.
+  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should be updated when rx i occurs.
 """
 abstract type AbstractSSAJumpAggregator{T, S, F1, F2, RNG} <: AbstractJumpAggregator end
 
@@ -36,7 +34,7 @@ end
 # execute_jumps!
 # generate_jumps!
 
-@inline function makewrapper(::Type{T}, aff) where T
+@inline function makewrapper(::Type{T}, aff) where {T}
     # rewrap existing wrappers
     if aff isa FunctionWrappers.FunctionWrapper
         T(aff.obj[])
@@ -50,7 +48,7 @@ end
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator,
                                      ::I) where {I <: DiffEqBase.DEIntegrator}
     if (p.affects! isa Vector) &&
-            !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+       !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
         p.affects! = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in p.affects!]
     end

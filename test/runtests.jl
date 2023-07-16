@@ -1,3 +1,4 @@
+#! format: off
 using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
@@ -20,6 +21,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
     @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
+    @time @safetestset "Save_positions test" begin include("save_positions.jl") end
     @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
     @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
     @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end

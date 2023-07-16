@@ -63,7 +63,6 @@ algorithms are optimized for pure jump problems.
     interpolation, and can therefore exactly evaluate the sampled solution
     path at any time when only saving the post-jump state for each jump.
 
-
 ## RegularJump Compatible Methods
 
 ### StochasticDiffEq.jl

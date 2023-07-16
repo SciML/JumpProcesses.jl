@@ -200,9 +200,9 @@ let
     test_affect!(integrator) = (integrator.u[1] += 1)
     function test_lrate(u, p, t)
         if t > 1.0
-              error("test_urate does not handle t > 1.0")
+            error("test_urate does not handle t > 1.0")
         else
-              return 0.05
+            return 0.05
         end
     end
     function test_urate(u, p, t)
@@ -213,10 +213,11 @@ let
         end
     end
 
-    test_jump = VariableRateJump(test_rate, test_affect!; urate=test_urate, rateinterval=(u,p,t)->1.0)
+    test_jump = VariableRateJump(test_rate, test_affect!; urate = test_urate,
+                                 rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
-    jprob = JumpProblem(dprob, Coevolve(), test_jump; dep_graph=[[1]])
+    jprob = JumpProblem(dprob, Coevolve(), test_jump; dep_graph = [[1]])
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())

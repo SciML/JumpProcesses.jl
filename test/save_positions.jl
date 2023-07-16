@@ -3,7 +3,7 @@ using StableRNGs
 rng = StableRNG(12345)
 
 # test that we only save when a jump occurs
-for alg in (Coevolve(), )
+for alg in (Coevolve(),)
     u0 = [0]
     tspan = (0.0, 30.0)
 

@@ -49,14 +49,19 @@ algorithms are optimized for pure jump problems.
   - `SSAStepper`: a stepping integrator for `JumpProblem`s defined over
     `DiscreteProblem`s involving `ConstantRateJump`s, `MassActionJump`s, and/or
     bounded `VariableRateJump`s . Supports handling of `DiscreteCallback`s and
-    saving controls like `saveat`. However, note that only a limited subset of
-    the output controls from the common solver and `DiscreteCallback` are
-    supported. In particular, to save every jump the options `save_positions =
-    (false, true)`, `save_positions = (true, false)` or `save_positions = (true,
-    true)` are equivalent and saves only after the jump has occurred. The option
-    `save_everystep` from the common solver is silently ignored without any
-    effect on saving behaviour. Finally, `saveat` behaves the same way as in the
-    common solver.
+    saving controls like `saveat`. Note that DifferentialEquations.jl treats
+    jumps as similar to callbacks, and hence `SSAStepper` only implements a
+    subset of ODE/SDE solver saving controls. In particular, `save_everystep` is
+    not supported as saving jumps each step is controlled via the
+    `save_positions` argument to [`JumpProblem`](@ref)s. Note, in contrast to
+    when [`JumpProblem`](@ref)s are coupled with ODE and SDE timesteppers, with
+    [`SSAStepper`](@ref), setting `save_positions = (false, true)`,
+    `save_positions = (true, false)` or `save_positions = (true, true)` are
+    equivalent and save only after the jump has occurred (as opposed to saving
+    the state both before and after a jump). This is because the underlying
+    [`SSAStepper`](@ref) generated-solution uses piecewise constant
+    interpolation, and can therefore exactly evaluate the sampled solution
+    path at any time when only saving the post-jump state for each jump.
 
 
 ## RegularJump Compatible Methods

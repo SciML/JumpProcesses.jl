@@ -8,17 +8,19 @@ Highly efficient integrator for pure jump problems that involve only `ConstantRa
 - Only works with `JumpProblem`s defined from `DiscreteProblem`s.
 - Only works with collections of `ConstantRateJump`s, `MassActionJump`s, and
   `VariableRateJump`s with rate bounds.
-- Only supports `DiscreteCallback`s for events, which are executed for every step
-  taken by `SSAStepper`. `Coevolve` may take a number of time steps larger
-  than the number of jumps when simulating `VariableRateJump`s. All the other
-  aggregators take a number of steps equal to the number of jumps.
-- Only supports a limited subset of the output controls from the common solver
-  and `DiscreteCallback`. In particular, the options `save_positions = (false,
-  true)`, `save_positions = (true, false)` or `save_positions = (true, true)` are
-  equivalent and will save every jump after it has occurred. Alternatively, the
-  option `save_everystep` from the common solver is silently ignored without any
-  effect on saving behaviour. Finally, `saveat` behaves the same way as in the
-  common solver.
+- Only supports `DiscreteCallback`s for events, which are checked after every step taken by
+  `SSAStepper`.
+- Only supports a limited subset of the output controls from the common solver interface,
+  specifically `save_start`, `save_end`, and `saveat`.
+- As when using jumps with ODEs and SDEs, saving controls for whether to save each time a
+  jump occurs are via the `save_positions` keyword argument to `JumpProblem`. Note that when
+  choosing `SSAStepper` as the timestepper, `save_positions = (true,true)`, `(true,false)`,
+  or `(false,true)` are all equivalent. `SSAStepper` will save only the post-jump state in
+  the solution object in each of these cases. This is because solution objects generated via
+  `SSAStepper` use piecewise-constant interpolation, and can therefore exactly reconstruct
+  the sampled jump process path with knowing just the post-jump state. That is, `sol(t)`
+  for any `0 <= t <= tstop` will give the exact value of the sampled solution path at `t`
+  provided at least one component of `save_positions` is `true`.
 
 ## Examples
 SIR model:

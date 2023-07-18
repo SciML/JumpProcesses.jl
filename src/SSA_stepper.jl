@@ -18,7 +18,9 @@ Highly efficient integrator for pure jump problems that involve only `ConstantRa
   or `(false,true)` are all equivalent. `SSAStepper` will save only the post-jump state in
   the solution object in each of these cases. This is because solution objects generated via
   `SSAStepper` use piecewise-constant interpolation, and can therefore exactly reconstruct
-  the sampled jump process path with knowing just the post-jump state.
+  the sampled jump process path with knowing just the post-jump state. That is, `sol(t)`
+  for any `0 <= t <= tstop` will give the exact value of the sampled solution path at `t`
+  provided at least one component of `save_positions` is `true`.
 
 ## Examples
 SIR model:

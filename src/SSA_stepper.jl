@@ -13,7 +13,7 @@ Highly efficient integrator for pure jump problems that involve only `ConstantRa
 - Only supports a limited subset of the output controls from the common solver interface,
   specifically `save_start`, `save_end`, and `saveat`.
 - As when using jumps with ODEs and SDEs, saving controls for whether to save each time a
-  jump occurs is via the `save_positions` keyword argument to `JumpProblem`. Note that when
+  jump occurs are via the `save_positions` keyword argument to `JumpProblem`. Note that when
   choosing `SSAStepper` as the timestepper, `save_positions = (true,true)`, `(true,false)`,
   or `(false,true)` are all equivalent. `SSAStepper` will save only the post-jump state in
   the solution object in each of these cases. This is because solution objects generated via

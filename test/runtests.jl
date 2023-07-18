@@ -1,3 +1,4 @@
+#! format: off
 using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin

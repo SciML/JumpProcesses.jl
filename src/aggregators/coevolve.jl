@@ -182,6 +182,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     uidx = next_jump - num_majumps
     lidx = uidx - num_cjumps
 
+    # lidx <= 0 indicates that we have a constant jump which we always accept
     (lidx <= 0) && return true
 
     @inbounds urate = cur_rates[next_jump]
@@ -189,6 +190,8 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
 
     s = -one(t)
 
+    # the first condition applies when the candidate time t is rejected because
+    # it was longer than the rateinterval when it was proposed
     if lrate == typemax(t)
         urate = get_urate(p, uidx, u, params, t)
         s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
@@ -205,8 +208,10 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
         end
     end
 
+    # candidate t was accepted
     (s < 0) && return true
 
+    # candidate t was reject, compute a new candidate time
     t = next_candidate_time!(p, u, params, t, s, lidx)
     update!(p.pq, next_jump, t)
     @inbounds cur_rates[next_jump] = urate

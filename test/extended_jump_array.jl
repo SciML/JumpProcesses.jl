@@ -18,4 +18,4 @@ new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 # Check that we no longer allocate. Run inside function so @allocated works properly
 norm_check_alloc(jump_array, t) = @allocated DiffEqBase.ODE_DEFAULT_NORM(jump_array, t)
 norm_check_alloc(rand_array, 0.0);
-@test 0 == @allocated norm_check_alloc(rand_array, 0.0)
+@test 0 == norm_check_alloc(rand_array, 0.0)

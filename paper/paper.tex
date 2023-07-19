@@ -11,6 +11,8 @@
 \usepackage{mathtools}
 \usepackage{soul}
 
+\numberwithin{equation}{section}
+
 \newcommand{\etal}{\textit{et al}.}
 \newcommand{\ie}{\textit{i}.\textit{e}.}
 \newcommand{\eg}{\textit{e}.\textit{g}.}
@@ -21,19 +23,19 @@
 \def\comment@@S{S}
 \def\comment@@G{G}
 \def\comment@#1:#2:#3\@nil{%
-  \if\relax\detokenize{#2}\relax
-    \textcolor{teal}{[#1]}
-  \else
-    \def\comment@@start{#1}%
-    \ifx\comment@@start\comment@@S
-      \textcolor{blue}{[\textbf{#1:} #2]}%
-    \else\ifx\comment@@start\comment@@G
-      \textcolor{magenta}{[\textbf{#1:} #2]}%
-    \else
-        \textcolor{teal}{[#1 #2]}%
-    \fi
-    \fi
-  \fi
+  % \if\relax\detokenize{#2}\relax
+  %   \textcolor{teal}{[#1]}
+  % \else
+  %   \def\comment@@start{#1}%
+  %   \ifx\comment@@start\comment@@S
+  %     \textcolor{blue}{[\textbf{#1:} #2]}%
+  %   \else\ifx\comment@@start\comment@@G
+  %     \textcolor{magenta}{[\textbf{#1:} #2]}%
+  %   \else
+  %       \textcolor{teal}{[#1 #2]}%
+  %   \fi
+  %   \fi
+  % \fi
 }
 \makeatother
 
@@ -60,7 +62,6 @@ The evolutionary point process is a stochastic collection of marked points over 
   \lambda^\ast (t) \equiv \lambda(t \mid H_{t^-} ) = \frac{p^\ast(t)}{1 - \int_{t^-}^{t_n} p^\ast(u) \, du},
 \end{equation}
 and conditional mark distribution, \( f^*(k | t) \) --- see~Chapter 7~\cite{daley2003}. \comment{S: \st{What does $p(t \mid H_{t^-})$ mean here? Are you sure about this formula? Do you mean the density for the next event time divided by one minus the associated CDF?}} Here \( H_{t^-} = \{ (t_n, k_n) \mid 0 \leq t_n \leq t \} \) denotes the internal history of the process up to but not including \( t \), the superscript \( \ast \) denotes the conditioning of any function on \( H_{t^-} \), and \( p^\ast(t) \) is the density function corresponding to the probability of an event taking place at time \( t \) given \( H_{t^-} \). We can interpret the conditional intensity as the likelihood of observing a point in the next infinitesimal unit of time, given that no point has occurred since the last observed point in \( H_{t^-} \). Lastly, the mark distribution denotes the density function corresponding to the probability of observing mark \( k \) given the occurrence of an event at time \( t \) and internal history \( H_{t^-} \).  \comment{G: There was indeed a mistake in the denominator. I hope that I have also clarified the notation.}
-
 
 \section{The homogeneous process} \label{sec:method-poisson}
 
@@ -93,23 +94,23 @@ The second procedure uses the fact that Poisson processes can be represented as 
 \subsection{Inverse methods} \label{subsec:sim-inverse}
 
 The \textit{inverse} method leverages Theorem 7.4.I~\cite{daley2003} which states that every simple point process~\footnote{A simple point process is a process in which the probability of observing more than one point in the same location is zero.} can be transformed to a homogeneous Poisson process with unit rate via the compensator. Let \( t_n \) be the time in which the \( n \)-th chronologically sorted event took place and \( t_0 \equiv 0 \), we define the compensator as:
-\[ \label{eqn:compensator}
+\begin{equation} \label{eqn:compensator}
   \Lambda^\ast (t_n) \equiv \tilde{t}_n \equiv \int_0^{t_n} \lambda^\ast (u) du
-\]
+\end{equation}
 The transformed data \( \tilde{t}_n \) forms a homogeneous Poisson process with unit rate. Now, if this is the case, then the transformed interval is distributed according to the exponential distribution.
 \begin{equation}\label{eqn:inverse}
   \Delta \tilde{t}_n \equiv \tilde{t}_n - \tilde{t}_{n-1} \sim \exp(1)
 \end{equation}
-The idea is to draw realizations from the unit rate Exponential process and solve Equation~\ref{eqn:inverse} for \( t_n \)  to determine the next event/firing time. In Algorithm~\ref{algo:sim-inverse}, we adapt Algorithm 7.4~\cite{daley2003}. \comment{G: \st{The advantage of using the inverse method is that it is easier to couple the point process with differential equations and solve the system with the same numerical integrator.}} \comment{G: I have removed the previous bit, I am not sure if this is really an advantage seeing how this method still needs to root find and so it is inefficient.}
+The idea is to draw realizations from the unit rate Exponential process and solve Equation~\ref{eqn:inverse} for \( t_n \)  to determine the next event/firing time. We illustrate this in Algorithm~\ref{algo:sim-inverse} where we adapt Algorithm 7.4~\cite{daley2003}. \comment{G: \st{The advantage of using the inverse method is that it is easier to couple the point process with differential equations and solve the system with the same numerical integrator.}} \comment{G: I have removed the previous bit, I am not sure if this is really an advantage seeing how this method still needs to root find and so it is inefficient.}
 
 Whenever the conditional intensity is constant between two points, Equation~\ref{eqn:inverse} can be solved analytically. Let \( \lambda^\ast \, (t) = \lambda_{n-1} , \forall t_{n-1} \leq t < t_n \), then
-\[
+\begin{equation}
 \begin{split}
   &\int_{t_{n-1}}^{t_n} \lambda^\ast \, (u) \, du = \Delta \tilde{t}_{n} \iff \\
   &\lambda_{n-1} (t_n - t_{n-1}) = \Delta \tilde{t}_n \iff \\
   &t_n = t_{n-1} + \frac{\Delta \tilde{t}_n}{\lambda_{n-1}}.
 \end{split}
-\]
+\end{equation}
 Which is equivalent to drawing the next realization time from the re-scaled exponential distribution \( \Delta t_n \sim \exp(\lambda_{n-1}) \). As we will see in Subsection~\ref{algo:sim-thinning}, this implies that the \textit{inverse} and \textit{thinning} methods are the same whenever the conditional intensity is constant between jumps.
 
 % see here on computing the inverse of integrals:
@@ -117,27 +118,27 @@ Which is equivalent to drawing the next realization time from the re-scaled expo
 The main drawback of the \textit{inverse} method is that the root finding problem defined in Equation~\ref{eqn:inverse} often requires a numerical solution. To get around a similar obstacle in the context of the piecewise deterministic Markov process, Veltz~\cite{veltz2015} proposes a change of variables in time that recasts the root finding problem into an initial value problem. He denotes his method for solving piecewise deterministic Markov processes \textit{CHV}.
 
 We map the evolutionary point process to a piecewise deterministic Markov process as following. Let \( \lambda^\ast_n \equiv \lambda^\ast(t_n) \), then the flow \( \varphi_{t-t_n}( \lambda^\ast_n ) \) maps the initial value of the conditional intensity at time \( t_n \) to its value at time \( t \). In other words, the flow describes the deterministic evolution of the conditional intensity function over time. Next, denote \( \mathbf{1}( \cdot ) \) as the indicator function, then the conditional intensity function can be re-written as a jump process:
-\[ \label{eqn:conditional-jump}
+\begin{equation} \label{eqn:conditional-jump}
   \lambda^\ast (t) = \sum_{n \geq 1} \varphi_{t - t_{n-1}} ( \lambda_{n-1} ) \mathbf{1}(t_{n-1} \leq t < t_n).
-\]
+\end{equation}
 According to Meiss~\cite{meiss2017}, if \( \varphi_t ( \cdot ) \) is a flow, then it is a solution to the initial value problem:
-\[
+\begin{equation}
   \varphi_{0} (\lambda_n^\ast) = \lambda_n^\ast \text{ , }
   \frac{d}{dt} \varphi_{t-t_n} (\lambda_n^\ast) = g(\varphi_{t-t_n} (\lambda_n^\ast))
-\]
+\end{equation}
 where \( g: \mathbb{R}^+ \to \mathbb{R} \) is the vector field of \( \lambda^\ast \) such that \( d \lambda^\ast / dt = g( \lambda^\ast ) \). \comment{S: \st{Say what $f$ is above, otherwise it is mysteriously used but never defined / explained. Also, in the following discussion it seems you are giving a bit different conversion to ODEs than Veltz, see (3.1) in his paper, so it probably should be explained why what you are presenting is equivalent in some sense but not formulated exactly the same.}}\comment{G: My objective was to show that the 3 assumptions of Theorem 3.1 in Veltz are satisfied. I hope I made it more explicit.}
 
 Equation~\ref{eq:lambda}, which defines the conditional intensity, denotes a differential equation. We can thus show that the probability of observing an interval longer than \( s \) given internal history \( H_{t^-} \) is equivalent to:
-\[ \label{eqn:transition-rate}
+\begin{equation} \label{eqn:transition-rate}
 \begin{split}
   &\Pr(t_n - t_{n-1} > s \mid H_{t^-}) = 1 - \int_{t_{n-1}}^{t_{n-1} + s} p^\ast(u) du = \\
-    &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \lambda^\ast (u + t_{n-1}) du \right) = \\ 
-    &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \varphi_{u} (\lambda_{n-1}^\ast) du \right)
+    &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \lambda^\ast (u) du \right) = \\ 
+    &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \varphi_{u-t_{n-1}} (\lambda_{n-1}^\ast) du \right)
 \end{split}
-\] 
+\end{equation} 
 \comment{S: \st{Again, say what $\Pr(t_n - t_{n-1} \mid \lambda^*_{n-1})$ is here, i.e. define this notation. As written it looks like it is the probability that the increment has a given value, which doesn't make sense since that would need to be a pdf not a probability. Also note you use $t_n$, $t_{n-1}$ on one side of the equation and just $t$ on the other.}}\comment{G: Notation fixed.}
 
-Equations~\ref{eqn:conditional-jump} and~\ref{eqn:transition-rate} define a piecewise deterministic Markov process that satisfies the conditions of Theorem 3.1~\cite{veltz2015}, namely (i) \( \varphi_{t}( \cdot ) \) is globaly defined, (ii) the total rate \( \lambda^\ast(t) > 0 \) for \( t > 0 \), and (iii) \( \lambda^\ast(t) \) is locally Lipschitz for \( t > 0 \). In this case, we can find \( t_n \) by solving the following initial value problem from \( 0 \) to \( \Delta \tilde{t}_n \sim \exp(1) \):
+Equations~\ref{eqn:conditional-jump} and~\ref{eqn:transition-rate} define a piecewise deterministic Markov process satisfying the conditions of Theorem 3.1~\cite{veltz2015}. In this case, we can find \( t_n \) by solving the following initial value problem from \( 0 \) to \( \Delta \tilde{t}_n \sim \exp(1) \):
 \begin{equation} \label{eqn:chv}
   \begin{cases}
   \begin{aligned}
@@ -146,11 +147,11 @@ Equations~\ref{eqn:conditional-jump} and~\ref{eqn:transition-rate} define a piec
   \end{aligned}
   \end{cases}
 \end{equation}
-The solution to Equation~\ref{eqn:inverse} is then given by \( ( t_n = t(\Delta \tilde{t}_n), \lambda^\ast(t(\Delta \tilde{t}_n)) =  \lambda^\ast(t_n)) \). Looking back at Equation~\ref{eqn:compensator}, we note that it is a one-to-one mapping between \( t \) and \( \tilde{t} \) which makes it completely natural to write \( t(\Delta \tilde{t}_n) \equiv \Lambda^{\ast-1} (\tilde{t}_{(n-1)} + \Delta \tilde{t}_n) \). The initial value problem above describes how both model time and the conditional intensity change with respect to transformed time \( \tilde{t} \). This allow us to draw a random sample in the transformed space to find the next jump in model time. \comment{S: \st{Point out why these equations make sense, and how they differ than Veltz's eqs.}} \comment{G: I have tried to make the connection between the compensator and the initial value problem above more explicit. I hope it clarifies better.} For more discussions on the links between point processes and Markov processes see Chapter 10~\cite{daley2007}. 
+The solution to Equation~\ref{eqn:inverse} is then given by \( ( t_n = t(\Delta \tilde{t}_n), \lambda^\ast(t(\Delta \tilde{t}_n)) =  \lambda^\ast(t_n)) \). Looking back at Equation~\ref{eqn:compensator}, we note that it is a one-to-one mapping between \( t \) and \( \tilde{t} \) which makes it completely natural to write \( t(\Delta \tilde{t}_n) \equiv \Lambda^{\ast-1} (\tilde{t}_{n-1} + \Delta \tilde{t}_n) \). The initial value problem above describes how both model time and the conditional intensity change with respect to transformed time \( \tilde{t} \). This allow us to draw a random sample in the transformed space to find the next jump in model time. \comment{S: \st{Point out why these equations make sense, and how they differ than Veltz's eqs.}} \comment{G: I have tried to make the connection between the compensator and the initial value problem above more explicit. I hope it clarifies better.} For more discussions on the links between point processes and Markov processes see Chapter 10~\cite{daley2007}. 
 
 In Algorithm~\ref{algo:sim-inverse}, we can implement the CHV method by solving Equation~\ref{eqn:chv} instead of Equation~\ref{eqn:inverse}. The algorithmic complexity is then determined by the ODE solver and no root-finding is required.
 
-Another concern with Algorithm~\ref{algo:sim-inverse} is updating and drawing from the conditional mark distribution in Line~\ref{line:inverse-mark-sample}, and updating the conditional intensity in Line~\ref{line:inverse-history-update}. A naive implementation of Line~\ref{line:inverse-history-update} scales with the number of marks \( O(K) \) since \( \lambda^\ast \) is usually constructed as the sum of \( K \) independent processes, each of which requires updating the conditional intensity rate. Likewise, drawing from the mark distribution in Line~\ref{line:inverse-mark-sample} usually involves drawing from a categorical distribution whose naive implementations also scales with the number of marks \( O(K) \).
+Another concern with Algorithm~\ref{algo:sim-inverse} is updating and drawing from the conditional mark distribution in Line~\ref{line:inverse-mark-sample}, and updating the conditional intensity in Line~\ref{line:inverse-history-update}. Assume a process with \( K \) number of marks. A naive implementation of Line~\ref{line:inverse-history-update} scales with the number of marks as \( O(K) \) since \( \lambda^\ast \) is usually constructed as the sum of \( K \) independent processes, each of which requires updating the conditional intensity rate. Likewise, drawing from the mark distribution in Line~\ref{line:inverse-mark-sample} usually involves drawing from a categorical distribution whose naive implementations also scales with the number of marks as \( O(K) \).
 
 Finally, Algorithm~\ref{algo:sim-inverse} is not guaranteed to terminate in finite time since one might need to sample many points before \( t_n > T \). The sampling rate can be especially high when simulating the process in a large population with self-exciting encounters. In biochemistry, Salis and Kaznessis~\cite{salis2005} partition a large system of chemical reactions into two: fast and slow reactions. While they approximate the fast reactions with a Gaussian process, the slow reactions are solved using a variation of the inverse method. They obtain an equivalent expression for the rate of slow reactions as in Equation~\ref{eqn:inverse}, which is integrated with the Euler method.
 
@@ -179,9 +180,9 @@ Finally, Algorithm~\ref{algo:sim-inverse} is not guaranteed to terminate in fini
 
 \textit{Thinning} algorithms have been proposed in different forms~\cite{daley2003}. The Shedler-Lewis algorithm can simulate processes with bounded intensity~\cite{lewis1976}. The classical algorithm from Ogata~\cite{ogata1981} overcomes this limitation and only requires the local boundedness of the conditional intensity. The advantage of Ogata's algorithm and its variations is that it can simulate processes with potentially unbounded intensity, such as self-exciting ones. As long as the intensity conditioned on the simulated history remains locally bounded, it is possible to simulate subsequent points indefinitely.
 
-In biochemistry, the \textit{thinning} method was popularized by Gillespie~\cite{gillespie1976,gillespie1977}. For this reason, this method is also called the \textit{Gillespie} method. Gillespie himself called it the \textit{direct} method or the \textit{stochastic simulation algorithm}. Gillespie introduced the \textit{thinning} method in the context of simulating chemical reactions of well-stirred systems. He developed a stochastic model for molecule interactions from physics principles without any references to the point process theory developed in this section. His model of molecule interaction boils down to a marked Poisson process with constant conditional intensity between jumps. The model consists of distinct populations of molecular species that interact through several reaction channels. A chemical reaction consists of a Poisson process that transforms a set of molecules of some type into a set of molecules of another type. What Gillespie calls the master equation can be deduced from the \textit{superposition theorem} --- Theorem 3.3~\cite{last2017}.
+In biochemistry, the \textit{thinning} method was popularized by Gillespie~\cite{gillespie1976,gillespie1977}. For this reason, this method is also called the \textit{Gillespie} method. Gillespie himself called it the \textit{direct} method or the \textit{stochastic simulation algorithm}. Gillespie introduced the \textit{thinning} method in the context of simulating chemical reactions of well-stirred systems. He developed a stochastic model for molecule interactions from physics principles without any references to the point process theory developed in this section. His model of chemical interactions is equivalent to a marked Poisson process with constant conditional intensity between jumps. The model consists of distinct populations of molecular species that interact through several reaction channels. A chemical reaction consists of a Poisson process that transforms a set of molecules of some type into a set of molecules of another type. What Gillespie calls the master equation can be deduced from the \textit{superposition theorem} --- Theorem 3.3~\cite{last2017}.
 
-Alternatively, in biochemistry, \textit{thinning} methods are known as \textit{rejection} algorithms. Than~\etal~\cite{thanh2014,thanh2017} proposed the \textit{rejection-based algorithm with composition-rejection search}, yet another more sophisticated variation of the \textit{thinning} method. In this case, the procedure groups similar processes together. For each group, an upper- and lower-bound conditional intensities are used for thinning. A similar procedure is also described in \cite{slepoy2008}, in which the authors refer to their algorithm as \textit{kinetic Monte Carlo}.
+Alternatively, in biochemistry, \textit{thinning} methods are known as \textit{rejection} algorithms. Than~\etal~\cite{thanh2014,thanh2017} proposed the \textit{rejection-based algorithm with composition-rejection search}, yet another more sophisticated variation of the \textit{thinning} method. In this case, the procedure groups similar processes together. For each group, an upper- and lower-bound conditional intensity is used for thinning. A similar procedure is also described in \cite{slepoy2008}, in which the authors refer to their algorithm as \textit{kinetic Monte Carlo}.
 
 In Algorithm~\ref{algo:sim-thinning}, we modify Algorithm 7.5.IV~\cite{daley2003} to incorporate the idea of a lower bound for the conditional intensity from~\cite{thanh2017}. To implement the algorithm, we define three functions, \( \bar{B}^\ast (t) = \bar{B}(t \mid H_t) \), \( \ubar{B}^\ast (t) = \ubar{B}(t\mid H_t) \) and \( L^\ast(t) = L(t \mid H_t) \), that characterize the local boundedness condition such that:
 \begin{equation} \label{eq:thinning-condition}
@@ -193,17 +194,9 @@ The tighter the bound on \( \bar{B}^\ast(t) \), the lower the number of samples 
 
 When the conditional intensity is constant between jumps such that \( \lambda^\ast \, (t) = \lambda_{n-1} , \forall t_{n-1} \leq t < t_n \) , let \( \bar{B}^\ast(t) = \ubar{B}^\ast(t) = \lambda_{n-1} \) and \( L^\ast(t) = \infty \). We have that for any \( u \sim \exp(1 \; / \; \bar{B}^\ast(t)) =  \exp(\lambda_{n-1})\) and \( v \sim U[0, 1] \) , \( u < L^\ast(t) = \infty \) and \( v < \lambda^\ast \, (t + u) \; / \; \bar{B}^\ast(t) = 1 \). Therefore, we advance the internal history for every iteration of Algorithm~\ref{algo:sim-thinning}. In this case, the bound \( \bar{B}^\ast(t) \) is as tight as possible, and this method becomes the same as the \textit{inverse} method of Subsection~\ref{subsec:sim-inverse}.
 
-Surprisingly, the \textit{inverse} method can also be seen as the limit of the \textit{thinning} method. Let \( d\tilde{t} \) be a constant, \( \Delta \tilde{t} \sim \exp(1) \) and \( dt ( d\tilde{t} ) \) such that given \( u \sim \exp(\lambda^\ast (t)) \) then \( \Pr( u < dt ) \) if and only if \( \Pr (\Delta \tilde{t} < d\tilde{t} ) \). This definition implies that \( dt / d\tilde{t} = 1 / \lambda^\ast (t) \) and \( d\lambda^\ast / d\tilde{t} = d\lambda^\ast / dt \times 1 / \lambda^\ast (t) \). For each round of thinning \( r \), we choose \( L^\ast(t_r) = dt_r \) such that \( \bar{B}^\ast (t_r) = \lambda^\ast(t) \) is as tight as possible. In this case the probability of accepting candidate time \( t_R \) after \( R \) rounds is:
-\[
-\begin{split}
-  & \Pr(L^\ast(t_R) < dt_R) \times \prod_{r = 1}^R \Pr(L^\ast(t_r) > dt_r) = \\
-  & \Pr(\Delta \tilde{t} < d\tilde{t}) \times \prod_{r = 1}^R \Pr(\Delta \tilde{t} > d\tilde{t}) = \exp(-d\tilde{t}) \exp\left(- \sum_{r=1}^R d\tilde{t} \right) \\ 
-  & \xrightarrow{ d\tilde{t} \to 0} \exp \left( - \int_0^{T_R} du \right) = 1 - \exp(-T_R) = \Pr(\Delta \tilde{t} < T_R)
-\end{split}
-\]
-Therefore, by construction we have that as \( d\tilde{t} \to 0 \), the thinning procedure is equivalent to the initial value problem defined in Equation~\ref{eqn:chv}. Therefore, the efficiency of thinning compared to \textit{CHV} will depend on the rejection rate for the former and the number of steps required by the ODE solver for the latter. Lemaire~\etal~\cite{lemaire2018} develop a more theoretical discussion of this topic. They show that under certain conditions the stochastic process determined by the local bound converges in distribution to the conditional intensity as the local interval goes to zero. \comment{G: This discussion illustrates the connection between the different simulation methods which highlights a few of the trade-offs that we discuss in the evaluation section.}
+Surprisingly, the \textit{inverse} method can be seen as the limit of \textit{thinning}. Lemaire~\etal~\cite{lemaire2018} propose a version of the \textit{thinning} algorithm for Piecewise Deterministic Markov Processes which does not use the local interval \( L^\ast \) for rejection --- this is equivalent to \( L^\ast(t) = \infty \) ---, and does not assume the upper bound \( \bar{B}^\ast(t) \) is constant over \( L^\ast(t) \). The efficiency of their algorithm depends on the assumption that the stochastic process determined by \( \bar{B}^\ast(t) \) can be efficiently inverted such that candidate times can be efficiently obtained using Equation~\ref{eqn:compensator}. They propose an optimal bound as a piecewise constant function partitioned in such a way that it envelopes the intensity function as strictly as possible. They then show that under certain conditions the stochastic process determined by \( \bar{B}^\ast(t) \) converges in distribution to the target conditional intensity as the partitions of the optimal boundary converge to zero. A modification of Lemaire~\etal approach that took the partition intervals of their optiomal \( \bar{B}^\ast(t) \) as \( L^\ast(t) \) and used those partitions as local upper bounds could show that \textit{thinning} indeed converges to the \textit{inverse} method. The efficiency of \textit{thinning} compared to \textit{inversion} will then depend on the rejection rate obtained by the former and the number of steps required by the ODE solver for the latter.
 
-While \textit{thinning} algorithms solve the issue by computing the inverse of the integrated conditional intensity, the issue of termination can be aggravated by the fact that we are now required to sample from a process with a rate higher than the original process. Moreover, like the \textit{inverse} method, \textit{thinning} algorithms can also face issues related with drawing from the conditional mark distribution --- Line~\ref{line:thinning-mark-sample} of Algorithm~\ref{algo:sim-thinning} ---, and updating the conditional intensity --- Line~\ref{line:lambda-update} of Algorithm~\ref{algo:next-time-thinning} --- and the mark distribution --- Line~\ref{line:thinning-history-update} of Algorithm~\ref{algo:sim-thinning}.
+While \textit{thinning} algorithms avoid the issue of directly computing the inverse of the integrated conditional intensity, they increase the number of time steps needed in the sampling algorithm as we are now sampling from a process with an increased intensity relative to the original process we are now required to sample from a process with a rate higher than the original process. Moreover, like the \textit{inverse} method, \textit{thinning} algorithms can also face issues related with drawing from the conditional mark distribution --- Line~\ref{line:thinning-mark-sample} of Algorithm~\ref{algo:sim-thinning} ---, and updating the conditional intensity --- Line~\ref{line:lambda-update} of Algorithm~\ref{algo:next-time-thinning} --- and the mark distribution --- Line~\ref{line:thinning-history-update} of Algorithm~\ref{algo:sim-thinning}.
 
 \begin{algorithm}[h]
 \begin{algorithmic}[1]
@@ -211,7 +204,7 @@ While \textit{thinning} algorithms solve the issue by computing the inverse of t
     \State initialize the history \( H_{T^-} \leftarrow \{ \} \)
     \State set \( n \leftarrow 0, t \leftarrow 0 \)
     \While{true}
-      \State \( t, \textunderscore \leftarrow \operatorname{NextTimeViaThinning}([t, T), H_{T^-}, \lambda^\ast) \)
+      \State \( t \leftarrow \operatorname{NextTimeViaThinning}([t, T), H_{T^-}, \lambda^\ast) \)
       \If{\(t \geq T \)}
         \State \textbf{break}
       \EndIf
@@ -230,7 +223,6 @@ While \textit{thinning} algorithms solve the issue by computing the inverse of t
 \begin{algorithm}[h]
 \begin{algorithmic}[1]
   \Procedure{NextTimeViaThinning}{\([t, T) \), \( \lambda^\ast \), \( H_{t} \),}
-      \State \( \operatorname{accepted} \leftarrow \operatorname{false} \)
       \While{\( t < T \)}
         \State update \( \lambda^\ast \) \label{line:lambda-update}
         \State find \( \bar{B}^\ast (t) \), \( \ubar{B}^\ast (t) \) and \( L^\ast(t) \) which satisfy Eq.~\ref{eq:thinning-condition}
@@ -244,10 +236,9 @@ While \textit{thinning} algorithms solve the issue by computing the inverse of t
           \State \textbf{next}
         \EndIf
         \State \( t \leftarrow t + u \)
-        \State \( \operatorname{accepted} \leftarrow \operatorname{true} \)
         \State \textbf{break}
       \EndWhile
-      \State \Return \( t, \operatorname{accepted} \)
+      \State \Return t
   \EndProcedure
 \end{algorithmic}
 \caption{Generates the next event time via \textit{thinning}. \\ \comment{S: \st{Is line 10's first inequality correct?}} \\ \comment{G: Fixed inequalities by changing the sampling distribution for \( v \).}}
@@ -264,34 +255,59 @@ We prefer to call this class of methods \textit{queueing} methods since most eff
 
 Our contribution, Algorithm~\ref{algo:sim-queueing}, presents a method for sampling a superposed point process consisting of \( M \) processes by keeping the strike time of each process in a priority queue \( Q \). The priority queue is initially constructed in \( O(M) \) steps in Lines~\ref{line:queueing-init-begin} to~\ref{line:queueing-init-end} of Algorithm~\ref{algo:sim-queueing}. In contrast to \textit{thinning} methods, updates to the conditional intensity depend only on the size of the neighbourhood of \( i \). That is, processes \( j \) whose conditional intensity depends on the history of \( i \). If the graph is sparse, then updates will be faster than with \textit{thinning}. 
 
-A source of inneficiency in some implementations of queueing algorithms is the fact that one might need to go through multiple rejection cycles before accepting a time candidate \( t_i \) for process \( i \). This might require looking ahead in the future. In addition to that, if process \( j \), which \( i \) depends on, takes place before \( i \), then we need to repeat the whole thinning process to obtain a new time candidate for \( i \). Algorithms like that can be implemented by adapting Lines 5 and 23 of Algorithm~\ref{algo:sim-queueing}. Replacing \( [0, \epsilon] \) by \( [0, T] \) and \( [t, t + \epsilon] \) by \( [t, T] \) in Lines~\ref{line:candidate-one} and~\ref{line:candidate-two} respectively results in completing the thinning procedure before handling the program execution back to the main loop. In our case, each call to \( \operatorname{NextTimeViaThinning} \) performs a single thinning cycle in sync with the main loop which avoids lookaheads and wasted rejections. Also, because thinning is synced with the main loop it is then possible to couple this simulator with other algorithms that step chronologically through time like ordinary differential equation solvers which means we can simulate jump processes with rates given by a differential equation.
+A source of inneficiency in some implementations of queueing algorithms is the fact that one might need to go through multiple rejection cycles before accepting a time candidate \( t_i \) for process \( i \). This might require looking ahead in the future. In addition to that, if process \( j \), which \( i \) depends on, takes place before \( i \), then we need to repeat the whole thinning process to obtain a new time candidate for \( i \). We thus propose Algorithm~\ref{algo:sim-queueing} which is a queueing algorithm that performs thinning in synchrony with the main loop, thus avoiding lookaheads and wasted rejections. Since thinning is now synced with the main loop it is possible to couple this simulator with other algorithms that step chronologically through time like ordinary differential equation solvers which means we can simulate jump processes with rates given by a differential equation. This is the first synced thinning algorithm we are aware of.
 
 \begin{algorithm}[h]
 \begin{algorithmic}[1]
-  \Procedure{QueueingMethod}{\( [0, T) \), \( \lambda_{k}^\ast \), \( f_{k}^\ast \),}
+  \Procedure{NextQueueTime}{\( t \), \( \lambda^\ast \), \( H_{t} \),}
+        \State update \( \lambda^\ast \)
+        \State find \( \bar{B}^\ast (t) \), \( \ubar{B}^\ast (t) \) and \( L^\ast(t) \) which satisfy Eq.~\ref{eq:thinning-condition}
+        \State draw \( u \sim \exp(\bar{B}^\ast(t)) \)
+        \If{ \( u > L^\ast(t) \)}
+          \State \( \operatorname{accepted} \leftarrow \operatorname{false} \)
+        \Else
+          \State \( \operatorname{accepted} \leftarrow \operatorname{true} \)
+        \EndIf
+        \State \( t \leftarrow t + u \)
+        \State \Return \( t, \bar{B}^\ast (t), \ubar{B}^\ast, \operatorname{accepted} \)
+  \EndProcedure
+\end{algorithmic}
+\caption{Generates the next candidate time for \textit{queueing}.}
+\label{algo:next-time-queueing}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\begin{algorithmic}[1]
+  \Procedure{QueueingMethod}{\( [0, T) \), \( \{ \lambda_{k}^\ast \} \), \( \{ f_{k}^\ast \} \),}
     \State initialize the history \( H_{T^-} \leftarrow \{ \} \)
     \State set \( n \leftarrow 0, t \leftarrow 0 \)
     \For{i=1,M} \label{line:queueing-init-begin}
-      \State \( t, \operatorname{accepted} \leftarrow \operatorname{NextTimeViaThinning}([0, \epsilon), H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
-      \State push \( (t_{i}, i, \operatorname{accepted}) \) to \( Q \)
+      \State \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i) \leftarrow \operatorname{NextQueueTime}(0, H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
+      \State push \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i, i) \) to \( Q \)
     \EndFor \label{line:queueing-init-end}
     \While{\( t < T \)}
-      \State first \( (t, i, \operatorname{accepted}) \) from \( Q \)
+      \State first \( (t_i, i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i, i) \) from \( Q \)
+      \State \( t \leftarrow t_i \)
       \If{\(t \geq T \)}
         \State \textbf{break}
       \EndIf
-      \If{ \( \operatorname{accepted} \)}
+      \State draw \( v \sim U[0, \bar{B}_i^\ast] \)
+      \If{\( ( v > \ubar{B}_i^\ast ) \) and \( ( v > \lambda^\ast \, (t) ) \)}
+        \State \( a_i \leftarrow \operatorname{false} \)
+      \EndIf
+      \If{ \( a_i \)}
         \State \( n \leftarrow n + 1 \)
         \State \( t_n \leftarrow t \)
         \State update  \( f^\ast \) and draw the mark \( k_n \sim f_i^\ast \, (k \mid t_n) \)
         \State update the history \( H_{T^-} \leftarrow H_{T^-} \cup (t_n, k_n) \)
         \For{\( j \in \{ i \} \cup \operatorname{Neighborhood}(i) \)}
-          \State \( t_{j}, \operatorname{accepted} \leftarrow \operatorname{NextTimeViaThinning}( \) \( [t, t + \epsilon), H_{T^-}, \lambda_{j}^\ast(\cdot)) \)
-          \State update \( (t_{j}, j, \operatorname{accepted}) \) in \( Q \)
+          \State \( (t_j, \bar{B}_j^\ast, \ubar{B}_j^\ast, a_j) \leftarrow \operatorname{NextQueueTime}(0, H_{T^-}, \lambda_{j}^\ast(\cdot)) \)
+          \State update \( (t_j, \bar{B}_j^\ast, \ubar{B}_j^\ast, a_j, j) \) in \( Q \)
         \EndFor
       \Else
-        \State \( t_i, \operatorname{accepted} \leftarrow \operatorname{NextTimeViaThinning}([t, t+\epsilon), H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-two}
-        \State update \( (t_{i}, i, \operatorname{accepted}) \) in \( Q \)
+        \State \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i) \leftarrow \operatorname{NextQueueTime}(0, H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
+ \label{line:candidate-two}
+        \State update \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i, i) \) in \( Q \)
       \EndIf
     \EndWhile
     \State \Return \( H_{T^-} \)
@@ -300,7 +316,6 @@ A source of inneficiency in some implementations of queueing algorithms is the f
 \caption{The \textit{queueing} method for simulating a marked evolutionary point process over a fixed duration of time \( [0, T) \). \\ \comment{S: \st{In the following say what $\lambda_k^*$ and $f_k^*$ are somewhere. I'd suggest a different notation for one of $k$ and $k_n$, otherwise one might think the $k$ in 9 is a mark and not the index of a given processes. Why do you say you are pushing and poping from the queue -- the algorithim is usually to update the queue in-place?}} \\ \comment{G: Processes are indexed with \( i \) and \( j \). There are \( M \) sub-processes. Kept \( k \) for marks. Fixed method names in queue.}}
 \label{algo:sim-queueing}
 \end{algorithm}
-
 
 % \section{Inexact simulation methods} \label{sec:method-inexact}
 
@@ -315,8 +330,7 @@ A source of inneficiency in some implementations of queueing algorithms is the f
 \texttt{JumpProcesses.jl} is a Julia library for simulating jump --- or point --- processes which is part of Julia's SciML organization.
 Our discussion in Section~\ref{sec:method-exact} identified three exact methods for simulating point processes. In all the cases, we identified two mathematical constructs required for simulation: the intensity rate and the mark distribution. In \texttt{JumpProcesses.jl}, these can be mapped to user defined functions \texttt{rate(u, p, t)} and \texttt{affect!(integrator)}. The library provides APIs for defining processes based on the nature of the intensity rate and the intended simulation algorithm. Processes intended for exact methods can choose between \texttt{ConstantRateJump} and \texttt{VariableRateJump}. While the former expects the rate between jumps to be constant, the latter allows for time-dependent rates. The library also provides the \texttt{MassActionJump} API to define large systems of point processes that can be expressed as reaction equations. Finally, \texttt{RegularJump} are intended for inexact methods.
 
-\comment{S: \st{normally one doesn't solve a differential equation but does a root find, so I would modify the following discuusion. Or perhaps you mean the DifferentialEquations.jl approach, in which please clarify that as implemented in DifferentialEquations.jl the root find is achieved by using continuous events combined with ODE integrators to solve (1), and this is different than the CHV ODE based approach.}} \comment{G: rephrased.} The \textit{inverse} method as described around Equation~\ref{eqn:inverse} uses root find to find the next jump time. Jumps to be simulated via the \textit{inverse} method must be initialized as a \texttt{VariableRateJump}. \texttt{JumpProcesses.jl} builds a continuous callback following the algorithm in~\cite{salis2005} and passes the problem to an \texttt{OrdinaryDiffEq.jl} integrator, which easily interoperate with \texttt{JumpProcesses.jl} as the former library also belong to the \textit{SciML} organization. \texttt{JumpProcesses.jl} does not yet support the CHV ODE based approach.
-
+\comment{S: \st{normally one doesn't solve a differential equation but does a root find, so I would modify the following discuusion. Or perhaps you mean the DifferentialEquations.jl approach, in which please clarify that as implemented in DifferentialEquations.jl the root find is achieved by using continuous events combined with ODE integrators to solve (1), and this is different than the CHV ODE based approach.}} \comment{G: rephrased.} The \textit{inverse} method as described around Equation~\ref{eqn:inverse} uses root find to find the next jump time. Jumps to be simulated via the \textit{inverse} method must be initialized as a \texttt{VariableRateJump}. \texttt{JumpProcesses.jl} builds a continuous callback following the algorithm in~\cite{salis2005} and passes the problem to an \texttt{OrdinaryDiffEq.jl} integrator, which easily interoperates with \texttt{JumpProcesses.jl} (both libraries are part of the \textit{SciML} organization, and by design built to easily compose). \texttt{JumpProcesses.jl} does not yet support the CHV ODE based approach.
 
 Alternatively, \textit{thinning} and \textit{queuing} methods can be simulated via discrete steps. In the context of the library, any method that uses a discrete callback is called an \textit{aggregator}. There are twelve different aggregators, seven of which implement a variation of the \textit{thinning} method and five of which a variation of the \textit{queuing} method.
 
@@ -326,7 +340,7 @@ Where most implementations differ is on updating the mark distribution in Line~\
 
 Next, we consider the \textit{queuing} aggregators. Starting with aggregators that only support \texttt{ConstantRateJump}s we have, \texttt{FRM}, \texttt{FRMFW} and \texttt{NRM}. \texttt{FRM} and \texttt{FRMFW} follow the \textit{first reaction} method in~\cite{gillespie1976}. To compute the next jump, both algorithms compute the time to the next event for each process and select the process with minimum time. This is equivalent to assuming a complete dependency graph in Algorithm~\ref{algo:sim-queueing}. For large systems, they can be less efficient than \texttt{NRM}. The latter implementation is sourced from~\cite{gibson2000} and follows Algorithm~\ref{algo:sim-queueing} very closely.
 
-Previously, we attempted to bridge the gap between the treatment of point process simulation in statistics and biochemistry. Despite the many commonalities, most of the algorithms implemented in \texttt{JumpProcesses.jl} are derived from the biochemistry literature. There has been less emphasis on implementing processes commonly studied in statistics such as self-exciting point processes characterized by time-varying and history-dependent intensity rates. This is addressed by our latest aggregators, \texttt{Coevolve}. This is the first aggregator that supports \texttt{VariableRateJump}s, facilitating substantially more performant simulation of processes with time-dependent intensity rates in \texttt{JumpProcesses.jl} and \texttt{DifferentialEquations.jl} compared to the current \textit{inverse} method-based approach that relies on ODE integration and continuous events. 
+Previously, we attempted to bridge the gap between the treatment of point process simulation in statistics and biochemistry. Despite the many commonalities, most of the algorithms implemented in \texttt{JumpProcesses.jl} are derived from the biochemistry literature. There has been less emphasis on implementing processes commonly studied in statistics such as self-exciting point processes characterized by time-varying and history-dependent intensity rates. This is addressed by our latest aggregator, \texttt{Coevolve}. This is the first aggregator that supports \texttt{VariableRateJump}s, facilitating substantially more performant simulation of processes with time-dependent intensity rates in \texttt{JumpProcesses.jl} and \texttt{DifferentialEquations.jl} compared to the current \textit{inverse} method-based approach that relies on ODE integration and continuous events. 
 
 The implementation of this aggregator takes  inspiration from~\cite{farajtabar2017}, and improves the method in several ways. First, we take advantage of the modularity and composability of Julia to design an API that accepts any intensity rate, not only the Hawkes'. Second, we avoid the re-computation of unused random numbers. When updating processes that have not yet fired, we can transform the unused time of constant rate processes to obtain the next candidate time for the first round of iteration of the \textit{thinning} procedure in Algorithm~\ref{algo:next-time-thinning}. This saves one round of sampling from the exponential distribution, which translates into a faster algorithm. Third, we allow the user to supply a lower bound rate which can short-circuit the loop in Algorithm~\ref{algo:next-time-thinning}, saving yet another round of sampling. Fourth, it adapts to processes with constant intensity between jumps which reduces the loop in Algorithm~\ref{algo:next-time-thinning} to the equivalent implemented in \texttt{NRM}. Finally, since \texttt{Coevolve} can be mapped to a \textit{thinning} algorithm --- see~\cite{farajtabar2017} ---, it can simulate any point process on the real line with a non-negative, left-continuous, history-adapted and locally bounded intensity rate as per Proposition~7.5.I~\cite{daley2003}.
 
@@ -347,7 +361,8 @@ To simulate a process intended for a discrete solver with \texttt{JumpProcesses.
 ]
   using JumpProcesses
   rate(u, p, t) = p[1]
-  affect!(integrator) = integrator.u[1] += 1
+  affect!(integrator) = (integrator.u[1] += 1; 
+    nothing)
   jump = ConstantRateJump(rate, affect!)
   u, tspan, p = [0.], (0., 200.), (0.25,)
   dprob = DiscreteProblem(u, tspan, p)
@@ -366,12 +381,12 @@ The simulation of a Hawkes process --- see Subsection~\ref{subsec:benchmark} for
   using JumpProcesses
   h = Float64[]
   rate(u, p, t) = p[1] +
-    p[2]*sum(exp.([-p[3]*(t-_t) for _t in h]))
+    p[2]*sum(exp(-p[3]*(t-_t)) for _t in h)
   lrate(u, p, t) = p[1]
   urate = rate
   rateinterval(u, p, t) = 1/(2*urate(u,p,t))
   affect!(integrator) = (push!(h, integrator.t);
-    integrator.u[1] += 1)
+    integrator.u[1] += 1; nothing)
   jump = VariableRateJump(rate, affect!; lrate,
     urate, rateinterval)
   u, tspan, p = [0.], (0., 200.), (0.25, 0.5, 2.0)
@@ -384,13 +399,13 @@ The simulation of a Hawkes process --- see Subsection~\ref{subsec:benchmark} for
 To assess the correctness of \texttt{Coevolve}, we add it to the \texttt{JumpProcesses.jl} test suite. Some tests check whether the aggregators are able to obtain empirical statistics close to the expected in a number of simple biochemistry models such as linear reactions, DNA repression, reversible binding and extinction. The test suite was missing a unit test for self-exciting process. Thus, we have added a test for the univariate Hawkes model that checks whether algorithms that accept \texttt{VariableRateJump} are able to produce an empirical distribution of trajectories whose first two moments of the observed rate are close to the expected ones.
 
 In addition to that, the correctness of the implemented algorithm can be visually assessed using a QQ-plot. As discussed in Subsection~\ref{subsec:sim-inverse}, every simple point process can be transformed to a Poisson process with unit rate. This implies that the interval between points for any such transformed process should match the exponential distribution. Therefore, the correctness of any aggregator can be assessed as following. \comment{S: \st{I think the next three sentences should be described more precisely / mathematically, for example, not assuming a reader will understand what a compensator is.}} \comment{G: I have added the definition of the compensator and the empirical quantile. Feel free to simplify it.} First, transform the simulated intervals with the appropriate compensator. Let \( t_{n_i} \) be the time in which the \( n \)-th event of subprocess \( i \) took place and \( t_{0_i} \equiv 0 \), the compensator for subprocess \( i \) is given by the following:
-\[
+\begin{equation}
   \Lambda_i^\ast(t_{n_i}) \equiv \Lambda_{n_i}^\ast \equiv \int_0^{t_{n_i}} \lambda_i^\ast(u) du 
-\]
+\end{equation}
 Then the transformed simulated interval is given by:
-\[
+\begin{equation}
   \Delta \Lambda_{n_i} \equiv \Lambda_{n_i}^\ast - \Lambda_{(n-1)_i}^\ast
-\]
+\end{equation}
 Compute the empirical quantiles of the transformed intervals. That is, the \( q \)-th quantile is the interval \( \Delta \Lambda_q \) that divides the sorted intervals in two sets, those below and above \( \Delta \Lambda_q \) such that \( q \)-percent of the elements are below it. Plot the empirical quantiles with the corresponding quantiles of the exponential distribution. If the simulator produces correct trajectories, this plot known as QQ-plot should depict the points aligned around the 45-degree line. We produce QQ-plots for the homogeneous Poisson process as well as the compound Hawkes process --- see Subsection~\ref{subsec:benchmark} for a definition --- to attest the correctness of \texttt{Coevolve}. Figure~\ref{fig:hawkes}~(d) depicts the QQ-plot for a ten-node compound Hawkes process with parameters \( \lambda = 0.5 , \alpha = 0.1 , \beta = 2.0 \) simulated \( 250 \) times for \( 200 \) units of time. Figure~\ref{fig:hawkes} also depicts the trajectory, the conditional intensity and the network structure of a single simulation for three random nodes in panels (a), (b) and (c) respectively. We obtained similar QQ-plots for the other algorithms that benchmarked the Multivariate Hawkes process below.
 
 \begin{figure}
@@ -410,7 +425,7 @@ We conduct a set of benchmarks to assess the performance of the \texttt{JumpProc
 
 First, we assess the speed of the aggregators against jump processes whose rates are constant between jumps. There are four such benchmarks: a 1-dimensional continuous time random walk approximation of a diffusion model (Diffusion), the multi-state model from Appendix A.6~\cite{marchetti2017} (Multi-state), a simple negative feedback gene expression model (Gene I) and the negative feedback gene expression from~\cite{gupta2018} (Gene II). We simulate a single trajectory for each aggregator to visually check that they produce similar trajectories for a given model. The Diffusion, Multi-state, Gene I and Gene II benchmarks are then simulated \( 50 \), \( 100 \), \( 2000 \) and \( 200 \) times, respectively. \comment{S: \st{In the next sentence, at least give a reference / link to where the source code is and what version of the benchmarks was used so this is not dated if the benchmarks are updated...}} \comment{G: Provided above.} Check the source code for further implementation details. 
 
-Benchmark results are listed in Table~\ref{tab:benchmark-biochemistry}. The table shows that no single aggregator dominates suggesting they should be selected according to the task at hand. However, \texttt{FRM}, \texttt{NRM}, \texttt{Coevolve} never dominate any benchmark. In common, they all belong to the family of queueing methods suggesting that there is a penalty when using such methods for jump processes whose rates are constatnt between jumps. We also note that the performance of \texttt{Coevolve} lag that of \texttt{NRM} despite the fact that \texttt{Coevolve} should take the same number of steps as \texttt{NRM} when no \texttt{VariableRateJump} is used. The reason behind this discrepancy is left for future investigation.
+Benchmark results are listed in Table~\ref{tab:benchmark-biochemistry}. The table shows that no single aggregator dominates suggesting they should be selected according to the task at hand. However, \texttt{FRM}, \texttt{NRM}, \texttt{Coevolve} never dominate any benchmark. In common, they all belong to the family of queueing methods suggesting that there is a penalty when using such methods for jump processes whose rates are constatnt between jumps. We also note that the performance of \texttt{Coevolve} lag that of \texttt{NRM} despite the fact that \texttt{Coevolve} should take the same number of steps as \texttt{NRM} when no \texttt{VariableRateJump} is used. The reason behind this discrepancy is likely due to implementation differences, but left for future investigation.
 
 \begin{table}
 \centering
@@ -433,20 +448,20 @@ Benchmark results are listed in Table~\ref{tab:benchmark-biochemistry}. The tabl
 \end{table}
 
 Second, we add a new benchmark which simulates the compound Hawkes process for an increasing number processes. Consider a graph with \( V \) nodes. The compound Hawkes process is characterized by \( V \) point processes such that the conditional intensity rate of node \( i \) connected to a set of nodes \( E_i \) in the graph is given by
-\[
+\begin{equation}
   \lambda_i^\ast (t) = \lambda + \sum_{j \in E_i} \sum_{t_{n_j} < t} \alpha \exp \left[-\beta (t - t_{n_j}) \right].
-\]
+\end{equation}
 This process is known as self-exciting, because the occurence of an event \( j \) at \( t_{n_j} \) will increase the conditional intensity of all the processes connected to it by \( \alpha \). The excited intensity then decreases at a rate proportional to \( \beta \).
-\[
+\begin{equation}
 \begin{split}
   \frac{d \lambda_i^\ast (t)}{d t}
     &= -\beta \sum_{j \in E_i} \sum_{t_{n_j} < t} \alpha \exp \left[-\beta (t - t_{n_j}) \right] \\
     &= -\beta \left( \lambda_i^\ast (t) - \lambda \right)
 \end{split}
-\]
+\end{equation}
 
 The conditional intensity of this process has a recursive formulation which can significantly speed the simulation. The recursive formulation for the univariate case is derived in~\cite{laub2021} which also provides additional discussion and results on the Hawkes process. We derive the compound case here. Let \( t_{N_i} = \max \{ t_{n_j} < t \mid j \in E_i \} \) and \( \phi_i^\ast (t) \) below.
-\[
+\begin{equation}
 \begin{split}
   \phi_i^\ast (t)
     % &= \sum_{j \in E_i} \sum_{t_{n_j} < t} \alpha \exp \left[-\beta (t - t_{n_j}) \right] \\
@@ -455,33 +470,33 @@ The conditional intensity of this process has a recursive formulation which can 
     % &= \exp \left[ -\beta (t - t_{N_i}) \right] \left( \alpha + \sum_{j \in E_i} \sum_{t_{n_j} < t_{N_i}} \alpha \exp \left[-\beta (t_{N_i} - t_{n_j}) \right] \right) \\
     &= \exp \left[ -\beta (t - t_{N_i}) \right] \left( \alpha + \phi_i^\ast (t_{N_i}) \right)
 \end{split}
-\]
+\end{equation}
 \comment{S: \st{I added an underscore $i$ to $\phi^*$ in the last eq above.}} \comment{G: Thanks.} Then the conditional intensity can be re-written in terms of \( \phi_i^\ast (t_{N_i}) \).
-\[
+\begin{equation}
   \lambda_i^\ast (t) = \lambda + \phi_i^\ast (t) = \lambda + \exp \left[ -\beta (t - t_{N_i}) \right] \left( \alpha + \phi_i^\ast (t_{N_i}) \right)
-\]
+\end{equation}
 
 A random graph is sampled from the Erd\H{o}s-Rényi model. This model assumes the probability of an edge between two nodes is independent of other edges, which we fix at \( 0.2 \). Note that this setup implies an increasing expected node degree.
 
 We fix the Hawkes parameters at \( \lambda = 0.5 , \alpha = 0.1 , \beta = 5.0 \) ensuring the process does not explode and simulate models in the range from \( 1 \) to \( 95 \) nodes for \( 25 \) units of time. We simulate \( 50 \) trajectories with a limit of ten seconds to complete execution. For this benchmark, we save the state of the system exactly after each jump.
 
-We assess the benchmark in five different settings. First, we run the \textit{inverse} method and \texttt{Coevolve} using the brute force implementation of the intensity rate which loops through the whole history of past events. Second, we implement a recursive algorithm for computing the intensity rate which we simulate with the same three methods. Next, we run the benchmark against \texttt{PiecewiseDeterministicMarkovProcesses.jl}~\footnote{\url{https://github.com/rveltz/PiecewiseDeterministicMarkovProcesses.jl}} which is developed by the same author who proposed the \textit{CHV} algorithm discussed in Subsection~\ref{subsec:sim-inverse}. Finally, we run the benchmark using the Python library Tick~\footnote{\url{https://github.com/X-DataInitiative/tick}}. This library implements a version of the thinning method for simulating the process and implements a recursive algorithm for computing the intensity rate.
+We assess the benchmark in five different settings. First, we run the \textit{inverse} method and \texttt{Coevolve} using the brute force implementation of the intensity rate which loops through the whole history of past events. Second, we implement a recursive algorithm for computing the intensity rate which we simulate with the same three methods. Next, we run the benchmark against \texttt{PiecewiseDeterministicMarkovProcesses.jl}~\footnote{\url{https://github.com/rveltz/PiecewiseDeterministicMarkovProcesses.jl}} which is developed by Veltz, the author of the \textit{CHV} algorithm discussed in Subsection~\ref{subsec:sim-inverse}. Finally, we run the benchmark using the Python library Tick~\footnote{\url{https://github.com/X-DataInitiative/tick}}. This library implements a version of the thinning method for simulating the process and implements a recursive algorithm for computing the intensity rate.
 
 Table~\ref{tab:benchmark-hawkes} shows that the \textit{Inverse} method which relies on root finding is the most inneficient of all methods for any system size. For large system size this method is unable to complete all \( 50 \) simulation runs because it is required to find an ever larger number of roots of an ever larger system of differential equations.
 
-The recursive implementation of the intensity rate brings considerable performance boost to the simulations, placing \texttt{Coevolve} as one of the fastest algorithm. As shown in Algorithm~\ref{algo:sim-queueing}, every sampled point in \texttt{Coevolve} requires a number of expected updates equal to the expected degree of the dependency graph. Therefore, it is able to complete non-exploding simulations efficiently.
+The recursive implementation of the intensity rate brings considerable performance boost to the simulations, placing \texttt{Coevolve} as one of the fastest algorithms. As shown in Algorithm~\ref{algo:sim-queueing}, every sampled point in \texttt{Coevolve} requires a number of expected updates equal to the expected degree of the dependency graph. Therefore, it is able to complete non-exploding simulations efficiently.
 
 The Python library \texttt{Tick} remains competitive for smaller problems, but gets considerably slower for bigger ones. Also, it is only specialized to the Hawkes process. Another drawback is that the library wraps the actual \texttt{C++} implementation. In contrast, \texttt{JumpProcesses.jl} can simulate many other point processes with a relatively simple user-interface provided by the Julia language. 
 
-\textit{CHV} is slower for smaller networks, but slightly faster than \texttt{Coevolve} for larger models. The reason behind the catchup is due to the fact that as the system becomes larger, the rejection rate of the thinning procedure in \texttt{Coevolve} increases at a similar rate as the simulation time. We compute the rejection rate as one minus the ratio between the number of jumps and the number of calls to the upper bound. A system with a single node sees a rejection rate of around 8 percent which rapidly increases to 80 percent when the system reaches 20 nodes and plateaus at around 95 percent with 95 nodes.
+\textit{CHV} is slower for smaller networks, but slightly faster than \texttt{Coevolve} for larger models. This change in relative performance occurs due to the rate of rejection in \texttt{Coevolve} increasing in model size for this particular model. We compute the rejection rate as one minus the ratio between the number of jumps and the number of calls to the upper bound. A system with a single node sees a rejection rate of around 8 percent which rapidly increases to 80 percent when the system reaches 20 nodes and plateaus at around 95 percent with 95 nodes.
 
-Finally, we introduce a new benchmark which intends to assess the performance of algorithms capable of simulating the stochastic model of hippocampal synaptic plasticity with geometrical readout of enzyme dynamics proposed in~\cite{rodrigues2021}. For short, we denote it as the synapse model. We chose to benchmark this model as it is representative of a complex biochemical model. It couples a jump problem containing 98 jumps affecting 49 discrete variables with a stiff, ordinary differential equation problem containing 34 continuous variables. Continuous variables affect jump rates while the discrete variables affect the continuous problem. There are 3 stages to the simulation: pre-synaptic evolution, glutamate release, and post-synaptic evolution. Among the algorithms considered, only the \textit{inverse} method implemented in \texttt{JumpProcesses.jl}, \texttt{Coevolve} and \textit{CHV} are able to simulate the synapse model in theory. However, in practice, only the last two complete at least one benchmark run.
+Finally, we introduce a new benchmark which is intended to assess the performance of algorithms capable of simulating the stochastic model of hippocampal synaptic plasticity with geometrical readout of enzyme dynamics proposed in~\cite{rodrigues2021}. For short, we denote it as the synapse model. We chose to benchmark this model as it is representative of a complex biochemical model. It couples a jump problem containing 98 jumps affecting 49 discrete variables with a stiff, ordinary differential equation problem containing 34 continuous variables. Continuous variables affect jump rates while the discrete variables affect the continuous problem. There are 3 stages to the simulation: pre-synaptic evolution, glutamate release, and post-synaptic evolution. Among the algorithms considered, only the \textit{inverse} method implemented in \texttt{JumpProcesses.jl}, \texttt{Coevolve} and \textit{CHV} are able to simulate the synapse model in theory. However, in practice, only the last two complete at least one benchmark run.
 
-Benchmark results are displayed in Table~\ref{tab:benchmark-synapse}. We observe that \textit{CHV} is the fastest algorithm completing the synapse evolution in about half of the time it takes \texttt{Coevolve} with less than half of the allocations. Further investigation reveals that the thinning procedure in \texttt{Coevolve} reaches an average of 70 percent over all jumps which likely leads to 2 to 3 times more function evaluations and Jacobians created compared to \textit{CHV}. Lemaire~\etal~\cite{lemaire2018} performs a similar benchmark in which they compare the Hodgkin-Huxley model against different thinning conditions and against an ODE approximation. They find that a thinned algorithm with optimal boundary conditions can run significantly faster than the ODE approximation. Thus, there could be plenty of room to improve the performance of \texttt{Coevolve} in our setting.
+Benchmark results are displayed in Table~\ref{tab:benchmark-synapse}. We observe that \textit{CHV} is the fastest algorithm completing the synapse evolution in about half of the time it takes \texttt{Coevolve} with less than half of the allocations. Further investigation reveals that the thinning procedure in \texttt{Coevolve} reaches an average of 70 percent over all jumps which then leads to 2 to 3 times more function evaluations and Jacobians created compared to \textit{CHV}. Our implementation adds stopping times via a call to \texttt{register\_next\_jump\_time!} even for rejected jumps --- we do not know a jump will be rejected until evaluated. This then leads the ODE solver to step to those times and make additional function evaluations and Jacobians. Lemaire~\etal~\cite{lemaire2018} performs a similar benchmark in which they compare the Hodgkin-Huxley model against different thinning conditions and against an ODE approximation. They find that a thinned algorithm with optimal boundary conditions can run significantly faster than the ODE approximation. Thus, there could be plenty of room to improve the performance of \texttt{Coevolve} in our setting.
 
-A disadvantage of \textit{CHV} compared with \texttt{Coevolve} is that it supports limited saving options by design. To save at pre-specified times would require using the fact that solutions are piecewise constant to determine solutions at times in-between jumps --- and for coupled ODE-jump problems would require root-finding to determine when \( s(u) = s_n \) for each desired saving time \( s_n \) in Equation~\ref{eqn:chv}. The alternative proposed in~\cite{veltz2015} is to introduce an artificial jump to the model such as the homogeneous Poisson process with unit rate to sample the system at regular intervals. Alternatively, \texttt{Coevolve} allows saving at any arbitrary point. A common workflow in simulating jump processes, particularly when interested in calculating statistics over time, is to pre-specify a precise set of times at which to save a simulation. In theory, this reduces memory pressure, particularly for systems with large numbers of jumps, and can give increased computational performance relative to saving the state at the occurrence of ever jump. However in the case of the synapse model, the number of candidate time rejections far surpasses the number of jumps. Therefore, reducing the number of saving points --- \eg~only saving at start and end of the simulation --- does not significantly reduce allocations or running time. Given these considerations, we decided to save after every jump and at regular pre-specified intervals that occur at the same frequency as the artificial jump used by \textit{CHV} to save at random intervals. \comment{S: \st{Please confirm what saving options PDMP.jl supports and update the following. I've never actually used it... Also, what was the saving protocol in the benchmarking? Saving nothing or everything? We should state that in this section when describing the benchmarks.}} \comment{G: I investigated the performance of \texttt{Coevolve} under different saving settings and I have expanded the discussion you started. The bottom-line is that it was not possible to improve the performance of \texttt{Coevolve} by saving less. However, some additional investigation might be required to pinpoint the exact cause of the problem. I find it strange that \texttt{Coevolve} performs significantly more function evaluations and Jacobian creation when it is tracing the same path as \textit{CHV} but with more stops.}
+A disadvantage of \textit{CHV} compared with \texttt{Coevolve} is that it supports limited saving options by design. To save at pre-specified times would require using the fact that solutions are piecewise constant to determine solutions at times in-between jumps --- and for coupled ODE-jump problems would require root-finding to determine when \( s(u) = s_n \) for each desired saving time \( s_n \) in Equation~\ref{eqn:chv}. The alternative proposed in~\cite{veltz2015} is to introduce an artificial jump to the model such as the homogeneous Poisson process with unit rate to sample the system at regular intervals. Alternatively, \texttt{Coevolve} allows saving at any arbitrary point. A common workflow in simulating jump processes, particularly when interested in calculating statistics over time, is to pre-specify a precise set of times at which to save a simulation. In theory, this reduces memory pressure, particularly for systems with large numbers of jumps, and can give increased computational performance relative to saving the state at the occurrence of every jump. However in the case of the synapse model, the number of candidate time rejections far surpasses the number of jumps. Therefore, reducing the number of saving points --- \eg~only saving at start and end of the simulation --- does not significantly reduce allocations or running time. Given these considerations, we decided to save after every jump and at regular pre-specified intervals that occur at the same frequency as the artificial saving jump used by \textit{CHV}. \comment{S: \st{Please confirm what saving options PDMP.jl supports and update the following. I've never actually used it... Also, what was the saving protocol in the benchmarking? Saving nothing or everything? We should state that in this section when describing the benchmarks.}} \comment{G: I investigated the performance of \texttt{Coevolve} under different saving settings and I have expanded the discussion you started. The bottom-line is that it was not possible to improve the performance of \texttt{Coevolve} by saving less. However, some additional investigation might be required to pinpoint the exact cause of the problem. I find it strange that \texttt{Coevolve} performs significantly more function evaluations and Jacobian creation when it is tracing the same path as \textit{CHV} but with more stops.}
 
-Another parameter that can affect the precision and speed of the synapse benchmark is the ODE solver. The author of \texttt{PiecewiseDeterministicMarkovProcesses.jl} discuss some of these issues in Discourse\footnote{\url{https://discourse.julialang.org/t/help-me-beat-lsoda/88236}}. Some ODE solvers can be faster and more precise. Due to time constraints, we have not investigated this matter. The synapse benchmark uses the \texttt{AutoTsit5(Rosenbrock23())} solver. Further investigation of this matter is left to future research. 
+Another parameter that can affect the precision and speed of the synapse benchmark is the ODE solver. The author of \texttt{PiecewiseDeterministicMarkovProcesses.jl} discuss some of these issues in Discourse\footnote{\url{https://discourse.julialang.org/t/help-me-beat-lsoda/88236}}. Some ODE solvers can be faster and more precise. Due to time constraints, we have not investigated this matter. The synapse benchmark uses the \texttt{AutoTsit5(Rosenbrock23())} solver in both \texttt{Coevolve} and \textit{CHV}. Further investigation of this matter is left to future research. 
 
 \begin{table*}
 \centering
@@ -535,13 +550,12 @@ Another parameter that can affect the precision and speed of the synapse benchma
 
 This paper demonstrates that \texttt{JumpProcesses.jl} is a fast, general-purpose library for simulating evolutionary point processes. With the addition of \texttt{Coevolve}, any point process on the real line with a non-negative, left-continuous, history-adapted and locally bounded intensity rate can be simulated with this library. The objective of this paper was to bridge the gap between the treatment of point process simulation in statistics and biochemistry. We demonstrated that many of the algorithms developed in biochemistry which served as the basis for the \texttt{JumpProcesses.jl} aggregators can be mapped to three general methods developed in statistics for simulating evolutionary point processes. We showed that the existing aggregators mainly differ in how they update and sample from the intensity rate and mark distribution. As we performed this exercise, we noticed the lack of an efficient aggregator for variable intensity rates in \texttt{JumpProcesses.jl}, a gap which \texttt{Coevolve} is meant to fill.
 
-\texttt{Coevolve} borrows many enhancements from other aggregators in \texttt{JumpProcesses.jl}. However, there are still a number of ways forward. First, given the performance of the \textit{CHV} algorithm in our benchmarks, we should consider adding it to \texttt{JumpProcesses.jl} as another aggregator so that it can benefit from tighter integration with the SciML organization and libraries. The saving behaviour of \textit{CHV} might pose a challenge when bringing this algorithm to the library. We could leverage the connection between \textit{inverse} and \textit{thinning} methods illustrated in Subsection~\ref{subsec:sim-thinning} to attempt to develop a version of this algorithm that can evolve in synchrony with model time. Second, the new aggregators depend on the user providing the bounds of the jump rates as well as well as the duration of their validity. However, this can be prone to errors. Numerical and analytical solutions are generally not guaranteed to
-strictly satisfy the same bounds. Also, it can be difficult to determine good a priori bounds on the ODE variables on complex model of many variables. A possible improvement would be for \texttt{JumpProcesses.jl} to determine these bounds automatically taking into account the derivative of the rates. Deriving efficient bounds require not only knowledge of the problem and a good amount of analytical work, but also knowledge about the numerical integrator. At best, the algorithm can perform significantly slower if a sub-optimal bound or interval is used, at worst it can return incorrect results. Third, we note that all benchmarks have used rate functions that are continuous except at jump time. Since \texttt{CHV} requires a continuous integrator to find the next jump, we speculate that its performance might deteriorate in the presence of discontinuities. It would be interesting to assess the performance of \texttt{Coevolve} and \texttt{CHV} in these situations. Fourth, \texttt{JumpProcesses.jl} would benefit from further development in inexact methods. At the moment, support is limited to processes with constant rates between jumps and does not support marks. Inexact methods should allow for the simulation of longer periods of time when only an event count per time interval is required. Hawkes processes can be expressed as a branching process. There are simulation algorithms that already take advantage of this structure to leap through time~\cite{laub2021}. It would be important to adapt these algorithms for general, compound branching processes to cater for a larger number of settings. Finally, \texttt{JumpProcesses.jl} also includes algorithms for jumps over two-dimensional spaces. It might be worth conducting a similar comparative exercise to identify algorithms in statistics for \(2 \)- and \( N \)-dimensional processes that could also be added to \texttt{JumpProcess.jl} as it has the potential to become the go-to library for general point process simulation. \comment{G: With the changes to \texttt{Coevolve}, I have modified the conclusion accordingly.}
-
+\texttt{Coevolve} borrows many enhancements from other aggregators in \texttt{JumpProcesses.jl}. However, there are still a number of ways forward. First, given the performance of the \textit{CHV} algorithm in our benchmarks, we should consider adding it to \texttt{JumpProcesses.jl} as another aggregator so that it can benefit from tighter integration with the SciML organization and libraries. The saving behaviour of \textit{CHV} might pose a challenge when bringing this algorithm to the library. We could leverage the connection between \textit{inverse} and \textit{thinning} methods illustrated in Subsection~\ref{subsec:sim-thinning} to attempt to develop a version of this algorithm that can evolve in synchrony with model time. Second, the new aggregator depends on the user providing bounds on the jump rates as well as the duration of their validity. In practice, it can be difficult to determine these bounds a priori, particularly for models with many ODE variables. Moreover, determining such bounds from an analytical solution or the underlying ODEs does not guarantee their holding for the numerically computed solution (which is obtained via an ODE discretization), and so modifications may be needed in practice. A possible improvement would be for \texttt{JumpProcesses.jl} to determine these bounds automatically taking into account the derivative of the rates. Deriving efficient bounds require not only knowledge of the problem and a good amount of analytical work, but also knowledge about the numerical integrator. At best, the algorithm can perform significantly slower if a sub-optimal bound or interval is used, at worst it can return incorrect results if a bound is incorrect --- \ie~it can be violated inside the calculated interval of validity. Third, we note that all benchmarks have used rate functions that are continuous except at jump time. Since \texttt{CHV} requires a continuous integrator to find the next jump, we speculate that its performance might deteriorate in the presence of discontinuities. It would be interesting to assess the performance of \texttt{Coevolve} and \texttt{CHV} in these situations. Fourth, \texttt{JumpProcesses.jl} would benefit from further development in inexact methods. At the moment, support is limited to processes with constant rates between jumps and the only solver available \texttt{SimpleTauLeaping} does not support marks. Inexact methods should allow for the simulation of longer periods of time when only an event count per time interval is required. Hawkes processes can be expressed as a branching process. There are simulation algorithms that already take advantage of this structure to leap through time~\cite{laub2021}. It would be important to adapt these algorithms for general, compound branching processes to cater for a larger number of settings. Finally, \texttt{JumpProcesses.jl} also includes algorithms for jumps over two-dimensional spaces. It might be worth conducting a similar comparative exercise to identify algorithms in statistics for \(2 \)- and \( N \)-dimensional processes that could also be added to \texttt{JumpProcess.jl} as it has the potential to become the go-to library for general point process simulation. \comment{G: With the changes to \texttt{Coevolve}, I have modified the conclusion accordingly.}
 
 \section{Acknowledgements}
 This project has been made possible in part by grant number 2021-237457 from the Chan Zuckerberg Initiative DAF, an advised fund of Silicon Valley Community Foundation. SAI was also partially supported by NSF-DMS 1902854.
 
 \bibliographystyle{juliacon}
 \bibliography{references}
+
 \end{document}

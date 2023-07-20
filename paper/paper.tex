@@ -2,16 +2,17 @@
 \documentclass{juliacon}
 \setcounter{page}{1}
 \usepackage{amsmath}
+\numberwithin{equation}{section}
 \usepackage{stackengine} % for decent underbars
 \usepackage{subfig}
 \usepackage{multirow}
 \usepackage{booktabs}
 \usepackage{algorithm} % floating algorithm environment with algorithmic keywords
 \usepackage{algpseudocode} % from algorithmicx
+\algrenewcommand\algorithmicindent{1.1em}
 \usepackage{mathtools}
 \usepackage{soul}
 
-\numberwithin{equation}{section}
 
 \newcommand{\etal}{\textit{et al}.}
 \newcommand{\ie}{\textit{i}.\textit{e}.}
@@ -132,7 +133,7 @@ Equation~\ref{eq:lambda}, which defines the conditional intensity, denotes a dif
 \begin{equation} \label{eqn:transition-rate}
 \begin{split}
   &\Pr(t_n - t_{n-1} > s \mid H_{t^-}) = 1 - \int_{t_{n-1}}^{t_{n-1} + s} p^\ast(u) du = \\
-    &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \lambda^\ast (u) du \right) = \\ 
+    &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \lambda^\ast (u) du \right) = \\
     &=\exp \left( -\int_{t_{n-1}}^{t_{n-1} + s} \varphi_{u-t_{n-1}} (\lambda_{n-1}^\ast) du \right)
 \end{split}
 \end{equation}
@@ -203,7 +204,7 @@ While \textit{thinning} algorithms avoid the issue of directly computing the inv
     \State initialize the history \( H_{T^-} \leftarrow \{ \} \)
     \State set \( n \leftarrow 0, t \leftarrow 0 \)
     \While{true}
-      \State \( t \leftarrow \operatorname{NextTimeViaThinning}([t, T), H_{T^-}, \lambda^\ast) \)
+      \State \( t \leftarrow \operatorname{TimeViaThinning}([t, T), H_{T^-}, \lambda^\ast) \)
       \If{\(t \geq T \)}
         \State \textbf{break}
       \EndIf
@@ -221,7 +222,7 @@ While \textit{thinning} algorithms avoid the issue of directly computing the inv
 
 \begin{algorithm}[h]
 \begin{algorithmic}[1]
-  \Procedure{NextTimeViaThinning}{\([t, T) \), \( \lambda^\ast \), \( H_{t} \),}
+  \Procedure{TimeViaThinning}{\([t, T) \), \( \lambda^\ast \), \( H_{t} \),}
       \While{\( t < T \)}
         \State update \( \lambda^\ast \) \label{line:lambda-update}
         \State find \( \bar{B}^\ast (t) \), \( \ubar{B}^\ast (t) \) and \( L^\ast(t) \) which satisfy Eq.~\ref{eq:thinning-condition}
@@ -252,13 +253,13 @@ Gibson and Bruck~\cite{gibson2000} improved the \textit{first reaction} method w
 
 We prefer to call this class of methods \textit{queueing} methods since most efficiency gains come from maintaining a priority queue of the next event times. Up to this point we assumed that we were sampling from a global process with a mark distribution that could generate any mark \( k \) given an event at time \( t \). With queueing, it is possible to simulate point processes with a finite space of marks as \( M \) interdependent point processes --- see Definition 6.4.1~\cite{daley2003} of multivariate point processes --- doing away with the need to draw from the mark distribution at every event occurrence. Alternatively, it is possible to split the global process into \( M \) interdependent processes each one of which with its own mark distribution.
 
-Our contribution, Algorithm~\ref{algo:sim-queueing}, presents a method for sampling a superposed point process consisting of \( M \) processes by keeping the strike time of each process in a priority queue \( Q \). The priority queue is initially constructed in \( O(M) \) steps in Lines~\ref{line:queueing-init-begin} to~\ref{line:queueing-init-end} of Algorithm~\ref{algo:sim-queueing}. In contrast to \textit{thinning} methods, updates to the conditional intensity depend only on the size of the neighbourhood of \( i \). That is, processes \( j \) whose conditional intensity depends on the history of \( i \). If the graph is sparse, then updates will be faster than with \textit{thinning}. 
+Our contribution, Algorithm~\ref{algo:sim-queueing}, presents a method for sampling a superposed point process consisting of \( M \) processes by keeping the strike time of each process in a priority queue \( Q \). The priority queue is initially constructed in \( O(M) \) steps in Lines~\ref{line:queueing-init-begin} to~\ref{line:queueing-init-end} of Algorithm~\ref{algo:sim-queueing}. In contrast to \textit{thinning} methods, updates to the conditional intensity depend only on the size of the neighbourhood of \( i \). That is, processes \( j \) whose conditional intensity depends on the history of \( i \). If the graph is sparse, then updates will be faster than with \textit{thinning}.
 
 A source of inneficiency in some implementations of queueing algorithms is the fact that one might need to go through multiple rejection cycles before accepting a time candidate \( t_i \) for process \( i \). This might require looking ahead in the future. In addition to that, if process \( j \), which \( i \) depends on, takes place before \( i \), then we need to repeat the whole thinning process to obtain a new time candidate for \( i \). We thus propose Algorithm~\ref{algo:sim-queueing} which is a queueing algorithm that performs thinning in synchrony with the main loop, thus avoiding lookaheads and wasted rejections. Since thinning is now synced with the main loop it is possible to couple this simulator with other algorithms that step chronologically through time like ordinary differential equation solvers which means we can simulate jump processes with rates given by a differential equation. This is the first synced thinning algorithm we are aware of.
 
 \begin{algorithm}[h]
 \begin{algorithmic}[1]
-  \Procedure{NextQueueTime}{\( t \), \( \lambda^\ast \), \( H_{t} \),}
+  \Procedure{QueueTime}{\( t \), \( \lambda^\ast \), \( H_{t} \),}
         \State update \( \lambda^\ast \)
         \State find \( \bar{B}^\ast (t) \), \( \ubar{B}^\ast (t) \) and \( L^\ast(t) \) which satisfy Eq.~\ref{eq:thinning-condition}
         \State draw \( u \sim \exp(\bar{B}^\ast(t)) \)
@@ -281,7 +282,7 @@ A source of inneficiency in some implementations of queueing algorithms is the f
     \State initialize the history \( H_{T^-} \leftarrow \{ \} \)
     \State set \( n \leftarrow 0, t \leftarrow 0 \)
     \For{i=1,M} \label{line:queueing-init-begin}
-      \State \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i) \leftarrow \operatorname{NextQueueTime}(0, H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
+      \State \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i) \leftarrow \operatorname{QueueTime}(0, H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
       \State push \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i, i) \) to \( Q \)
     \EndFor \label{line:queueing-init-end}
     \While{\( t < T \)}
@@ -300,11 +301,11 @@ A source of inneficiency in some implementations of queueing algorithms is the f
         \State update  \( f^\ast \) and draw the mark \( k_n \sim f_i^\ast \, (k \mid t_n) \)
         \State update the history \( H_{T^-} \leftarrow H_{T^-} \cup (t_n, k_n) \)
         \For{\( j \in \{ i \} \cup \operatorname{Neighborhood}(i) \)}
-          \State \( (t_j, \bar{B}_j^\ast, \ubar{B}_j^\ast, a_j) \leftarrow \operatorname{NextQueueTime}(0, H_{T^-}, \lambda_{j}^\ast(\cdot)) \)
+          \State \( (t_j, \bar{B}_j^\ast, \ubar{B}_j^\ast, a_j) \leftarrow \operatorname{QueueTime}(0, H_{T^-}, \lambda_{j}^\ast(\cdot)) \)
           \State update \( (t_j, \bar{B}_j^\ast, \ubar{B}_j^\ast, a_j, j) \) in \( Q \)
         \EndFor
       \Else
-        \State \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i) \leftarrow \operatorname{NextQueueTime}(0, H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
+        \State \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i) \leftarrow \operatorname{QueueTime}(0, H_{T^-}, \lambda_{i}^\ast(\cdot)) \) \label{line:candidate-one}
  \label{line:candidate-two}
         \State update \( (t_i, \bar{B}_i^\ast, \ubar{B}_i^\ast, a_i, i) \) in \( Q \)
       \EndIf
@@ -339,7 +340,7 @@ Where most implementations differ is on updating the mark distribution in Line~\
 
 Next, we consider the \textit{queuing} aggregators. Starting with aggregators that only support \texttt{ConstantRateJump}s we have, \texttt{FRM}, \texttt{FRMFW} and \texttt{NRM}. \texttt{FRM} and \texttt{FRMFW} follow the \textit{first reaction} method in~\cite{gillespie1976}. To compute the next jump, both algorithms compute the time to the next event for each process and select the process with minimum time. This is equivalent to assuming a complete dependency graph in Algorithm~\ref{algo:sim-queueing}. For large systems, they can be less efficient than \texttt{NRM}. The latter implementation is sourced from~\cite{gibson2000} and follows Algorithm~\ref{algo:sim-queueing} very closely.
 
-Previously, we attempted to bridge the gap between the treatment of point process simulation in statistics and biochemistry. Despite the many commonalities, most of the algorithms implemented in \texttt{JumpProcesses.jl} are derived from the biochemistry literature. There has been less emphasis on implementing processes commonly studied in statistics such as self-exciting point processes characterized by time-varying and history-dependent intensity rates. This is addressed by our latest aggregator, \texttt{Coevolve}. This is the first aggregator that supports \texttt{VariableRateJump}s, facilitating substantially more performant simulation of processes with time-dependent intensity rates in \texttt{JumpProcesses.jl} and \texttt{DifferentialEquations.jl} compared to the current \textit{inverse} method-based approach that relies on ODE integration and continuous events. 
+Previously, we attempted to bridge the gap between the treatment of point process simulation in statistics and biochemistry. Despite the many commonalities, most of the algorithms implemented in \texttt{JumpProcesses.jl} are derived from the biochemistry literature. There has been less emphasis on implementing processes commonly studied in statistics such as self-exciting point processes characterized by time-varying and history-dependent intensity rates. This is addressed by our latest aggregator, \texttt{Coevolve}. This is the first aggregator that supports \texttt{VariableRateJump}s, facilitating substantially more performant simulation of processes with time-dependent intensity rates in \texttt{JumpProcesses.jl} and \texttt{DifferentialEquations.jl} compared to the current \textit{inverse} method-based approach that relies on ODE integration and continuous events.
 
 The implementation of this aggregator takes  inspiration from~\cite{farajtabar2017}, and improves the method in several ways. First, we take advantage of the modularity and composability of Julia to design an API that accepts any intensity rate, not only the Hawkes'. Second, we avoid the re-computation of unused random numbers. When updating processes that have not yet fired, we can transform the unused time of constant rate processes to obtain the next candidate time for the first round of iteration of the \textit{thinning} procedure in Algorithm~\ref{algo:next-time-thinning}. This saves one round of sampling from the exponential distribution, which translates into a faster algorithm. Third, we allow the user to supply a lower bound rate which can short-circuit the loop in Algorithm~\ref{algo:next-time-thinning}, saving yet another round of sampling. Fourth, it adapts to processes with constant intensity between jumps which reduces the loop in Algorithm~\ref{algo:next-time-thinning} to the equivalent implemented in \texttt{NRM}. Finally, since \texttt{Coevolve} can be mapped to a \textit{thinning} algorithm --- see~\cite{farajtabar2017} ---, it can simulate any point process on the real line with a non-negative, left-continuous, history-adapted and locally bounded intensity rate as per Proposition~7.5.I~\cite{daley2003}.
 
@@ -360,7 +361,7 @@ To simulate a process intended for a discrete solver with \texttt{JumpProcesses.
 ]
   using JumpProcesses
   rate(u, p, t) = p[1]
-  affect!(integrator) = (integrator.u[1] += 1; 
+  affect!(integrator) = (integrator.u[1] += 1;
     nothing)
   jump = ConstantRateJump(rate, affect!)
   u, tspan, p = [0.], (0., 200.), (0.25,)
@@ -399,7 +400,7 @@ To assess the correctness of \texttt{Coevolve}, we add it to the \texttt{JumpPro
 
 In addition to that, the correctness of the implemented algorithm can be visually assessed using a QQ-plot. As discussed in Subsection~\ref{subsec:sim-inverse}, every simple point process can be transformed to a Poisson process with unit rate. This implies that the interval between points for any such transformed process should match the exponential distribution. Therefore, the correctness of any aggregator can be assessed as following. First, transform the simulated intervals with the appropriate compensator. Let \( t_{n_i} \) be the time in which the \( n \)-th event of subprocess \( i \) took place and \( t_{0_i} \equiv 0 \), the compensator for subprocess \( i \) is given by the following:
 \begin{equation}
-  \Lambda_i^\ast(t_{n_i}) \equiv \Lambda_{n_i}^\ast \equiv \int_0^{t_{n_i}} \lambda_i^\ast(u) du 
+  \Lambda_i^\ast(t_{n_i}) \equiv \Lambda_{n_i}^\ast \equiv \int_0^{t_{n_i}} \lambda_i^\ast(u) du
 \end{equation}
 Then the transformed simulated interval is given by:
 \begin{equation}
@@ -485,7 +486,7 @@ Table~\ref{tab:benchmark-hawkes} shows that the \textit{Inverse} method which re
 
 The recursive implementation of the intensity rate brings considerable performance boost to the simulations, placing \texttt{Coevolve} as one of the fastest algorithms. As shown in Algorithm~\ref{algo:sim-queueing}, every sampled point in \texttt{Coevolve} requires a number of expected updates equal to the expected degree of the dependency graph. Therefore, it is able to complete non-exploding simulations efficiently.
 
-The Python library \texttt{Tick} remains competitive for smaller problems, but gets considerably slower for bigger ones. Also, it is only specialized to the Hawkes process. Another drawback is that the library wraps the actual \texttt{C++} implementation. In contrast, \texttt{JumpProcesses.jl} can simulate many other point processes with a relatively simple user-interface provided by the Julia language. 
+The Python library \texttt{Tick} remains competitive for smaller problems, but gets considerably slower for bigger ones. Also, it is only specialized to the Hawkes process. Another drawback is that the library wraps the actual \texttt{C++} implementation. In contrast, \texttt{JumpProcesses.jl} can simulate many other point processes with a relatively simple user-interface provided by the Julia language.
 
 \textit{CHV} is slower for smaller networks, but slightly faster than \texttt{Coevolve} for larger models. This change in relative performance occurs due to the rate of rejection in \texttt{Coevolve} increasing in model size for this particular model. We compute the rejection rate as one minus the ratio between the number of jumps and the number of calls to the upper bound. A system with a single node sees a rejection rate of around 8 percent which rapidly increases to 80 percent when the system reaches 20 nodes and plateaus at around 95 percent with 95 nodes.
 
@@ -495,14 +496,14 @@ Benchmark results are displayed in Table~\ref{tab:benchmark-synapse}. We observe
 
 A disadvantage of \textit{CHV} compared with \texttt{Coevolve} is that it supports limited saving options by design. To save at pre-specified times would require using the fact that solutions are piecewise constant to determine solutions at times in-between jumps --- and for coupled ODE-jump problems would require root-finding to determine when \( s(u) = s_n \) for each desired saving time \( s_n \) in Equation~\ref{eqn:chv}. The alternative proposed in~\cite{veltz2015} is to introduce an artificial jump to the model such as the homogeneous Poisson process with unit rate to sample the system at regular intervals. Alternatively, \texttt{Coevolve} allows saving at any arbitrary point. A common workflow in simulating jump processes, particularly when interested in calculating statistics over time, is to pre-specify a precise set of times at which to save a simulation. In theory, this reduces memory pressure, particularly for systems with large numbers of jumps, and can give increased computational performance relative to saving the state at the occurrence of every jump. However in the case of the synapse model, the number of candidate time rejections far surpasses the number of jumps. Therefore, reducing the number of saving points --- \eg~only saving at start and end of the simulation --- does not significantly reduce allocations or running time. Given these considerations, we decided to save after every jump and at regular pre-specified intervals that occur at the same frequency as the artificial saving jump used by \textit{CHV}.
 
-Another parameter that can affect the precision and speed of the synapse benchmark is the ODE solver. The author of \texttt{PiecewiseDeterministicMarkovProcesses.jl} discuss some of these issues in Discourse\footnote{\url{https://discourse.julialang.org/t/help-me-beat-lsoda/88236}}. Some ODE solvers can be faster and more precise. Due to time constraints, we have not investigated this matter. The synapse benchmark uses the \texttt{AutoTsit5(Rosenbrock23())} solver in both \texttt{Coevolve} and \textit{CHV}. Further investigation of this matter is left to future research. 
+Another parameter that can affect the precision and speed of the synapse benchmark is the ODE solver. The author of \texttt{PiecewiseDeterministicMarkovProcesses.jl} discuss some of these issues in Discourse\footnote{\url{https://discourse.julialang.org/t/help-me-beat-lsoda/88236}}. Some ODE solvers can be faster and more precise. Due to time constraints, we have not investigated this matter. The synapse benchmark uses the \texttt{AutoTsit5(Rosenbrock23())} solver in both \texttt{Coevolve} and \textit{CHV}. Further investigation of this matter is left to future research.
 
 \begin{table*}
 \centering
-\begin{tabular}{clllllll} 
+\begin{tabular}{clllllll}
 \toprule
 \multicolumn{1}{l}{} &  & \multicolumn{2}{c}{\textbf{Brute Force }} & \multicolumn{4}{c}{\textbf{Recursive}} \\
-\multicolumn{1}{l}{} & \textbf{V} & \textbf{\textit{Inverse}} & \textbf{\texttt{Coevolve}} & \textbf{\textit{Inverse}} & \textbf{\texttt{Coevolve}} & \textbf{\textit{CHV}} & \textbf{\textit{Tick}} \\ 
+\multicolumn{1}{l}{} & \textbf{V} & \textbf{\textit{Inverse}} & \textbf{\texttt{Coevolve}} & \textbf{\textit{Inverse}} & \textbf{\texttt{Coevolve}} & \textbf{\textit{CHV}} & \textbf{\textit{Tick}} \\
 \hline
 \multirow{20}{*}{\textbf{Time}} & \textbf{1}  & 126.9 \( \mu \)s  & \textbf{3.1 \( \bm{\mu} \)s} & 111.9 \( \mu \)s & \underline{3.7 \( \mu \)s}     & 101.6 \( \mu \)s             & 31.6 \( \mu \)s              \\
                                 &             &                   &                              &                  &                                &                              &                              \\
@@ -532,11 +533,11 @@ Another parameter that can affect the precision and speed of the synapse benchma
 
 \begin{table}
 \centering
-\begin{tabular}{lll} 
+\begin{tabular}{lll}
 \toprule
- & \textbf{Time} & \textbf{Allocation}  \\ 
+ & \textbf{Time} & \textbf{Allocation}  \\
 \hline
-\textbf{\textit{Inverse}} & -  & - \\ 
+\textbf{\textit{Inverse}} & -  & - \\
 \textbf{\texttt{Coevolve}} & \underline{4.9 s} & \underline{131.4 Mb}  \\
 \textbf{\textit{CHV}} & \textbf{2.4 s} & \textbf{54.0 Mb} \\
 \bottomrule

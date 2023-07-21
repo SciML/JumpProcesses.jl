@@ -5,7 +5,7 @@ using Printf, Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = ((Coevolve(), true, :Coevolve), (PDMPCHV(), true, :PDMPCHV), (PyTick, true, :PyTick))
+algorithms = ((Coevolve(), true, :Coevolve), (PDMPCHVFull(), true, :PDMPCHVFull), (PyTick, true, :PyTick))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -15,8 +15,8 @@ Gs = [erdos_renyi(V, 0.2, seed = 6221) for V in Vs]
 
 attempts = (Coevolve = [],)
 mean_attempts = (Coevolve = [],)
-jumps = (Coevolve = [], PDMPCHV = [], PyTick = [])
-mean_jumps = (Coevolve = [], PDMPCHV = [], PyTick = [])
+jumps = (Coevolve = [], PDMPCHVFull = [], PyTick = [])
+mean_jumps = (Coevolve = [], PDMPCHVFull = [], PyTick = [])
 rejections = (Coevolve = [],)
 mean_rejections = (Coevolve = [],)
 
@@ -60,7 +60,7 @@ end
 
 plot(title = "Number Jumps");
 plot!([nv(G) for G in Gs], mean_jumps.Coevolve, label = "Coevolve");
-plot!([nv(G) for G in Gs], mean_jumps.PDMPCHV, label = "PDMPCHV")
+plot!([nv(G) for G in Gs], mean_jumps.PDMPCHVFull, label = "PDMPCHVFull")
 
 plot(title = "Number Attempts");
 plot!([nv(G) for G in Gs], mean_attempts.Coevolve, label = "Coevolve");

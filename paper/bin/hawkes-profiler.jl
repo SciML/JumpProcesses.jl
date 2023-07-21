@@ -6,7 +6,7 @@ using PiecewiseDeterministicMarkovProcesses: CHV
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = ((Coevolve(), true), (PDMPCHV(), true), (PDMPCHVNonCont(), true))
+algorithms = ((Coevolve(), true), (PDMPCHVFull(), true), (PDMPCHVSimple(), true))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -21,9 +21,9 @@ for (algo, use_recursion) in algorithms
         @info "Profiling $algo, $label."
         g = [neighbors(G, i) for i in 1:nv(G)]
         u = [0.0 for i in 1:nv(G)]
-        if typeof(algo) <: PDMPCHV
+        if typeof(algo) <: PDMPCHVFull
             _p = (p[1], p[2], p[3], nothing, nothing, g)
-        elseif typeof(algo) <: PDMPCHVNonCont
+        elseif typeof(algo) <: PDMPCHVSimple
             if use_recursion
               h = zeros(eltype(tspan), nv(G))
               ϕ = zeros(eltype(tspan), nv(G))
@@ -41,7 +41,7 @@ for (algo, use_recursion) in algorithms
         jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion)
         stepper = if typeof(algo) <: Coevolve
             SSAStepper()
-        elseif typeof(algo) <: Union{PDMPCHV,PDMPCHVNonCont}
+        elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
             CHV(Tsit5())
         else
             Tsit5()
@@ -50,7 +50,7 @@ for (algo, use_recursion) in algorithms
         now = time()
         Profile.clear()
         for _ in 1:50
-            if ~(typeof(algo) <: PDMPCHV)
+            if ~(typeof(algo) <: PDMPCHVFull)
                 h .= 0
                 if typeof(algo) <: Coevolve
                     urate .= 0

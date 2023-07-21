@@ -9,14 +9,14 @@ const PDMP = PiecewiseDeterministicMarkovProcesses
 using PyCall
 
 struct PyTick end
-struct PDMPCHV end
-struct PDMPCHVNonCont end
+struct PDMPCHVFull end
+struct PDMPCHVSimple end
 
 include("utils.jl")
 include("viz.jl")
 include("hawkes.jl")
 
-export PyTick, PDMPCHV, PDMPCHVNonCont
+export PyTick, PDMPCHVSimple, PDMPCHVFull
 export reset_history!, histories, conditional_rate, empirical_rate, qq
 export half_page, pgfkw
 export hawkes_rate, hawkes_rate_closure, hawkes_jump, hawkes_Λ, hawkes_problem

@@ -13,9 +13,9 @@ algorithms = (
     (Coevolve(), true),
     (Direct(), true),
     (PyTick(), true),
-    (PDMPCHV(), true),
-    (PDMPCHVNonCont(), false),
-    (PDMPCHVNonCont(), true),
+    (PDMPCHVFull(), true),
+    (PDMPCHVSimple(), false),
+    (PDMPCHVSimple(), true),
 )
 
 p = (0.5, 0.1, 5.0)
@@ -35,9 +35,9 @@ for (algo, use_recursion) in algorithms
         u = [0.0 for i in 1:nv(G)]
         if typeof(algo) <: PyTick
             _p = (p[1], p[2], p[3])
-        elseif typeof(algo) <: PDMPCHV
+        elseif typeof(algo) <: PDMPCHVFull
             _p = (p[1], p[2], p[3], nothing, nothing, g)
-        elseif typeof(algo) <: PDMPCHVNonCont
+        elseif typeof(algo) <: PDMPCHVSimple
             if use_recursion
               global h = zeros(eltype(tspan), nv(G))
               global ϕ = zeros(eltype(tspan), nv(G))
@@ -69,18 +69,18 @@ for (algo, use_recursion) in algorithms
             else
                 global stepper = if typeof(algo) <: Coevolve
                     SSAStepper()
-                elseif typeof(algo) <: Union{PDMPCHV, PDMPCHVNonCont}
+                elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
                     CHV(Tsit5())
                 else
                     Tsit5()
                 end
-                if typeof(algo) <: PDMPCHV
+                if typeof(algo) <: PDMPCHVFull
                     @benchmark(solve(jump_prob, stepper),
                                setup=(),
                                samples=50,
                                evals=1,
                                seconds=10,)
-                elseif typeof(algo) <: PDMPCHVNonCont
+                elseif typeof(algo) <: PDMPCHVSimple
                     if use_recursion
                         @benchmark(solve(jump_prob, stepper),
                                    setup=(h .= 0; ϕ .= 0),
@@ -94,7 +94,6 @@ for (algo, use_recursion) in algorithms
                                    evals=1,
                                    seconds=10,)
                     end
-
                 else
                     if use_recursion
                         @benchmark(solve(jump_prob, stepper),

@@ -19,9 +19,9 @@ algorithms = (
   (Coevolve(), true),
   (Direct(), true),
   (PyTick(), true),
-  (PDMPCHV(), true),
-  (PDMPCHVNonCont(), false),
-  (PDMPCHVNonCont(), true),
+  (PDMPCHVFull(), true),
+  (PDMPCHVSimple(), false),
+  (PDMPCHVSimple(), true),
 )
 
 V = 10
@@ -45,9 +45,9 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
     @info "Method" i algo use_recursion
     if typeof(algo) <: PyTick
         _p = (p[1], p[2], p[3])
-    elseif typeof(algo) <: PDMPCHV
+    elseif typeof(algo) <: PDMPCHVFull
         _p = (p[1], p[2], p[3], nothing, nothing, g)
-    elseif typeof(algo) <: PDMPCHVNonCont
+    elseif typeof(algo) <: PDMPCHVSimple
         if use_recursion
           h = zeros(eltype(tspan), nv(G))
           ϕ = zeros(eltype(tspan), nv(G))
@@ -77,14 +77,14 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
     else
         stepper = if typeof(algo) <: Coevolve
             SSAStepper()
-        elseif typeof(algo) <: Union{PDMPCHV,PDMPCHVNonCont}
+        elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
             CHV(Tsit5())
         else
             Tsit5()
         end
         sol = solve(jump_prob, stepper)
         sols[i] = sol
-        if typeof(algo) <: Union{PDMPCHV,PDMPCHVNonCont}
+        if typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
             t = sol.time
             N = sol.xd[1:V, :]'
         else
@@ -142,17 +142,17 @@ algorithms = (
   (Coevolve(), false),
   (Coevolve(), true),
   (PyTick(), true),
-  (PDMPCHV(), true),
-  (PDMPCHVNonCont(), true),
-  (PDMPCHVNonCont(), false)
+  (PDMPCHVFull(), true),
+  (PDMPCHVSimple(), true),
+  (PDMPCHVSimple(), false)
 )
 qqs = Vector(undef, length(algorithms))
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     if typeof(algo) <: PyTick
         _p = (p[1], p[2], p[3])
-    elseif typeof(algo) <: PDMPCHV
+    elseif typeof(algo) <: PDMPCHVFull
         _p = (p[1], p[2], p[3], nothing, nothing, g)
-    elseif typeof(algo) <: PDMPCHVNonCont
+    elseif typeof(algo) <: PDMPCHVSimple
         if use_recursion
             h = zeros(eltype(tspan), nv(G))
             ϕ = zeros(eltype(tspan), nv(G))
@@ -181,23 +181,23 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
             jump_prob.simulate()
             runs[n] = jump_prob.timestamps
         else
-            if ~(typeof(algo) <: PDMPCHV)
+            if ~(typeof(algo) <: PDMPCHVFull)
                 if use_recursion
                     h .= 0
-                    if ~(typeof(algo) <: PDMPCHVNonCont)
+                    if ~(typeof(algo) <: PDMPCHVSimple)
                         urate .= 0
                     end
                     ϕ .= 0
                 else
                     reset_history!(h)
-                    if ~(typeof(algo) <: PDMPCHVNonCont)
+                    if ~(typeof(algo) <: PDMPCHVSimple)
                         urate .= 0
                     end
                 end
             end
             stepper = if typeof(algo) <: Coevolve
                 SSAStepper()
-            elseif typeof(algo) <: Union{PDMPCHV,PDMPCHVNonCont}
+            elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
                 CHV(Tsit5())
             else
                 Tsit5()

@@ -7,12 +7,16 @@ using Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = ((Coevolve(), false),
-              (Direct(), false),
-              (Coevolve(), true),
-              (Direct(), true),
-              (PyTick(), true),
-              (PDMPCHV(), true))
+algorithms = (
+    (Coevolve(), false),
+    (Direct(), false),
+    (Coevolve(), true),
+    (Direct(), true),
+    (PyTick(), true),
+    (PDMPCHV(), true),
+    (PDMPCHVNonCont(), false),
+    (PDMPCHVNonCont(), true),
+)
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -33,6 +37,15 @@ for (algo, use_recursion) in algorithms
             _p = (p[1], p[2], p[3])
         elseif typeof(algo) <: PDMPCHV
             _p = (p[1], p[2], p[3], nothing, nothing, g)
+        elseif typeof(algo) <: PDMPCHVNonCont
+            if use_recursion
+              global h = zeros(eltype(tspan), nv(G))
+              global ϕ = zeros(eltype(tspan), nv(G))
+              _p = (p[1], p[2], p[3], h, ϕ, g)
+            else
+              global h = [eltype(tspan)[] for _ in 1:nv(G)]
+              _p = (p[1], p[2], p[3], h, g)
+            end
         else
             if use_recursion
                 global h = zeros(eltype(tspan), nv(G))
@@ -56,7 +69,7 @@ for (algo, use_recursion) in algorithms
             else
                 global stepper = if typeof(algo) <: Coevolve
                     SSAStepper()
-                elseif typeof(algo) <: PDMPCHV
+                elseif typeof(algo) <: Union{PDMPCHV, PDMPCHVNonCont}
                     CHV(Tsit5())
                 else
                     Tsit5()
@@ -67,6 +80,21 @@ for (algo, use_recursion) in algorithms
                                samples=50,
                                evals=1,
                                seconds=10,)
+                elseif typeof(algo) <: PDMPCHVNonCont
+                    if use_recursion
+                        @benchmark(solve(jump_prob, stepper),
+                                   setup=(h .= 0; ϕ .= 0),
+                                   samples=50,
+                                   evals=1,
+                                   seconds=10,)
+                    else
+                        @benchmark(solve(jump_prob, stepper),
+                                   setup=(reset_history!(h)),
+                                   samples=50,
+                                   evals=1,
+                                   seconds=10,)
+                    end
+
                 else
                     if use_recursion
                         @benchmark(solve(jump_prob, stepper),

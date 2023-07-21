@@ -5,7 +5,7 @@ using Printf, Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = ((Coevolve(), true, :Coevolve), (CoevolveSynced(), true, :CoevolveSynced))
+algorithms = ((Coevolve(), true, :Coevolve), (PDMPCHV(), true, :PDMPCHV), (PyTick, true, :PyTick))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -13,12 +13,12 @@ tspan = (0.0, 25.0)
 Vs = append!([1], 5:5:95)
 Gs = [erdos_renyi(V, 0.2, seed = 6221) for V in Vs]
 
-attempts = (Coevolve = [], CoevolveSynced = [])
-mean_attempts = (Coevolve = [], CoevolveSynced = [])
-jumps = (Coevolve = [], CoevolveSynced = [], PDMPCHV = [], PyTick = [])
-mean_jumps = (Coevolve = [], CoevolveSynced = [], PDMPCHV = [], PyTick = [])
-rejections = (Coevolve = [], CoevolveSynced = [])
-mean_rejections = (Coevolve = [], CoevolveSynced = [])
+attempts = (Coevolve = [],)
+mean_attempts = (Coevolve = [],)
+jumps = (Coevolve = [], PDMPCHV = [], PyTick = [])
+mean_jumps = (Coevolve = [], PDMPCHV = [], PyTick = [])
+rejections = (Coevolve = [],)
+mean_rejections = (Coevolve = [],)
 
 for (algo, use_recursion, label) in algorithms
     for (i, G) in enumerate(Gs)
@@ -60,20 +60,16 @@ end
 
 plot(title = "Number Jumps");
 plot!([nv(G) for G in Gs], mean_jumps.Coevolve, label = "Coevolve");
-plot!([nv(G) for G in Gs], mean_jumps.CoevolveSynced, label = "PDMPCHV")
+plot!([nv(G) for G in Gs], mean_jumps.PDMPCHV, label = "PDMPCHV")
 
 plot(title = "Number Attempts");
 plot!([nv(G) for G in Gs], mean_attempts.Coevolve, label = "Coevolve");
-plot!([nv(G) for G in Gs], mean_attempts.CoevolveSynced, label = "CoevolveSynced")
 
 plot(title = "Rejection Rate");
 yaxis!([0, 1.05]);
 plot!([nv(G) for G in Gs], mean_rejections.Coevolve, label = "Coevolve");
-plot!([nv(G) for G in Gs], mean_rejections.CoevolveSynced, label = "CoevolveSynced")
 
 plot(title = "1 .- mean_jump ./ mean_attemps");
 yaxis!([0, 1.05]);
 plot!([nv(G) for G in Gs], 1 .- mean_jumps.Coevolve ./ mean_attempts.Coevolve,
       label = "Coevolve");
-plot!([nv(G) for G in Gs], 1 .- mean_jumps.CoevolveSynced ./ mean_attempts.CoevolveSynced,
-      label = "CoevolveSynced")

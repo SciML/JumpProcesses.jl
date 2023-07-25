@@ -14,13 +14,13 @@ root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
 algorithms = ((Coevolve(), false),
-    (Direct(), false),
-    (Coevolve(), true),
-    (Direct(), true),
-    (PyTick(), true),
-    (PDMPCHVFull(), true),
-    (PDMPCHVSimple(), false),
-    (PDMPCHVSimple(), true))
+              (Direct(), false),
+              (Coevolve(), true),
+              (Direct(), true),
+              (PyTick(), true),
+              (PDMPCHVFull(), true),
+              (PDMPCHVSimple(), false),
+              (PDMPCHVSimple(), true))
 
 V = 10
 G = erdos_renyi(V, 0.2, seed = 9103)
@@ -98,10 +98,10 @@ end
 let fig = []
     for (i, (algo, use_recursion)) in enumerate(algorithms)
         push!(fig,
-            plot(ts[i],
-                Ns[i],
-                title = "$algo, use_recursion = $(use_recursion)",
-                legend = false))
+              plot(ts[i],
+                   Ns[i],
+                   title = "$algo, use_recursion = $(use_recursion)",
+                   legend = false))
     end
     fig = plot(fig..., layout = (4, 2))
     savefig(fig, "$(assets)/hawkes-examples.png")
@@ -111,12 +111,12 @@ end
 let sol = sols[1]
     with(:pgfplotsx) do
         fig = barcodeplot(histories(sol)[1:3],
-            xlims = (0, 20),
-            legend = false,
-            markersize = 2,
-            xlabel = "t",
-            ylabel = "node index";
-            pgfkw...)
+                          xlims = (0, 20),
+                          legend = false,
+                          markersize = 2,
+                          xlabel = "t",
+                          ylabel = "node index";
+                          pgfkw...)
         savefig(fig, "$(assets)/hawkes-barcode.pdf")
     end
 end
@@ -124,24 +124,24 @@ end
 let sol = sols[1]
     with(:pgfplotsx) do
         fig = plot(conditional_rate(hawkes_rate_closure(u, g),
-                sol;
-                saveat = 0.01,
-                ixs = [1, 2, 3]),
-            xlims = (0.0, 20.0),
-            legend = false,
-            ylabel = "conditional rate";
-            pgfkw...)
+                                    sol;
+                                    saveat = 0.01,
+                                    ixs = [1, 2, 3]),
+                   xlims = (0.0, 20.0),
+                   legend = false,
+                   ylabel = "conditional rate";
+                   pgfkw...)
         savefig(fig, "$(assets)/hawkes-intensity.pdf")
     end
 end
 
 @info "Running simulations for QQ plot."
 algorithms = ((Coevolve(), false),
-    (Coevolve(), true),
-    (PyTick(), true),
-    (PDMPCHVFull(), true),
-    (PDMPCHVSimple(), true),
-    (PDMPCHVSimple(), false))
+              (Coevolve(), true),
+              (PyTick(), true),
+              (PDMPCHVFull(), true),
+              (PDMPCHVSimple(), true),
+              (PDMPCHVSimple(), false))
 qqs = Vector(undef, length(algorithms))
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     if typeof(algo) <: PyTick
@@ -219,11 +219,11 @@ let fig, pgfkw = copy(pgfkw)
     pgfkw[:size] = (175, 175)
     with(:pgfplotsx) do
         fig = qqplot(qqs[1]...,
-            legend = false,
-            aspect_ratio = :equal,
-            markersize = 1.0,
-            alpha = 0.75;
-            pgfkw...)
+                     legend = false,
+                     aspect_ratio = :equal,
+                     markersize = 1.0,
+                     alpha = 0.75;
+                     pgfkw...)
         savefig(fig, "$(assets)/hawkes-qqplot.pdf")
     end
 end

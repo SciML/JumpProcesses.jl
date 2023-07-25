@@ -1,7 +1,7 @@
 module Paper
 
 using JumpProcesses,
-    Graphs, OrdinaryDiffEq, Plots, Statistics, PiecewiseDeterministicMarkovProcesses
+      Graphs, OrdinaryDiffEq, Plots, Statistics, PiecewiseDeterministicMarkovProcesses
 import Distributions: Exponential
 import LinearAlgebra: I
 const PDMP = PiecewiseDeterministicMarkovProcesses

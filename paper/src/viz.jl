@@ -1,10 +1,10 @@
 half_page = (350, 175)
 pgfkw = Dict(:size => half_page,
-    :fontfamily => "times-serif",
-    :titlefontsize => 7,
-    :tickfontsize => 6,
-    :labelfontsize => 7,
-    :legendfontsize => 7)
+             :fontfamily => "times-serif",
+             :titlefontsize => 7,
+             :tickfontsize => 6,
+             :labelfontsize => 7,
+             :legendfontsize => 7)
 
 @userplot QQPlot
 @recipe function f(x::QQPlot)

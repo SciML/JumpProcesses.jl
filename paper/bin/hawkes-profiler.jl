@@ -61,8 +61,8 @@ for (algo, use_recursion) in algorithms
         end
         duration = @sprintf "%.0f" (time() - now) * 1e3/50
         ProfileSVG.save(joinpath(assets,
-                "hawkes-profile-$(string(algo)[1:end-2])-$label.svg"),
-            title = "Profile $algo, $label ($(nv(G)) nodes, $(duration) ms/rep)")
+                                 "hawkes-profile-$(string(algo)[1:end-2])-$label.svg"),
+                        title = "Profile $algo, $label ($(nv(G)) nodes, $(duration) ms/rep)")
         @info "Took $(duration) ms/rep."
         Profile.clear()
     end

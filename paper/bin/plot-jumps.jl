@@ -8,9 +8,9 @@ root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
 algorithms = ((Coevolve(), true, :Coevolve),
-    (PDMPCHVFull(), true, :PDMPCHVFull),
-    (PDMPCHVSimple(), true, :PDMPCHVSimple),
-    (PyTick(), true, :PyTick))
+              (PDMPCHVFull(), true, :PDMPCHVFull),
+              (PDMPCHVSimple(), true, :PDMPCHVSimple),
+              (PyTick(), true, :PyTick))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -52,7 +52,7 @@ for (algo, use_recursion, label) in algorithms
             _p = (p[1], p[2], p[3])
         end
         jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion,
-            track_attempts = false)
+                                   track_attempts = false)
         if typeof(algo) <: Coevolve
             stepper = SSAStepper()
         elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}

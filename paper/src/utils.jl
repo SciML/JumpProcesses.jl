@@ -106,14 +106,14 @@ function conditional_rate(rate_closures, sol, h; saveat = nothing, ixs = nothing
         push!(condrates, condrate)
     end
     return DiffEqBase.build_solution(sol.prob,
-                                     sol.alg,
-                                     _saveat,
-                                     condrates,
-                                     dense = false,
-                                     calculate_error = false,
-                                     destats = DiffEqBase.DEStats(0),
-                                     interp = DiffEqBase.ConstantInterpolation(_saveat,
-                                                                               condrates))
+        sol.alg,
+        _saveat,
+        condrates,
+        dense = false,
+        calculate_error = false,
+        destats = DiffEqBase.DEStats(0),
+        interp = DiffEqBase.ConstantInterpolation(_saveat,
+            condrates))
 end
 
 function conditional_rate(rate_closures, sol; saveat = nothing, ixs = nothing)

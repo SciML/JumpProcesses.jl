@@ -1,10 +1,10 @@
 half_page = (350, 175)
 pgfkw = Dict(:size => half_page,
-             :fontfamily => "times-serif",
-             :titlefontsize => 7,
-             :tickfontsize => 6,
-             :labelfontsize => 7,
-             :legendfontsize => 7)
+    :fontfamily => "times-serif",
+    :titlefontsize => 7,
+    :tickfontsize => 6,
+    :labelfontsize => 7,
+    :legendfontsize => 7)
 
 @userplot QQPlot
 @recipe function f(x::QQPlot)
@@ -47,6 +47,8 @@ end
     markershape --> :circle
     ylims --> (0.0, k + 1.0)
     for (i, h) in enumerate(histories)
-        @series begin histories[i], y[i] end
+        @series begin
+            histories[i], y[i]
+        end
     end
 end

@@ -1,65 +1,821 @@
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" width="960" height="166" viewBox="0 0 960 166"
-     xmlns="http://www.w3.org/2000/svg" id="fig-71c98b7c5b5d41e0b12765537d51f6a3">
+<svg version="1.1" width="960" height="691" viewBox="0 0 960 691"
+     xmlns="http://www.w3.org/2000/svg" id="fig-7d2d51f396af4d75ae7e58bb95309f42">
 <defs>
-    <clipPath id="fig-71c98b7c5b5d41e0b12765537d51f6a3-clip">
-        <rect x="0" y="0" width="960" height="166"/>
+    <clipPath id="fig-7d2d51f396af4d75ae7e58bb95309f42-clip">
+        <rect x="0" y="0" width="960" height="691"/>
     </clipPath>
 </defs>
 <style type="text/css">
-    #fig-71c98b7c5b5d41e0b12765537d51f6a3 text {
+    #fig-7d2d51f396af4d75ae7e58bb95309f42 text {
         pointer-events: none;
         font-family: inherit;
         font-size: 12px;
         fill: #000000;
     }
-    text#fig-71c98b7c5b5d41e0b12765537d51f6a3-caption {
+    text#fig-7d2d51f396af4d75ae7e58bb95309f42-caption {
         font-size: 16.8px;
         fill: #000000;
         text-anchor: middle;
     }
-    #fig-71c98b7c5b5d41e0b12765537d51f6a3-bg {
+    #fig-7d2d51f396af4d75ae7e58bb95309f42-bg {
         fill: #FFFFFF;
     }
-    #fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport rect, #fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport path {
+    #fig-7d2d51f396af4d75ae7e58bb95309f42-viewport rect, #fig-7d2d51f396af4d75ae7e58bb95309f42-viewport path {
         vector-effect: non-scaling-stroke;
         fill-opacity: 1;
     }
-    #fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport text {
+    #fig-7d2d51f396af4d75ae7e58bb95309f42-viewport text {
         stroke: #000000;
         stroke-width: 0;
         stroke-opacity: 0.35;
     }
-    #fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport rect:hover, #fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport path:hover {
+    #fig-7d2d51f396af4d75ae7e58bb95309f42-viewport rect:hover, #fig-7d2d51f396af4d75ae7e58bb95309f42-viewport path:hover {
         fill-opacity: 0.75;
         stroke: #000000;
         stroke-width: 0.5;
     }
-    #fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport + rect {
+    #fig-7d2d51f396af4d75ae7e58bb95309f42-viewport + rect {
         fill: #FFFFFF;
         opacity: 0.8;
     }
-    text#fig-71c98b7c5b5d41e0b12765537d51f6a3-details{
+    text#fig-7d2d51f396af4d75ae7e58bb95309f42-details{
         fill: #000000;
     }
 </style>
-<g id="fig-71c98b7c5b5d41e0b12765537d51f6a3-frame" clip-path="url(#fig-71c98b7c5b5d41e0b12765537d51f6a3-clip)">
-<rect id="fig-71c98b7c5b5d41e0b12765537d51f6a3-bg" x="0" y="0" width="960" height="166"/>
-<text id="fig-71c98b7c5b5d41e0b12765537d51f6a3-caption" x="480" y="24">Profile results</text>
-<g id="fig-71c98b7c5b5d41e0b12765537d51f6a3-viewport" transform="scale(1)">
-<rect x="10" y="113" width="939" height="15" rx="2" fill="#F3004D" data-dinfo=""/>
-<text x="10" dx="4" y="124.25"> in :-1</text>
-<rect x="10" y="98" width="939" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
-<text x="10" dx="4" y="109.25">eval in boot.jl:370</text>
-<rect x="10" y="83" width="939" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="10" dx="4" y="94.25">include in client.jl:478</text>
-<rect x="10" y="68" width="939" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
-<text x="10" dx="4" y="79.25">_include in loading.jl:1963</text>
-<rect x="10" y="53" width="939" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="10" dx="4" y="64.25">include_string in loading.jl:1903</text>
-<rect x="10" y="38" width="939" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
-<text x="10" dx="4" y="49.25">eval in boot.jl:370</text>
+<g id="fig-7d2d51f396af4d75ae7e58bb95309f42-frame" clip-path="url(#fig-7d2d51f396af4d75ae7e58bb95309f42-clip)">
+<rect id="fig-7d2d51f396af4d75ae7e58bb95309f42-bg" x="0" y="0" width="960" height="691"/>
+<text id="fig-7d2d51f396af4d75ae7e58bb95309f42-caption" x="480" y="24">Profile results</text>
+<g id="fig-7d2d51f396af4d75ae7e58bb95309f42-viewport" transform="scale(1)">
+<rect x="10" y="638" width="939.38" height="15" rx="2" fill="#F3004D" data-dinfo=""/>
+<text x="10" dx="4" y="649.25"> in :-1</text>
+<rect x="10" y="623" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="10" dx="4" y="634.25">_copyto_impl! in array.jl:327</text>
+<rect x="10" y="608" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="10" dx="4" y="619.25">unsafe_copyto! in array.jl:286</text>
+<rect x="15.62" y="623" width="933.76" height="15" rx="2" fill="#C5312F" data-dinfo="./"/>
+<text x="15.62" dx="4" y="634.25">eval in boot.jl:370</text>
+<rect x="15.62" y="608" width="933.76" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="15.62" dx="4" y="619.25">include in client.jl:478</text>
+<rect x="15.62" y="593" width="933.76" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
+<text x="15.62" dx="4" y="604.25">_include in loading.jl:1963</text>
+<rect x="15.62" y="578" width="933.76" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="15.62" dx="4" y="589.25">include_string in loading.jl:1903</text>
+<rect x="15.62" y="563" width="933.76" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
+<text x="15.62" dx="4" y="574.25">eval in boot.jl:370</text>
+<rect x="15.62" y="548" width="933.76" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="15.62" dx="4" y="559.25">solve in chvdiffeq.jl:206</text>
+<rect x="15.62" y="533" width="933.76" height="15" rx="2" fill="#D42137" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="15.62" dx="4" y="544.25">#solve#17 in chvdiffeq.jl:219</text>
+<rect x="15.62" y="518" width="933.76" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="15.62" dx="4" y="529.25">chv_diffeq! in chvdiffeq.jl:76</text>
+<rect x="15.62" y="503" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="15.62" dx="4" y="514.25">#chv_diffeq!#9 in chvdiffeq.jl:120</text>
+<rect x="15.62" y="488" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/problems/"/>
+<text x="15.62" dx="4" y="499.25">ODEProblem in ode_problems.jl:174</text>
+<rect x="15.62" y="473" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/problems/"/>
+<text x="15.62" dx="4" y="484.25">ODEProblem in ode_problems.jl:174</text>
+<rect x="15.62" y="458" width="5.63" height="15" rx="2" fill="#F3004D" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/problems/"/>
+<text x="15.62" dx="4" y="469.25">#ODEProblem#277 in ode_problems.jl:177</text>
+<rect x="15.62" y="443" width="5.63" height="15" rx="2" fill="#D42137" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="15.62" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2179</text>
+<rect x="21.25" y="503" width="607.5" height="15" rx="2" fill="#C5312F" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="21.25" dx="4" y="514.25">#chv_diffeq!#9 in chvdiffeq.jl:138</text>
+<rect x="26.88" y="488" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/"/>
+<text x="26.88" dx="4" y="499.25">step! in iterator_interface.jl:4</text>
+<rect x="26.88" y="473" width="22.5" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="26.88" dx="4" y="484.25">loopheader! in integrator_utils.jl:14</text>
+<rect x="26.88" y="458" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="26.88" dx="4" y="469.25">apply_step! in integrator_utils.jl:355</text>
+<rect x="26.88" y="443" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="26.88" dx="4" y="454.25">update_uprev! in integrator_utils.jl:339</text>
+<rect x="26.88" y="428" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/RecursiveArrayTools/w8ctF/src/"/>
+<text x="26.88" dx="4" y="439.25">recursivecopy! in utils.jl:56</text>
+<rect x="26.88" y="413" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="26.88" dx="4" y="424.25">copyto! in array.jl:342</text>
+<rect x="26.88" y="398" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="26.88" dx="4" y="409.25">copyto! in array.jl:319</text>
+<rect x="26.88" y="383" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="26.88" dx="4" y="394.25">_copyto_impl! in array.jl:327</text>
+<rect x="26.88" y="368" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="26.88" dx="4" y="379.25">unsafe_copyto! in array.jl:286</text>
+<rect x="32.5" y="458" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="32.5" dx="4" y="469.25">apply_step! in integrator_utils.jl:375</text>
+<rect x="32.5" y="443" width="16.88" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="32.5" dx="4" y="454.25">reset_fsal! in integrator_utils.jl:456</text>
+<rect x="32.5" y="428" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="32.5" dx="4" y="439.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="32.5" y="413" width="16.88" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="32.5" dx="4" y="424.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="32.5" y="398" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="32.5" dx="4" y="409.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="32.5" y="383" width="16.88" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="32.5" dx="4" y="394.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="32.5" y="368" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="32.5" dx="4" y="379.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="32.5" y="353" width="16.88" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="32.5" dx="4" y="364.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="32.5" y="338" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="32.5" dx="4" y="349.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="32.5" y="323" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="32.5" dx="4" y="334.25">Void in utils.jl:473</text>
+<rect x="32.5" y="308" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="32.5" dx="4" y="319.25">#11 in chvdiffeq.jl:120</text>
+<rect x="32.5" y="293" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="32.5" dx="4" y="304.25">CHV in chvdiffeq.jl:13</text>
+<rect x="32.5" y="278" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="32.5" dx="4" y="289.25">setindex! in array.jl:969</text>
+<rect x="38.12" y="278" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="38.12" dx="4" y="289.25">/ in float.jl:411</text>
+<rect x="49.38" y="473" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="49.38" dx="4" y="484.25">loopheader! in integrator_utils.jl:28</text>
+<rect x="49.38" y="458" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="49.38" dx="4" y="469.25">fix_dt_at_bounds! in integrator_utils.jl:0</text>
+<rect x="55" y="488" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/"/>
+<text x="55" dx="4" y="499.25">step! in iterator_interface.jl:5</text>
+<rect x="55" y="473" width="16.88" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="55" dx="4" y="484.25">check_error! in integrator_interface.jl:628</text>
+<rect x="55" y="458" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="55" dx="4" y="469.25">check_error in integrator_interface.jl:603</text>
+<rect x="55" y="443" width="16.88" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="55" dx="4" y="454.25">ODE_DEFAULT_UNSTABLE_CHECK in common_defaults.jl:67</text>
+<rect x="55" y="428" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="55" dx="4" y="439.25">NAN_CHECK in common_defaults.jl:60</text>
+<rect x="55" y="413" width="16.88" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="55" dx="4" y="424.25">any in reducedim.jl:1004</text>
+<rect x="55" y="398" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="55" dx="4" y="409.25">#any#828 in reducedim.jl:1004</text>
+<rect x="55" y="383" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="55" dx="4" y="394.25">_any in reduce.jl:1218</text>
+<rect x="66.25" y="383" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="66.25" dx="4" y="394.25">_any in reduce.jl:1221</text>
+<rect x="66.25" y="368" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="66.25" dx="4" y="379.25">iterate in array.jl:893</text>
+<rect x="66.25" y="353" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="66.25" dx="4" y="364.25">getindex in essentials.jl:13</text>
+<rect x="71.88" y="488" width="427.5" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/"/>
+<text x="71.88" dx="4" y="499.25">step! in iterator_interface.jl:7</text>
+<rect x="71.88" y="473" width="427.5" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="71.88" dx="4" y="484.25">perform_step! in low_order_rk_perform_step.jl:771</text>
+<rect x="71.88" y="458" width="11.24" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="71.88" dx="4" y="469.25">perform_step! in Base.jl:0</text>
+<rect x="83.12" y="458" width="11.26" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="83.12" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:777</text>
+<rect x="83.12" y="443" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="83.12" dx="4" y="454.25">fast_materialize! in FastBroadcast.jl:37</text>
+<rect x="83.12" y="428" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="83.12" dx="4" y="439.25">_fast_materialize! in FastBroadcast.jl:385</text>
+<rect x="83.12" y="413" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="83.12" dx="4" y="424.25">macro expansion in FastBroadcast.jl:427</text>
+<rect x="83.12" y="398" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="83.12" dx="4" y="409.25">macro expansion in simdloop.jl:75</text>
+<rect x="88.75" y="398" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="88.75" dx="4" y="409.25">macro expansion in simdloop.jl:77</text>
+<rect x="88.75" y="383" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="88.75" dx="4" y="394.25">macro expansion in FastBroadcast.jl:428</text>
+<rect x="88.75" y="368" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="88.75" dx="4" y="379.25">muladd in float.jl:413</text>
+<rect x="94.38" y="458" width="56.24" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="94.38" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:779</text>
+<rect x="94.38" y="443" width="56.24" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="94.38" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="94.38" y="428" width="56.24" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="94.38" dx="4" y="439.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="94.38" y="413" width="56.24" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="94.38" dx="4" y="424.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="94.38" y="398" width="56.24" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="94.38" dx="4" y="409.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="94.38" y="383" width="56.24" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="94.38" dx="4" y="394.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="94.38" y="368" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="94.38" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:135</text>
+<rect x="94.38" y="353" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="94.38" dx="4" y="364.25">!= in operators.jl:269</text>
+<rect x="94.38" y="338" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="94.38" dx="4" y="349.25">== in pointer.jl:163</text>
+<rect x="94.38" y="323" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="94.38" dx="4" y="334.25">== in promotion.jl:499</text>
+<rect x="100" y="368" width="50.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="100" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="100" y="353" width="33.75" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="100" dx="4" y="364.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="100" y="338" width="33.75" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="100" dx="4" y="349.25">Void in utils.jl:473</text>
+<rect x="100" y="323" width="33.75" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="100" dx="4" y="334.25">#11 in chvdiffeq.jl:120</text>
+<rect x="100" y="308" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="100" dx="4" y="319.25">CHV in chvdiffeq.jl:9</text>
+<rect x="100" y="293" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="100" dx="4" y="304.25">VariableRate in rate.jl:13</text>
+<rect x="100" y="278" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="100" dx="4" y="289.25">hawkes_rate_full in hawkes.jl:173</text>
+<rect x="100" y="263" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="274.25">sum in reducedim.jl:994</text>
+<rect x="100" y="248" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="259.25">#sum#807 in reducedim.jl:994</text>
+<rect x="100" y="233" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="244.25">_sum in reducedim.jl:998</text>
+<rect x="100" y="218" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="229.25">#_sum#809 in reducedim.jl:998</text>
+<rect x="100" y="203" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="214.25">_sum in reducedim.jl:999</text>
+<rect x="100" y="188" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="199.25">#_sum#810 in reducedim.jl:999</text>
+<rect x="100" y="173" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="184.25">mapreduce in reducedim.jl:357</text>
+<rect x="100" y="158" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="169.25">#mapreduce#800 in reducedim.jl:357</text>
+<rect x="100" y="143" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="154.25">_mapreduce_dim in reducedim.jl:365</text>
+<rect x="100" y="128" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="139.25">_mapreduce in reduce.jl:442</text>
+<rect x="100" y="113" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="124.25">mapreduce_impl in reduce.jl:272</text>
+<rect x="100" y="98" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="109.25">mapreduce_impl in reduce.jl:258</text>
+<rect x="100" y="83" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="94.25">macro expansion in simdloop.jl:77</text>
+<rect x="100" y="68" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="79.25">macro expansion in reduce.jl:260</text>
+<rect x="100" y="53" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="100" dx="4" y="64.25">add_sum in reduce.jl:27</text>
+<rect x="100" y="38" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="100" dx="4" y="49.25">+ in float.jl:408</text>
+<rect x="105.62" y="308" width="28.13" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="105.62" dx="4" y="319.25">CHV in chvdiffeq.jl:13</text>
+<rect x="105.62" y="293" width="28.13" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="105.62" dx="4" y="304.25">/ in float.jl:411</text>
+<rect x="150.62" y="458" width="11.26" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="150.62" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:780</text>
+<rect x="150.62" y="443" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="150.62" dx="4" y="454.25">fast_materialize! in FastBroadcast.jl:37</text>
+<rect x="150.62" y="428" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="150.62" dx="4" y="439.25">_fast_materialize! in FastBroadcast.jl:385</text>
+<rect x="150.62" y="413" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="150.62" dx="4" y="424.25">macro expansion in FastBroadcast.jl:427</text>
+<rect x="150.62" y="398" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="150.62" dx="4" y="409.25">macro expansion in simdloop.jl:72</text>
+<rect x="150.62" y="383" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="150.62" dx="4" y="394.25">&amp;lt; in int.jl:83</text>
+<rect x="156.25" y="398" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="156.25" dx="4" y="409.25">macro expansion in simdloop.jl:77</text>
+<rect x="156.25" y="383" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="156.25" dx="4" y="394.25">macro expansion in FastBroadcast.jl:428</text>
+<rect x="156.25" y="368" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="156.25" dx="4" y="379.25">* in float.jl:410</text>
+<rect x="161.88" y="458" width="61.87" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="161.88" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:782</text>
+<rect x="161.88" y="443" width="61.87" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="161.88" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="161.88" y="428" width="61.87" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="161.88" dx="4" y="439.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="161.88" y="413" width="61.87" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="161.88" dx="4" y="424.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="161.88" y="398" width="61.87" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="161.88" dx="4" y="409.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="161.88" y="383" width="61.87" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="161.88" dx="4" y="394.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="161.88" y="368" width="61.87" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="161.88" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="161.88" y="353" width="45" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="161.88" dx="4" y="364.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="161.88" y="338" width="45" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="161.88" dx="4" y="349.25">Void in utils.jl:473</text>
+<rect x="161.88" y="323" width="45" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="161.88" dx="4" y="334.25">#11 in chvdiffeq.jl:120</text>
+<rect x="161.88" y="308" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="161.88" dx="4" y="319.25">CHV in chvdiffeq.jl:9</text>
+<rect x="161.88" y="293" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="161.88" dx="4" y="304.25">VariableRate in rate.jl:13</text>
+<rect x="161.88" y="278" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="161.88" dx="4" y="289.25">hawkes_rate_full in hawkes.jl:173</text>
+<rect x="161.88" y="263" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="161.88" dx="4" y="274.25">sum in reducedim.jl:994</text>
+<rect x="161.88" y="248" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="161.88" dx="4" y="259.25">#sum#807 in reducedim.jl:994</text>
+<rect x="161.88" y="233" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="161.88" dx="4" y="244.25">_sum in reducedim.jl:998</text>
+<rect x="161.88" y="218" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="161.88" dx="4" y="229.25">#_sum#809 in reducedim.jl:998</text>
+<rect x="161.88" y="203" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="161.88" dx="4" y="214.25">_sum in reducedim.jl:999</text>
+<rect x="161.88" y="188" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="161.88" dx="4" y="199.25">#_sum#810 in reducedim.jl:999</text>
+<rect x="161.88" y="173" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="161.88" dx="4" y="184.25">mapreduce in reducedim.jl:357</text>
+<rect x="161.88" y="158" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="161.88" dx="4" y="169.25">#mapreduce#800 in reducedim.jl:357</text>
+<rect x="161.88" y="143" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="161.88" dx="4" y="154.25">_mapreduce_dim in reducedim.jl:365</text>
+<rect x="161.88" y="128" width="28.12" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="161.88" dx="4" y="139.25">_mapreduce in reduce.jl:442</text>
+<rect x="161.88" y="113" width="28.12" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="161.88" dx="4" y="124.25">mapreduce_impl in reduce.jl:272</text>
+<rect x="161.88" y="98" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="161.88" dx="4" y="109.25">mapreduce_impl in reduce.jl:0</text>
+<rect x="167.5" y="98" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="167.5" dx="4" y="109.25">mapreduce_impl in reduce.jl:248</text>
+<rect x="173.12" y="98" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="173.12" dx="4" y="109.25">mapreduce_impl in reduce.jl:258</text>
+<rect x="173.12" y="83" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="173.12" dx="4" y="94.25">macro expansion in simdloop.jl:75</text>
+<rect x="173.12" y="68" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="173.12" dx="4" y="79.25">&amp;lt; in int.jl:83</text>
+<rect x="178.75" y="83" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="178.75" dx="4" y="94.25">macro expansion in simdloop.jl:77</text>
+<rect x="178.75" y="68" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="178.75" dx="4" y="79.25">macro expansion in reduce.jl:260</text>
+<rect x="178.75" y="53" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="178.75" dx="4" y="64.25">add_sum in reduce.jl:27</text>
+<rect x="178.75" y="38" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="178.75" dx="4" y="49.25">+ in float.jl:408</text>
+<rect x="190" y="308" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="190" dx="4" y="319.25">CHV in chvdiffeq.jl:13</text>
+<rect x="190" y="293" width="16.88" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="190" dx="4" y="304.25">/ in float.jl:411</text>
+<rect x="223.75" y="458" width="39.37" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="223.75" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:785</text>
+<rect x="223.75" y="443" width="39.37" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="223.75" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="223.75" y="428" width="39.37" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="223.75" dx="4" y="439.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="223.75" y="413" width="39.37" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="223.75" dx="4" y="424.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="223.75" y="398" width="39.37" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="223.75" dx="4" y="409.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="223.75" y="383" width="39.37" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="223.75" dx="4" y="394.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="223.75" y="368" width="39.37" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="223.75" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="223.75" y="353" width="28.13" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="223.75" dx="4" y="364.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="223.75" y="338" width="28.13" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="223.75" dx="4" y="349.25">Void in utils.jl:473</text>
+<rect x="223.75" y="323" width="28.13" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="223.75" dx="4" y="334.25">#11 in chvdiffeq.jl:120</text>
+<rect x="223.75" y="308" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="223.75" dx="4" y="319.25">CHV in chvdiffeq.jl:9</text>
+<rect x="223.75" y="293" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="223.75" dx="4" y="304.25">VariableRate in rate.jl:13</text>
+<rect x="223.75" y="278" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="223.75" dx="4" y="289.25">hawkes_rate_full in hawkes.jl:170</text>
+<rect x="229.38" y="308" width="16.87" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="229.38" dx="4" y="319.25">CHV in chvdiffeq.jl:13</text>
+<rect x="229.38" y="293" width="16.87" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="229.38" dx="4" y="304.25">/ in float.jl:411</text>
+<rect x="246.25" y="308" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="246.25" dx="4" y="319.25">CHV in chvdiffeq.jl:15</text>
+<rect x="263.12" y="458" width="78.76" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="263.12" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:789</text>
+<rect x="263.12" y="443" width="78.76" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="263.12" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="263.12" y="428" width="78.76" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="263.12" dx="4" y="439.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="263.12" y="413" width="78.76" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="263.12" dx="4" y="424.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="263.12" y="398" width="78.76" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="263.12" dx="4" y="409.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="263.12" y="383" width="78.76" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="263.12" dx="4" y="394.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="263.12" y="368" width="78.76" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="263.12" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="263.12" y="353" width="73.13" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="263.12" dx="4" y="364.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="263.12" y="338" width="73.13" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="263.12" dx="4" y="349.25">Void in utils.jl:473</text>
+<rect x="263.12" y="323" width="73.13" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="263.12" dx="4" y="334.25">#11 in chvdiffeq.jl:120</text>
+<rect x="263.12" y="308" width="28.13" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="263.12" dx="4" y="319.25">CHV in chvdiffeq.jl:9</text>
+<rect x="263.12" y="293" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="263.12" dx="4" y="304.25">getproperty in Base.jl:37</text>
+<rect x="268.75" y="293" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="268.75" dx="4" y="304.25">VariableRate in rate.jl:13</text>
+<rect x="268.75" y="278" width="22.5" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="268.75" dx="4" y="289.25">hawkes_rate_full in hawkes.jl:173</text>
+<rect x="268.75" y="263" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="268.75" dx="4" y="274.25">sum in reducedim.jl:994</text>
+<rect x="268.75" y="248" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="259.25">#sum#807 in reducedim.jl:994</text>
+<rect x="268.75" y="233" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="268.75" dx="4" y="244.25">_sum in reducedim.jl:998</text>
+<rect x="268.75" y="218" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="229.25">#_sum#809 in reducedim.jl:998</text>
+<rect x="268.75" y="203" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="268.75" dx="4" y="214.25">_sum in reducedim.jl:999</text>
+<rect x="268.75" y="188" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="199.25">#_sum#810 in reducedim.jl:999</text>
+<rect x="268.75" y="173" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="268.75" dx="4" y="184.25">mapreduce in reducedim.jl:357</text>
+<rect x="268.75" y="158" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="169.25">#mapreduce#800 in reducedim.jl:357</text>
+<rect x="268.75" y="143" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="268.75" dx="4" y="154.25">_mapreduce_dim in reducedim.jl:365</text>
+<rect x="268.75" y="128" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="139.25">_mapreduce in reduce.jl:442</text>
+<rect x="268.75" y="113" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="268.75" dx="4" y="124.25">mapreduce_impl in reduce.jl:272</text>
+<rect x="268.75" y="98" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="109.25">mapreduce_impl in reduce.jl:258</text>
+<rect x="268.75" y="83" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="268.75" dx="4" y="94.25">macro expansion in simdloop.jl:75</text>
+<rect x="268.75" y="68" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="268.75" dx="4" y="79.25">&amp;lt; in int.jl:83</text>
+<rect x="274.38" y="83" width="11.24" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="274.38" dx="4" y="94.25">macro expansion in simdloop.jl:77</text>
+<rect x="274.38" y="68" width="11.24" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="274.38" dx="4" y="79.25">macro expansion in reduce.jl:260</text>
+<rect x="274.38" y="53" width="11.24" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="274.38" dx="4" y="64.25">add_sum in reduce.jl:27</text>
+<rect x="274.38" y="38" width="11.24" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="274.38" dx="4" y="49.25">+ in float.jl:408</text>
+<rect x="285.62" y="83" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="285.62" dx="4" y="94.25">macro expansion in simdloop.jl:78</text>
+<rect x="285.62" y="68" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="285.62" dx="4" y="79.25">+ in int.jl:87</text>
+<rect x="291.25" y="308" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="291.25" dx="4" y="319.25">CHV in chvdiffeq.jl:10</text>
+<rect x="291.25" y="293" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="291.25" dx="4" y="304.25">hawkes_drate_full in hawkes.jl:166</text>
+<rect x="291.25" y="278" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="291.25" dx="4" y="289.25">* in float.jl:410</text>
+<rect x="296.88" y="308" width="39.37" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="296.88" dx="4" y="319.25">CHV in chvdiffeq.jl:13</text>
+<rect x="296.88" y="293" width="16.87" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="296.88" dx="4" y="304.25">setindex! in array.jl:969</text>
+<rect x="313.75" y="293" width="22.5" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="313.75" dx="4" y="304.25">/ in float.jl:411</text>
+<rect x="341.88" y="458" width="11.24" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="341.88" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:790</text>
+<rect x="341.88" y="443" width="11.24" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="341.88" dx="4" y="454.25">fast_materialize! in FastBroadcast.jl:37</text>
+<rect x="341.88" y="428" width="11.24" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="341.88" dx="4" y="439.25">_fast_materialize! in FastBroadcast.jl:385</text>
+<rect x="341.88" y="413" width="11.24" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="341.88" dx="4" y="424.25">macro expansion in FastBroadcast.jl:427</text>
+<rect x="341.88" y="398" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="341.88" dx="4" y="409.25">macro expansion in simdloop.jl:0</text>
+<rect x="347.5" y="398" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="347.5" dx="4" y="409.25">macro expansion in simdloop.jl:77</text>
+<rect x="347.5" y="383" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="347.5" dx="4" y="394.25">macro expansion in FastBroadcast.jl:428</text>
+<rect x="347.5" y="368" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="347.5" dx="4" y="379.25">setindex! in array.jl:969</text>
+<rect x="353.12" y="458" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="353.12" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:794</text>
+<rect x="353.12" y="443" width="16.88" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="353.12" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="353.12" y="428" width="16.88" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="353.12" dx="4" y="439.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="353.12" y="413" width="16.88" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="353.12" dx="4" y="424.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="353.12" y="398" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="353.12" dx="4" y="409.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="353.12" y="383" width="16.88" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="353.12" dx="4" y="394.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="353.12" y="368" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="353.12" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="353.12" y="353" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="353.12" dx="4" y="364.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="353.12" y="338" width="11.26" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="353.12" dx="4" y="349.25">Void in utils.jl:473</text>
+<rect x="353.12" y="323" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="353.12" dx="4" y="334.25">#11 in chvdiffeq.jl:120</text>
+<rect x="353.12" y="308" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="353.12" dx="4" y="319.25">CHV in chvdiffeq.jl:9</text>
+<rect x="353.12" y="293" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="353.12" dx="4" y="304.25">VariableRate in rate.jl:13</text>
+<rect x="353.12" y="278" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="353.12" dx="4" y="289.25">hawkes_rate_full in hawkes.jl:173</text>
+<rect x="353.12" y="263" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="274.25">sum in reducedim.jl:994</text>
+<rect x="353.12" y="248" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="353.12" dx="4" y="259.25">#sum#807 in reducedim.jl:994</text>
+<rect x="353.12" y="233" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="244.25">_sum in reducedim.jl:998</text>
+<rect x="353.12" y="218" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="353.12" dx="4" y="229.25">#_sum#809 in reducedim.jl:998</text>
+<rect x="353.12" y="203" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="214.25">_sum in reducedim.jl:999</text>
+<rect x="353.12" y="188" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="353.12" dx="4" y="199.25">#_sum#810 in reducedim.jl:999</text>
+<rect x="353.12" y="173" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="184.25">mapreduce in reducedim.jl:357</text>
+<rect x="353.12" y="158" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="353.12" dx="4" y="169.25">#mapreduce#800 in reducedim.jl:357</text>
+<rect x="353.12" y="143" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="154.25">_mapreduce_dim in reducedim.jl:365</text>
+<rect x="353.12" y="128" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="353.12" dx="4" y="139.25">_mapreduce in reduce.jl:442</text>
+<rect x="353.12" y="113" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="124.25">mapreduce_impl in reduce.jl:272</text>
+<rect x="353.12" y="98" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="353.12" dx="4" y="109.25">mapreduce_impl in reduce.jl:258</text>
+<rect x="353.12" y="83" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="353.12" dx="4" y="94.25">macro expansion in simdloop.jl:75</text>
+<rect x="353.12" y="68" width="11.26" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="353.12" dx="4" y="79.25">&amp;lt; in int.jl:83</text>
+<rect x="370" y="458" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="370" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:795</text>
+<rect x="370" y="443" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="370" dx="4" y="454.25">fast_materialize! in FastBroadcast.jl:37</text>
+<rect x="370" y="428" width="22.5" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="370" dx="4" y="439.25">_fast_materialize! in FastBroadcast.jl:385</text>
+<rect x="370" y="413" width="22.5" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="370" dx="4" y="424.25">macro expansion in FastBroadcast.jl:427</text>
+<rect x="370" y="398" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="370" dx="4" y="409.25">macro expansion in simdloop.jl:77</text>
+<rect x="370" y="383" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="370" dx="4" y="394.25">macro expansion in FastBroadcast.jl:428</text>
+<rect x="370" y="368" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="370" dx="4" y="379.25">setindex! in array.jl:969</text>
+<rect x="375.62" y="368" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="375.62" dx="4" y="379.25">muladd in float.jl:413</text>
+<rect x="381.25" y="398" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="381.25" dx="4" y="409.25">macro expansion in simdloop.jl:78</text>
+<rect x="381.25" y="383" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="381.25" dx="4" y="394.25">+ in int.jl:87</text>
+<rect x="392.5" y="458" width="56.25" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="392.5" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:800</text>
+<rect x="392.5" y="443" width="56.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="392.5" dx="4" y="454.25">ODEFunction in scimlfunctions.jl:2126</text>
+<rect x="392.5" y="428" width="56.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="392.5" dx="4" y="439.25">FunctionWrappersWrapper in FunctionWrappersWrappers.jl:10</text>
+<rect x="392.5" y="413" width="56.25" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappersWrappers/9XR0m/src/"/>
+<text x="392.5" dx="4" y="424.25">_call in FunctionWrappersWrappers.jl:12</text>
+<rect x="392.5" y="398" width="56.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.5" dx="4" y="409.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="392.5" y="383" width="56.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.5" dx="4" y="394.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="392.5" y="368" width="56.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.5" dx="4" y="379.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="392.5" y="353" width="50.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.5" dx="4" y="364.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="392.5" y="338" width="50.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/SciMLBase/K9t9C/src/"/>
+<text x="392.5" dx="4" y="349.25">Void in utils.jl:473</text>
+<rect x="392.5" y="323" width="50.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="392.5" dx="4" y="334.25">#11 in chvdiffeq.jl:120</text>
+<rect x="392.5" y="308" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="392.5" dx="4" y="319.25">CHV in chvdiffeq.jl:9</text>
+<rect x="392.5" y="293" width="22.5" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="392.5" dx="4" y="304.25">VariableRate in rate.jl:13</text>
+<rect x="392.5" y="278" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="392.5" dx="4" y="289.25">hawkes_rate_full in hawkes.jl:173</text>
+<rect x="392.5" y="263" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="392.5" dx="4" y="274.25">sum in reducedim.jl:994</text>
+<rect x="392.5" y="248" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="259.25">#sum#807 in reducedim.jl:994</text>
+<rect x="392.5" y="233" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="392.5" dx="4" y="244.25">_sum in reducedim.jl:998</text>
+<rect x="392.5" y="218" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="229.25">#_sum#809 in reducedim.jl:998</text>
+<rect x="392.5" y="203" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="392.5" dx="4" y="214.25">_sum in reducedim.jl:999</text>
+<rect x="392.5" y="188" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="199.25">#_sum#810 in reducedim.jl:999</text>
+<rect x="392.5" y="173" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="392.5" dx="4" y="184.25">mapreduce in reducedim.jl:357</text>
+<rect x="392.5" y="158" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="169.25">#mapreduce#800 in reducedim.jl:357</text>
+<rect x="392.5" y="143" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="392.5" dx="4" y="154.25">_mapreduce_dim in reducedim.jl:365</text>
+<rect x="392.5" y="128" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="139.25">_mapreduce in reduce.jl:442</text>
+<rect x="392.5" y="113" width="22.5" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="392.5" dx="4" y="124.25">mapreduce_impl in reduce.jl:272</text>
+<rect x="392.5" y="98" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="109.25">mapreduce_impl in reduce.jl:258</text>
+<rect x="392.5" y="83" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="392.5" dx="4" y="94.25">macro expansion in simdloop.jl:75</text>
+<rect x="392.5" y="68" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="392.5" dx="4" y="79.25">&amp;lt; in int.jl:83</text>
+<rect x="403.75" y="83" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="403.75" dx="4" y="94.25">macro expansion in simdloop.jl:77</text>
+<rect x="403.75" y="68" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="403.75" dx="4" y="79.25">macro expansion in reduce.jl:260</text>
+<rect x="403.75" y="53" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="403.75" dx="4" y="64.25">add_sum in reduce.jl:27</text>
+<rect x="403.75" y="38" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="403.75" dx="4" y="49.25">+ in float.jl:408</text>
+<rect x="415" y="308" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="415" dx="4" y="319.25">CHV in chvdiffeq.jl:10</text>
+<rect x="415" y="293" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="415" dx="4" y="304.25">hawkes_drate_full in hawkes.jl:166</text>
+<rect x="415" y="278" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="415" dx="4" y="289.25">- in float.jl:409</text>
+<rect x="420.62" y="308" width="22.5" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="420.62" dx="4" y="319.25">CHV in chvdiffeq.jl:13</text>
+<rect x="420.62" y="293" width="22.5" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="420.62" dx="4" y="304.25">/ in float.jl:411</text>
+<rect x="448.75" y="458" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="448.75" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:813</text>
+<rect x="448.75" y="443" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="448.75" dx="4" y="454.25">fast_materialize! in FastBroadcast.jl:37</text>
+<rect x="448.75" y="428" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="448.75" dx="4" y="439.25">_fast_materialize! in FastBroadcast.jl:385</text>
+<rect x="448.75" y="413" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="448.75" dx="4" y="424.25">macro expansion in FastBroadcast.jl:427</text>
+<rect x="448.75" y="398" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="448.75" dx="4" y="409.25">macro expansion in simdloop.jl:77</text>
+<rect x="448.75" y="383" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FastBroadcast/xrPat/src/"/>
+<text x="448.75" dx="4" y="394.25">macro expansion in FastBroadcast.jl:428</text>
+<rect x="448.75" y="368" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="448.75" dx="4" y="379.25">* in float.jl:410</text>
+<rect x="454.38" y="368" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="454.38" dx="4" y="379.25">muladd in float.jl:413</text>
+<rect x="460" y="458" width="33.75" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="460" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:817</text>
+<rect x="460" y="443" width="33.75" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="460" dx="4" y="454.25">calculate_residuals! in calculate_residuals.jl:103</text>
+<rect x="460" y="428" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="460" dx="4" y="439.25">macro expansion in simdloop.jl:75</text>
+<rect x="465.62" y="428" width="28.13" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="465.62" dx="4" y="439.25">macro expansion in simdloop.jl:77</text>
+<rect x="465.62" y="413" width="28.13" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="465.62" dx="4" y="424.25">macro expansion in calculate_residuals.jl:104</text>
+<rect x="465.62" y="398" width="28.13" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="465.62" dx="4" y="409.25">setindex! in array.jl:969</text>
+<rect x="493.75" y="458" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/perform_step/"/>
+<text x="493.75" dx="4" y="469.25">perform_step! in low_order_rk_perform_step.jl:820</text>
+<rect x="493.75" y="443" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="493.75" dx="4" y="454.25">ODE_DEFAULT_NORM in common_defaults.jl:30</text>
+<rect x="493.75" y="428" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="493.75" dx="4" y="439.25">add_fast in fastmath.jl:165</text>
+<rect x="499.38" y="488" width="123.74" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/"/>
+<text x="499.38" dx="4" y="499.25">step! in iterator_interface.jl:8</text>
+<rect x="499.38" y="473" width="123.74" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="499.38" dx="4" y="484.25">loopfooter! in integrator_utils.jl:198</text>
+<rect x="499.38" y="458" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="499.38" dx="4" y="469.25">_loopfooter! in integrator_utils.jl:217</text>
+<rect x="499.38" y="443" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="499.38" dx="4" y="454.25">stepsize_controller! in controllers.jl:5</text>
+<rect x="499.38" y="428" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="499.38" dx="4" y="439.25">stepsize_controller! in controllers.jl:133</text>
+<rect x="499.38" y="413" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="499.38" dx="4" y="424.25">fastpow in fastpow.jl:106</text>
+<rect x="499.38" y="398" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="499.38" dx="4" y="409.25">exp2_fast in fastmath.jl:276</text>
+<rect x="499.38" y="383" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
+<text x="499.38" dx="4" y="394.25">exp2_fast in exp.jl:326</text>
+<rect x="499.38" y="368" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
+<text x="499.38" dx="4" y="379.25">exp_impl_fast in exp.jl:299</text>
+<rect x="499.38" y="353" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="499.38" dx="4" y="364.25">muladd in float.jl:413</text>
+<rect x="505" y="458" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="505" dx="4" y="469.25">_loopfooter! in integrator_utils.jl:219</text>
+<rect x="510.62" y="458" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="510.62" dx="4" y="469.25">_loopfooter! in integrator_utils.jl:244</text>
+<rect x="510.62" y="443" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="510.62" dx="4" y="454.25">calc_dt_propose! in integrator_utils.jl:0</text>
+<rect x="516.25" y="443" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="516.25" dx="4" y="454.25">calc_dt_propose! in integrator_utils.jl:406</text>
+<rect x="516.25" y="428" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="516.25" dx="4" y="439.25">setproperty! in Base.jl:38</text>
+<rect x="527.5" y="458" width="95.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="527.5" dx="4" y="469.25">_loopfooter! in integrator_utils.jl:245</text>
+<rect x="527.5" y="443" width="95.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="527.5" dx="4" y="454.25">handle_callbacks! in integrator_utils.jl:312</text>
+<rect x="527.5" y="428" width="95.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="527.5" dx="4" y="439.25">apply_discrete_callback! in callbacks.jl:607</text>
+<rect x="527.5" y="413" width="95.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="527.5" dx="4" y="424.25">#10 in chvdiffeq.jl:117</text>
+<rect x="527.5" y="398" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="527.5" dx="4" y="409.25">chvjump in chvdiffeq.jl:27</text>
+<rect x="527.5" y="383" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PreallocationTools/nhCNl/src/"/>
+<text x="527.5" dx="4" y="394.25">get_tmp in PreallocationTools.jl:133</text>
+<rect x="527.5" y="368" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="527.5" dx="4" y="379.25">getproperty in Base.jl:37</text>
+<rect x="533.12" y="398" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="533.12" dx="4" y="409.25">chvjump in chvdiffeq.jl:51</text>
+<rect x="533.12" y="383" width="16.88" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="533.12" dx="4" y="394.25">VariableRate in rate.jl:13</text>
+<rect x="533.12" y="368" width="16.88" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="533.12" dx="4" y="379.25">hawkes_rate_full in hawkes.jl:175</text>
+<rect x="533.12" y="353" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="533.12" dx="4" y="364.25">materialize! in broadcast.jl:881</text>
+<rect x="533.12" y="338" width="11.26" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="533.12" dx="4" y="349.25">materialize! in broadcast.jl:884</text>
+<rect x="533.12" y="323" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="533.12" dx="4" y="334.25">copyto! in broadcast.jl:926</text>
+<rect x="533.12" y="308" width="11.26" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="533.12" dx="4" y="319.25">copyto! in broadcast.jl:967</text>
+<rect x="533.12" y="293" width="11.26" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="533.12" dx="4" y="304.25">copyto! in abstractarray.jl:1071</text>
+<rect x="533.12" y="278" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="533.12" dx="4" y="289.25">copyto_unaliased! in abstractarray.jl:1091</text>
+<rect x="533.12" y="263" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="533.12" dx="4" y="274.25">setindex! in subarray.jl:351</text>
+<rect x="533.12" y="248" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="533.12" dx="4" y="259.25">setindex! in array.jl:969</text>
+<rect x="538.75" y="278" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="538.75" dx="4" y="289.25">copyto_unaliased! in abstractarray.jl:1117</text>
+<rect x="544.38" y="353" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="544.38" dx="4" y="364.25">view in subarray.jl:177</text>
+<rect x="544.38" y="338" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="544.38" dx="4" y="349.25">checkbounds in abstractarray.jl:709</text>
+<rect x="544.38" y="323" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="544.38" dx="4" y="334.25">checkbounds in abstractarray.jl:694</text>
+<rect x="544.38" y="308" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="544.38" dx="4" y="319.25">checkindex in abstractarray.jl:773</text>
+<rect x="544.38" y="293" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="544.38" dx="4" y="304.25">checkindex in abstractarray.jl:768</text>
+<rect x="544.38" y="278" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="544.38" dx="4" y="289.25">&amp;lt;= in int.jl:488</text>
+<rect x="550" y="398" width="28.12" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="550" dx="4" y="409.25">chvjump in chvdiffeq.jl:57</text>
+<rect x="550" y="383" width="28.12" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="550" dx="4" y="394.25">pfsample in utils.jl:57</text>
+<rect x="550" y="368" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="550" dx="4" y="379.25">sum in reducedim.jl:994</text>
+<rect x="550" y="353" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="550" dx="4" y="364.25">#sum#807 in reducedim.jl:994</text>
+<rect x="550" y="338" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="550" dx="4" y="349.25">_sum in reducedim.jl:998</text>
+<rect x="550" y="323" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="550" dx="4" y="334.25">#_sum#809 in reducedim.jl:998</text>
+<rect x="550" y="308" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="550" dx="4" y="319.25">_sum in reducedim.jl:999</text>
+<rect x="550" y="293" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="550" dx="4" y="304.25">#_sum#810 in reducedim.jl:999</text>
+<rect x="550" y="278" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="550" dx="4" y="289.25">mapreduce in reducedim.jl:357</text>
+<rect x="550" y="263" width="11.25" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="550" dx="4" y="274.25">#mapreduce#800 in reducedim.jl:357</text>
+<rect x="550" y="248" width="11.25" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="550" dx="4" y="259.25">_mapreduce_dim in reducedim.jl:365</text>
+<rect x="550" y="233" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="550" dx="4" y="244.25">_mapreduce in reduce.jl:442</text>
+<rect x="550" y="218" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="550" dx="4" y="229.25">mapreduce_impl in reduce.jl:272</text>
+<rect x="550" y="203" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="550" dx="4" y="214.25">mapreduce_impl in reduce.jl:258</text>
+<rect x="550" y="188" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="550" dx="4" y="199.25">macro expansion in simdloop.jl:77</text>
+<rect x="550" y="173" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="550" dx="4" y="184.25">macro expansion in reduce.jl:260</text>
+<rect x="550" y="158" width="11.25" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="550" dx="4" y="169.25">add_sum in reduce.jl:27</text>
+<rect x="550" y="143" width="11.25" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="550" dx="4" y="154.25">+ in float.jl:408</text>
+<rect x="561.25" y="368" width="16.87" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="561.25" dx="4" y="379.25">pfsample in utils.jl:50</text>
+<rect x="561.25" y="353" width="5.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="561.25" dx="4" y="364.25">&amp;lt; in float.jl:535</text>
+<rect x="578.12" y="398" width="22.5" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="578.12" dx="4" y="409.25">chvjump in chvdiffeq.jl:60</text>
+<rect x="578.12" y="383" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="578.12" dx="4" y="394.25">affect! in jumps.jl:32</text>
+<rect x="578.12" y="368" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="578.12" dx="4" y="379.25">+ in int.jl:87</text>
+<rect x="583.75" y="368" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="583.75" dx="4" y="379.25">getindex in subarray.jl:286</text>
+<rect x="583.75" y="353" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/cache/build/default-amdci5-2/julialang/julia-release-1-dot-9/usr/share/julia/stdlib/v1.9/LinearAlgebra/src/"/>
+<text x="583.75" dx="4" y="364.25">getindex in diagonal.jl:115</text>
+<rect x="583.75" y="338" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="583.75" dx="4" y="349.25">getindex in essentials.jl:13</text>
+<rect x="589.38" y="383" width="11.24" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="589.38" dx="4" y="394.25">affect! in jumps.jl:33</text>
+<rect x="589.38" y="368" width="11.24" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="589.38" dx="4" y="379.25">iterate in range.jl:891</text>
+<rect x="589.38" y="353" width="11.24" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="589.38" dx="4" y="364.25">== in promotion.jl:499</text>
+<rect x="600.62" y="398" width="11.26" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="600.62" dx="4" y="409.25">chvjump in chvdiffeq.jl:71</text>
+<rect x="600.62" y="383" width="11.26" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
+<text x="600.62" dx="4" y="394.25">log in log.jl:267</text>
+<rect x="600.62" y="368" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
+<text x="600.62" dx="4" y="379.25">_log in log.jl:0</text>
+<rect x="606.25" y="368" width="5.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
+<text x="606.25" dx="4" y="379.25">_log in log.jl:293</text>
+<rect x="606.25" y="353" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="606.25" dx="4" y="364.25">- in float.jl:409</text>
+<rect x="611.88" y="398" width="11.24" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="611.88" dx="4" y="409.25">chvjump in chvdiffeq.jl:72</text>
+<rect x="611.88" y="383" width="5.62" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="611.88" dx="4" y="394.25">add_tstop! in integrator_interface.jl:187</text>
+<rect x="617.5" y="383" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="617.5" dx="4" y="394.25">add_tstop! in integrator_interface.jl:190</text>
+<rect x="617.5" y="368" width="5.62" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="617.5" dx="4" y="379.25">push! in binary_heap.jl:91</text>
+<rect x="617.5" y="353" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="617.5" dx="4" y="364.25">heappush! in arrays_as_heaps.jl:72</text>
+<rect x="617.5" y="338" width="5.62" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="617.5" dx="4" y="349.25">push! in array.jl:1061</text>
+<rect x="617.5" y="323" width="5.62" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="617.5" dx="4" y="334.25">_growend! in array.jl:1014</text>
+<rect x="623.12" y="488" width="5.63" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/"/>
+<text x="623.12" dx="4" y="499.25">step! in iterator_interface.jl:24</text>
+<rect x="623.12" y="473" width="5.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/OrdinaryDiffEq/xaB2l/src/integrators/"/>
+<text x="623.12" dx="4" y="484.25">handle_tstop! in integrator_utils.jl:428</text>
+<rect x="628.75" y="503" width="253.13" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="628.75" dx="4" y="514.25">#chv_diffeq!#9 in chvdiffeq.jl:146</text>
+<rect x="628.75" y="488" width="253.13" height="15" rx="2" fill="#FFA000" data-dinfo="./"/>
+<text x="628.75" dx="4" y="499.25">copy in array.jl:365</text>
+<rect x="881.88" y="503" width="67.5" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/PiecewiseDeterministicMarkovProcesses/vDx0E/src/"/>
+<text x="881.88" dx="4" y="514.25">#chv_diffeq!#9 in chvdiffeq.jl:147</text>
+<rect x="881.88" y="488" width="67.5" height="15" rx="2" fill="#FFA400" data-dinfo="./"/>
+<text x="881.88" dx="4" y="499.25">copy in array.jl:365</text>
 </g></g>
 <script><![CDATA[
 // Snap.svg 0.3.0
@@ -454,10 +1210,10 @@ f+=g+"]",i[b]=f}return Function("val","return Snap.path.toString.call(["+i+"])")
 <script><![CDATA[
 if (typeof require === 'function' && define.amd) {
     require(['ProfileSVG'], function (ProfileSVG) {
-        ProfileSVG.initialize("fig-71c98b7c5b5d41e0b12765537d51f6a3");
+        ProfileSVG.initialize("fig-7d2d51f396af4d75ae7e58bb95309f42");
     });
 } else {
-    ProfileSVG.initialize("fig-71c98b7c5b5d41e0b12765537d51f6a3");
+    ProfileSVG.initialize("fig-7d2d51f396af4d75ae7e58bb95309f42");
 }
 ]]></script>
 </svg>

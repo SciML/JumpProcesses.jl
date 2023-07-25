@@ -4,9 +4,9 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct RSSACRJumpAggregation{F, U, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V,
+mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD,
                                      P <: PriorityTable, W <: Function} <:
-               AbstractSSAJumpAggregator
+               AbstractSSAJumpAggregator{F, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::F
@@ -22,18 +22,16 @@ mutable struct RSSACRJumpAggregation{F, U, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V
     vartojumps_map::VJMAP
     jumptovars_map::JVMAP
     bracket_data::BD
-    ulow::T2V
-    uhigh::T2V
+    ulow::U
+    uhigh::U
     minrate::F
     maxrate::F   # initial maxrate only, table can increase beyond it!
     rt::P #rate table
     ratetogroup::W
-    cur_u_bnds::Matrix{U} # current bounds on state u
 end
 
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
-                               rs::F1,
-                               affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG; u::U,
+                               rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG; u::U,
                                vartojumps_map = nothing, jumptovars_map = nothing,
                                bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
                                maxrate = convert(F, Inf),
@@ -68,9 +66,8 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
 
     # matrix to store bracketing interval for species and the relative interval width
     # first row is Xlow, second is Xhigh
-    cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
-    ulow = @view cs_bnds[1, :]
-    uhigh = @view cs_bnds[2, :]
+    ulow = similar(u)
+    uhigh = similar(u)
 
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
@@ -82,12 +79,13 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(F, 1), minrate, 2 * minrate)
 
-    RSSACRJumpAggregation{typeof(njt), eltype(U), S, F1, F2, RNG, typeof(vtoj_map),
-                          typeof(jtov_map), typeof(bd), typeof(ulow), typeof(rt),
+    affecttype = F2 <: Tuple ? F2 : Any
+    RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, U, typeof(vtoj_map),
+                          typeof(jtov_map), typeof(bd), typeof(rt),
                           typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
                                                sum_rate, maj, rs, affs!, sps, rng, vtoj_map,
                                                jtov_map, bd, ulow, uhigh, minrate, maxrate,
-                                               rt, ratetogroup, cs_bnds)
+                                               rt, ratetogroup)
 end
 
 ############################# Required Functions ##############################
@@ -119,9 +117,9 @@ function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
 
     # update rates
     update_dependent_rates!(p, u, params, t)
@@ -163,17 +161,46 @@ end
 """
 update bracketing for species that depend on the just executed jump
 """
-@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u, params, t)
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::AbstractVector,
+                                         params, t)
     # update bracketing intervals
-    ubnds = p.cur_u_bnds
+    @unpack ulow, uhigh = p
     crhigh = p.cur_rate_high
 
     @inbounds for uidx in p.jumptovars_map[p.next_jump]
         uval = u[uidx]
         # if new u value is outside the bracketing interval
-        if uval == zero(uval) || uval < ubnds[1, uidx] || uval > ubnds[2, uidx]
+        if uval == zero(uval) || uval < ulow[uidx] || uval > uhigh[uidx]
             # update u bracketing interval
-            ubnds[1, uidx], ubnds[2, uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+            ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+
+            # for each dependent jump, update jump rate brackets
+            for jidx in p.vartojumps_map[uidx]
+                oldrate = crhigh[jidx]
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+
+                # update the priority table
+                update!(p.rt, jidx, oldrate, crhigh[jidx])
+            end
+        end
+    end
+
+    p.sum_rate = groupsum(p.rt)
+    nothing
+end
+
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::SVector, params, t)
+    # update bracketing intervals
+    crhigh = p.cur_rate_high
+
+    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+        uval = u[uidx]
+        # if new u value is outside the bracketing interval
+        if uval == zero(uval) || uval < p.ulow[uidx] || uval > p.uhigh[uidx]
+            # update u bracketing interval
+            ulow, uhigh = get_spec_brackets(p.bracket_data, uidx, uval)
+            p.ulow = setindex(p.ulow, ulow, uidx)
+            p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]

@@ -18,7 +18,9 @@ algorithms = ((Coevolve(), false),
               (Coevolve(), true),
               (Direct(), true),
               (PyTick(), true),
-              (PDMPCHV(), true))
+              (PDMPCHVFull(), true),
+              (PDMPCHVSimple(), false),
+              (PDMPCHVSimple(), true))
 
 V = 10
 G = erdos_renyi(V, 0.2, seed = 9103)
@@ -33,16 +35,25 @@ u = [0.0 for i in 1:nv(G)]
 p = (0.5, 0.1, 2.0)
 Λ = hawkes_Λ(g, p)
 
+@info "Running Hawkes example for each method."
 ts = Vector(undef, length(algorithms))
 Ns = Vector(undef, length(algorithms))
 sols = Vector(undef, length(algorithms))
-
-@info "Running Hawkes example for each method."
 for (i, (algo, use_recursion)) in enumerate(algorithms)
+    @info "Method" i algo use_recursion
     if typeof(algo) <: PyTick
         _p = (p[1], p[2], p[3])
-    elseif typeof(algo) <: PDMPCHV
+    elseif typeof(algo) <: PDMPCHVFull
         _p = (p[1], p[2], p[3], nothing, nothing, g)
+    elseif typeof(algo) <: PDMPCHVSimple
+        if use_recursion
+            h = zeros(eltype(tspan), nv(G))
+            ϕ = zeros(eltype(tspan), nv(G))
+            _p = (p[1], p[2], p[3], h, ϕ, g)
+        else
+            h = [eltype(tspan)[] for _ in 1:nv(G)]
+            _p = (p[1], p[2], p[3], h, g)
+        end
     else
         if use_recursion
             h = zeros(eltype(tspan), nv(G))
@@ -64,14 +75,14 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
     else
         stepper = if typeof(algo) <: Coevolve
             SSAStepper()
-        elseif typeof(algo) <: PDMPCHV
+        elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
             CHV(Tsit5())
         else
             Tsit5()
         end
         sol = solve(jump_prob, stepper)
         sols[i] = sol
-        if typeof(algo) <: PDMPCHV
+        if typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
             t = sol.time
             N = sol.xd[1:V, :]'
         else
@@ -92,7 +103,7 @@ let fig = []
                    title = "$algo, use_recursion = $(use_recursion)",
                    legend = false))
     end
-    fig = plot(fig..., layout = (3, 2))
+    fig = plot(fig..., layout = (4, 2))
     savefig(fig, "$(assets)/hawkes-examples.png")
 end
 
@@ -125,13 +136,27 @@ let sol = sols[1]
 end
 
 @info "Running simulations for QQ plot."
-algorithms = ((Coevolve(), false), (Coevolve(), true), (PyTick(), true), (PDMPCHV(), true))
+algorithms = ((Coevolve(), false),
+              (Coevolve(), true),
+              (PyTick(), true),
+              (PDMPCHVFull(), true),
+              (PDMPCHVSimple(), true),
+              (PDMPCHVSimple(), false))
 qqs = Vector(undef, length(algorithms))
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     if typeof(algo) <: PyTick
         _p = (p[1], p[2], p[3])
-    elseif typeof(algo) <: PDMPCHV
+    elseif typeof(algo) <: PDMPCHVFull
         _p = (p[1], p[2], p[3], nothing, nothing, g)
+    elseif typeof(algo) <: PDMPCHVSimple
+        if use_recursion
+            h = zeros(eltype(tspan), nv(G))
+            ϕ = zeros(eltype(tspan), nv(G))
+            _p = (p[1], p[2], p[3], h, ϕ, g)
+        else
+            h = [eltype(tspan)[] for _ in 1:nv(G)]
+            _p = (p[1], p[2], p[3], h, g)
+        end
     else
         if use_recursion
             h = zeros(eltype(tspan), nv(G))
@@ -152,19 +177,23 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
             jump_prob.simulate()
             runs[n] = jump_prob.timestamps
         else
-            if ~(typeof(algo) <: PDMPCHV)
+            if ~(typeof(algo) <: PDMPCHVFull)
                 if use_recursion
                     h .= 0
-                    urate .= 0
+                    if ~(typeof(algo) <: PDMPCHVSimple)
+                        urate .= 0
+                    end
                     ϕ .= 0
                 else
                     reset_history!(h)
-                    urate .= 0
+                    if ~(typeof(algo) <: PDMPCHVSimple)
+                        urate .= 0
+                    end
                 end
             end
             stepper = if typeof(algo) <: Coevolve
                 SSAStepper()
-            elseif typeof(algo) <: PDMPCHV
+            elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
                 CHV(Tsit5())
             else
                 Tsit5()
@@ -182,7 +211,7 @@ let fig = []
         push!(fig, qqplot(qqs[i]..., legend = false, aspect_ratio = :equal))
         title!("$algo, use_recursion = $(use_recursion)")
     end
-    fig = plot(fig..., layout = (2, 2))
+    fig = plot(fig..., layout = (3, 2))
     savefig(fig, "$(assets)/hawkes-qqplots.png")
 end
 

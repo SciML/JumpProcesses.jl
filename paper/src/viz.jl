@@ -47,6 +47,8 @@ end
     markershape --> :circle
     ylims --> (0.0, k + 1.0)
     for (i, h) in enumerate(histories)
-        @series begin histories[i], y[i] end
+        @series begin
+            histories[i], y[i]
+        end
     end
 end

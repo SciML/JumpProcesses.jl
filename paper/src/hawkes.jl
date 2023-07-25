@@ -49,14 +49,21 @@ function hawkes_rate_closure(u, g)
     return [(h) -> hawkes_rate(i, g, h) for i in 1:length(u)]
 end
 
-function hawkes_jump(u, g; use_recursion = false)
-    return [hawkes_jump(i, g; use_recursion) for i in 1:length(u)]
+function hawkes_jump(u, g; use_recursion = false, track_attempts = false)
+    return [hawkes_jump(i, g; use_recursion, track_attempts) for i in 1:length(u)]
 end
 
-function hawkes_jump(i::Int, g; use_recursion = false)
+function hawkes_jump(i::Int, g; use_recursion = false, track_attempts = false)
     rate = hawkes_rate(i, g; use_recursion)
-    urate = rate
-    @inbounds rateinterval(u, p, t) = p[5][i] == p[1] ? typemax(t) : 1 / (2 * p[5][i])
+    if track_attempts
+        function urate(u, p, t)
+            p[end][i] += 1
+            return rate(u, p, t)
+        end
+    else
+        urate = rate
+    end
+    @inbounds rateinterval(u, p, t) = p[5][i] == p[1] ? typemax(t) : 2 / p[5][i]
     @inbounds lrate(u, p, t) = p[1]
     @inbounds function affect_recursion!(integrator)
         λ, α, β, h, _, ϕ = integrator.p
@@ -110,9 +117,10 @@ function hawkes_problem(p,
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = false)
+                        use_recursion = false,
+                        track_attempts = false)
     oprob = ODEProblem(f!, u, tspan, p)
-    jumps = hawkes_jump(u, g; use_recursion)
+    jumps = hawkes_jump(u, g; use_recursion, track_attempts)
     jprob = JumpProblem(oprob, agg, jumps...; save_positions = save_positions)
     return jprob
 end
@@ -123,9 +131,10 @@ function hawkes_problem(p,
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = false)
+                        use_recursion = false,
+                        track_attempts = false)
     dprob = DiscreteProblem(u, tspan, p)
-    jumps = hawkes_jump(u, g; use_recursion)
+    jumps = hawkes_jump(u, g; use_recursion, track_attempts)
     jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g,
                         save_positions = save_positions)
     return jprob
@@ -137,7 +146,8 @@ function hawkes_problem(p,
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = true)
+                        use_recursion = true,
+                        track_attempts = false)
     λ, α, β = p
     SimuHawkesSumExpKernels = pyimport("tick.hawkes")[:SimuHawkesSumExpKernels]
     jprob = SimuHawkesSumExpKernels(baseline = fill(λ, length(u)),
@@ -150,14 +160,14 @@ function hawkes_problem(p,
     return jprob
 end
 
-function hawkes_drate(dxc, xc, xd, p, t)
+function hawkes_drate_full(dxc, xc, xd, p, t)
     λ, α, β, _, _, g = p
     for i in 1:length(g)
         dxc[i] = -β * (xc[i] - λ)
     end
 end
 
-function hawkes_rate(rate, xc, xd, p, t, issum::Bool)
+function hawkes_rate_full(rate, xc, xd, p, t, issum::Bool)
     λ, α, β, _, _, g = p
     if issum
         return sum(@view(xc[1:length(g)]))
@@ -166,7 +176,7 @@ function hawkes_rate(rate, xc, xd, p, t, issum::Bool)
     return 0.0
 end
 
-function hawkes_affect!(xc, xd, p, t, i::Int64)
+function hawkes_affect_full!(xc, xd, p, t, i::Int64)
     λ, α, β, _, _, g = p
     for j in g[i]
         xc[i] += α
@@ -174,15 +184,93 @@ function hawkes_affect!(xc, xd, p, t, i::Int64)
 end
 
 function hawkes_problem(p,
-                        agg::PDMPCHV;
+                        agg::PDMPCHVFull;
                         u = [0.0],
                         tspan = (0.0, 50.0),
                         save_positions = (false, true),
                         g = [[1]],
-                        use_recursion = true)
+                        use_recursion = true,
+                        track_attempts = false)
     xd0 = Array{Int}(u)
     xc0 = [p[1] for i in 1:length(u)]
     nu = one(eltype(xd0)) * I(length(xd0))
-    jprob = PDMPProblem(hawkes_drate, hawkes_rate, hawkes_affect!, nu, xc0, xd0, p, tspan)
+    jprob = PDMPProblem(hawkes_drate_full,
+                        hawkes_rate_full,
+                        hawkes_affect_full!,
+                        nu,
+                        xc0,
+                        xd0,
+                        p,
+                        tspan)
+    return jprob
+end
+
+function hawkes_drate_simple(dxc, xc, xd, p, t)
+    dxc .= 0
+end
+
+function hawkes_rate_simple_recursion(rate, xc, xd, p, t, issum::Bool)
+    λ, _, β, h, ϕ, g = p
+    for i in 1:length(g)
+        rate[i] = λ + exp(-β * (t - h[i])) * ϕ[i]
+    end
+    if issum
+        return sum(rate)
+    end
+    return 0.0
+end
+
+function hawkes_rate_simple_brute(rate, xc, xd, p, t, issum::Bool)
+    λ, α, β, h, g = p
+    for i in 1:length(g)
+        x = zero(typeof(t))
+        for j in g[i]
+            for _t in reverse(h[j])
+                ϕij = α * exp(-β * (t - _t))
+                if ϕij ≈ 0
+                    break
+                end
+                x += ϕij
+            end
+        end
+        rate[i] = λ + x
+    end
+    if issum
+        return sum(rate)
+    end
+    return 0.0
+end
+
+function hawkes_affect_simple_recursion!(xc, xd, p, t, i::Int64)
+    _, α, β, h, ϕ, g = p
+    for j in g[i]
+        ϕ[j] *= exp(-β * (t - h[j]))
+        ϕ[j] += α
+        h[j] = t
+    end
+end
+
+function hawkes_affect_simple_brute!(xc, xd, p, t, i::Int64)
+    push!(p[4][i], t)
+end
+
+function hawkes_problem(p,
+                        agg::PDMPCHVSimple;
+                        u = [0.0],
+                        tspan = (0.0, 50.0),
+                        save_positions = (false, true),
+                        g = [[1]],
+                        use_recursion = true,
+                        track_attempts = false)
+    xd0 = Array{Int}(u)
+    xc0 = copy(u)
+    nu = one(eltype(xd0)) * I(length(xd0))
+    if use_recursion
+        jprob = PDMPProblem(hawkes_drate_simple, hawkes_rate_simple_recursion,
+                            hawkes_affect_simple_recursion!, nu, xc0, xd0, p, tspan)
+    else
+        jprob = PDMPProblem(hawkes_drate_simple, hawkes_rate_simple_brute,
+                            hawkes_affect_simple_brute!, nu, xc0, xd0, p, tspan)
+    end
     return jprob
 end

@@ -1,4 +1,5 @@
-mutable struct DirectJumpAggregation{T, S, F1, F2, RNG} <: AbstractSSAJumpAggregator
+mutable struct DirectJumpAggregation{T, S, F1, F2, RNG} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -14,8 +15,9 @@ end
 function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
                                rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
                                kwargs...) where {T, S, F1, F2, RNG}
-    DirectJumpAggregation{T, S, F1, F2, RNG}(nj, nj, njt, et, crs, sr, maj, rs, affs!, sps,
-                                             rng)
+    affecttype = F2 <: Tuple ? F2 : Any
+    DirectJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr, maj, rs,
+                                                     affs!, sps, rng)
 end
 
 ############################# Required Functions #############################
@@ -50,8 +52,9 @@ function initialize!(p::DirectJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
-    update_state!(p, integrator, u)
+@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t,
+                                affects!)
+    update_state!(p, integrator, u, affects!)
     nothing
 end
 
@@ -66,8 +69,8 @@ end
 ######################## SSA specific helper routines ########################
 
 # tuple-based constant jumps
-function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                           t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
+                           t) where {T, S, F1 <: Tuple}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -108,8 +111,8 @@ end
 end
 
 # function wrapper-based constant jumps
-function time_to_next_jump(p::DirectJumpAggregation{T, S, F1, F2, RNG}, u, params,
-                           t) where {T, S, F1 <: AbstractArray, F2 <: AbstractArray, RNG}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
+                           t) where {T, S, F1 <: AbstractArray}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates

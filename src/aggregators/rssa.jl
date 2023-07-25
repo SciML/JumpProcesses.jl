@@ -4,8 +4,8 @@
 # functions of the current population sizes (i.e. u)
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
-mutable struct RSSAJumpAggregation{T, T2, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V} <:
-               AbstractSSAJumpAggregator
+mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, VJMAP, JVMAP, BD, U} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -13,7 +13,6 @@ mutable struct RSSAJumpAggregation{T, T2, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V}
     cur_rate_low::Vector{T}
     cur_rate_high::Vector{T}
     sum_rate::T
-    cur_u_bnds::Matrix{T2}
     ma_jumps::S
     rates::F1
     affects!::F2
@@ -22,8 +21,8 @@ mutable struct RSSAJumpAggregation{T, T2, S, F1, F2, RNG, VJMAP, JVMAP, BD, T2V}
     vartojumps_map::VJMAP
     jumptovars_map::JVMAP
     bracket_data::BD
-    ulow::T2V
-    uhigh::T2V
+    ulow::U
+    uhigh::U
 end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -59,17 +58,16 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     # a bracket data structure is needed for updating species populations
     bd = (bracket_data === nothing) ? BracketData{T, eltype(U)}() : bracket_data
 
-    # matrix to store bracketing interval for species and the relative interval width
-    # first row is Xlow, second is Xhigh
-    cs_bnds = Matrix{eltype(U)}(undef, 2, length(u))
-    ulow = @view cs_bnds[1, :]
-    uhigh = @view cs_bnds[2, :]
+    # current bounds on solution
+    ulow = similar(u)
+    uhigh = similar(u)
 
-    RSSAJumpAggregation{T, eltype(U), S, F1, F2, RNG, typeof(vtoj_map), typeof(jtov_map),
-                        typeof(bd), typeof(ulow)}(nj, nj, njt, et, crl_bnds, crh_bnds, sr,
-                                                  cs_bnds, maj, rs,
-                                                  affs!, sps, rng, vtoj_map, jtov_map, bd,
-                                                  ulow, uhigh)
+    affecttype = F2 <: Tuple ? F2 : Any
+    RSSAJumpAggregation{T, S, F1, affecttype, RNG, typeof(vtoj_map),
+                        typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
+                                                         crh_bnds, sr, maj, rs, affs!, sps,
+                                                         rng, vtoj_map, jtov_map, bd, ulow,
+                                                         uhigh)
 end
 
 ############################# Required Functions ##############################
@@ -95,9 +93,9 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
     update_rates!(p, u, params, t)
     nothing
 end
@@ -144,9 +142,9 @@ end
 """
 Update rates
 """
-@inline function update_rates!(p::RSSAJumpAggregation, u, params, t)
+@inline function update_rates!(p::RSSAJumpAggregation, u::AbstractVector, params, t)
     # update bracketing intervals
-    ubnds = p.cur_u_bnds
+    @unpack ulow, uhigh = p
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
 
@@ -154,9 +152,35 @@ Update rates
         uval = u[uidx]
 
         # if new u value is outside the bracketing interval
-        if uval == zero(uval) || uval < ubnds[1, uidx] || uval > ubnds[2, uidx]
+        if uval == zero(uval) || uval < ulow[uidx] || uval > uhigh[uidx]
             # update u bracketing interval
-            ubnds[1, uidx], ubnds[2, uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+            ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
+
+            # for each dependent jump, update jump rate brackets
+            for jidx in p.vartojumps_map[uidx]
+                sum_rate -= crhigh[jidx]
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+                sum_rate += crhigh[jidx]
+            end
+        end
+    end
+    p.sum_rate = sum_rate
+end
+
+@inline function update_rates!(p::RSSAJumpAggregation, u::SVector, params, t)
+    # update bracketing intervals
+    sum_rate = p.sum_rate
+    crhigh = p.cur_rate_high
+
+    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+        uval = u[uidx]
+
+        # if new u value is outside the bracketing interval
+        if uval == zero(uval) || uval < p.ulow[uidx] || uval > p.uhigh[uidx]
+            # update u bracketing interval
+            ulow, uhigh = get_spec_brackets(p.bracket_data, uidx, uval)
+            p.ulow = setindex(p.ulow, ulow, uidx)
+            p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]

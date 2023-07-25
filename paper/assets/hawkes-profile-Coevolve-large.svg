@@ -1,507 +1,363 @@
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" width="960" height="511" viewBox="0 0 960 511"
-     xmlns="http://www.w3.org/2000/svg" id="fig-fbf4e6b8d3194d7381d73515a83b77dc">
+<svg version="1.1" width="960" height="496" viewBox="0 0 960 496"
+     xmlns="http://www.w3.org/2000/svg" id="fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd">
 <defs>
-    <clipPath id="fig-fbf4e6b8d3194d7381d73515a83b77dc-clip">
-        <rect x="0" y="0" width="960" height="511"/>
+    <clipPath id="fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-clip">
+        <rect x="0" y="0" width="960" height="496"/>
     </clipPath>
 </defs>
 <style type="text/css">
-    #fig-fbf4e6b8d3194d7381d73515a83b77dc text {
+    #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd text {
         pointer-events: none;
         font-family: inherit;
         font-size: 12px;
         fill: #000000;
     }
-    text#fig-fbf4e6b8d3194d7381d73515a83b77dc-caption {
+    text#fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-caption {
         font-size: 16.8px;
         fill: #000000;
         text-anchor: middle;
     }
-    #fig-fbf4e6b8d3194d7381d73515a83b77dc-bg {
+    #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-bg {
         fill: #FFFFFF;
     }
-    #fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport rect, #fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport path {
+    #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport rect, #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport path {
         vector-effect: non-scaling-stroke;
         fill-opacity: 1;
     }
-    #fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport text {
+    #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport text {
         stroke: #000000;
         stroke-width: 0;
         stroke-opacity: 0.35;
     }
-    #fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport rect:hover, #fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport path:hover {
+    #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport rect:hover, #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport path:hover {
         fill-opacity: 0.75;
         stroke: #000000;
         stroke-width: 0.5;
     }
-    #fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport + rect {
+    #fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport + rect {
         fill: #FFFFFF;
         opacity: 0.8;
     }
-    text#fig-fbf4e6b8d3194d7381d73515a83b77dc-details{
+    text#fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-details{
         fill: #000000;
     }
 </style>
-<g id="fig-fbf4e6b8d3194d7381d73515a83b77dc-frame" clip-path="url(#fig-fbf4e6b8d3194d7381d73515a83b77dc-clip)">
-<rect id="fig-fbf4e6b8d3194d7381d73515a83b77dc-bg" x="0" y="0" width="960" height="511"/>
-<text id="fig-fbf4e6b8d3194d7381d73515a83b77dc-caption" x="480" y="24">Profile Coevolve(), large (80 nodes, 5 ms/rep)</text>
-<g id="fig-fbf4e6b8d3194d7381d73515a83b77dc-viewport" transform="scale(1)">
-<rect x="10" y="458" width="939.55" height="15" rx="2" fill="#F3004D" data-dinfo=""/>
-<text x="10" dx="4" y="469.25"> in :-1</text>
-<rect x="10" y="443" width="939.55" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="10" dx="4" y="454.25">_start in client.jl:522</text>
-<rect x="10" y="428" width="939.55" height="15" rx="2" fill="#F3004D" data-dinfo="./"/>
-<text x="10" dx="4" y="439.25">exec_options in client.jl:303</text>
-<rect x="10" y="413" width="939.55" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="10" dx="4" y="424.25">include in Base.jl:419</text>
-<rect x="10" y="398" width="939.55" height="15" rx="2" fill="#F3004D" data-dinfo="./"/>
-<text x="10" dx="4" y="409.25">_include in loading.jl:1488</text>
-<rect x="10" y="383" width="939.55" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="10" dx="4" y="394.25">include_string in loading.jl:1428</text>
-<rect x="10" y="368" width="939.55" height="15" rx="2" fill="#F3004D" data-dinfo="./"/>
-<text x="10" dx="4" y="379.25">eval in boot.jl:368</text>
-<rect x="10" y="353" width="939.55" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/WXn2i/src/"/>
-<text x="10" dx="4" y="364.25">solve in solve.jl:859</text>
-<rect x="10" y="338" width="939.55" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/WXn2i/src/"/>
-<text x="10" dx="4" y="349.25">#solve#35 in solve.jl:860</text>
-<rect x="10" y="323" width="939.55" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="10" dx="4" y="334.25">__solve in SSA_stepper.jl:98</text>
-<rect x="10" y="308" width="939.55" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="10" dx="4" y="319.25">#__solve#217 in SSA_stepper.jl:102</text>
-<rect x="10" y="293" width="939.55" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="10" dx="4" y="304.25">solve! in SSA_stepper.jl:109</text>
-<rect x="10" y="278" width="881.73" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="10" dx="4" y="289.25">step! in SSA_stepper.jl:258</text>
-<rect x="10" y="263" width="881.73" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="10" dx="4" y="274.25">AbstractSSAJumpAggregator in ssajump.jl:43</text>
-<rect x="10" y="248" width="14.45" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="10" dx="4" y="259.25">execute_jumps! in coevolve.jl:114</text>
-<rect x="10" y="233" width="14.45" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="10" dx="4" y="244.25">update_state! in ssajump.jl:180</text>
-<rect x="10" y="218" width="14.45" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="10" dx="4" y="229.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="10" y="203" width="14.45" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="10" dx="4" y="214.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="10" y="188" width="14.45" height="15" rx="2" fill="#F3004D" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="10" dx="4" y="199.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="10" y="173" width="14.45" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="10" dx="4" y="184.25">CallWrapper in FunctionWrappers.jl:65</text>
-<rect x="10" y="158" width="14.45" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="10" dx="4" y="169.25">#71 in coevolve.jl:83</text>
-<rect x="10" y="143" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="10" dx="4" y="154.25">affect_recursion! in hawkes.jl:66</text>
-<rect x="10" y="128" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="10" dx="4" y="139.25">* in float.jl:385</text>
-<rect x="14.82" y="128" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="14.82" dx="4" y="139.25">exp in exp.jl:326</text>
-<rect x="14.82" y="113" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
-<text x="14.82" dx="4" y="124.25">exp_impl in exp.jl:218</text>
-<rect x="14.82" y="98" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="14.82" dx="4" y="109.25">+ in float.jl:383</text>
-<rect x="19.64" y="143" width="4.81" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="19.64" dx="4" y="154.25">affect_recursion! in hawkes.jl:67</text>
-<rect x="19.64" y="128" width="4.81" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="19.64" dx="4" y="139.25">+ in float.jl:383</text>
-<rect x="24.45" y="248" width="867.28" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="24.45" dx="4" y="259.25">execute_jumps! in coevolve.jl:116</text>
-<rect x="24.45" y="233" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="24.45" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:0</text>
-<rect x="29.27" y="233" width="795" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="29.27" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:131</text>
-<rect x="29.27" y="218" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="29.27" dx="4" y="229.25">next_time in float.jl:0</text>
-<rect x="38.91" y="218" width="14.45" height="15" rx="2" fill="#E1B2FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="38.91" dx="4" y="229.25">_randexp in normal.jl:120</text>
-<rect x="53.36" y="218" width="14.46" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="53.36" dx="4" y="229.25">next_time in coevolve.jl:0</text>
-<rect x="67.82" y="218" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="67.82" dx="4" y="229.25">next_time in coevolve.jl:158</text>
-<rect x="72.64" y="218" width="9.63" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="72.64" dx="4" y="229.25">next_time in coevolve.jl:159</text>
-<rect x="72.64" y="203" width="9.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/UnPack/EkESO/src/"/>
-<text x="72.64" dx="4" y="214.25">macro expansion in UnPack.jl:101</text>
-<rect x="72.64" y="188" width="9.63" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/UnPack/EkESO/src/"/>
-<text x="72.64" dx="4" y="199.25">unpack in UnPack.jl:34</text>
-<rect x="72.64" y="173" width="9.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="72.64" dx="4" y="184.25">getproperty in Base.jl:38</text>
-<rect x="82.27" y="218" width="139.73" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="82.27" dx="4" y="229.25">next_time in coevolve.jl:164</text>
-<rect x="82.27" y="203" width="139.73" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="82.27" dx="4" y="214.25">get_urate in coevolve.jl:143</text>
-<rect x="82.27" y="188" width="139.73" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="82.27" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="82.27" y="173" width="139.73" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="82.27" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="82.27" y="158" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="82.27" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:135</text>
-<rect x="82.27" y="143" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="82.27" dx="4" y="154.25">!= in operators.jl:282</text>
-<rect x="82.27" y="128" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="82.27" dx="4" y="139.25">== in pointer.jl:155</text>
-<rect x="82.27" y="113" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="82.27" dx="4" y="124.25">== in promotion.jl:477</text>
-<rect x="87.09" y="158" width="134.91" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="87.09" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="87.09" y="143" width="86.73" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="87.09" dx="4" y="154.25">CallWrapper in FunctionWrappers.jl:65</text>
-<rect x="87.09" y="128" width="9.64" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="87.09" dx="4" y="139.25">rate_recursion in array.jl:0</text>
-<rect x="96.73" y="128" width="77.09" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="96.73" dx="4" y="139.25">rate_recursion in hawkes.jl:5</text>
-<rect x="96.73" y="113" width="9.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="96.73" dx="4" y="124.25">* in float.jl:385</text>
-<rect x="106.36" y="113" width="14.46" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="106.36" dx="4" y="124.25">+ in float.jl:383</text>
-<rect x="120.82" y="113" width="53" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
-<text x="120.82" dx="4" y="124.25">exp in exp.jl:326</text>
-<rect x="120.82" y="98" width="9.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="120.82" dx="4" y="109.25">exp_impl in exp.jl:211</text>
-<rect x="120.82" y="83" width="9.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="120.82" dx="4" y="94.25">muladd in float.jl:388</text>
-<rect x="130.45" y="98" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
-<text x="130.45" dx="4" y="109.25">exp_impl in exp.jl:214</text>
-<rect x="130.45" y="83" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="130.45" dx="4" y="94.25">muladd in float.jl:388</text>
-<rect x="135.27" y="98" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="135.27" dx="4" y="109.25">exp_impl in exp.jl:217</text>
-<rect x="135.27" y="83" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
-<text x="135.27" dx="4" y="94.25">table_unpack in exp.jl:183</text>
-<rect x="135.27" y="68" width="9.64" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="135.27" dx="4" y="79.25">&amp; in int.jl:340</text>
-<rect x="144.91" y="98" width="24.09" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
-<text x="144.91" dx="4" y="109.25">exp_impl in exp.jl:218</text>
-<rect x="144.91" y="83" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="144.91" dx="4" y="94.25">+ in float.jl:383</text>
-<rect x="149.73" y="83" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="149.73" dx="4" y="94.25">muladd in float.jl:388</text>
-<rect x="154.55" y="83" width="14.45" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
-<text x="154.55" dx="4" y="94.25">expm1b_kernel in exp.jl:78</text>
-<rect x="154.55" y="68" width="14.45" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="154.55" dx="4" y="79.25">* in float.jl:385</text>
-<rect x="222" y="218" width="24.09" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="222" dx="4" y="229.25">next_time in coevolve.jl:167</text>
-<rect x="222" y="203" width="24.09" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="222" dx="4" y="214.25">getindex in mutable_binary_heap.jl:283</text>
-<rect x="222" y="188" width="24.09" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="222" dx="4" y="199.25">getindex in array.jl:924</text>
-<rect x="246.09" y="218" width="9.64" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="246.09" dx="4" y="229.25">next_time in coevolve.jl:171</text>
-<rect x="246.09" y="203" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="246.09" dx="4" y="214.25">+ in float.jl:383</text>
-<rect x="255.73" y="218" width="192.72" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="255.73" dx="4" y="229.25">next_time in coevolve.jl:174</text>
-<rect x="255.73" y="203" width="192.72" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="255.73" dx="4" y="214.25">get_rateinterval in coevolve.jl:147</text>
-<rect x="255.73" y="188" width="192.72" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="255.73" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="255.73" y="173" width="192.72" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="255.73" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="255.73" y="158" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="255.73" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:135</text>
-<rect x="255.73" y="143" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="255.73" dx="4" y="154.25">assume in FunctionWrappers.jl:10</text>
-<rect x="260.55" y="158" width="187.9" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="260.55" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="260.55" y="143" width="96.36" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="260.55" dx="4" y="154.25">CallWrapper in FunctionWrappers.jl:65</text>
-<rect x="260.55" y="128" width="96.36" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="260.55" dx="4" y="139.25">rateinterval in hawkes.jl:61</text>
-<rect x="260.55" y="113" width="24.09" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="260.55" dx="4" y="124.25">getindex in array.jl:924</text>
-<rect x="284.64" y="113" width="9.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="284.64" dx="4" y="124.25">== in float.jl:410</text>
-<rect x="294.27" y="113" width="9.64" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="294.27" dx="4" y="124.25">* in promotion.jl:389</text>
-<rect x="294.27" y="98" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="294.27" dx="4" y="109.25">* in float.jl:385</text>
-<rect x="303.91" y="113" width="48.18" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="303.91" dx="4" y="124.25">/ in promotion.jl:391</text>
-<rect x="303.91" y="98" width="48.18" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="303.91" dx="4" y="109.25">/ in float.jl:386</text>
-<rect x="448.45" y="218" width="207.19" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="448.45" dx="4" y="229.25">next_time in coevolve.jl:177</text>
-<rect x="448.45" y="203" width="207.19" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="448.45" dx="4" y="214.25">get_urate in coevolve.jl:143</text>
-<rect x="448.45" y="188" width="14.46" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="448.45" dx="4" y="199.25">getproperty in Base.jl:38</text>
-<rect x="462.91" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="462.91" dx="4" y="199.25">getindex in array.jl:924</text>
-<rect x="467.73" y="188" width="187.91" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="467.73" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="467.73" y="173" width="187.91" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="467.73" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="467.73" y="158" width="187.91" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="467.73" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="467.73" y="143" width="139.72" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="467.73" dx="4" y="154.25">CallWrapper in FunctionWrappers.jl:65</text>
-<rect x="467.73" y="128" width="14.45" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="467.73" dx="4" y="139.25">rate_recursion in array.jl:0</text>
-<rect x="482.18" y="128" width="120.46" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="482.18" dx="4" y="139.25">rate_recursion in hawkes.jl:5</text>
-<rect x="482.18" y="113" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="482.18" dx="4" y="124.25">getindex in array.jl:924</text>
-<rect x="487" y="113" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="487" dx="4" y="124.25">setindex! in array.jl:966</text>
-<rect x="496.64" y="113" width="14.45" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="496.64" dx="4" y="124.25">* in float.jl:385</text>
-<rect x="511.09" y="113" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="511.09" dx="4" y="124.25">+ in float.jl:383</text>
-<rect x="515.91" y="113" width="81.91" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
-<text x="515.91" dx="4" y="124.25">exp in exp.jl:326</text>
-<rect x="515.91" y="98" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="515.91" dx="4" y="109.25">exp_impl in exp.jl:211</text>
-<rect x="515.91" y="83" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="515.91" dx="4" y="94.25">muladd in float.jl:388</text>
-<rect x="525.55" y="98" width="9.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
-<text x="525.55" dx="4" y="109.25">exp_impl in exp.jl:212</text>
-<rect x="525.55" y="83" width="9.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="525.55" dx="4" y="94.25">reinterpret in essentials.jl:438</text>
-<rect x="535.18" y="98" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="535.18" dx="4" y="109.25">exp_impl in exp.jl:214</text>
-<rect x="535.18" y="83" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="535.18" dx="4" y="94.25">muladd in float.jl:388</text>
-<rect x="540" y="98" width="9.64" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
-<text x="540" dx="4" y="109.25">exp_impl in exp.jl:217</text>
-<rect x="540" y="83" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
-<text x="540" dx="4" y="94.25">table_unpack in exp.jl:183</text>
-<rect x="540" y="68" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="540" dx="4" y="79.25">reinterpret in essentials.jl:438</text>
-<rect x="544.82" y="83" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
-<text x="544.82" dx="4" y="94.25">table_unpack in exp.jl:184</text>
-<rect x="544.82" y="68" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="544.82" dx="4" y="79.25">&amp;gt;&amp;gt; in int.jl:501</text>
-<rect x="544.82" y="53" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="544.82" dx="4" y="64.25">&amp;gt;&amp;gt; in int.jl:495</text>
-<rect x="549.64" y="98" width="24.09" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="549.64" dx="4" y="109.25">exp_impl in exp.jl:218</text>
-<rect x="549.64" y="83" width="14.45" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="549.64" dx="4" y="94.25">+ in float.jl:383</text>
-<rect x="564.09" y="83" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
-<text x="564.09" dx="4" y="94.25">expm1b_kernel in exp.jl:78</text>
-<rect x="564.09" y="68" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="564.09" dx="4" y="79.25">* in float.jl:385</text>
-<rect x="568.91" y="68" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="568.91" dx="4" y="79.25">evalpoly in math.jl:177</text>
-<rect x="568.91" y="53" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="568.91" dx="4" y="64.25">macro expansion in math.jl:178</text>
-<rect x="568.91" y="38" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="568.91" dx="4" y="49.25">muladd in float.jl:388</text>
-<rect x="573.73" y="98" width="14.45" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
-<text x="573.73" dx="4" y="109.25">exp_impl in exp.jl:231</text>
-<rect x="573.73" y="83" width="14.45" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="573.73" dx="4" y="94.25">reinterpret in essentials.jl:438</text>
-<rect x="655.64" y="218" width="24.09" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="655.64" dx="4" y="229.25">next_time in coevolve.jl:178</text>
-<rect x="655.64" y="203" width="14.45" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="655.64" dx="4" y="214.25">/ in float.jl:386</text>
-<rect x="670.09" y="203" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="670.09" dx="4" y="214.25">randexp in normal.jl:118</text>
-<rect x="670.09" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="670.09" dx="4" y="199.25">rand in Random.jl:254</text>
-<rect x="670.09" y="173" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="670.09" dx="4" y="184.25">rand in Xoshiro.jl:200</text>
-<rect x="670.09" y="158" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="670.09" dx="4" y="169.25">rand in Random.jl:257</text>
-<rect x="670.09" y="143" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="670.09" dx="4" y="154.25">rand in Xoshiro.jl:130</text>
-<rect x="670.09" y="128" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="670.09" dx="4" y="139.25">&amp;lt;&amp;lt; in int.jl:503</text>
-<rect x="670.09" y="113" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="670.09" dx="4" y="124.25">&amp;lt;&amp;lt; in int.jl:496</text>
-<rect x="674.91" y="188" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="674.91" dx="4" y="199.25">_randexp in normal.jl:124</text>
-<rect x="674.91" y="173" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="674.91" dx="4" y="184.25">* in promotion.jl:389</text>
-<rect x="674.91" y="158" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="674.91" dx="4" y="169.25">* in float.jl:385</text>
-<rect x="679.73" y="218" width="9.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="679.73" dx="4" y="229.25">next_time in coevolve.jl:182</text>
-<rect x="679.73" y="203" width="9.63" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="679.73" dx="4" y="214.25">&amp;gt;= in operators.jl:429</text>
-<rect x="679.73" y="188" width="9.63" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="679.73" dx="4" y="199.25">&amp;lt;= in float.jl:413</text>
-<rect x="689.36" y="218" width="72.28" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="689.36" dx="4" y="229.25">next_time in coevolve.jl:184</text>
-<rect x="689.36" y="203" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="689.36" dx="4" y="214.25">getindex in array.jl:924</text>
-<rect x="694.18" y="203" width="57.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="694.18" dx="4" y="214.25">get_lrate in coevolve.jl:151</text>
-<rect x="694.18" y="188" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="694.18" dx="4" y="199.25">getindex in array.jl:924</text>
-<rect x="699" y="188" width="53" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="699" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="699" y="173" width="53" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="699" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="699" y="158" width="53" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="699" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="761.64" y="218" width="4.81" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="761.64" dx="4" y="229.25">next_time in coevolve.jl:185</text>
-<rect x="761.64" y="203" width="4.81" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="761.64" dx="4" y="214.25">&amp;lt; in float.jl:412</text>
-<rect x="766.45" y="218" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="766.45" dx="4" y="229.25">next_time in coevolve.jl:187</text>
-<rect x="766.45" y="203" width="9.64" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="766.45" dx="4" y="214.25">rand in Random.jl:257</text>
-<rect x="766.45" y="188" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="766.45" dx="4" y="199.25">rand in Random.jl:257</text>
-<rect x="766.45" y="173" width="9.64" height="15" rx="2" fill="#00B58B" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="766.45" dx="4" y="184.25">rand in Xoshiro.jl:210</text>
-<rect x="766.45" y="158" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="766.45" dx="4" y="169.25">rand in Random.jl:257</text>
-<rect x="766.45" y="143" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="766.45" dx="4" y="154.25">rand in Xoshiro.jl:130</text>
-<rect x="766.45" y="128" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="766.45" dx="4" y="139.25">&amp;lt;&amp;lt; in int.jl:503</text>
-<rect x="766.45" y="113" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="766.45" dx="4" y="124.25">&amp;lt;&amp;lt; in int.jl:496</text>
-<rect x="771.27" y="143" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="771.27" dx="4" y="154.25">rand in Xoshiro.jl:137</text>
-<rect x="771.27" y="128" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="771.27" dx="4" y="139.25">setproperty! in Base.jl:39</text>
-<rect x="776.09" y="218" width="14.46" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="776.09" dx="4" y="229.25">next_time in coevolve.jl:189</text>
-<rect x="776.09" y="203" width="14.46" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="776.09" dx="4" y="214.25">get_rate in coevolve.jl:155</text>
-<rect x="776.09" y="188" width="14.46" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="776.09" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="776.09" y="173" width="14.46" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="776.09" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="776.09" y="158" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="776.09" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:131</text>
-<rect x="776.09" y="143" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="776.09" dx="4" y="154.25">== in pointer.jl:155</text>
-<rect x="776.09" y="128" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="776.09" dx="4" y="139.25">== in promotion.jl:477</text>
-<rect x="780.91" y="158" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="780.91" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="780.91" y="143" width="9.64" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="780.91" dx="4" y="154.25">CallWrapper in FunctionWrappers.jl:65</text>
-<rect x="780.91" y="128" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="780.91" dx="4" y="139.25">rate_recursion in hawkes.jl:5</text>
-<rect x="780.91" y="113" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="780.91" dx="4" y="124.25">getindex in array.jl:924</text>
-<rect x="785.73" y="113" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
-<text x="785.73" dx="4" y="124.25">exp in exp.jl:326</text>
-<rect x="785.73" y="98" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
-<text x="785.73" dx="4" y="109.25">exp_impl in exp.jl:216</text>
-<rect x="785.73" y="83" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="785.73" dx="4" y="94.25">&amp;gt;&amp;gt; in int.jl:501</text>
-<rect x="785.73" y="68" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="785.73" dx="4" y="79.25">&amp;gt;&amp;gt; in int.jl:494</text>
-<rect x="790.55" y="218" width="14.45" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="790.55" dx="4" y="229.25">next_time in coevolve.jl:191</text>
-<rect x="790.55" y="203" width="14.45" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="790.55" dx="4" y="214.25">get_urate in coevolve.jl:143</text>
-<rect x="790.55" y="188" width="4.81" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="790.55" dx="4" y="199.25">getproperty in Base.jl:38</text>
-<rect x="795.36" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="795.36" dx="4" y="199.25">getindex in array.jl:924</text>
-<rect x="800.18" y="188" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="800.18" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
-<rect x="800.18" y="173" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="800.18" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
-<rect x="800.18" y="158" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="800.18" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
-<rect x="800.18" y="143" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
-<text x="800.18" dx="4" y="154.25">CallWrapper in FunctionWrappers.jl:65</text>
-<rect x="800.18" y="128" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/latent-relations/docs/overleaf-juliacon-2023/src/"/>
-<text x="800.18" dx="4" y="139.25">rate_recursion in hawkes.jl:5</text>
-<rect x="800.18" y="113" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
-<text x="800.18" dx="4" y="124.25">exp in exp.jl:326</text>
-<rect x="800.18" y="98" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
-<text x="800.18" dx="4" y="109.25">exp_impl in exp.jl:218</text>
-<rect x="800.18" y="83" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
-<text x="800.18" dx="4" y="94.25">expm1b_kernel in exp.jl:78</text>
-<rect x="800.18" y="68" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="800.18" dx="4" y="79.25">evalpoly in math.jl:177</text>
-<rect x="800.18" y="53" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="800.18" dx="4" y="64.25">macro expansion in math.jl:178</text>
-<rect x="800.18" y="38" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="800.18" dx="4" y="49.25">muladd in float.jl:388</text>
-<rect x="805" y="218" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="805" dx="4" y="229.25">next_time in coevolve.jl:192</text>
-<rect x="805" y="203" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="805" dx="4" y="214.25">randexp in normal.jl:118</text>
-<rect x="805" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="805" dx="4" y="199.25">rand in Random.jl:254</text>
-<rect x="805" y="173" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="805" dx="4" y="184.25">rand in Xoshiro.jl:200</text>
-<rect x="805" y="158" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="805" dx="4" y="169.25">rand in Random.jl:257</text>
-<rect x="805" y="143" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci4-2/julialang/julia-release-1-dot-8/usr/share/julia/stdlib/v1.8/Random/src/"/>
-<text x="805" dx="4" y="154.25">rand in Xoshiro.jl:130</text>
-<rect x="805" y="128" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="805" dx="4" y="139.25">&amp;lt;&amp;lt; in int.jl:503</text>
-<rect x="805" y="113" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="805" dx="4" y="124.25">&amp;lt;&amp;lt; in int.jl:496</text>
-<rect x="824.27" y="233" width="67.46" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/aggregators/"/>
-<text x="824.27" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:132</text>
-<rect x="824.27" y="218" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="824.27" dx="4" y="229.25">_heap_bubble_down! in mutable_binary_heap.jl:43</text>
-<rect x="829.09" y="218" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="829.09" dx="4" y="229.25">update! in mutable_binary_heap.jl:0</text>
-<rect x="833.91" y="218" width="9.64" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="833.91" dx="4" y="229.25">update! in mutable_binary_heap.jl:255</text>
-<rect x="843.55" y="218" width="4.81" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="843.55" dx="4" y="229.25">update! in mutable_binary_heap.jl:264</text>
-<rect x="843.55" y="203" width="4.81" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="843.55" dx="4" y="214.25">lt in ordering.jl:117</text>
-<rect x="843.55" y="188" width="4.81" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="843.55" dx="4" y="199.25">isless in float.jl:427</text>
-<rect x="843.55" y="173" width="4.81" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="843.55" dx="4" y="184.25">_fpint in float.jl:420</text>
-<rect x="843.55" y="158" width="4.81" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="843.55" dx="4" y="169.25">reinterpret in essentials.jl:438</text>
-<rect x="848.36" y="218" width="14.46" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="848.36" dx="4" y="229.25">update! in mutable_binary_heap.jl:265</text>
-<rect x="848.36" y="203" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="848.36" dx="4" y="214.25">_heap_bubble_up! in mutable_binary_heap.jl:25</text>
-<rect x="848.36" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="848.36" dx="4" y="199.25">getindex in array.jl:924</text>
-<rect x="853.18" y="203" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="853.18" dx="4" y="214.25">_heap_bubble_up! in mutable_binary_heap.jl:27</text>
-<rect x="853.18" y="188" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="853.18" dx="4" y="199.25">lt in ordering.jl:117</text>
-<rect x="853.18" y="173" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="853.18" dx="4" y="184.25">isless in float.jl:427</text>
-<rect x="853.18" y="158" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="853.18" dx="4" y="169.25">_fpint in float.jl:421</text>
-<rect x="853.18" y="143" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="853.18" dx="4" y="154.25">&amp;lt; in int.jl:83</text>
-<rect x="858" y="203" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="858" dx="4" y="214.25">_heap_bubble_up! in mutable_binary_heap.jl:29</text>
-<rect x="858" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="858" dx="4" y="199.25">setindex! in array.jl:966</text>
-<rect x="862.82" y="218" width="24.09" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="862.82" dx="4" y="229.25">update! in mutable_binary_heap.jl:267</text>
-<rect x="862.82" y="203" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="862.82" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:0</text>
-<rect x="867.64" y="203" width="9.63" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="867.64" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:67</text>
-<rect x="867.64" y="188" width="9.63" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="867.64" dx="4" y="199.25">lt in ordering.jl:117</text>
-<rect x="867.64" y="173" width="9.63" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
-<text x="867.64" dx="4" y="184.25">isless in float.jl:425</text>
-<rect x="877.27" y="203" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="877.27" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:76</text>
-<rect x="877.27" y="188" width="4.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
-<text x="877.27" dx="4" y="199.25">lt in ordering.jl:117</text>
-<rect x="877.27" y="173" width="4.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
-<text x="877.27" dx="4" y="184.25">isless in float.jl:425</text>
-<rect x="882.09" y="203" width="4.82" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/59MD0/src/heaps/"/>
-<text x="882.09" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:77</text>
-<rect x="882.09" y="188" width="4.82" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
-<text x="882.09" dx="4" y="199.25">setindex! in array.jl:966</text>
-<rect x="891.73" y="278" width="57.82" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="891.73" dx="4" y="289.25">step! in SSA_stepper.jl:268</text>
-<rect x="891.73" y="263" width="57.82" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="891.73" dx="4" y="274.25">savevalues! in SSA_stepper.jl:274</text>
-<rect x="891.73" y="248" width="57.82" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/JumpProcesses/a8QEW/src/"/>
-<text x="891.73" dx="4" y="259.25">savevalues! in SSA_stepper.jl:283</text>
-<rect x="891.73" y="233" width="57.82" height="15" rx="2" fill="#F6A60A" data-dinfo="./"/>
-<text x="891.73" dx="4" y="244.25">copy in array.jl:369</text>
+<g id="fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-frame" clip-path="url(#fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-clip)">
+<rect id="fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-bg" x="0" y="0" width="960" height="496"/>
+<text id="fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-caption" x="480" y="24">Profile results</text>
+<g id="fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd-viewport" transform="scale(1)">
+<rect x="10" y="443" width="939.6" height="15" rx="2" fill="#F3004D" data-dinfo=""/>
+<text x="10" dx="4" y="454.25"> in :-1</text>
+<rect x="10" y="428" width="939.6" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
+<text x="10" dx="4" y="439.25">eval in boot.jl:370</text>
+<rect x="10" y="413" width="939.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="10" dx="4" y="424.25">include in client.jl:478</text>
+<rect x="10" y="398" width="939.6" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
+<text x="10" dx="4" y="409.25">_include in loading.jl:1963</text>
+<rect x="10" y="383" width="939.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="10" dx="4" y="394.25">include_string in loading.jl:1903</text>
+<rect x="10" y="368" width="939.6" height="15" rx="2" fill="#D42137" data-dinfo="./"/>
+<text x="10" dx="4" y="379.25">eval in boot.jl:370</text>
+<rect x="10" y="353" width="939.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="10" dx="4" y="364.25">solve in solve.jl:1006</text>
+<rect x="10" y="338" width="939.6" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DiffEqBase/9rTlH/src/"/>
+<text x="10" dx="4" y="349.25">#solve#35 in solve.jl:1007</text>
+<rect x="10" y="323" width="939.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="10" dx="4" y="334.25">__solve in SSA_stepper.jl:108</text>
+<rect x="10" y="308" width="939.6" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="10" dx="4" y="319.25">#__solve#218 in SSA_stepper.jl:112</text>
+<rect x="10" y="293" width="939.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="10" dx="4" y="304.25">solve! in SSA_stepper.jl:119</text>
+<rect x="10" y="278" width="754" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="10" dx="4" y="289.25">step! in SSA_stepper.jl:273</text>
+<rect x="10" y="263" width="17.4" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="10" dx="4" y="274.25">CoevolveJumpAggregation in coevolve.jl:73</text>
+<rect x="10" y="248" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="10" dx="4" y="259.25">accept_next_jump! in coevolve.jl:0</text>
+<rect x="15.8" y="248" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="15.8" dx="4" y="259.25">accept_next_jump! in coevolve.jl:203</text>
+<rect x="15.8" y="233" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="15.8" dx="4" y="244.25">get_rate in coevolve.jl:255</text>
+<rect x="15.8" y="218" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="15.8" dx="4" y="229.25">getindex in essentials.jl:13</text>
+<rect x="21.6" y="248" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="21.6" dx="4" y="259.25">accept_next_jump! in coevolve.jl:215</text>
+<rect x="21.6" y="233" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="21.6" dx="4" y="244.25">next_candidate_time! in coevolve.jl:283</text>
+<rect x="21.6" y="218" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="21.6" dx="4" y="229.25">get_rateinterval in coevolve.jl:247</text>
+<rect x="21.6" y="203" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="21.6" dx="4" y="214.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="21.6" y="188" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="21.6" dx="4" y="199.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="21.6" y="173" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="21.6" dx="4" y="184.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="27.4" y="263" width="736.6" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="27.4" dx="4" y="274.25">CoevolveJumpAggregation in coevolve.jl:78</text>
+<rect x="27.4" y="248" width="63.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="27.4" dx="4" y="259.25">execute_jumps! in coevolve.jl:160</text>
+<rect x="27.4" y="233" width="63.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="27.4" dx="4" y="244.25">update_state! in ssajump.jl:223</text>
+<rect x="27.4" y="218" width="63.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="27.4" dx="4" y="229.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="27.4" y="203" width="63.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="27.4" dx="4" y="214.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="27.4" y="188" width="63.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="27.4" dx="4" y="199.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="27.4" y="173" width="58" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="27.4" dx="4" y="184.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="27.4" y="158" width="58" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="27.4" dx="4" y="169.25">#70 in coevolve.jl:126</text>
+<rect x="27.4" y="143" width="23.2" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="27.4" dx="4" y="154.25">affect_recursion! in hawkes.jl:70</text>
+<rect x="27.4" y="128" width="23.2" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="27.4" dx="4" y="139.25">iterate in array.jl:893</text>
+<rect x="27.4" y="113" width="23.2" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="27.4" dx="4" y="124.25">iterate in array.jl:893</text>
+<rect x="50.6" y="143" width="34.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="50.6" dx="4" y="154.25">affect_recursion! in hawkes.jl:71</text>
+<rect x="50.6" y="128" width="17.4" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="50.6" dx="4" y="139.25">setindex! in array.jl:969</text>
+<rect x="68" y="128" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="68" dx="4" y="139.25">getindex in essentials.jl:13</text>
+<rect x="73.8" y="128" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
+<text x="73.8" dx="4" y="139.25">exp in exp.jl:325</text>
+<rect x="73.8" y="113" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
+<text x="73.8" dx="4" y="124.25">exp_impl in exp.jl:215</text>
+<rect x="73.8" y="98" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
+<text x="73.8" dx="4" y="109.25">table_unpack in exp.jl:182</text>
+<rect x="73.8" y="83" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="73.8" dx="4" y="94.25">reinterpret in essentials.jl:513</text>
+<rect x="91.2" y="248" width="672.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="91.2" dx="4" y="259.25">execute_jumps! in coevolve.jl:162</text>
+<rect x="91.2" y="233" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="91.2" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:227</text>
+<rect x="97" y="233" width="498.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="97" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:231</text>
+<rect x="97" y="218" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/cache/build/default-amdci5-2/julialang/julia-release-1-dot-9/usr/share/julia/stdlib/v1.9/Random/src/"/>
+<text x="97" dx="4" y="229.25">_randexp in normal.jl:129</text>
+<rect x="102.8" y="218" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="102.8" dx="4" y="229.25">next_time in coevolve.jl:258</text>
+<rect x="108.6" y="218" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="108.6" dx="4" y="229.25">next_time in coevolve.jl:259</text>
+<rect x="108.6" y="203" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/UnPack/EkESO/src/"/>
+<text x="108.6" dx="4" y="214.25">macro expansion in UnPack.jl:101</text>
+<rect x="108.6" y="188" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/UnPack/EkESO/src/"/>
+<text x="108.6" dx="4" y="199.25">unpack in UnPack.jl:34</text>
+<rect x="108.6" y="173" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="108.6" dx="4" y="184.25">getproperty in Base.jl:37</text>
+<rect x="114.4" y="218" width="249.4" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="114.4" dx="4" y="229.25">next_time in coevolve.jl:264</text>
+<rect x="114.4" y="203" width="249.4" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="114.4" dx="4" y="214.25">get_urate in coevolve.jl:243</text>
+<rect x="114.4" y="188" width="249.4" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="114.4" dx="4" y="199.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="114.4" y="173" width="249.4" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="114.4" dx="4" y="184.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="114.4" y="158" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="114.4" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:131</text>
+<rect x="114.4" y="143" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="114.4" dx="4" y="154.25">== in pointer.jl:163</text>
+<rect x="114.4" y="128" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="114.4" dx="4" y="139.25">== in promotion.jl:499</text>
+<rect x="120.2" y="158" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="120.2" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:136</text>
+<rect x="120.2" y="143" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="120.2" dx="4" y="154.25">getproperty in Base.jl:37</text>
+<rect x="126" y="158" width="237.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="126" dx="4" y="169.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="126" y="143" width="121.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="126" dx="4" y="154.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="126" y="128" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="126" dx="4" y="139.25">rate_recursion in essentials.jl:0</text>
+<rect x="137.6" y="128" width="104.4" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="137.6" dx="4" y="139.25">rate_recursion in hawkes.jl:4</text>
+<rect x="137.6" y="113" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="137.6" dx="4" y="124.25">setindex! in array.jl:969</text>
+<rect x="143.4" y="113" width="17.4" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="143.4" dx="4" y="124.25">* in float.jl:410</text>
+<rect x="160.8" y="113" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="160.8" dx="4" y="124.25">+ in float.jl:408</text>
+<rect x="166.6" y="113" width="75.4" height="15" rx="2" fill="#6FDC91" data-dinfo="./special/"/>
+<text x="166.6" dx="4" y="124.25">exp in exp.jl:325</text>
+<rect x="166.6" y="98" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
+<text x="166.6" dx="4" y="109.25">exp_impl in exp.jl:209</text>
+<rect x="166.6" y="83" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="166.6" dx="4" y="94.25">muladd in float.jl:413</text>
+<rect x="172.4" y="98" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
+<text x="172.4" dx="4" y="109.25">exp_impl in exp.jl:210</text>
+<rect x="172.4" y="83" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="172.4" dx="4" y="94.25">reinterpret in essentials.jl:513</text>
+<rect x="178.2" y="98" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
+<text x="178.2" dx="4" y="109.25">exp_impl in exp.jl:211</text>
+<rect x="178.2" y="83" width="11.6" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="178.2" dx="4" y="94.25">- in float.jl:409</text>
+<rect x="189.8" y="98" width="23.2" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
+<text x="189.8" dx="4" y="109.25">exp_impl in exp.jl:216</text>
+<rect x="189.8" y="83" width="23.2" height="15" rx="2" fill="#E1B2FF" data-dinfo="./special/"/>
+<text x="189.8" dx="4" y="94.25">expm1b_kernel in exp.jl:78</text>
+<rect x="189.8" y="68" width="11.6" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="189.8" dx="4" y="79.25">* in float.jl:410</text>
+<rect x="201.4" y="68" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="201.4" dx="4" y="79.25">evalpoly in math.jl:177</text>
+<rect x="201.4" y="53" width="11.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="201.4" dx="4" y="64.25">macro expansion in math.jl:178</text>
+<rect x="201.4" y="38" width="11.6" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="201.4" dx="4" y="49.25">muladd in float.jl:413</text>
+<rect x="213" y="98" width="17.4" height="15" rx="2" fill="#2CA3FF" data-dinfo="./special/"/>
+<text x="213" dx="4" y="109.25">exp_impl in exp.jl:218</text>
+<rect x="213" y="83" width="17.4" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="213" dx="4" y="94.25">abs in float.jl:609</text>
+<rect x="230.4" y="98" width="11.6" height="15" rx="2" fill="#00B58B" data-dinfo="./special/"/>
+<text x="230.4" dx="4" y="109.25">exp_impl in exp.jl:229</text>
+<rect x="230.4" y="83" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="230.4" dx="4" y="94.25">reinterpret in essentials.jl:513</text>
+<rect x="236.2" y="83" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="236.2" dx="4" y="94.25">+ in int.jl:87</text>
+<rect x="363.8" y="218" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="363.8" dx="4" y="229.25">next_time in coevolve.jl:274</text>
+<rect x="363.8" y="203" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="363.8" dx="4" y="214.25">/ in float.jl:411</text>
+<rect x="369.6" y="203" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/cache/build/default-amdci5-2/julialang/julia-release-1-dot-9/usr/share/julia/stdlib/v1.9/Random/src/"/>
+<text x="369.6" dx="4" y="214.25">randexp in normal.jl:127</text>
+<rect x="375.4" y="218" width="220.4" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="375.4" dx="4" y="229.25">next_time in coevolve.jl:275</text>
+<rect x="375.4" y="203" width="11.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="375.4" dx="4" y="214.25">next_candidate_time! in array.jl:0</text>
+<rect x="387" y="203" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="387" dx="4" y="214.25">next_candidate_time! in coevolve.jl:0</text>
+<rect x="392.8" y="203" width="133.4" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="392.8" dx="4" y="214.25">next_candidate_time! in coevolve.jl:283</text>
+<rect x="392.8" y="188" width="133.4" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="392.8" dx="4" y="199.25">get_rateinterval in coevolve.jl:247</text>
+<rect x="392.8" y="173" width="133.4" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.8" dx="4" y="184.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="392.8" y="158" width="133.4" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.8" dx="4" y="169.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="392.8" y="143" width="133.4" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.8" dx="4" y="154.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="392.8" y="128" width="63.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="392.8" dx="4" y="139.25">CallWrapper in FunctionWrappers.jl:65</text>
+<rect x="392.8" y="113" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="392.8" dx="4" y="124.25">rateinterval in hawkes.jl:0</text>
+<rect x="398.6" y="113" width="58" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/paper/src/"/>
+<text x="398.6" dx="4" y="124.25">rateinterval in hawkes.jl:66</text>
+<rect x="398.6" y="98" width="34.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="398.6" dx="4" y="109.25">getindex in essentials.jl:13</text>
+<rect x="433.4" y="98" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="433.4" dx="4" y="109.25">getindex in tuple.jl:29</text>
+<rect x="526.2" y="203" width="11.6" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="526.2" dx="4" y="214.25">next_candidate_time! in coevolve.jl:285</text>
+<rect x="526.2" y="188" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="526.2" dx="4" y="199.25">+ in float.jl:408</text>
+<rect x="537.8" y="203" width="58" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="537.8" dx="4" y="214.25">next_candidate_time! in coevolve.jl:292</text>
+<rect x="537.8" y="188" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="537.8" dx="4" y="199.25">getindex in essentials.jl:13</text>
+<rect x="543.6" y="188" width="52.2" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="543.6" dx="4" y="199.25">get_lrate in coevolve.jl:251</text>
+<rect x="543.6" y="173" width="52.2" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="543.6" dx="4" y="184.25">FunctionWrapper in FunctionWrappers.jl:144</text>
+<rect x="543.6" y="158" width="52.2" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="543.6" dx="4" y="169.25">do_ccall in FunctionWrappers.jl:125</text>
+<rect x="543.6" y="143" width="52.2" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/FunctionWrappers/Q5cBx/src/"/>
+<text x="543.6" dx="4" y="154.25">macro expansion in FunctionWrappers.jl:137</text>
+<rect x="595.8" y="233" width="145" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="595.8" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:232</text>
+<rect x="595.8" y="218" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="595.8" dx="4" y="229.25">update! in mutable_binary_heap.jl:0</text>
+<rect x="607.4" y="218" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="607.4" dx="4" y="229.25">update! in mutable_binary_heap.jl:255</text>
+<rect x="613.2" y="218" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="613.2" dx="4" y="229.25">update! in mutable_binary_heap.jl:261</text>
+<rect x="613.2" y="203" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="613.2" dx="4" y="214.25">getindex in essentials.jl:13</text>
+<rect x="619" y="218" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="619" dx="4" y="229.25">update! in mutable_binary_heap.jl:264</text>
+<rect x="619" y="203" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="619" dx="4" y="214.25">lt in ordering.jl:117</text>
+<rect x="619" y="188" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="619" dx="4" y="199.25">isless in float.jl:548</text>
+<rect x="624.8" y="218" width="29" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="624.8" dx="4" y="229.25">update! in mutable_binary_heap.jl:265</text>
+<rect x="624.8" y="203" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="624.8" dx="4" y="214.25">_heap_bubble_up! in mutable_binary_heap.jl:0</text>
+<rect x="630.6" y="203" width="23.2" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="630.6" dx="4" y="214.25">_heap_bubble_up! in mutable_binary_heap.jl:29</text>
+<rect x="630.6" y="188" width="23.2" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="630.6" dx="4" y="199.25">setindex! in array.jl:969</text>
+<rect x="653.8" y="218" width="81.2" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="653.8" dx="4" y="229.25">update! in mutable_binary_heap.jl:267</text>
+<rect x="653.8" y="203" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="653.8" dx="4" y="214.25">_heap_bubble_down! in array.jl:0</text>
+<rect x="659.6" y="203" width="23.2" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="659.6" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:0</text>
+<rect x="682.8" y="203" width="11.6" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="682.8" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:62</text>
+<rect x="682.8" y="188" width="11.6" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="682.8" dx="4" y="199.25">getindex in essentials.jl:13</text>
+<rect x="694.4" y="203" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="694.4" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:67</text>
+<rect x="694.4" y="188" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="694.4" dx="4" y="199.25">lt in ordering.jl:117</text>
+<rect x="694.4" y="173" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="694.4" dx="4" y="184.25">isless in float.jl:548</text>
+<rect x="700.2" y="203" width="17.4" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="700.2" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:76</text>
+<rect x="700.2" y="188" width="11.6" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="700.2" dx="4" y="199.25">lt in ordering.jl:117</text>
+<rect x="700.2" y="173" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="700.2" dx="4" y="184.25">isless in float.jl:548</text>
+<rect x="706" y="173" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="706" dx="4" y="184.25">isless in float.jl:550</text>
+<rect x="706" y="158" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="706" dx="4" y="169.25">_fpint in float.jl:543</text>
+<rect x="706" y="143" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="706" dx="4" y="154.25">reinterpret in essentials.jl:513</text>
+<rect x="717.6" y="203" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="717.6" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:77</text>
+<rect x="717.6" y="188" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="717.6" dx="4" y="199.25">setindex! in array.jl:969</text>
+<rect x="723.4" y="203" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/.julia/packages/DataStructures/CvTHU/src/heaps/"/>
+<text x="723.4" dx="4" y="214.25">_heap_bubble_down! in mutable_binary_heap.jl:98</text>
+<rect x="723.4" y="188" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="723.4" dx="4" y="199.25">setindex! in array.jl:969</text>
+<rect x="740.8" y="233" width="11.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="740.8" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:233</text>
+<rect x="740.8" y="218" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="740.8" dx="4" y="229.25">setindex! in array.jl:969</text>
+<rect x="752.4" y="233" width="11.6" height="15" rx="2" fill="#6FDC91" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/aggregators/"/>
+<text x="752.4" dx="4" y="244.25">update_dependent_rates! in coevolve.jl:234</text>
+<rect x="752.4" y="218" width="11.6" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="752.4" dx="4" y="229.25">iterate in iterators.jl:202</text>
+<rect x="752.4" y="203" width="11.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="752.4" dx="4" y="214.25">iterate in array.jl:893</text>
+<rect x="752.4" y="188" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="752.4" dx="4" y="199.25">getindex in essentials.jl:13</text>
+<rect x="758.2" y="188" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="758.2" dx="4" y="199.25">&amp;lt; in int.jl:494</text>
+<rect x="758.2" y="173" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="758.2" dx="4" y="184.25">&amp;lt; in int.jl:487</text>
+<rect x="764" y="278" width="185.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="764" dx="4" y="289.25">step! in SSA_stepper.jl:285</text>
+<rect x="764" y="263" width="185.6" height="15" rx="2" fill="#E1B2FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="764" dx="4" y="274.25">savevalues! in SSA_stepper.jl:291</text>
+<rect x="764" y="248" width="11.6" height="15" rx="2" fill="#2CA3FF" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="764" dx="4" y="259.25">savevalues! in SSA_stepper.jl:299</text>
+<rect x="764" y="233" width="5.8" height="15" rx="2" fill="#E1B2FF" data-dinfo="./"/>
+<text x="764" dx="4" y="244.25">push! in array.jl:1061</text>
+<rect x="764" y="218" width="5.8" height="15" rx="2" fill="#2CA3FF" data-dinfo="./"/>
+<text x="764" dx="4" y="229.25">_growend! in array.jl:1014</text>
+<rect x="769.8" y="233" width="5.8" height="15" rx="2" fill="#6FDC91" data-dinfo="./"/>
+<text x="769.8" dx="4" y="244.25">push! in array.jl:1062</text>
+<rect x="769.8" y="218" width="5.8" height="15" rx="2" fill="#00B58B" data-dinfo="./"/>
+<text x="769.8" dx="4" y="229.25">setindex! in array.jl:969</text>
+<rect x="775.6" y="248" width="174" height="15" rx="2" fill="#00B58B" data-dinfo="/home/gzagatti/phd/lrpp/docs/JumpProcesses.jl/src/"/>
+<text x="775.6" dx="4" y="259.25">savevalues! in SSA_stepper.jl:300</text>
+<rect x="775.6" y="233" width="174" height="15" rx="2" fill="#FFA000" data-dinfo="./"/>
+<text x="775.6" dx="4" y="244.25">copy in array.jl:365</text>
 </g></g>
 <script><![CDATA[
 // Snap.svg 0.3.0
@@ -896,10 +752,10 @@ f+=g+"]",i[b]=f}return Function("val","return Snap.path.toString.call(["+i+"])")
 <script><![CDATA[
 if (typeof require === 'function' && define.amd) {
     require(['ProfileSVG'], function (ProfileSVG) {
-        ProfileSVG.initialize("fig-fbf4e6b8d3194d7381d73515a83b77dc");
+        ProfileSVG.initialize("fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd");
     });
 } else {
-    ProfileSVG.initialize("fig-fbf4e6b8d3194d7381d73515a83b77dc");
+    ProfileSVG.initialize("fig-9ae765ed9e1c4f9e8d48e0b5e2d889cd");
 }
 ]]></script>
 </svg>

@@ -1,7 +1,8 @@
 # Implementation the original Next Reaction Method
 # Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
 
-mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <: AbstractSSAJumpAggregator
+mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -38,10 +39,11 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     pq = MutableBinaryMinHeap{T}()
 
-    NRMJumpAggregation{T, S, F1, F2, RNG, typeof(dg), typeof(pq)}(nj, nj, njt, et, crs, sr,
-                                                                  maj,
-                                                                  rs, affs!, sps, rng, dg,
-                                                                  pq)
+    affecttype = F2 <: Tuple ? F2 : Any
+    NRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(pq)}(nj, nj, njt, et,
+                                                                          crs, sr, maj,
+                                                                          rs, affs!, sps,
+                                                                          rng, dg, pq)
 end
 
 +############################# Required Functions ##############################
@@ -66,9 +68,9 @@ function initialize!(p::NRMJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t)
+function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
-    u = update_state!(p, integrator, u)
+    u = update_state!(p, integrator, u, affects!)
 
     # update current jump rates and times
     update_dependent_rates!(p, u, params, t)

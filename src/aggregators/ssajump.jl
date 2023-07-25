@@ -17,11 +17,9 @@ An aggregator interface for SSA-like algorithms.
 
 ### Optional fields:
 
-  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should
-
-    # be updated when rx i occurs.
+  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should be updated when rx i occurs.
 """
-abstract type AbstractSSAJumpAggregator <: AbstractJumpAggregator end
+abstract type AbstractSSAJumpAggregator{T, S, F1, F2, RNG} <: AbstractJumpAggregator end
 
 function DiscreteCallback(c::AbstractSSAJumpAggregator)
     DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
@@ -36,24 +34,65 @@ end
 # execute_jumps!
 # generate_jumps!
 
+@inline function makewrapper(::Type{T}, aff) where {T}
+    # rewrap existing wrappers
+    if aff isa FunctionWrappers.FunctionWrapper
+        T(aff.obj[])
+    elseif aff isa Function
+        T(aff)
+    else
+        error("Invalid type of affect function, $(typeof(aff)), expected a Function or FunctionWrapper.")
+    end
+end
+
+@inline function concretize_affects!(p::AbstractSSAJumpAggregator,
+                                     ::I) where {I <: DiffEqBase.DEIntegrator}
+    if (p.affects! isa Vector) &&
+       !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
+        p.affects! = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in p.affects!]
+    end
+    nothing
+end
+
+@inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
+                                     ::I) where {T, S, F1, F2 <: Tuple,
+                                                 I <: DiffEqBase.DEIntegrator}
+    nothing
+end
+
+# setting up a new simulation
+function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
+    concretize_affects!(p, integrator)
+    initialize!(p, integrator, u, integrator.p, t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    u_modified!(integrator, false)
+    nothing
+end
+
 # condition for jump to occur
 @inline function (p::AbstractSSAJumpAggregator)(u, t, integrator)
     p.next_jump_time == t
 end
 
 # executing jump at the next jump time
-function (p::AbstractSSAJumpAggregator)(integrator)
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: DiffEqBase.DEIntegrator}
+    affects! = p.affects!
+    if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    else
+        error("Error, invalid affects! type. Expected a vector of function wrappers and got $(typeof(affects!))")
+    end
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
 
-# setting up a new simulation
-function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
-    initialize!(p, integrator, u, integrator.p, t)
+function (p::AbstractSSAJumpAggregator{T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where
+    {T, S, F1, F2 <: Union{Tuple, Nothing}}
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
-    u_modified!(integrator, false)
     nothing
 end
 
@@ -170,7 +209,7 @@ end
 
 Execute `p.next_jump`.
 """
-@inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u)
+@inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u, affects!)
     @unpack ma_jumps, next_jump = p
     num_ma_rates = get_num_majumps(ma_jumps)
     if next_jump <= num_ma_rates # is next jump a mass action jump
@@ -181,12 +220,34 @@ Execute `p.next_jump`.
         end
     else
         idx = next_jump - num_ma_rates
-        @inbounds p.affects![idx](integrator)
+        @inbounds affects![idx](integrator)
     end
 
     # save jump that was just executed
     p.prev_jump = next_jump
     return integrator.u
+end
+
+@generated function update_state!(p::AbstractSSAJumpAggregator, integrator, u,
+                                  affects!::T) where {T <: Tuple}
+    quote
+        @unpack ma_jumps, next_jump = p
+        num_ma_rates = get_num_majumps(ma_jumps)
+        if next_jump <= num_ma_rates # is next jump a mass action jump
+            if u isa SVector
+                integrator.u = executerx(u, next_jump, ma_jumps)
+            else
+                @inbounds executerx!(u, next_jump, ma_jumps)
+            end
+        else
+            idx = next_jump - num_ma_rates
+            Base.Cartesian.@nif $(fieldcount(T)) i->(i == idx) i->(@inbounds affects![i](integrator)) i->(@inbounds affects![fieldcount(T)](integrator))
+        end
+
+        # save jump that was just executed
+        p.prev_jump = next_jump
+        return integrator.u
+    end
 end
 
 """

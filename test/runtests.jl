@@ -1,8 +1,11 @@
+#! format: off
 using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
     @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
     @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
+    @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
+    @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end
     @time @safetestset "Monte Carlo Tests" begin include("monte_carlo_test.jl") end
     @time @safetestset "Split Coupled Tests" begin include("splitcoupled.jl") end
     @time @safetestset "SSA Tests" begin include("ssa_tests.jl") end
@@ -13,9 +16,13 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
+    @static if VERSION >= v"1.9.0"
+        @time @safetestset "Direct allocations test" begin include("allocations.jl") end
+    end
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
     @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
+    @time @safetestset "Save_positions test" begin include("save_positions.jl") end
     @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
     @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
     @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
@@ -28,4 +35,5 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
     @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
     @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
+    @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
 end

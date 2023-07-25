@@ -7,12 +7,10 @@ using Printf, Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = (
-  (Coevolve(), true, :Coevolve), 
-  (PDMPCHVFull(), true, :PDMPCHVFull), 
-  (PDMPCHVSimple(), true, :PDMPCHVSimple), 
-  (PyTick(), true, :PyTick)
-)
+algorithms = ((Coevolve(), true, :Coevolve),
+    (PDMPCHVFull(), true, :PDMPCHVFull),
+    (PDMPCHVSimple(), true, :PDMPCHVSimple),
+    (PyTick(), true, :PyTick))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -43,21 +41,21 @@ for (algo, use_recursion, label) in algorithms
             _p = (p[1], p[2], p[3], nothing, nothing, g)
         elseif typeof(algo) <: PDMPCHVSimple
             if use_recursion
-              global h = zeros(eltype(tspan), nv(G))
-              global ϕ = zeros(eltype(tspan), nv(G))
-              _p = (p[1], p[2], p[3], h, ϕ, g)
+                global h = zeros(eltype(tspan), nv(G))
+                global ϕ = zeros(eltype(tspan), nv(G))
+                _p = (p[1], p[2], p[3], h, ϕ, g)
             else
-              global h = [eltype(tspan)[] for _ in 1:nv(G)]
-              _p = (p[1], p[2], p[3], h, g)
+                global h = [eltype(tspan)[] for _ in 1:nv(G)]
+                _p = (p[1], p[2], p[3], h, g)
             end
         elseif typeof(algo) <: PyTick
             _p = (p[1], p[2], p[3])
         end
         jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion,
-                                   track_attempts = false)
+            track_attempts = false)
         if typeof(algo) <: Coevolve
             stepper = SSAStepper()
-        elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
+        elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
             stepper = CHV(Tsit5())
         elseif typeof(algo) <: PyTick
             stepper = nothing
@@ -75,7 +73,7 @@ for (algo, use_recursion, label) in algorithms
                 jump_prob.simulate()
                 push!(js, [length(j) for j in jump_prob.timestamps])
             else
-                if typeof(algo) <: Union{Coevolve,PDMPCHVSimple}
+                if typeof(algo) <: Union{Coevolve, PDMPCHVSimple}
                     if use_recursion
                         h .= 0
                     else
@@ -90,7 +88,7 @@ for (algo, use_recursion, label) in algorithms
                 sol = solve(jump_prob, stepper)
                 if typeof(algo) <: Coevolve
                     push!(js, sol.u[end])
-                elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
+                elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
                     push!(js, sol.xd[end])
                 end
             end

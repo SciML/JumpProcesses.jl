@@ -25,12 +25,12 @@ for (algo, use_recursion) in algorithms
             _p = (p[1], p[2], p[3], nothing, nothing, g)
         elseif typeof(algo) <: PDMPCHVSimple
             if use_recursion
-              h = zeros(eltype(tspan), nv(G))
-              ϕ = zeros(eltype(tspan), nv(G))
-              _p = (p[1], p[2], p[3], h, ϕ, g)
+                h = zeros(eltype(tspan), nv(G))
+                ϕ = zeros(eltype(tspan), nv(G))
+                _p = (p[1], p[2], p[3], h, ϕ, g)
             else
-              h = [eltype(tspan)[] for _ in 1:nv(G)]
-              _p = (p[1], p[2], p[3], h, g)
+                h = [eltype(tspan)[] for _ in 1:nv(G)]
+                _p = (p[1], p[2], p[3], h, g)
             end
         else
             h = zeros(eltype(tspan), nv(G))
@@ -41,7 +41,7 @@ for (algo, use_recursion) in algorithms
         jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion)
         stepper = if typeof(algo) <: Coevolve
             SSAStepper()
-        elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
+        elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
             CHV(Tsit5())
         else
             Tsit5()
@@ -61,8 +61,8 @@ for (algo, use_recursion) in algorithms
         end
         duration = @sprintf "%.0f" (time() - now) * 1e3/50
         ProfileSVG.save(joinpath(assets,
-                                 "hawkes-profile-$(string(algo)[1:end-2])-$label.svg"),
-                        title = "Profile $algo, $label ($(nv(G)) nodes, $(duration) ms/rep)")
+                "hawkes-profile-$(string(algo)[1:end-2])-$label.svg"),
+            title = "Profile $algo, $label ($(nv(G)) nodes, $(duration) ms/rep)")
         @info "Took $(duration) ms/rep."
         Profile.clear()
     end

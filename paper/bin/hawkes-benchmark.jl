@@ -7,16 +7,14 @@ using Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = (
-    (Coevolve(), false),
+algorithms = ((Coevolve(), false),
     (Direct(), false),
     (Coevolve(), true),
     (Direct(), true),
     (PyTick(), true),
     (PDMPCHVFull(), true),
     (PDMPCHVSimple(), false),
-    (PDMPCHVSimple(), true),
-)
+    (PDMPCHVSimple(), true))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -39,12 +37,12 @@ for (algo, use_recursion) in algorithms
             _p = (p[1], p[2], p[3], nothing, nothing, g)
         elseif typeof(algo) <: PDMPCHVSimple
             if use_recursion
-              global h = zeros(eltype(tspan), nv(G))
-              global ϕ = zeros(eltype(tspan), nv(G))
-              _p = (p[1], p[2], p[3], h, ϕ, g)
+                global h = zeros(eltype(tspan), nv(G))
+                global ϕ = zeros(eltype(tspan), nv(G))
+                _p = (p[1], p[2], p[3], h, ϕ, g)
             else
-              global h = [eltype(tspan)[] for _ in 1:nv(G)]
-              _p = (p[1], p[2], p[3], h, g)
+                global h = [eltype(tspan)[] for _ in 1:nv(G)]
+                _p = (p[1], p[2], p[3], h, g)
             end
         else
             if use_recursion
@@ -62,10 +60,10 @@ for (algo, use_recursion) in algorithms
         trial = try
             if typeof(algo) <: PyTick
                 @benchmark(jump_prob.simulate(),
-                           setup=(jump_prob.reset()),
-                           samples=50,
-                           evals=1,
-                           seconds=10,)
+                    setup=(jump_prob.reset()),
+                    samples=50,
+                    evals=1,
+                    seconds=10,)
             else
                 global stepper = if typeof(algo) <: Coevolve
                     SSAStepper()
@@ -76,43 +74,43 @@ for (algo, use_recursion) in algorithms
                 end
                 if typeof(algo) <: PDMPCHVFull
                     @benchmark(solve(jump_prob, stepper),
-                               setup=(),
-                               samples=50,
-                               evals=1,
-                               seconds=10,)
+                        setup=(),
+                        samples=50,
+                        evals=1,
+                        seconds=10,)
                 elseif typeof(algo) <: PDMPCHVSimple
                     if use_recursion
                         @benchmark(solve(jump_prob, stepper),
-                                   setup=(h .= 0; ϕ .= 0),
-                                   samples=50,
-                                   evals=1,
-                                   seconds=10,)
+                            setup=(h .= 0; ϕ .= 0),
+                            samples=50,
+                            evals=1,
+                            seconds=10,)
                     else
                         @benchmark(solve(jump_prob, stepper),
-                                   setup=(reset_history!(h)),
-                                   samples=50,
-                                   evals=1,
-                                   seconds=10,)
+                            setup=(reset_history!(h)),
+                            samples=50,
+                            evals=1,
+                            seconds=10,)
                     end
                 else
                     if use_recursion
                         @benchmark(solve(jump_prob, stepper),
-                                   setup=(h .= 0; urate .= 0; ϕ .= 0),
-                                   samples=50,
-                                   evals=1,
-                                   seconds=10,)
+                            setup=(h .= 0; urate .= 0; ϕ .= 0),
+                            samples=50,
+                            evals=1,
+                            seconds=10,)
                     else
                         @benchmark(solve(jump_prob, stepper),
-                                   setup=(reset_history!(h); urate .= 0),
-                                   samples=50,
-                                   evals=1,
-                                   seconds=10,)
+                            setup=(reset_history!(h); urate .= 0),
+                            samples=50,
+                            evals=1,
+                            seconds=10,)
                     end
                 end
             end
         catch e
             BenchmarkTools.Trial(BenchmarkTools.Parameters(samples = 50, evals = 1,
-                                                           seconds = 10))
+                seconds = 10))
         end
         push!(_bs, trial)
         if (nv(G) == 1 || nv(G) % 10 == 0)
@@ -125,9 +123,9 @@ for (algo, use_recursion) in algorithms
 end
 
 fig = plot(yscale = :log10,
-           xlabel = "V",
-           ylabel = "Time (ns)",
-           legend_position = :outertopright);
+    xlabel = "V",
+    ylabel = "Time (ns)",
+    legend_position = :outertopright);
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     _bs, _Vs = [], []
     for (j, b) in enumerate(bs[i])

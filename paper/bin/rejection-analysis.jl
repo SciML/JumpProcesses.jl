@@ -5,7 +5,9 @@ using Printf, Plots
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = ((Coevolve(), true, :Coevolve), (PDMPCHVFull(), true, :PDMPCHVFull), (PyTick, true, :PyTick))
+algorithms = ((Coevolve(), true, :Coevolve),
+    (PDMPCHVFull(), true, :PDMPCHVFull),
+    (PyTick, true, :PyTick))
 
 p = (0.5, 0.1, 5.0)
 tspan = (0.0, 25.0)
@@ -31,7 +33,7 @@ for (algo, use_recursion, label) in algorithms
         h = zeros(eltype(tspan), nv(G))
         _p = (p[1], p[2], p[3], h, urate, ϕ, a)
         jump_prob = hawkes_problem(_p, algo; u, tspan, g, use_recursion,
-                                   track_attempts = true)
+            track_attempts = true)
         stepper = SSAStepper()
         now = time()
         as = [] # attempts
@@ -72,4 +74,4 @@ plot!([nv(G) for G in Gs], mean_rejections.Coevolve, label = "Coevolve");
 plot(title = "1 .- mean_jump ./ mean_attemps");
 yaxis!([0, 1.05]);
 plot!([nv(G) for G in Gs], 1 .- mean_jumps.Coevolve ./ mean_attempts.Coevolve,
-      label = "Coevolve");
+    label = "Coevolve");

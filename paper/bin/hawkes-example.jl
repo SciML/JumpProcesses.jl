@@ -13,16 +13,14 @@ end
 root = dirname(@__DIR__)
 assets = "$(root)/assets"
 
-algorithms = (
-  (Coevolve(), false),
-  (Direct(), false),
-  (Coevolve(), true),
-  (Direct(), true),
-  (PyTick(), true),
-  (PDMPCHVFull(), true),
-  (PDMPCHVSimple(), false),
-  (PDMPCHVSimple(), true),
-)
+algorithms = ((Coevolve(), false),
+    (Direct(), false),
+    (Coevolve(), true),
+    (Direct(), true),
+    (PyTick(), true),
+    (PDMPCHVFull(), true),
+    (PDMPCHVSimple(), false),
+    (PDMPCHVSimple(), true))
 
 V = 10
 G = erdos_renyi(V, 0.2, seed = 9103)
@@ -49,12 +47,12 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
         _p = (p[1], p[2], p[3], nothing, nothing, g)
     elseif typeof(algo) <: PDMPCHVSimple
         if use_recursion
-          h = zeros(eltype(tspan), nv(G))
-          ϕ = zeros(eltype(tspan), nv(G))
-          _p = (p[1], p[2], p[3], h, ϕ, g)
+            h = zeros(eltype(tspan), nv(G))
+            ϕ = zeros(eltype(tspan), nv(G))
+            _p = (p[1], p[2], p[3], h, ϕ, g)
         else
-          h = [eltype(tspan)[] for _ in 1:nv(G)]
-          _p = (p[1], p[2], p[3], h, g)
+            h = [eltype(tspan)[] for _ in 1:nv(G)]
+            _p = (p[1], p[2], p[3], h, g)
         end
     else
         if use_recursion
@@ -77,14 +75,14 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
     else
         stepper = if typeof(algo) <: Coevolve
             SSAStepper()
-        elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
+        elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
             CHV(Tsit5())
         else
             Tsit5()
         end
         sol = solve(jump_prob, stepper)
         sols[i] = sol
-        if typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
+        if typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
             t = sol.time
             N = sol.xd[1:V, :]'
         else
@@ -100,10 +98,10 @@ end
 let fig = []
     for (i, (algo, use_recursion)) in enumerate(algorithms)
         push!(fig,
-              plot(ts[i],
-                   Ns[i],
-                   title = "$algo, use_recursion = $(use_recursion)",
-                   legend = false))
+            plot(ts[i],
+                Ns[i],
+                title = "$algo, use_recursion = $(use_recursion)",
+                legend = false))
     end
     fig = plot(fig..., layout = (4, 2))
     savefig(fig, "$(assets)/hawkes-examples.png")
@@ -113,12 +111,12 @@ end
 let sol = sols[1]
     with(:pgfplotsx) do
         fig = barcodeplot(histories(sol)[1:3],
-                          xlims = (0, 20),
-                          legend = false,
-                          markersize = 2,
-                          xlabel = "t",
-                          ylabel = "node index";
-                          pgfkw...)
+            xlims = (0, 20),
+            legend = false,
+            markersize = 2,
+            xlabel = "t",
+            ylabel = "node index";
+            pgfkw...)
         savefig(fig, "$(assets)/hawkes-barcode.pdf")
     end
 end
@@ -126,26 +124,24 @@ end
 let sol = sols[1]
     with(:pgfplotsx) do
         fig = plot(conditional_rate(hawkes_rate_closure(u, g),
-                                    sol;
-                                    saveat = 0.01,
-                                    ixs = [1, 2, 3]),
-                   xlims = (0.0, 20.0),
-                   legend = false,
-                   ylabel = "conditional rate";
-                   pgfkw...)
+                sol;
+                saveat = 0.01,
+                ixs = [1, 2, 3]),
+            xlims = (0.0, 20.0),
+            legend = false,
+            ylabel = "conditional rate";
+            pgfkw...)
         savefig(fig, "$(assets)/hawkes-intensity.pdf")
     end
 end
 
 @info "Running simulations for QQ plot."
-algorithms = (
-  (Coevolve(), false),
-  (Coevolve(), true),
-  (PyTick(), true),
-  (PDMPCHVFull(), true),
-  (PDMPCHVSimple(), true),
-  (PDMPCHVSimple(), false)
-)
+algorithms = ((Coevolve(), false),
+    (Coevolve(), true),
+    (PyTick(), true),
+    (PDMPCHVFull(), true),
+    (PDMPCHVSimple(), true),
+    (PDMPCHVSimple(), false))
 qqs = Vector(undef, length(algorithms))
 for (i, (algo, use_recursion)) in enumerate(algorithms)
     if typeof(algo) <: PyTick
@@ -158,8 +154,8 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
             ϕ = zeros(eltype(tspan), nv(G))
             _p = (p[1], p[2], p[3], h, ϕ, g)
         else
-          h = [eltype(tspan)[] for _ in 1:nv(G)]
-          _p = (p[1], p[2], p[3], h, g)
+            h = [eltype(tspan)[] for _ in 1:nv(G)]
+            _p = (p[1], p[2], p[3], h, g)
         end
     else
         if use_recursion
@@ -197,7 +193,7 @@ for (i, (algo, use_recursion)) in enumerate(algorithms)
             end
             stepper = if typeof(algo) <: Coevolve
                 SSAStepper()
-            elseif typeof(algo) <: Union{PDMPCHVFull,PDMPCHVSimple}
+            elseif typeof(algo) <: Union{PDMPCHVFull, PDMPCHVSimple}
                 CHV(Tsit5())
             else
                 Tsit5()
@@ -223,11 +219,11 @@ let fig, pgfkw = copy(pgfkw)
     pgfkw[:size] = (175, 175)
     with(:pgfplotsx) do
         fig = qqplot(qqs[1]...,
-                     legend = false,
-                     aspect_ratio = :equal,
-                     markersize = 1.0,
-                     alpha = 0.75;
-                     pgfkw...)
+            legend = false,
+            aspect_ratio = :equal,
+            markersize = 1.0,
+            alpha = 0.75;
+            pgfkw...)
         savefig(fig, "$(assets)/hawkes-qqplot.pdf")
     end
 end

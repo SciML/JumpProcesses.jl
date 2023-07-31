@@ -28,7 +28,7 @@ end
     nothing
 end
 
-@inline function executerx(speciesvec::SVector{T}, rxidx::S,
+@inline function executerx(speciesvec::StaticArraysCore.SVector{T}, rxidx::S,
                            majump::M) where {T, S, M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch

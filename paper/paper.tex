@@ -3,7 +3,6 @@
 \setcounter{page}{1}
 \usepackage{amsmath}
 \numberwithin{equation}{section}
-\usepackage{stackengine} % for decent underbars
 \usepackage{subfig}
 \usepackage{multirow}
 \usepackage{booktabs}
@@ -17,7 +16,25 @@
 \newcommand{\etal}{\textit{et al}.}
 \newcommand{\ie}{\textit{i}.\textit{e}.}
 \newcommand{\eg}{\textit{e}.\textit{g}.}
-\newcommand\ubar[1]{\stackunder[1.2pt]{\(#1\)}{\rule{.8ex}{.075ex}}}
+
+% more aesthetically pleasing underbars
+% https://tex.stackexchange.com/questions/143037/appearance-issues-with-bar-and-underline
+\newdimen\slantmathcorr
+\def\oversl#1{%assuming that mathslant=0.25
+\setbox0=\hbox{$#1$}
+\slantmathcorr=\wd0
+\hskip 0.2\slantmathcorr \overline{\hbox to 0.8\wd0{%
+\vphantom{\hbox{$#1$}}}}
+\hskip-\wd0\hbox{$#1$}
+}
+\def\ubar#1{%assuming that mathslant=0.25
+\setbox0=\hbox{$#1$}
+\slantmathcorr=\wd0
+\underline{\hbox to 0.7\wd0{%
+\vphantom{\hbox{$#1$}}}}
+\hskip-0.8\wd0\hbox{$#1$}
+}
+
 \makeatletter
 % https://tex.stackexchange.com/questions/622046/test-if-an-argument-starts-with-a-particular-string
 \newcommand{\comment}[1]{\comment@#1::\@nil}

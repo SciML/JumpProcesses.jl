@@ -1,4 +1,4 @@
-module FastExtendedJumpArrayBroadcast
+module JumpProcessFastBroadcastExt
 
 using JumpProcesses, FastBroadcast
 
@@ -30,4 +30,4 @@ end
     dst
 end
 
-end # module FastExtendedJumpArrayBroadcast
+end # module JumpProcessFastBroadcastExt

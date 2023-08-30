@@ -83,3 +83,14 @@ oop_prob = ODEProblem((u, p, t) -> [0.0], u₀, (0.0, 2.0), nothing) # only diff
 jump_prob = JumpProblem(oop_prob, Direct(), oop_test_jump)
 sol = solve(jump_prob, Tsit5())
 @test sol.retcode == ReturnCode.Success
+
+# Test saveat https://github.com/SciML/JumpProcesses.jl/issues/179 and https://github.com/SciML/JumpProcesses.jl/issues/322
+let
+    f(du,u,p,t) = (du[1] = u[1]; nothing)
+    prob = ODEProblem(f,[0.2],(0.0,10.0))
+    rate(u,p,t) = u[1]
+    affect!(integrator) = (integrator.u.u[1] = integrator.u.u[1]/2)
+    jump = VariableRateJump(rate,affect!)
+    jump_prob = JumpProblem(prob,Direct(),jump)
+    sol = solve(jump_prob,Tsit5(),saveat=0.5)
+end

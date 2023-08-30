@@ -1,4 +1,4 @@
-using Test, JumpProcesses, DiffEqBase
+using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq
 using StableRNGs
 
 rng = StableRNG(123)
@@ -24,3 +24,62 @@ new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 norm_check_alloc(jump_array, t) = @allocated DiffEqBase.ODE_DEFAULT_NORM(jump_array, t)
 norm_check_alloc(rand_array, 0.0);
 @test 0 == norm_check_alloc(rand_array, 0.0)
+
+## Broadcasting
+bc_eja_1 = ExtendedJumpArray(rand(rng, 10), rand(rng, 2))
+bc_eja_2 = ExtendedJumpArray(rand(rng, 10), rand(rng, 2))
+bc_out = ExtendedJumpArray(zeros(10), zeros(2))
+
+# Test that broadcasting gives the same output as non-broadcasted math
+@test bc_eja_1 + bc_eja_2 ≈ bc_eja_1 .+ bc_eja_2
+@test 3.14 * bc_eja_1 + 2.7 * bc_eja_2 ≈ 3.14 .* bc_eja_1 .+ 2.7 .* bc_eja_2
+
+# Test that non-allocating (copyto!) gives the same result, both w/ and w/o the dot macro
+bc_out .= 3.14 .* bc_eja_1 + 2.7 .* bc_eja_2
+@test bc_out ≈ 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+@. bc_out = 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+@test bc_out ≈ 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+
+# Test that mismatched arrays cannot be broadcasted
+bc_mismatch = ExtendedJumpArray(rand(rng, 8), rand(rng, 4))
+@test_throws DimensionMismatch bc_mismatch+bc_eja_1
+@test_throws DimensionMismatch bc_mismatch.+bc_eja_1
+
+# Test that datatype mixing persists through broadcasting
+bc_dtype_1 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))
+bc_dtype_2 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))
+result = bc_dtype_1 + bc_dtype_2 * 2
+@test eltype(result.jump_u) == Int64
+out_result = ExtendedJumpArray(zeros(10), zeros(2))
+out_result .= bc_dtype_1 .+ bc_dtype_2 .* 2
+@test eltype(result.jump_u) == Int64
+@test out_result ≈ result
+
+# Test that fast broadcasting also gives the correct results
+using FastBroadcast
+@.. bc_out = 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+@test bc_out ≈ 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+
+# Test both the in-place and allocating problems (https://github.com/SciML/JumpProcesses.jl/issues/321)
+# to check that an ExtendedJumpArray is not getting downgraded into a Vector
+oop_test_rate(u, p, t) = exp(t)
+function oop_test_affect!(integrator)
+    integrator.u[1] += 1
+    nothing
+end
+oop_test_jump = VariableRateJump(oop_test_rate, oop_test_affect!)
+
+# Test in-place
+u₀ = [0.0]
+inplace_prob = ODEProblem((du, u, p, t) -> (du .= 0), u₀, (0.0, 2.0), nothing)
+jump_prob = JumpProblem(inplace_prob, Direct(), oop_test_jump)
+sol = solve(jump_prob, Tsit5())
+@test sol.retcode == ReturnCode.Success
+sol.u
+
+# Test out-of-place
+u₀ = [0.0]
+oop_prob = ODEProblem((u, p, t) -> [0.0], u₀, (0.0, 2.0), nothing) # only difference is use of OOP ode function
+jump_prob = JumpProblem(oop_prob, Direct(), oop_test_jump)
+sol = solve(jump_prob, Tsit5())
+@test sol.retcode == ReturnCode.Success

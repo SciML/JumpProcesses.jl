@@ -83,3 +83,39 @@ oop_prob = ODEProblem((u, p, t) -> [0.0], u₀, (0.0, 2.0), nothing) # only diff
 jump_prob = JumpProblem(oop_prob, Direct(), oop_test_jump)
 sol = solve(jump_prob, Tsit5())
 @test sol.retcode == ReturnCode.Success
+
+# Test saveat https://github.com/SciML/JumpProcesses.jl/issues/179 and https://github.com/SciML/JumpProcesses.jl/issues/322
+let
+    f(du, u, p, t) = (du[1] = u[1]; nothing)
+    prob = ODEProblem(f, [0.2], (0.0, 10.0))
+    rate(u, p, t) = u[1]
+    affect!(integrator) = (integrator.u.u[1] = integrator.u.u[1]/2; nothing)
+    jump = VariableRateJump(rate, affect!)
+    jump_prob = JumpProblem(prob, Direct(), jump)
+    sol = solve(jump_prob, Tsit5(); saveat = 0.5)
+    times = range(0.0, 10.0; step = 0.5)
+    @test issubset(times, sol.t)
+end
+
+# Test for u0 promotion https://github.com/SciML/JumpProcesses.jl/issues/275
+let
+    p = (λ = 2.0, μ = 1.5)
+
+    deathrate(u,p,t) = p.μ * u[1]
+    deathaffect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    deathvrj = VariableRateJump(deathrate, deathaffect!)
+
+    rate1(u,p,t) = p.λ * (sin(pi*t/2) + 1)
+    affect1!(integrator) = (integrator.u[1] += 1)
+    vrj = VariableRateJump(rate1, affect1!)
+
+    function f!(du, u, p, t)
+        du .= 0
+        nothing
+    end
+    u₀ = [0, 0]
+    oprob = ODEProblem(f!, u₀, (0.0, 10.0), p)
+    jprob = JumpProblem(oprob, Direct(), vrj, deathvrj)
+    sol = solve(jprob, Tsit5())
+    @test eltype(sol.u) <: ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}
+end

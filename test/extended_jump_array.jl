@@ -1,4 +1,4 @@
-using Test, JumpProcesses, DiffEqBase
+using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq
 using StableRNGs
 
 rng = StableRNG(123)
@@ -59,3 +59,27 @@ out_result .= bc_dtype_1 .+ bc_dtype_2 .* 2
 using FastBroadcast
 @.. bc_out = 3.14 * bc_eja_1 + 2.7 * bc_eja_2
 @test bc_out ≈ 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+
+# Test both the in-place and allocating problems (https://github.com/SciML/JumpProcesses.jl/issues/321)
+# to check that an ExtendedJumpArray is not getting downgraded into a Vector
+oop_test_rate(u, p, t) = exp(t)
+function oop_test_affect!(integrator)
+    integrator.u[1] += 1
+    nothing
+end
+oop_test_jump = VariableRateJump(oop_test_rate, oop_test_affect!)
+
+# Test in-place
+u₀ = [0.0]
+inplace_prob = ODEProblem((du, u, p, t) -> (du .= 0), u₀, (0.0, 2.0), nothing)
+jump_prob = JumpProblem(inplace_prob, Direct(), oop_test_jump)
+sol = solve(jump_prob, Tsit5())
+@test sol.retcode == ReturnCode.Success
+sol.u
+
+# Test out-of-place
+u₀ = [0.0]
+oop_prob = ODEProblem((u, p, t) -> [0.0], u₀, (0.0, 2.0), nothing) # only difference is use of OOP ode function
+jump_prob = JumpProblem(oop_prob, Direct(), oop_test_jump)
+sol = solve(jump_prob, Tsit5())
+@test sol.retcode == ReturnCode.Success

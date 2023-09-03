@@ -14,7 +14,7 @@ struct RxRates{F, M, C}
     "AbstractMassActionJump"
     ma_jumps::M
 
-    "indexable collection of SpatialConstantRateJump"
+    "indexable collection of ConstantRateJump"
     cr_jumps::C
 end
 

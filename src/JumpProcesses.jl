@@ -99,7 +99,7 @@ export ExtendedJumpArray
 
 # spatial structs and functions
 export CartesianGrid, CartesianGridRej
-export SpatialMassActionJump, SpatialConstantRateJump
+export SpatialMassActionJump
 export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect
 

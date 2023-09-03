@@ -89,7 +89,7 @@ function execute_rx_at_site!(integrator, rx_rates::RxRates, rx, site)
                              rx_rates.ma_jumps)
     else
         cr_jump = rx_rates.cr_jumps[rx - get_num_majumps(rx_rates.ma_jumps)]
-        cr_jump.affect!(integrator)
+        cr_jump.affect!(integrator, site)
     end
 end
 

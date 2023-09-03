@@ -39,6 +39,9 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
 
     # a dependency graph is needed
     if dep_graph === nothing
+        if length(rx_rates.cr_jumps) != 0
+            error("Provide a dependency graph to use DirectCRDirect with constant rate jumps.")
+        end
         dg = make_dependency_graph(num_specs, rx_rates.ma_jumps)
     else
         dg = dep_graph
@@ -54,6 +57,9 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     end
 
     if jumptovars_map === nothing
+        if length(rx_rates.cr_jumps) != 0
+            error("Provide a jump-to-species dependency graph to use DirectCRDirect with constant rate jumps.")
+        end
         jtov_map = jump_to_vars_map(rx_rates.ma_jumps)
     else
         jtov_map = jumptovars_map
@@ -94,7 +100,7 @@ function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
 
     next_jump = SpatialJump{Int}(typemax(Int), typemax(Int), typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
-    rx_rates = RxRates(num_sites(spatial_system), majumps)
+    rx_rates = RxRates(num_sites(spatial_system), majumps, constant_jumps)
     hop_rates = HopRates(hopping_constants, spatial_system)
     site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 

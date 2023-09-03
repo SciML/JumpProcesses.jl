@@ -16,8 +16,8 @@ mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPG
     rx_rates::RX
     hop_rates::HOP
     site_rates::Vector{T}
-    rates::F1 #rates for constant-rate jumps
-    affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 # legacy, not used
+    affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -199,4 +199,4 @@ end
 
 number of constant rate jumps
 """
-num_constant_rate_jumps(aggregator::DirectCRDirectJumpAggregation) = 0
+num_constant_rate_jumps(aggregator::DirectCRDirectJumpAggregation) = length(aggregator.rx_rates.cr_jumps)

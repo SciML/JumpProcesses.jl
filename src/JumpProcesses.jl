@@ -56,6 +56,7 @@ include("aggregators/coevolve.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
+include("spatial/spatial_constant_rate_jump.jl")
 include("spatial/topology.jl")
 include("spatial/hop_rates.jl")
 include("spatial/reaction_rates.jl")
@@ -98,7 +99,7 @@ export ExtendedJumpArray
 
 # spatial structs and functions
 export CartesianGrid, CartesianGridRej
-export SpatialMassActionJump
+export SpatialMassActionJump, SpatialConstantRateJump
 export outdegree, num_sites, neighbors
 export NSM, DirectCRDirect
 

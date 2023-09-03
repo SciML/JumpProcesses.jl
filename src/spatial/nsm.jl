@@ -12,8 +12,8 @@ mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, J
     end_time::T
     rx_rates::RX
     hop_rates::HOP
-    rates::F1 #rates for constant-rate jumps
-    affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 # legacy, not used
+    affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -187,4 +187,4 @@ end
 
 number of constant rate jumps
 """
-num_constant_rate_jumps(aggregator::NSMJumpAggregation) = 0
+num_constant_rate_jumps(aggregator::NSMJumpAggregation) = length(aggregator.rx_rates.cr_jumps)

@@ -24,9 +24,9 @@ end
 initializes RxRates with zero rates
 """
 function RxRates(num_sites::Int, ma_jumps::M, cr_jumps::C) where {M, C}
-    numrxjumps = get_num_majumps(ma_jumps)
+    numrxjumps = get_num_majumps(ma_jumps) + length(cr_jumps)
     rates = zeros(Float64, numrxjumps, num_sites)
-    RxRates{Float64, M}(rates, vec(sum(rates, dims = 1)), ma_jumps, cr_jumps)
+    RxRates{Float64, M, C}(rates, vec(sum(rates, dims = 1)), ma_jumps, cr_jumps)
 end
 RxRates(num_sites::Int, ma_jumps::M) where {M} = RxRates(num_sites, ma_jumps, ConstantRateJump[])
 
@@ -67,7 +67,7 @@ function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
             set_rx_rate_at_site!(rx_rates, site, rx, rate)
         else
             cr_jump = rx_rates.cr_jumps[rx - get_num_majumps(ma_jumps)]
-            set_rx_rate_at_site!(rx_rates, site, rx, cr_jump.rate(u, integrator.p, integrator.t))
+            set_rx_rate_at_site!(rx_rates, site, rx, cr_jump.rate(u, integrator.p, integrator.t, site))
         end
     end
 end

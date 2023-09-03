@@ -1,5 +1,6 @@
 """
-A file with structs and functions for sampling reactions and updating reaction rates in spatial SSAs
+A file with structs and functions for sampling reactions and updating reaction rates in spatial SSAs.
+Massaction jumps go first in the indexing, then constant rate jumps.
 """
 
 ### spatial rx rates ###
@@ -13,6 +14,7 @@ struct RxRates{F, M, C}
     "AbstractMassActionJump"
     ma_jumps::M
 
+    "indexable collection of SpatialConstantRateJump"
     cr_jumps::C
 end
 
@@ -28,7 +30,7 @@ function RxRates(num_sites::Int, ma_jumps::M, cr_jumps::C) where {M, C}
 end
 RxRates(num_sites::Int, ma_jumps::M) where {M} = RxRates(num_sites, ma_jumps, ConstantRateJump[])
 
-num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
+num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps) + length(rx_rates.cr_jumps)
 
 """
     reset!(rx_rates::RxRates)
@@ -51,26 +53,22 @@ function total_site_rx_rate(rx_rates::RxRates, site)
 end
 
 """
-    update_rx_rates!(rx_rates, rxs, u, site)
+    update_rx_rates!(rx_rates, rxs, integrator, site)
 
 update rates of all reactions in rxs at site
 """
-function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
-                          site) where {F, M <: MassActionJump}
+function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
+                          site)
     u = integrator.u
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
-        set_rx_rate_at_site!(rx_rates, site, rx,
-                             evalrxrate((@view u[:, site]), rx, ma_jumps))
-    end
-end
-
-function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
-                          site) where {F, M <: SpatialMassActionJump}
-    u = integrator.u
-    ma_jumps = rx_rates.ma_jumps
-    @inbounds for rx in rxs
-        set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate(u, rx, ma_jumps, site))
+        if is_massaction(rx_rates, rx)
+            rate = eval_massaction_rate(u, rx, ma_jumps, site)
+            set_rx_rate_at_site!(rx_rates, site, rx, rate)
+        else
+            cr_jump = rx_rates.cr_jumps[rx - get_num_majumps(ma_jumps)]
+            set_rx_rate_at_site!(rx_rates, site, rx, cr_jump.rate(u, integrator.p, integrator.t))
+        end
     end
 end
 
@@ -82,6 +80,16 @@ sample a reaction at site, return reaction index
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
     linear_search((@view rx_rates.rates[:, site]),
                   rand(rng) * total_site_rx_rate(rx_rates, site))
+end
+
+function execute_rx_at_site!(integrator, rx_rates::RxRates, rx, site)
+    if is_massaction(rx_rates, rx)
+        @inbounds executerx!((@view integrator.u[:, site]), rx,
+                             rx_rates.ma_jumps)
+    else
+        cr_jump = rx_rates.cr_jumps[rx - get_num_majumps(rx_rates.ma_jumps)]
+        cr_jump.affect!(integrator)
+    end
 end
 
 # helper functions
@@ -96,3 +104,11 @@ function Base.show(io::IO, ::MIME"text/plain", rx_rates::RxRates)
     num_rxs, num_sites = size(rx_rates.rates)
     println(io, "RxRates with $num_rxs reactions and $num_sites sites")
 end
+
+"Return true if jump is a massaction jump."
+function is_massaction(rx_rates::RxRates, rx)
+    rx <= get_num_majumps(rx_rates.ma_jumps)
+end
+
+eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: SpatialMassActionJump} = evalrxrate(u, rx, ma_jumps, site)
+eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: MassActionJump} = evalrxrate((@view u[:, site]), rx, ma_jumps)

@@ -9,7 +9,7 @@ struct SpatialJump{J}
     "source location"
     src::J
 
-    "index of jump as a hop or reaction"
+    "index of jump as a hop or reaction, hops first, then massaction reactions, then constant rate reactions"
     jidx::Int
 
     "destination location, equal to src for within-site reactions"
@@ -69,8 +69,7 @@ function update_state!(p, integrator)
         execute_hop!(integrator, jump.src, jump.dst, jump.jidx)
     else
         rx_index = reaction_id_from_jump(p, jump)
-        @inbounds executerx!((@view integrator.u[:, jump.src]), rx_index,
-                             p.rx_rates.ma_jumps)
+        execute_rx_at_site!(integrator, p.rx_rates, rx_index, jump.src)
     end
     # save jump that was just exectued
     p.prev_jump = jump

@@ -34,6 +34,11 @@ u = ones(Int, num_species, num_nodes)
 integrator = DummyIntegrator(u, nothing, nothing)
 rng = StableRNG(12345)
 
+# Test constructors
+@test JP.RxRates(num_nodes, ma_jumps).ma_jumps == ma_jumps
+@test JP.RxRates(num_nodes, spatial_ma_jumps).ma_jumps == spatial_ma_jumps
+@test JP.RxRates(num_nodes, cr_jumps).cr_jumps == cr_jumps
+
 # Tests for RxRates
 rx_rates_list = [JP.RxRates(num_nodes, ma_jumps, cr_jumps), JP.RxRates(num_nodes, spatial_ma_jumps, cr_jumps)]
 for rx_rates in rx_rates_list

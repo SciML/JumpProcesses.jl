@@ -28,7 +28,8 @@ function RxRates(num_sites::Int, ma_jumps::M, cr_jumps::C) where {M, C}
     rates = zeros(Float64, numrxjumps, num_sites)
     RxRates{Float64, M, C}(rates, vec(sum(rates, dims = 1)), ma_jumps, cr_jumps)
 end
-RxRates(num_sites::Int, ma_jumps::M) where {M} = RxRates(num_sites, ma_jumps, ConstantRateJump[])
+RxRates(num_sites::Int, ma_jumps::M) where {M<:AbstractMassActionJump} = RxRates(num_sites, ma_jumps, ConstantRateJump[])
+RxRates(num_sites::Int, cr_jumps::C) where {C} = RxRates(num_sites, SpatialMassActionJump(nothing), cr_jumps)
 
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps) + length(rx_rates.cr_jumps)
 

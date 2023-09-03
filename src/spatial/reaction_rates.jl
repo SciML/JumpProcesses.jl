@@ -52,8 +52,9 @@ end
 
 update rates of all reactions in rxs at site
 """
-function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, u,
+function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
                           site) where {F, M <: MassActionJump}
+    u = integrator.u
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx,
@@ -61,8 +62,9 @@ function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, u,
     end
 end
 
-function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, u,
+function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
                           site) where {F, M <: SpatialMassActionJump}
+    u = integrator.u
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate(u, rx, ma_jumps, site))

@@ -6,8 +6,12 @@ const JP = JumpProcesses
 # reset!
 # total_site_rx_rate
 # update_rx_rates!
-# update_rx_rates!
 # sample_rx_at_site
+
+# Dummy integrator to test update_rx_rates!
+struct DummyIntegrator{S}
+    u::S
+end
 
 io = IOBuffer()
 # setup of A + B <--> C
@@ -22,6 +26,7 @@ num_rxs = length(rates)
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 spatial_ma_jumps = SpatialMassActionJump(rates, reactstoch, netstoch)
 u = ones(Int, num_species, num_nodes)
+integrator = DummyIntegrator(u)
 rng = StableRNG(12345)
 
 # Tests for RxRates
@@ -30,7 +35,7 @@ for rx_rates in rx_rates_list
     @test JP.num_rxs(rx_rates) == length(rates)
     show(io, "text/plain", rx_rates)
     for site in 1:num_nodes
-        JP.update_rx_rates!(rx_rates, 1:num_rxs, u, site)
+        JP.update_rx_rates!(rx_rates, 1:num_rxs, integrator, site)
         @test JP.total_site_rx_rate(rx_rates, site) == 1.1
         rx_props = [JP.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
         rx_probs = rx_props / sum(rx_props)

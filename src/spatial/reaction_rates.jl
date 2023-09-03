@@ -3,7 +3,7 @@ A file with structs and functions for sampling reactions and updating reaction r
 """
 
 ### spatial rx rates ###
-struct RxRates{F, M}
+struct RxRates{F, M, C}
     "rx_rates[i,j] is rate of reaction i at site j"
     rates::Matrix{F}
 
@@ -12,18 +12,21 @@ struct RxRates{F, M}
 
     "AbstractMassActionJump"
     ma_jumps::M
+
+    cr_jumps::C
 end
 
 """
-    RxRates(num_sites::Int, ma_jumps::M) where {M}
+    RxRates(num_sites::Int, ma_jumps::M, cr_jumps::C) where {M, C}
 
 initializes RxRates with zero rates
 """
-function RxRates(num_sites::Int, ma_jumps::M) where {M}
+function RxRates(num_sites::Int, ma_jumps::M, cr_jumps::C) where {M, C}
     numrxjumps = get_num_majumps(ma_jumps)
     rates = zeros(Float64, numrxjumps, num_sites)
-    RxRates{Float64, M}(rates, vec(sum(rates, dims = 1)), ma_jumps)
+    RxRates{Float64, M}(rates, vec(sum(rates, dims = 1)), ma_jumps, cr_jumps)
 end
+RxRates(num_sites::Int, ma_jumps::M) where {M} = RxRates(num_sites, ma_jumps, ConstantRateJump[])
 
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
 

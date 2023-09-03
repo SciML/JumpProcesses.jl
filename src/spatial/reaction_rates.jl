@@ -57,17 +57,8 @@ function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
     u = integrator.u
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
-        set_rx_rate_at_site!(rx_rates, site, rx,
-                             evalrxrate((@view u[:, site]), rx, ma_jumps))
-    end
-end
-
-function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
-                          site) where {F, M <: SpatialMassActionJump}
-    u = integrator.u
-    ma_jumps = rx_rates.ma_jumps
-    @inbounds for rx in rxs
-        set_rx_rate_at_site!(rx_rates, site, rx, evalrxrate(u, rx, ma_jumps, site))
+        rate = eval_massaction_rate(u, rx, ma_jumps, site)
+        set_rx_rate_at_site!(rx_rates, site, rx, rate)
     end
 end
 
@@ -93,3 +84,6 @@ function Base.show(io::IO, ::MIME"text/plain", rx_rates::RxRates)
     num_rxs, num_sites = size(rx_rates.rates)
     println(io, "RxRates with $num_rxs reactions and $num_sites sites")
 end
+
+eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: SpatialMassActionJump} = evalrxrate(u, rx, ma_jumps, site)
+eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: MassActionJump} = evalrxrate((@view u[:, site]), rx, ma_jumps)

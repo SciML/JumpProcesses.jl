@@ -204,7 +204,9 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         if is_spatial(aggregator)
             kwargs = merge((; hopping_constants, spatial_system), kwargs)
         else
-            # TODO(vilin97): Handle flattening of constant rate jumps.
+            if num_crjs(jumps) != 0
+                error("Use a spatial SSA, e.g. DirectCRDirect in order to use ConstantRateJumps.")
+            end 
             prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
         end
     end

@@ -9,8 +9,10 @@ const JP = JumpProcesses
 # sample_rx_at_site
 
 # Dummy integrator to test update_rx_rates!
-struct DummyIntegrator{S}
-    u::S
+struct DummyIntegrator{U,P,T}
+    u::U # state
+    p::P # parameters
+    t::T # time
 end
 
 io = IOBuffer()

@@ -43,16 +43,18 @@ function total_site_rate(rx_rates::RxRates, hop_rates::AbstractHopRates, site)
     total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)
 end
 
-function update_rates_after_reaction!(p, u, site, reaction_id)
-    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], u, site)
+function update_rates_after_reaction!(p, integrator, site, reaction_id)
+    u = integrator.u
+    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], integrator, site)
     update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
 end
 
-function update_rates_after_hop!(p, u, source_site, target_site, species)
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, source_site)
+function update_rates_after_hop!(p, integrator, source_site, target_site, species)
+    u = integrator.u
+    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, source_site)
     update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
 
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], u, target_site)
+    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, target_site)
     update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
 end
 

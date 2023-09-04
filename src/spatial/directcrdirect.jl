@@ -16,8 +16,8 @@ mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPG
     rx_rates::RX
     hop_rates::HOP
     site_rates::Vector{T}
-    rates::F1 #rates for constant-rate jumps
-    affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 # legacy, not used
+    affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -106,7 +106,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::DirectCRDirectJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
-    fill_rates_and_get_times!(p, u, t)
+    fill_rates_and_get_times!(p, integrator, t)
     generate_jumps!(p, integrator, params, u, t)
     nothing
 end
@@ -127,7 +127,7 @@ function execute_jumps!(p::DirectCRDirectJumpAggregation, integrator, u, params,
     update_state!(p, integrator)
 
     # update current jump rates and times
-    update_dependent_rates_and_firing_times!(p, integrator.u, t)
+    update_dependent_rates_and_firing_times!(p, integrator, t)
     nothing
 end
 
@@ -137,8 +137,9 @@ end
 
 reset all stucts, reevaluate all rates, repopulate the priority table
 """
-function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, u, t)
+function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, integrator, t)
     @unpack spatial_system, rx_rates, hop_rates, site_rates, rt = aggregation
+    u = integrator.u
 
     reset!(rx_rates)
     reset!(hop_rates)
@@ -148,7 +149,7 @@ function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, u
     species = 1:(aggregation.numspecies)
 
     for site in 1:num_sites(spatial_system)
-        update_rx_rates!(rx_rates, rxs, u, site)
+        update_rx_rates!(rx_rates, rxs, integrator, site)
         update_hop_rates!(hop_rates, species, u, site, spatial_system)
         site_rates[site] = total_site_rate(rx_rates, hop_rates, site)
     end
@@ -161,17 +162,18 @@ function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, u
 end
 
 """
-    update_dependent_rates_and_firing_times!(p, u, t)
+    update_dependent_rates_and_firing_times!(p, integrator, t)
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates_and_firing_times!(p::DirectCRDirectJumpAggregation, u, t)
+function update_dependent_rates_and_firing_times!(p::DirectCRDirectJumpAggregation, integrator, t)
+    u = integrator.u
     site_rates = p.site_rates
     jump = p.prev_jump
     if is_hop(p, jump)
         source_site = jump.src
         target_site = jump.dst
-        update_rates_after_hop!(p, u, source_site, target_site, jump.jidx)
+        update_rates_after_hop!(p, integrator, source_site, target_site, jump.jidx)
 
         # update site rates
         oldrate = site_rates[source_site]
@@ -183,7 +185,7 @@ function update_dependent_rates_and_firing_times!(p::DirectCRDirectJumpAggregati
         update!(p.rt, target_site, oldrate, site_rates[target_site])
     else
         site = jump.src
-        update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p, jump))
+        update_rates_after_reaction!(p, integrator, site, reaction_id_from_jump(p, jump))
 
         # update site rates
         oldrate = site_rates[site]

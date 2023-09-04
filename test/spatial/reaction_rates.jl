@@ -31,7 +31,7 @@ affect_fn!(integrator) = nothing # a dummy reaction, does nothing
 cr_jumps = [ConstantRateJump(rate_fn, affect_fn!)]
 num_rxs = 3
 u = ones(Int, num_species, num_nodes)
-integrator = DummyIntegrator(u, nothing, nothing)
+integrator = DummyIntegrator(u,nothing,nothing)
 rng = StableRNG(12345)
 
 # Test constructors

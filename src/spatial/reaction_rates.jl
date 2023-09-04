@@ -53,7 +53,7 @@ end
 update rates of all reactions in rxs at site
 """
 function update_rx_rates!(rx_rates::RxRates{F, M}, rxs, integrator,
-                          site) where {F, M <: MassActionJump}
+                          site) where {F, M <: AbstractMassActionJump}
     u = integrator.u
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs

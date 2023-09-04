@@ -28,7 +28,7 @@ num_rxs = length(rates)
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 spatial_ma_jumps = SpatialMassActionJump(rates, reactstoch, netstoch)
 u = ones(Int, num_species, num_nodes)
-integrator = DummyIntegrator(u)
+integrator = DummyIntegrator(u,nothing,nothing)
 rng = StableRNG(12345)
 
 # Tests for RxRates

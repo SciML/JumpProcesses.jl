@@ -2,7 +2,7 @@
 # Marchetti, Priami and Thanh - Simulation Algorithms for Computational Systems Biology
 # Note, this implementation **assumes** jump rate functions are monotone
 # functions of the current population sizes (i.e. u)
-# requires vartojumps_map as JumpProblem keywords
+# requires vartojumps_map keyword
 
 mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, VJMAP, JVMAP, BD, U} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}

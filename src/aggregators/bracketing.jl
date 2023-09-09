@@ -50,7 +50,7 @@ end
 @inline function get_cjump_brackets(ulow, uhigh, rate, params, t)
     rlow = rate(ulow, params, t)
     rhigh = rate(uhigh, params, t)
-    return (rlow <= rhigh) ? rlow,rhigh : rhigh,rlow
+    return (rlow <= rhigh) ? (rlow, rhigh) : (rhigh, rlow)
 end
 
 """

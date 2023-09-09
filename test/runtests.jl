@@ -2,7 +2,6 @@
 using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
-    @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
     @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
     @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
     @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
@@ -20,6 +19,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @static if VERSION >= v"1.9.0"
         @time @safetestset "Direct allocations test" begin include("allocations.jl") end
     end
+    @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
     @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end

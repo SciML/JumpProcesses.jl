@@ -14,18 +14,18 @@ end
 BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
 
 # support either vectors of data for each field, or scalars
-"Get fluctuation rate of species i."
+# Get fluctuation rate of species i.
 @inline getfr(bd::BracketData{AbstractVector{T1}, T2}, i) where {T1, T2} = bd.fluctrate[i]
 @inline getfr(bd::BracketData{T1, T2}, i) where {T1 <: Number, T2} = bd.fluctrate
 
-"Get threshold value of species i."
+# Get threshold value of species i.
 @inline gettv(bd::BracketData{T1, AbstractVector{T2}}, i) where {T1, T2} = bd.threshold[i]
 @inline gettv(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.threshold
 
 @inline getΔu(bd::BracketData{T1, AbstractVector{T2}}, i) where {T1, T2} = bd.Δu[i]
 @inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.Δu
 
-"Get brackets ((1-fluctrate)*u, (1+fluctrate)*u) for species i."
+# Get brackets ((1-fluctrate)*u, (1+fluctrate)*u) for species i.
 @inline function get_spec_brackets(bd, i, u)
     if u == zero(u)
         return zero(u), zero(u)
@@ -40,13 +40,13 @@ end
 
 @inline get_spec_brackets(bd, i, u::AbstractVector) = get_spec_brackets(bd, i, u[i])
 
-"Get propensity brackets of massaction jump k."
+# Get propensity brackets of massaction jump k.
 @inline function get_majump_brackets(ulow, uhigh, k, majumps)
     evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
 end
 
 # for constant rate jumps we must check the ordering of the bracket values
-"Get propensity brackets of constant rate jump."
+# Get propensity brackets of constant rate jump.
 @inline function get_cjump_brackets(ulow, uhigh, rate, params, t)
     rlow = rate(ulow, params, t)
     rhigh = rate(uhigh, params, t)
@@ -67,7 +67,7 @@ get brackets for the rate of reaction rx by first checking if the reaction is a 
     end
 end
 
-"Update species i brackets in the aggregator."
+# Update species i brackets in the aggregator.
 @inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::AbstractVector)
     @unpack ulow, uhigh = p
     @inbounds for (i, uval) in enumerate(u)
@@ -85,8 +85,8 @@ end
     nothing
 end
 
-"Set up bracketing. The aggregator must have fields
-    ulow, uhigh, cur_rate_low, cur_rate_high, sum_rate, ma_jumps, rates."
+# Set up bracketing. The aggregator must have fields
+#    ulow, uhigh, cur_rate_low, cur_rate_high, sum_rate, ma_jumps, rates.
 function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     # species bracketing interval
     update_u_brackets!(p, u)

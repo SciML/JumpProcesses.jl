@@ -1,3 +1,4 @@
+using JumpProcesses, Test
 const JP = JumpProcesses
 
 fluctuation_rate = 0.1

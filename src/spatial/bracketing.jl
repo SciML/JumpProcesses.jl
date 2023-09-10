@@ -29,6 +29,10 @@ function setindex!(low_high::LowHigh, val::LowHigh, i)
     val
 end
 
+function getindex(low_high::LowHigh, i)
+    return LowHigh(low_high.low[i], low_high.high[i])
+end
+
 function total_site_rate(rx_rates::LowHigh, hop_rates::LowHigh, site) 
     return LowHigh(
         total_site_rate(rx_rates.low, hop_rates.low, site), 

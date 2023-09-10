@@ -33,6 +33,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
     @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
     @time @safetestset "Topology" begin include("spatial/topology.jl") end
+    @time @safetestset "Spatial bracketing Tests" begin include("spatial/bracketing.jl") end
     @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
     @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
     @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end

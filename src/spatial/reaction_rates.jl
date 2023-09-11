@@ -39,6 +39,9 @@ function reset!(rx_rates::RxRates)
     nothing
 end
 
+rx_rate(rx_rates, rx, site) = rx_rates.rates[rx, site]
+evalrxrate(rx_rates, u, rx, site) = eval_massaction_rate(u, rx, rx_rates.ma_jumps, site)
+
 """
     total_site_rx_rate(rx_rates::RxRates, site)
 
@@ -76,20 +79,6 @@ sample a reaction at site, return reaction index
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
     linear_search((@view rx_rates.rates[:, site]),
                   rand(rng) * total_site_rx_rate(rx_rates, site))
-end
-
-"""
-    recompute_site_rx_rate(rx_rates::RxRates, u, site)
-
-compute the total reaction rate at site at the current state u
-"""
-function recompute_site_rx_rate(rx_rates::RxRates, u, site)
-    rate = zero(eltype(rx_rates.rates))
-    ma_jumps = rx_rates.ma_jumps
-    for rx in 1:num_rxs(rx_rates)
-        rate += eval_massaction_rate(u, rx, ma_jumps, site)
-    end
-    return rate
 end
 
 # helper functions

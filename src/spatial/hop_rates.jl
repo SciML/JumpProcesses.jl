@@ -72,14 +72,7 @@ function update_hop_rates!(hop_rates::AbstractHopRates, species_vec, u, site, sp
     end
 end
 
-function recompute_site_hop_rate(hop_rates::HP, u, site, spatial_system) where {HP <: AbstractHopRates}
-    rate = zero(eltype(hop_rates.rates))
-    num_species = size(hop_rates.rates, 1)
-    for species in 1:num_species
-        rate += evalhoprate(hop_rates, u, species, site, spatial_system)
-    end
-    return rate
-end
+hop_rate(hop_rates, species, site) = @inbounds hop_rates.rates[species, site]
 
 """
     total_site_hop_rate(hop_rates::AbstractHopRates, site)

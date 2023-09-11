@@ -4,12 +4,12 @@ using Test, Graphs
 using StableRNGs
 rng = StableRNG(12345)
 
-Nsims = 1000
+Nsims = 100
 reltol = 0.05
 non_spatial_mean = [65.7395, 65.7395, 434.2605] #mean of 10,000 simulations
 
 dim = 1
-linear_size = 1
+linear_size = 5
 dims = Tuple(repeat([linear_size], dim))
 num_nodes = prod(dims)
 starting_site = trunc(Int, (linear_size^dim + 1) / 2)

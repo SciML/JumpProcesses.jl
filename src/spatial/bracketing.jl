@@ -35,8 +35,8 @@ end
     nothing
 end
 
-function is_outside_brackets(u_low_high::LowHigh{M}, u::M, species, site) where {M}
-    return u[species, site] < u_low_high.low[species, site] || u[species, site] > u_low_high.high[species, site]
+function is_inside_brackets(u_low_high::LowHigh{M}, u::M, species, site) where {M}
+    return u_low_high.low[species, site] < u[species, site] < u_low_high.high[species, site]
 end
 
 ### convenience functions for LowHigh ###

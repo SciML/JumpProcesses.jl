@@ -49,13 +49,6 @@ getindex(low_high::LowHigh{A}, i) where {A <: AbstractArray} = LowHigh(low_high.
 
 get_majumps(rx_rates::LowHigh{R}) where {R <: RxRates} = get_majumps(rx_rates.low)
 
-function total_site_rate(rx_rates::LowHigh, hop_rates::LowHigh, site) 
-    return LowHigh(
-        total_site_rate(rx_rates.low, hop_rates.low, site), 
-        total_site_rate(rx_rates.high, hop_rates.high, site))
-end
-
-# Compatible with constant rate jumps, because u_low_high.low and u_low_high.high are used in rate().
 function update_rx_rates!(rx_rates::LowHigh, rxs, u_low_high, integrator, site)
     update_rx_rates!(rx_rates.low, rxs, u_low_high.low, integrator, site)
     update_rx_rates!(rx_rates.high, rxs, u_low_high.high, integrator, site)
@@ -70,5 +63,3 @@ function reset!(low_high::LowHigh)
     reset!(low_high.low)
     reset!(low_high.high)
 end
-
-reset!(array::AbstractArray) = fill!(array, zero(eltype(array)))

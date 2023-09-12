@@ -40,15 +40,12 @@ function is_inside_brackets(u_low_high::LowHigh{M}, u::M, species, site) where {
 end
 
 ### convenience functions for LowHigh ###
-function setindex!(low_high::LowHigh, val::LowHigh, i...)
+function setindex!(low_high::LowHigh{A}, val::LowHigh, i...) where {A <: AbstractArray}
     low_high.low[i...] = val.low
     low_high.high[i...] = val.high
     val
 end
-
-function getindex(low_high::LowHigh, i)
-    return LowHigh(low_high.low[i], low_high.high[i])
-end
+getindex(low_high::LowHigh{A}, i) where {A <: AbstractArray} = LowHigh(low_high.low[i], low_high.high[i])
 
 get_majumps(rx_rates::LowHigh{R}) where {R <: RxRates} = get_majumps(rx_rates.low)
 

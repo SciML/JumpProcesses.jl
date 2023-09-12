@@ -189,7 +189,7 @@ end
 return hopping rate of species at site
 """
 function evalhoprate(hop_rates::HopRatesGraphDsi, u, species, site, spatial_system)
-    u[species, site] * hop_rates.hopping_constants[species, site] *
+    @inbounds u[species, site] * hop_rates.hopping_constants[species, site] *
               outdegree(spatial_system, site)
 end
 

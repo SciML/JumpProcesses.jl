@@ -58,9 +58,8 @@ end
 
 update rates of all reactions in rxs at site
 """
-function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
-                          site)
-    u = integrator.u
+function update_rx_rates!(rx_rates::RxRates, rxs, u::AbstractMatrix, integrator,
+    site)
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         if is_massaction(rx_rates, rx)
@@ -71,6 +70,12 @@ function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
             set_rx_rate_at_site!(rx_rates, site, rx, cr_jump.rate(u, integrator.p, integrator.t, site))
         end
     end
+end
+
+function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
+    site)
+    u = integrator.u
+    update_rx_rates!(rx_rates, rxs, u, integrator, site)
 end
 
 """

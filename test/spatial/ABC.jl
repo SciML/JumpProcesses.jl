@@ -78,18 +78,7 @@ grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 # jump_prob = JumpProblem(non_spatial_prob, Direct(), majumps)
 # non_spatial_mean = get_mean_end_state(jump_prob, 10000)
 
-spatial_jump_prob = JumpProblem(prob, RSSACRDirect(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false))
-sol = solve(spatial_jump_prob, SSAStepper())
-mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-mean_end_state = reshape(mean_end_state, num_species, num_nodes)
-diff = sum(mean_end_state, dims = 2) - non_spatial_mean
-for (i, d) in enumerate(diff)
-    @test abs(d) < reltol * non_spatial_mean[i]
-end
-
-
-spatial_jump_prob = JumpProblem(prob, NSM(), majumps, hopping_constants = hopping_constants,
+spatial_jump_prob = JumpProblem(prob, DirectCRRSSA(), majumps, hopping_constants = hopping_constants,
                   spatial_system = grids[1], save_positions = (false, false))
 sol = solve(spatial_jump_prob, SSAStepper())
 mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)

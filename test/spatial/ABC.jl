@@ -74,7 +74,7 @@ for spatial_jump_prob in jump_problems
     end
 end
 
-# using non-spatial SSAs to get the mean
+#using non-spatial SSAs to get the mean
 # non_spatial_rates = [0.1,1.0]
 # reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
 # netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]

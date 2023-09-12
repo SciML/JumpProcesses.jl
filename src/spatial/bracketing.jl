@@ -46,6 +46,10 @@ function setindex!(low_high::LowHigh, val::LowHigh, i...)
     val
 end
 
+function getindex(low_high::LowHigh, i)
+    return LowHigh(low_high.low[i], low_high.high[i])
+end
+
 get_majumps(rx_rates::LowHigh{R}) where {R <: RxRates} = get_majumps(rx_rates.low)
 
 function total_site_rate(rx_rates::LowHigh, hop_rates::LowHigh, site) 

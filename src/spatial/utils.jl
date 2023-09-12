@@ -40,9 +40,7 @@ function sample_jump_direct(rx_rates, hop_rates, site, spatial_system, rng)
     end
 end
 
-function sample_jump_direct(p, site)
-    sample_jump_direct(p.rx_rates, p.hop_rates, site, p.spatial_system, p.rng)
-end
+sample_jump_direct(p, site) = sample_jump_direct(p.rx_rates, p.hop_rates, site, p.spatial_system, p.rng)
 
 function total_site_rate(rx_rates::RxRates, hop_rates::AbstractHopRates, site)
     total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)

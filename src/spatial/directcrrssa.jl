@@ -1,10 +1,10 @@
-# site chosen with RSSACR, rx or hop chosen with Direct
+# site chosen with DirectCR, rx or hop chosen with RSSA
 
-############################ RSSACRDirect ###################################
+############################ DirectCRRSSA ###################################
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
-mutable struct RSSACRDirectJumpAggregation{T, BD, M, RNG, J, RX, HOP, DEPGR,
+mutable struct DirectCRRSSAJumpAggregation{T, BD, M, RNG, J, RX, HOP, DEPGR,
     VJMAP, JVMAP, SS, U <: PriorityTable, S, F1, F2} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::SpatialJump{J}
@@ -28,7 +28,7 @@ mutable struct RSSACRDirectJumpAggregation{T, BD, M, RNG, J, RX, HOP, DEPGR,
     affects!::F2 # legacy, not used
 end
 
-function RSSACRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, bd::BD,
+function DirectCRRSSAJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, bd::BD,
     u_low_high::LowHigh{M}, rx_rates::LowHigh{RX},
     hop_rates::LowHigh{HOP}, site_rates::LowHigh{Vector{T}},
     sps::Tuple{Bool, Bool}, rng::RNG, spatial_system::SS;
@@ -69,7 +69,7 @@ function RSSACRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, bd::BD,
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    RSSACRDirectJumpAggregation{
+    DirectCRRSSAJumpAggregation{
         T,
         BD,
         M,
@@ -91,7 +91,7 @@ end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::RSSACRDirect, starting_state, p, t, end_time,
+function aggregate(aggregator::DirectCRRSSA, starting_state, p, t, end_time,
     constant_jumps, ma_jumps, save_positions, rng; hopping_constants,
     spatial_system, bracket_data = nothing, kwargs...)
     T = typeof(end_time)
@@ -116,14 +116,14 @@ function aggregate(aggregator::RSSACRDirect, starting_state, p, t, end_time,
          bracket_data
     u_low_high = LowHigh(starting_state)
 
-    RSSACRDirectJumpAggregation(next_jump, next_jump_time, end_time, bd, u_low_high,
+    DirectCRRSSAJumpAggregation(next_jump, next_jump_time, end_time, bd, u_low_high,
         rx_rates, hop_rates,
         site_rates, save_positions, rng, spatial_system;
         num_specs = num_species, kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
-function initialize!(p::RSSACRDirectJumpAggregation, integrator, u, params, t)
+function initialize!(p::DirectCRRSSAJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, integrator, t)
     generate_jumps!(p, integrator, u, params, t)
@@ -131,7 +131,7 @@ function initialize!(p::RSSACRDirectJumpAggregation, integrator, u, params, t)
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::RSSACRDirectJumpAggregation, integrator, u, params, t)
+function generate_jumps!(p::DirectCRRSSAJumpAggregation, integrator, u, params, t)
     @unpack rng, rt, site_rates, rx_rates, hop_rates, spatial_system = p
     time_delta = zero(t)
     while true
@@ -148,7 +148,7 @@ function generate_jumps!(p::RSSACRDirectJumpAggregation, integrator, u, params, 
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::RSSACRDirectJumpAggregation, integrator, u, params, t,
+function execute_jumps!(p::DirectCRRSSAJumpAggregation, integrator, u, params, t,
     affects!)
     update_state!(p, integrator)
     update_dependent_rates!(p, integrator, t)
@@ -192,11 +192,11 @@ function accept_rx(p, u, jump)
 end
 
 """
-    fill_rates_and_get_times!(aggregation::RSSACRDirectJumpAggregation, u, t)
+    fill_rates_and_get_times!(aggregation::DirectCRRSSAJumpAggregation, u, t)
 
 reset all stucts, reevaluate all rates, repopulate the priority table
 """
-function fill_rates_and_get_times!(aggregation::RSSACRDirectJumpAggregation, integrator, t)
+function fill_rates_and_get_times!(aggregation::DirectCRRSSAJumpAggregation, integrator, t)
     @unpack bracket_data, u_low_high, spatial_system, rx_rates, hop_rates, site_rates, rt = aggregation
     u = integrator.u
     update_u_brackets!(u_low_high::LowHigh, bracket_data, u::AbstractMatrix)
@@ -227,7 +227,7 @@ end
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates!(p::RSSACRDirectJumpAggregation, integrator, t)
+function update_dependent_rates!(p::DirectCRRSSAJumpAggregation, integrator, t)
     jump = p.prev_jump
     if is_hop(p, jump)
         update_brackets!(p, integrator, jump.jidx, (jump.src, jump.dst))
@@ -258,8 +258,8 @@ function update_brackets!(p, integrator, species_to_update, sites_to_update)
 end
 
 """
-    num_constant_rate_jumps(aggregator::RSSACRDirectJumpAggregation)
+    num_constant_rate_jumps(aggregator::DirectCRRSSAJumpAggregation)
 
 number of constant rate jumps
 """
-num_constant_rate_jumps(aggregator::RSSACRDirectJumpAggregation) = 0
+num_constant_rate_jumps(aggregator::DirectCRRSSAJumpAggregation) = 0

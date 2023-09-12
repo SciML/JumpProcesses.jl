@@ -57,9 +57,9 @@ function HopRates(p::Pair{SpecHop, SiteHop},
 end
 
 """
-    update_hop_rates!(hop_rates::HopRatesGraphDsi, species_vec, u, site, spatial_system)
+    update_hop_rates!(hop_rates::AbstractHopRates, species_vec, u, site, spatial_system)
 
-    update rates of all species in species_vec at site
+update rates of all species in species_vec at site
 """
 function update_hop_rates!(hop_rates::AbstractHopRates, species_vec, u, site, spatial_system)
     @inbounds for species in species_vec

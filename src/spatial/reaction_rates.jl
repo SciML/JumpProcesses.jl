@@ -65,8 +65,11 @@ function update_rx_rates!(rx_rates::RxRates, rxs, u::AbstractMatrix, integrator,
     end
 end
 
-update_rx_rates!(rx_rates::RxRates, rxs, integrator,
-    site) = update_rx_rates!(rx_rates, rxs, integrator.u, integrator, site)
+function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
+    site)
+    u = integrator.u
+    update_rx_rates!(rx_rates, rxs, u, integrator, site)
+end
 
 """
     sample_rx_at_site(rx_rates::RxRates, site, rng)

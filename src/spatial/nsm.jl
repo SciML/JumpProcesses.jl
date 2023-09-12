@@ -2,7 +2,6 @@
 
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
-#NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
 mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, JVMAP,
                                   PQ, SS} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}

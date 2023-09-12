@@ -47,29 +47,32 @@ end
 
 # testing
 grids = [CartesianGridRej(dims), Graphs.grid(dims)]
-# jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
-#                                         hopping_constants = hopping_constants,
-#                                         spatial_system = grid,
-#                                         save_positions = (false, false)) for grid in grids]
-# push!(jump_problems,
-#       JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants,
-#                   spatial_system = grids[1], save_positions = (false, false)))
-# # setup flattenned jump prob
-# push!(jump_problems,
-#       JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
-#                   spatial_system = grids[1], save_positions = (false, false)))
-# # test
-# for spatial_jump_prob in jump_problems
-#     solution = solve(spatial_jump_prob, SSAStepper())
-#     mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-#     mean_end_state = reshape(mean_end_state, num_species, num_nodes)
-#     diff = sum(mean_end_state, dims = 2) - non_spatial_mean
-#     for (i, d) in enumerate(diff)
-#         @test abs(d) < reltol * non_spatial_mean[i]
-#     end
-# end
+jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
+                                        hopping_constants = hopping_constants,
+                                        spatial_system = grid,
+                                        save_positions = (false, false)) for grid in grids]
 
-#using non-spatial SSAs to get the mean
+# SSAs
+for alg in [DirectCRDirect(), DirectCRRSSA()]
+    push!(jump_problems, JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants, spatial_system = grids[1], save_positions = (false, false)))
+end
+
+# setup flattenned jump prob
+push!(jump_problems,
+      JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
+                  spatial_system = grids[1], save_positions = (false, false)))
+# test
+for spatial_jump_prob in jump_problems
+    solution = solve(spatial_jump_prob, SSAStepper())
+    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+    mean_end_state = reshape(mean_end_state, num_species, num_nodes)
+    diff = sum(mean_end_state, dims = 2) - non_spatial_mean
+    for (i, d) in enumerate(diff)
+        @test abs(d) < reltol * non_spatial_mean[i]
+    end
+end
+
+# using non-spatial SSAs to get the mean
 # non_spatial_rates = [0.1,1.0]
 # reactstoch = [[1 => 1, 2 => 1],[3 => 1]]
 # netstoch = [[1 => -1, 2 => -1, 3 => 1],[1 => 1, 2 => 1, 3 => -1]]
@@ -77,13 +80,3 @@ grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 # non_spatial_prob = DiscreteProblem(u0,(0.0,end_time), non_spatial_rates)
 # jump_prob = JumpProblem(non_spatial_prob, Direct(), majumps)
 # non_spatial_mean = get_mean_end_state(jump_prob, 10000)
-
-spatial_jump_prob = JumpProblem(prob, DirectCRRSSA(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false))
-sol = solve(spatial_jump_prob, SSAStepper())
-mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
-mean_end_state = reshape(mean_end_state, num_species, num_nodes)
-diff = sum(mean_end_state, dims = 2) - non_spatial_mean
-for (i, d) in enumerate(diff)
-    @test abs(d) < reltol * non_spatial_mean[i]
-end

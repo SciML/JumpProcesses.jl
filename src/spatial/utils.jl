@@ -27,6 +27,8 @@ end
 
 sample jump at site with direct method
 """
+sample_jump_direct(p, site) = sample_jump_direct(p.rx_rates, p.hop_rates, site, p.spatial_system, p.rng)
+
 function sample_jump_direct(rx_rates, hop_rates, site, spatial_system, rng)
     numspecies = size(hop_rates.rates, 1)
     if rand(rng) * (total_site_rate(rx_rates, hop_rates, site)) <
@@ -39,8 +41,6 @@ function sample_jump_direct(rx_rates, hop_rates, site, spatial_system, rng)
         return SpatialJump(site, species_to_diffuse, target_site)
     end
 end
-
-sample_jump_direct(p, site) = sample_jump_direct(p.rx_rates, p.hop_rates, site, p.spatial_system, p.rng)
 
 function total_site_rate(rx_rates::RxRates, hop_rates::AbstractHopRates, site)
     total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)

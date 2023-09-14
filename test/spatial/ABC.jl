@@ -1,6 +1,8 @@
 using JumpProcesses, DiffEqBase
 # using BenchmarkTools
 using Test, Graphs
+using StableRNGs
+rng = StableRNG(12345)
 
 Nsims = 100
 reltol = 0.05
@@ -67,19 +69,19 @@ grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
                                         hopping_constants = hopping_constants,
                                         spatial_system = grid,
-                                        save_positions = (false, false)) for grid in grids]
+                                        save_positions = (false, false), rng = rng) for grid in grids]
 push!(jump_problems,
       JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false)))
+                  spatial_system = grids[1], save_positions = (false, false), rng = rng))
 # setup constant rate jump problems
 push!(jump_problems, JumpProblem(prob, NSM(), crjumps, hopping_constants = hopping_constants,
-            spatial_system = CartesianGrid(dims), save_positions = (false, false), dep_graph = dep_graph, jumptovars_map = jumptovars_map))
+            spatial_system = CartesianGrid(dims), save_positions = (false, false), dep_graph = dep_graph, jumptovars_map = jumptovars_map, rng = rng))
 push!(jump_problems, JumpProblem(prob, DirectCRDirect(), crjumps, hopping_constants = hopping_constants,
-            spatial_system = CartesianGrid(dims), save_positions = (false, false), dep_graph = dep_graph, jumptovars_map = jumptovars_map))
+            spatial_system = CartesianGrid(dims), save_positions = (false, false), dep_graph = dep_graph, jumptovars_map = jumptovars_map, rng = rng))
 # setup flattenned jump prob
 push!(jump_problems,
       JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false)))
+                  spatial_system = grids[1], save_positions = (false, false), rng = rng))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

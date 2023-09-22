@@ -184,6 +184,32 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 supports_variablerates(aggregator::AbstractAggregatorAlgorithm) = false
 supports_variablerates(aggregator::Coevolve) = true
 
+# true if aggregator supports hops, e.g. diffusion
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
+
+# return the fastest aggregator out of the available ones
+function select_aggregator(jumps::JumpSet; vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, spatial_system=nothing, hopping_constants=nothing)
+    
+    # detect if a spatial SSA should be used
+    !isnothing(spatial_system) && !isnothing(hopping_constants) && return DirectCRDirect
+
+    # if variable rate jumps are present, return the only SSA that supports them
+    num_vrjs(jumps) != 0 && return Coevolve
+    
+    # if the number of jumps is small, return the Direct
+    num_majumps(jumps) + num_crjs(jumps) < 10 && return Direct
+
+    # if there are only massaction jumps, we can any build dependency graph, so return the fastest aggregator
+    num_crjs(jumps) == 0 && num_vrjs(jumps) == 0 && return RSSACR
+
+    # in the presence of constant rate jumps, we rely on the given dependency graphs
+    if !isnothing(vartojumps_map) && !isnothing(jumptovars_map)
+        return RSSACR
+    elseif !isnothing(dep_graph)
+        return DirectCR
+    else
+        return Direct
+    end
+end

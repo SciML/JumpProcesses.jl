@@ -12,7 +12,7 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
+SSAalgs = (JumpProcesses.NullAggregator(), RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
            NRM(), RSSA(), DirectCR(), Coevolve())
 
 # numerical parameters

@@ -171,9 +171,12 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::Abstr
                      kwargs...)
     JumpProblem(prob, aggregator, JumpSet(jumps...); kwargs...)
 end
-function JumpProblem(prob, jumps::JumpSet; kwargs...)
-    JumpProblem(prob, NullAggregator(), jumps; kwargs...)
+function JumpProblem(prob, jumps::JumpSet; vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, spatial_system=nothing, hopping_constants=nothing, kwargs...)
+    aggregator = select_aggregator(jumps::JumpSet; vartojumps_map=vartojumps_map, jumptovars_map=jumptovars_map, dep_graph=dep_graph, spatial_system=spatial_system, hopping_constants=hopping_constants)
+    return JumpProblem(prob, aggregator(), jumps; vartojumps_map=vartojumps_map, jumptovars_map=jumptovars_map, dep_graph=dep_graph, spatial_system=spatial_system, hopping_constants=hopping_constants, kwargs...)
 end
+# this makes it easier to test the aggregator selection
+JumpProblem(prob, aggregator::NullAggregator, jumps::JumpSet; kwargs...) = JumpProblem(prob, jumps; kwargs...)
 
 make_kwarg(; kwargs...) = kwargs
 

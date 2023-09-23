@@ -36,9 +36,9 @@ hopping_constants = [diffusivity for i in u0]
 uniform_majumps_1 = SpatialMassActionJump(uniform_rates[:, 1], reactstoch, netstoch)
 uniform_majumps_2 = SpatialMassActionJump(uniform_rates, reactstoch, netstoch)
 uniform_majumps_3 = SpatialMassActionJump([1.0], reshape(uniform_rates[2, :], 1, num_nodes),
-                                          reactstoch, netstoch) # hybrid
+    reactstoch, netstoch) # hybrid
 uniform_majumps_4 = SpatialMassActionJump(MassActionJump(uniform_rates[:, 1], reactstoch,
-                                                         netstoch))
+    netstoch))
 uniform_majumps = [
     uniform_majumps_1,
     uniform_majumps_2,
@@ -48,30 +48,30 @@ uniform_majumps = [
 
 non_uniform_majumps_1 = SpatialMassActionJump(non_uniform_rates, reactstoch, netstoch) # reactions are zero outside of center site
 non_uniform_majumps_2 = SpatialMassActionJump([1.0],
-                                              reshape(non_uniform_rates[2, :], 1,
-                                                      num_nodes), reactstoch, netstoch) # birth everywhere, death only at center site
+    reshape(non_uniform_rates[2, :], 1,
+        num_nodes), reactstoch, netstoch) # birth everywhere, death only at center site
 non_uniform_majumps_3 = SpatialMassActionJump([1.0 0.0 0.0 0.0 0.0;
-                                               0.0 0.0 0.0 0.0 death_rate], reactstoch,
-                                              netstoch) # birth on the left, death on the right
+        0.0 0.0 0.0 0.0 death_rate], reactstoch,
+    netstoch) # birth on the left, death on the right
 non_uniform_majumps = [non_uniform_majumps_1, non_uniform_majumps_2, non_uniform_majumps_3]
 
 # put together the JumpProblem's
 uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
-                                                hopping_constants = hopping_constants,
-                                                spatial_system = grid,
-                                                save_positions = (false, false), rng = rng)
+    hopping_constants = hopping_constants,
+    spatial_system = grid,
+    save_positions = (false, false), rng = rng)
                                     for majump in uniform_majumps]
 # flattenned
 append!(uniform_jump_problems,
-        JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants = hopping_constants,
-                                spatial_system = grid, save_positions = (false, false), rng = rng)
-                    for majump in uniform_majumps])
+    JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants = hopping_constants,
+        spatial_system = grid, save_positions = (false, false), rng = rng)
+                for majump in uniform_majumps])
 
 # non-uniform
 non_uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
-                                                    hopping_constants = hopping_constants,
-                                                    spatial_system = grid,
-                                                    save_positions = (false, false), rng = rng)
+    hopping_constants = hopping_constants,
+    spatial_system = grid,
+    save_positions = (false, false), rng = rng)
                                         for majump in non_uniform_majumps]
 
 # testing

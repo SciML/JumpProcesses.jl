@@ -18,7 +18,7 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", jump::SpatialJump)
     println(io,
-            "SpatialJump with source $(jump.src), destination $(jump.dst) and index $(jump.jidx).")
+        "SpatialJump with source $(jump.src), destination $(jump.dst) and index $(jump.jidx).")
 end
 
 ######################## helper routines for all spatial SSAs ########################
@@ -34,7 +34,7 @@ function sample_jump_direct(p, site)
         return SpatialJump(site, rx + p.numspecies, site)
     else
         species_to_diffuse, target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
-                                                             p.spatial_system)
+            p.spatial_system)
         return SpatialJump(site, species_to_diffuse, target_site)
     end
 end
@@ -70,7 +70,7 @@ function update_state!(p, integrator)
     else
         rx_index = reaction_id_from_jump(p, jump)
         @inbounds executerx!((@view integrator.u[:, jump.src]), rx_index,
-                             p.rx_rates.ma_jumps)
+            p.rx_rates.ma_jumps)
     end
     # save jump that was just exectued
     p.prev_jump = jump

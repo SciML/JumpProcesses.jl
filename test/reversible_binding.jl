@@ -49,7 +49,7 @@ algs = JumpProcesses.JUMP_AGGREGATORS
 relative_tolerance = 0.01
 for alg in algs
     local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-        rng = rng)
+                              rng = rng)
     local Amean = getmean(jprob, Nsims)
     @test abs(Amean - mastereq_mean) / mastereq_mean < relative_tolerance
 end

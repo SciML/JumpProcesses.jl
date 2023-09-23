@@ -74,7 +74,7 @@ sample a reaction at site, return reaction index
 """
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
     linear_search((@view rx_rates.rates[:, site]),
-        rand(rng) * total_site_rx_rate(rx_rates, site))
+                  rand(rng) * total_site_rx_rate(rx_rates, site))
 end
 
 # helper functions
@@ -90,9 +90,5 @@ function Base.show(io::IO, ::MIME"text/plain", rx_rates::RxRates)
     println(io, "RxRates with $num_rxs reactions and $num_sites sites")
 end
 
-function eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: SpatialMassActionJump}
-    evalrxrate(u, rx, ma_jumps, site)
-end
-function eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: MassActionJump}
-    evalrxrate((@view u[:, site]), rx, ma_jumps)
-end
+eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: SpatialMassActionJump} = evalrxrate(u, rx, ma_jumps, site)
+eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: MassActionJump} = evalrxrate((@view u[:, site]), rx, ma_jumps)

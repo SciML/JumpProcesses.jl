@@ -1,8 +1,8 @@
 struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
-    seed = nothing,
-    dt = error("dt is required for SimpleTauLeaping."))
+                          seed = nothing,
+                          dt = error("dt is required for SimpleTauLeaping."))
 
     # boilerplate from SimpleTauLeaping method
     @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
@@ -46,8 +46,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     end
 
     sol = DiffEqBase.build_solution(prob, alg, t, u,
-        calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(t, u))
+                                    calculate_error = false,
+                                    interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
 export SimpleTauLeaping

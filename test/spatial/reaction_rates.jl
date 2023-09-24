@@ -9,7 +9,7 @@ const JP = JumpProcesses
 # sample_rx_at_site
 
 # Dummy integrator to test update_rx_rates!
-struct DummyIntegrator{U, P, T}
+struct DummyIntegrator{U,P,T}
     u::U # state
     p::P # parameters
     t::T # time
@@ -28,7 +28,7 @@ num_rxs = length(rates)
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 spatial_ma_jumps = SpatialMassActionJump(rates, reactstoch, netstoch)
 u = ones(Int, num_species, num_nodes)
-integrator = DummyIntegrator(u, nothing, nothing)
+integrator = DummyIntegrator(u,nothing,nothing)
 rng = StableRNG(12345)
 
 # Tests for RxRates

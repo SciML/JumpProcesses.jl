@@ -5,7 +5,7 @@ rng = StableRNG(123)
 
 # Check that the new broadcast norm gives the same result as the old one
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}(rand(rng, 5),
-                                                                             rand(rng, 2))
+    rand(rng, 2))
 old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
                                    max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
@@ -13,8 +13,8 @@ new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 
 # Check for an ExtendedJumpArray where the types differ (Float64/Int64)
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Int64}}(rand(rng, 5),
-                                                                           rand(rng, 1:1000,
-                                                                                2))
+    rand(rng, 1:1000,
+        2))
 old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
                                    max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
@@ -89,7 +89,7 @@ let
     f(du, u, p, t) = (du[1] = u[1]; nothing)
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
     rate(u, p, t) = u[1]
-    affect!(integrator) = (integrator.u.u[1] = integrator.u.u[1]/2; nothing)
+    affect!(integrator) = (integrator.u.u[1] = integrator.u.u[1] / 2; nothing)
     jump = VariableRateJump(rate, affect!)
     jump_prob = JumpProblem(prob, Direct(), jump)
     sol = solve(jump_prob, Tsit5(); saveat = 0.5)
@@ -101,11 +101,11 @@ end
 let
     p = (λ = 2.0, μ = 1.5)
 
-    deathrate(u,p,t) = p.μ * u[1]
+    deathrate(u, p, t) = p.μ * u[1]
     deathaffect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
     deathvrj = VariableRateJump(deathrate, deathaffect!)
 
-    rate1(u,p,t) = p.λ * (sin(pi*t/2) + 1)
+    rate1(u, p, t) = p.λ * (sin(pi * t / 2) + 1)
     affect1!(integrator) = (integrator.u[1] += 1)
     vrj = VariableRateJump(rate1, affect1!)
 

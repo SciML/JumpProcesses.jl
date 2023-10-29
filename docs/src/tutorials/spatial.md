@@ -73,7 +73,7 @@ We are now ready to set up the `JumpProblem` with the Next Subvolume Method.
 ```@example spatial
 alg = NSM()
 jump_prob = JumpProblem(prob, alg, majumps, hopping_constants = hopping_constants,
-                        spatial_system = grid, save_positions = (true, false))
+    spatial_system = grid, save_positions = (true, false))
 ```
 
 The `save_positions` keyword tells the solver to save the positions just before the jumps. To solve the jump problem do
@@ -124,7 +124,7 @@ function get_frame(k, sol, linear_size, labels, title)
     end
     for species in 1:num_species
         scatter!(plt, species_seriess_x[species], species_seriess_y[species],
-                 label = labels[species], marker = 6)
+            label = labels[species], marker = 6)
     end
     xticks!(plt, range(xlim..., length = linear_size + 1))
     yticks!(plt, range(ylim..., length = linear_size + 1))
@@ -146,7 +146,7 @@ function animate_2d(sol, linear_size; species_labels, title, verbose = true)
 end
 # animate
 anim = animate_2d(solution, 5, species_labels = ["A", "B", "C"], title = "A + B <--> C",
-                  verbose = false)
+    verbose = false)
 fps = 5
 gif(anim, fps = fps)
 ```

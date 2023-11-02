@@ -276,7 +276,7 @@ is:
 
 ```julia
 JumpProblem(prob, aggregator, jumps::JumpSet;
-            save_positions = typeof(prob) <: AbstractDiscreteProblem ? (false, true) :
+            save_positions = prob isa AbstractDiscreteProblem ? (false, true) :
                              (true, true))
 ```
 

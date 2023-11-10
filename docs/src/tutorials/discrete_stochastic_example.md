@@ -22,7 +22,7 @@ chemical kinetics (i.e., Gillespie) models. It is not necessary to have read the
 
 !!! note
     
-    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/tutorials/ode_example/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
+    This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 We begin by demonstrating how to build jump processes using
 [JumpProcesses.jl](https://docs.sciml.ai/JumpProcesses/stable/)'s different jump types,
@@ -741,7 +741,7 @@ element in `du` which the jump rate functions depend on. In this section,
 type of jump and use any type of aggregator. However, the implementation does
 not enforce this requirement, so one must be careful. Alternatively, when `f(du, u, p, t)` *does* modify variables that affect the jump rate, we have to
 implement another strategy as described in the next [next Section](@ref
-VariableRateJumpSect].
+VariableRateJumpSect).
 
 ## [Adding a general VariableRateJump that Depends on a Continuously Evolving Variable](@id VariableRateJumpSect)
 

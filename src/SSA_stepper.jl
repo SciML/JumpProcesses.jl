@@ -189,7 +189,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
                                     interp = DiffEqBase.ConstantInterpolation(t, u))
     save_everystep = any(cb.save_positions)
 
-    if typeof(saveat) <: Number
+    if saveat isa Number
         _saveat = prob.tspan[1]:saveat:prob.tspan[2]
     else
         _saveat = saveat
@@ -277,7 +277,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
     jump_modified_u = integrator.u_modified
 
-    if !(typeof(integrator.opts.callback.discrete_callbacks) <: Tuple{})
+    if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
         discrete_modified, saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,
                                                                              integrator.opts.callback.discrete_callbacks...)
     else

@@ -119,81 +119,94 @@ plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 ## broadcasting
 
-struct ExtendedJumpArrayStyle{Style <: Broadcast.BroadcastStyle} <:
-       Broadcast.AbstractArrayStyle{Any} end
-ExtendedJumpArrayStyle(::S) where {S} = ExtendedJumpArrayStyle{S}()
-ExtendedJumpArrayStyle(::S, ::Val{N}) where {S, N} = ExtendedJumpArrayStyle(S(Val(N)))
-function ExtendedJumpArrayStyle(::Val{N}) where {N}
-    ExtendedJumpArrayStyle{Broadcast.DefaultArrayStyle{N}}()
+# The jump array styles stores two sub-styles in the type,
+# one for the `u` array and one for the `jump_u` array
+struct ExtendedJumpArrayStyle{UStyle <: Broadcast.BroadcastStyle,
+                              JumpUStyle <: Broadcast.BroadcastStyle} <:
+       Broadcast.BroadcastStyle end
+# Init style based on type of u/jump_u
+function ExtendedJumpArrayStyle(::US, ::JumpUS) where {US, JumpUS}
+    ExtendedJumpArrayStyle{US, JumpUS}()
+end
+function Base.BroadcastStyle(::Type{ExtendedJumpArray{T3, T1, UType, JumpUType}}) where {T3,
+                                                                                         T1,
+                                                                                         UType,
+                                                                                         JumpUType
+                                                                                         }
+    ExtendedJumpArrayStyle(Base.BroadcastStyle(UType), Base.BroadcastStyle(JumpUType))
 end
 
-# promotion rules
-@inline function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle{AStyle},
-                                          ::ExtendedJumpArrayStyle{BStyle}) where {AStyle,
-                                                                                   BStyle}
-    ExtendedJumpArrayStyle(Broadcast.BroadcastStyle(AStyle(), BStyle()))
+# Combine with other styles by combining individually with u/jump_u styles
+function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
+                             ::Style) where {UStyle, JumpUStyle,
+                                             Style <: Base.Broadcast.BroadcastStyle}
+    ExtendedJumpArrayStyle(Broadcast.result_style(UStyle(), Style()),
+                           Broadcast.result_style(JumpUStyle(), Style()))
 end
-function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle{Style},
-                                  ::Broadcast.DefaultArrayStyle{0}) where {
-                                                                           Style <:
-                                                                           Broadcast.BroadcastStyle
-                                                                           }
-    ExtendedJumpArrayStyle{Style}()
+
+# Decay back to the DefaultArrayStyle for higher-order default styles, to support adding to raw vectors as needed
+function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
+                             ::Broadcast.DefaultArrayStyle{0}) where {UStyle, JumpUStyle}
+    ExtendedJumpArrayStyle(UStyle(), JumpUStyle())
 end
-function Broadcast.BroadcastStyle(::ExtendedJumpArrayStyle,
-                                  ::Broadcast.DefaultArrayStyle{N}) where {N}
+
+function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
+                             ::Broadcast.DefaultArrayStyle{N}) where {N, UStyle, JumpUStyle}
     Broadcast.DefaultArrayStyle{N}()
 end
 
-combine_styles(args::Tuple{}) = Broadcast.DefaultArrayStyle{0}()
-@inline function combine_styles(args::Tuple{Any})
-    Broadcast.result_style(Broadcast.BroadcastStyle(args[1]))
-end
-@inline function combine_styles(args::Tuple{Any, Any})
-    Broadcast.result_style(Broadcast.BroadcastStyle(args[1]),
-                           Broadcast.BroadcastStyle(args[2]))
-end
-@inline function combine_styles(args::Tuple)
-    Broadcast.result_style(Broadcast.BroadcastStyle(args[1]),
-                           combine_styles(Base.tail(args)))
+# Lookup the first ExtendedJumpArray to pick output container size
+"`A = find_eja(args)` returns the first ExtendedJumpArray among the arguments."
+find_eja(bc::Base.Broadcast.Broadcasted) = find_eja(bc.args)
+find_eja(args::Tuple) = find_eja(find_eja(args[1]), Base.tail(args))
+find_eja(x) = x
+find_eja(::Tuple{}) = nothing
+find_eja(a::ExtendedJumpArray, rest) = a
+find_eja(::Any, rest) = find_eja(rest)
+
+function Base.similar(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+                      ::Type{ElType}) where {US, JumpUS, ElType}
+    A = find_eja(bc)
+    ExtendedJumpArray(similar(A.u, ElType), similar(A.jump_u, ElType))
 end
 
-function Broadcast.BroadcastStyle(::Type{ExtendedJumpArray{T, S}}) where {T, S}
-    ExtendedJumpArrayStyle(Broadcast.result_style(Broadcast.BroadcastStyle(T)))
+# Helper functions that repack broadcasted functions
+@inline function repack(bc::Broadcast.Broadcasted{Style}, i) where {Style}
+    Broadcast.Broadcasted{Style}(bc.f, repack_args(i, bc.args))
+end
+@inline function repack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+                        i::Val{:u}) where {US, JumpUS}
+    Broadcast.Broadcasted{US}(bc.f, repack_args(i, bc.args))
+end
+@inline function repack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+                        i::Val{:jump_u}) where {US, JumpUS}
+    Broadcast.Broadcasted{JumpUS}(bc.f, repack_args(i, bc.args))
 end
 
-@inline function Base.copy(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where {
-                                                                                            Style
-                                                                                            }
-    ExtendedJumpArray(copy(unpack(bc, Val(:u))), copy(unpack(bc, Val(:jump_u))))
+# Helper functions that repack arguments
+@inline repack(x, ::Any) = x
+@inline repack(x::ExtendedJumpArray, ::Val{:u}) = x.u
+@inline repack(x::ExtendedJumpArray, ::Val{:jump_u}) = x.jump_u
+
+# Repack args with generated function to do this in a type-stable way without recursion
+@generated function repack_args(extract_symbol, args::NTuple{N, Any}) where {N}
+    # Extract over the arg tuple
+    extracted_args = [:(repack(args[$i], extract_symbol)) for i in 1:N]
+    # Splat extracted args to another args tuple
+    return quote
+        ($(extracted_args...),)
+    end
 end
 
 @inline function Base.copyto!(dest::ExtendedJumpArray,
-                              bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}}) where {
-                                                                                               Style
-                                                                                               }
-    copyto!(dest.u, unpack(bc, Val(:u)))
-    copyto!(dest.jump_u, unpack(bc, Val(:jump_u)))
+                              bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}}) where {
+                                                                                                    US,
+                                                                                                    JumpUS
+                                                                                                    }
+    copyto!(dest.u, repack(bc, Val(:u)))
+    copyto!(dest.jump_u, repack(bc, Val(:jump_u)))
     dest
 end
-
-# drop axes because it is easier to recompute
-@inline function unpack(bc::Broadcast.Broadcasted{Style}, i) where {Style}
-    Broadcast.Broadcasted{Style}(bc.f, unpack_args(i, bc.args))
-end
-@inline function unpack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{Style}},
-                        i) where {Style}
-    Broadcast.Broadcasted{Style}(bc.f, unpack_args(i, bc.args))
-end
-unpack(x, ::Any) = x
-unpack(x::ExtendedJumpArray, ::Val{:u}) = x.u
-unpack(x::ExtendedJumpArray, ::Val{:jump_u}) = x.jump_u
-
-@inline function unpack_args(i, args::Tuple)
-    (unpack(args[1], i), unpack_args(i, Base.tail(args))...)
-end
-unpack_args(i, args::Tuple{Any}) = (unpack(args[1], i),)
-unpack_args(::Any, args::Tuple{}) = ()
 
 Base.:*(x::ExtendedJumpArray, y::Number) = ExtendedJumpArray(y .* x.u, y .* x.jump_u)
 Base.:*(y::Number, x::ExtendedJumpArray) = ExtendedJumpArray(y .* x.u, y .* x.jump_u)

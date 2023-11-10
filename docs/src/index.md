@@ -51,7 +51,7 @@ Pkg.add("JumpProcesses")
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
   - There are a few community forums for getting help and asking questions:
-    
+
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the
@@ -100,34 +100,20 @@ Pkg.status(; mode = PKGMODE_MANIFEST) # hide
 </details>
 ```
 
-```@raw html
-You can also download the
-<a href="
-```
-
 ```@eval
 using TOML
+using Markdown
 projtoml = joinpath("..", "..", "Project.toml")
 version = TOML.parse(read(projtoml, String))["version"]
 name = TOML.parse(read(projtoml, String))["name"]
-link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
+link_manifest = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
        "/assets/Manifest.toml"
-```
-
-```@raw html
-">manifest</a> file and the
-<a href="
-```
-
-```@eval
-using TOML
-projtoml = joinpath("..", "..", "Project.toml")
-version = TOML.parse(read(projtoml, String))["version"]
-name = TOML.parse(read(projtoml, String))["name"]
-link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
+link_project = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
        "/assets/Project.toml"
-```
-
-```@raw html
-">project</a> file.
+Markdown.parse("""You can also download the
+[manifest]($link_manifest)
+file and the
+[project]($link_project)
+file.
+""")
 ```

@@ -61,6 +61,7 @@ include("spatial/hop_rates.jl")
 include("spatial/reaction_rates.jl")
 include("spatial/flatten.jl")
 include("spatial/utils.jl")
+include("spatial/bracketing.jl")
 
 include("spatial/nsm.jl")
 include("spatial/directcrdirect.jl")

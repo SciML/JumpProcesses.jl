@@ -52,7 +52,7 @@ Now we can create the `DiscreteProblem`:
 prob = DiscreteProblem(starting_state, tspan, rates)
 ```
 
-Since both reactions are [massaction reactions](https://en.wikipedia.org/wiki/Law_of_mass_action), we put them together in a `MassActionJump`. In order to do that, we create two stoichiometry vectors. The net stoichiometry vector describes which molecules change in number and how much after each reaction; for example, `[1 => -1]` is the first molecule disappearing. The reaction stoichiometry vector describes what the reactants of each reaction are; for example, `[1 => 1, 2 => 1]` would mean that the reactants are one molecule of type 1, and one molecule of type 2.
+Since both reactions are [mass action reactions](https://en.wikipedia.org/wiki/Law_of_mass_action), we put them together in a `MassActionJump`. In order to do that, we create two stoichiometry vectors. The net stoichiometry vector describes which molecules change in number and how much after each reaction; for example, `[1 => -1]` is the first molecule disappearing. The reaction stoichiometry vector describes what the reactants of each reaction are; for example, `[1 => 1, 2 => 1]` would mean that the reactants are one molecule of type 1, and one molecule of type 2.
 
 ```@example spatial
 netstoch = [[1 => -1, 2 => -1, 3 => 1], [1 => 1, 2 => 1, 3 => -1]]

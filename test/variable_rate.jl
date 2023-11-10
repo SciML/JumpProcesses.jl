@@ -196,11 +196,17 @@ end
 # Test that rate, urate and lrate do not get called past tstop
 # https://github.com/SciML/JumpProcesses.jl/issues/330
 let
-    test_rate(u, p, t) = 0.1
+    function test_rate(u, p, t)
+        if t > 1.0
+            error("test_rate does not handle t > 1.0")
+        else
+            return 0.1
+        end
+    end
     test_affect!(integrator) = (integrator.u[1] += 1)
     function test_lrate(u, p, t)
         if t > 1.0
-            error("test_urate does not handle t > 1.0")
+            error("test_lrate does not handle t > 1.0")
         else
             return 0.05
         end

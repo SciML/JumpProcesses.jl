@@ -5,7 +5,22 @@ assetpath = joinpath(docpath, "src", "assets")
 cp(joinpath(docpath, "Manifest.toml"), joinpath(assetpath, "Manifest.toml"), force = true)
 cp(joinpath(docpath, "Project.toml"), joinpath(assetpath, "Project.toml"), force = true)
 
-include("pages.jl")
+# include("pages.jl")
+
+pages = [
+    # "index.md",
+    "Tutorials" => Any[
+                       # "tutorials/simple_poisson_process.md",
+                       # "tutorials/discrete_stochastic_example.md",
+                       "tutorials/point_process.md",
+                       # "tutorials/jump_diffusion.md",
+                       # "tutorials/spatial.md",
+                       ],
+    # "FAQ" => "faq.md",
+    # "Type Documentation" => Any["Jump types and JumpProblem" => "jump_types.md",
+    #                             "Jump solvers" => "jump_solve.md"],
+    # "API" => "api.md",
+]
 
 mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/require", "[tex]/mathtools"]),
                            :tex => Dict("inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
@@ -21,11 +36,12 @@ makedocs(sitename = "JumpProcesses.jl",
          authors = "Chris Rackauckas",
          modules = [JumpProcesses],
          clean = true, doctest = false, linkcheck = true, warnonly = [:missing_docs],
-         format = Documenter.HTML(; assets = ["assets/favicon.ico"],
-                                  canonical = "https://docs.sciml.ai/JumpProcesses/",
+         format = Documenter.HTML(; 
+                                  # assets = ["assets/favicon.ico"],
+                                  # canonical = "https://docs.sciml.ai/JumpProcesses/",
                                   prettyurls = (get(ENV, "CI", nothing) == "true"),
                                   mathengine),
          pages = pages)
 
-deploydocs(repo = "github.com/SciML/JumpProcesses.jl.git";
-           push_preview = true)
+# deploydocs(repo = "github.com/SciML/JumpProcesses.jl.git";
+#            push_preview = true)

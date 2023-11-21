@@ -64,7 +64,7 @@ Pkg.add("JumpProcesses")
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
   - There are a few community forums for getting help and asking questions:
-
+    
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the
@@ -120,9 +120,9 @@ projtoml = joinpath("..", "..", "Project.toml")
 version = TOML.parse(read(projtoml, String))["version"]
 name = TOML.parse(read(projtoml, String))["name"]
 link_manifest = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
-       "/assets/Manifest.toml"
+                "/assets/Manifest.toml"
 link_project = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
-       "/assets/Project.toml"
+               "/assets/Project.toml"
 Markdown.parse("""\nYou can also download the
 [manifest]($link_manifest)
 file and the

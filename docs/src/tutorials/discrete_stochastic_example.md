@@ -21,7 +21,7 @@ chemical kinetics (i.e., Gillespie) models. It is not necessary to have read the
     τ-leaping methods.
 
 !!! note
-
+    
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 We begin by demonstrating how to build jump processes using
@@ -561,7 +561,9 @@ unchanged (`rateinterval(u,p,t)`). The lower- and upper-bounds of the rate
 should be valid from the time they are computed `t` until `t + rateinterval(u, p, t)`:
 
 ```@example tut2
-rate3(u, p, t) = p[1] * u[1] * u[2] + p[3] * u[1] * sum(exp(-p[4] * (t - _t)) for _t in p[5])
+function rate3(u, p, t)
+    p[1] * u[1] * u[2] + p[3] * u[1] * sum(exp(-p[4] * (t - _t)) for _t in p[5])
+end
 lrate = rate1              # β*S*I
 urate = rate3
 rateinterval(u, p, t) = 1 / (2 * urate(u, p, t))
@@ -587,7 +589,8 @@ rate4(u, p, t) = p[2] * u[2]         # ν*I
 function affect4!(integrator)
     integrator.u[2] -= 1
     integrator.u[3] += 1
-    length(integrator.p[5]) > 0 && deleteat!(integrator.p[5], rand(1:length(integrator.p[5])))
+    length(integrator.p[5]) > 0 &&
+        deleteat!(integrator.p[5], rand(1:length(integrator.p[5])))
     nothing
 end
 jump4 = ConstantRateJump(rate4, affect4!)

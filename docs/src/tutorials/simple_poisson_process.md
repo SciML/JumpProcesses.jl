@@ -7,7 +7,7 @@ may occur, can skip directly to the [second tutorial](@ref ssa_tutorial) for a
 tutorial covering similar material but focused on the SIR model.
 
 !!! note
-
+    
     If you have a background in point process theory, we recommend that
     you read our example on [modelling temporal point processes with
     JumpProcesses](@ref tpp_tutorial)
@@ -274,14 +274,13 @@ initialized, we can think that internally the jumps will get ordered as
 vector `[deathcrj, vrj1]`. This vector of jumps is not the same as our
 state variable `u`.
 
-
-We assume the convention that jumps depends on themselves. With regards to 
-`vrj1` that represents births, we have that when `vrj1` fires the 
-population ``N(t)`` increases by 1. Since `deathcrj` is proportional to 
-population size, then a birth event should trigger an update of the death 
-rate. Conversely, death events do not modify the birth rate, since births 
-only obey seasonal fluctuation. The graph below encodes the dependency we 
-just described such that `dep_graph[1]` are the dependents of death events 
+We assume the convention that jumps depends on themselves. With regards to
+`vrj1` that represents births, we have that when `vrj1` fires the
+population ``N(t)`` increases by 1. Since `deathcrj` is proportional to
+population size, then a birth event should trigger an update of the death
+rate. Conversely, death events do not modify the birth rate, since births
+only obey seasonal fluctuation. The graph below encodes the dependency we
+just described such that `dep_graph[1]` are the dependents of death events
 and `dep_graph[2]` are the dependents of birth events.
 
 ```@example tut1

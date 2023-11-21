@@ -1,7 +1,7 @@
 # [Piecewise Deterministic Markov Processes and Jump Diffusion Equations](@id jump_diffusion_tutorial)
 
 !!! note
-
+    
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 Jump Diffusion equations are stochastic differential equations (SDE) with discontinuous
@@ -18,7 +18,6 @@ deterministic ``dt`` with size ``f(u, p, t)``, (2) stochastic diffusion
 stochastic process which is usually represented as Gaussian white noise.
 By jump we mean a discrete stochastic process which is usually represented
 by a Poisson process.
-
 
 In this tutorial, we will show how to solve problems with jumps more
 general than the homogeneous Poisson process. In the special case that

@@ -10,9 +10,11 @@ share many things in common which make JumpProcesses ideal for both.
 
 Processes involving multiple jumps are known as compound jump (or point)
 processes.
+
 ```math
 du = \sum_{j} h_j(u,p,t) dN_j(t)
 ```
+
 where ``N_j`` is a jump process with rate ``\lambda_i(u,p,t)``.
 
 The homogeneous Poisson process is the canonical point process with a constant
@@ -27,11 +29,14 @@ Chemical Master Equation (CME).
 
 Any differential equation can be extended by jumps. For example, we have an ODE
 with jumps, denoted by
+
 ```math
 du = f(u,p,t)dt + \sum_{j} h_j(u,p,t) dN_j(t)
 ```
+
 Extending a stochastic differential equation (SDE) to have jumps is commonly known as a jump-
 diffusion, and is denoted by
+
 ```math
 du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_i(u,p,t)dN_i(t)
 ```
@@ -39,6 +44,7 @@ du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_i(u,p,t)dN_i(t)
 The general workflow with any of the jump processes above is to define the base
 and jump problem, solve the jump problem and then analyze the solution. The full
 code for a jump process with no other dynamics apart from jumps is:
+
 ```@example ex0
 using JumpProcesses
 u0 = [0]
@@ -51,8 +57,8 @@ jprob = JumpProblem(dprob, Direct(), jump)
 sol = solve(jprob, SSAStepper())
 
 using Plots
-plot(sol, title="Sample path from a jump process with constant rate",
-  label = "N(t)", xlabel = "t", legend = :bottomright)
+plot(sol, title = "Sample path from a jump process with constant rate",
+    label = "N(t)", xlabel = "t", legend = :bottomright)
 ```
 
 ## Step 1: Defining a problem
@@ -60,6 +66,7 @@ plot(sol, title="Sample path from a jump process with constant rate",
 The first thing you want to do is to define your base problem from the many
 options available. For dynamics that involve only jumps we employ
 a `DiscreteProblem` as our base problem.
+
 ```@example ex0
 using JumpProcesses
 u0 = [0]
@@ -93,6 +100,7 @@ executed.
 Here we add a `ConstantRateJump` to the base problem. As such the user must
 define the `rate` and `affect!` which determines the frequency and the effect of
 the jumps on the base problem.
+
 ```@example ex0
 rate(u, p, t) = 2.0
 affect!(integrator) = (integrator.u[1] += 1)
@@ -107,6 +115,7 @@ algorithms that determines jump times. We call them _aggregators_ because they
 aggregate all jump callbacks into a single callback. Alternatively, we can think
 of aggregators as the jump simulation algorithms. In this case we use the
 `Direct` _aggregator_.
+
 ```@example ex0
 jprob = JumpProblem(dprob, Direct(), jump)
 ```
@@ -122,6 +131,7 @@ section](@ref Jump-Aggregators-for-Exact-Simulation).
 ## Step 3: Solving a problem
 
 After defining a problem, we solve it using `solve` with an appropriate stepper.
+
 ```@example ex0
 sol = solve(jprob, SSAStepper())
 ```
@@ -138,14 +148,17 @@ Apart from time-stepping, you might also be interested in controlling the saving
 frequency of the state variable `u`. This control can be thought as orthogonal
 to how the stepper evolves time. To avoid saving at every jump, we can
 initialize jumps as following.
+
 ```@example ex0
 jprob = JumpProblem(dprob, Direct(), jump; save_positions = (false, false))
 ```
 
-Finally, to solve the problem at regular intervals we can use `saveat`. 
+Finally, to solve the problem at regular intervals we can use `saveat`.
+
 ```@example ex0
 sol = solve(jprob, SSAStepper(); saveat = 1.0)
 ```
+
 When you do not save the jump events, be careful when analysing interpolated
 values as they will not be an accurate representation of the sampled path. This
 can be particularly problematic plotting the data.

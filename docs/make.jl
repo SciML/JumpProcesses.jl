@@ -27,5 +27,5 @@ makedocs(sitename = "JumpProcesses.jl",
                                   mathengine),
          pages = pages)
 
-# deploydocs(repo = "github.com/SciML/JumpProcesses.jl.git";
-#            push_preview = true)
+deploydocs(repo = "github.com/SciML/JumpProcesses.jl.git";
+           push_preview = true)

@@ -1,20 +1,29 @@
 # [Piecewise Deterministic Markov Processes and Jump Diffusion Equations](@id jump_diffusion_tutorial)
 
 !!! note
-    
+
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
-Jump Diffusion equations are stochastic differential equations with discontinuous
+Jump Diffusion equations are stochastic differential equations (SDE) with discontinuous
 jumps. These can be written as:
 
 ```math
 du = f(u,p,t)dt + \sum_{j}g_j(u,p,t)dW_j(t) + \sum_{i}h_i(u,p,t)dN_i(t)
 ```
 
-where ``N_i`` is a Poisson-counter which denotes jumps of size ``h_i``. In this
-tutorial, we will show how to solve problems with even more general jumps. In the
-special case that ``g_j = 0`` for all ``j``, we'll call the resulting jump-ODE a
-[piecewise deterministic Markov
+The change in state vector ``u`` depends on three concurrent dynamics, (1)
+deterministic ``dt`` with size ``f(u, p, t)``, (2) stochastic diffusion
+``dW_j(t)`` with size ``g_j(u, p, t)``, and, (3) stochastic jump
+``dN_i(t)`` with size ``h_i(u, p, t)``. By diffusion we mean a continuous
+stochastic process which is usually represented as Gaussian white noise.
+By jump we mean a discrete stochastic process which is usually represented
+by a Poisson process.
+
+
+In this tutorial, we will show how to solve problems with jumps more
+general than the homogeneous Poisson process. In the special case that
+``g_j = 0`` for all ``j``, we'll call the resulting jump-ODE a [piecewise
+deterministic Markov
 process](https://en.wikipedia.org/wiki/Piecewise-deterministic_Markov_process).
 
 Before running this tutorial, please install the following packages if they are
@@ -108,6 +117,9 @@ sol = solve(jump_prob, Tsit5())
 plot(sol)
 ```
 
+Note that every time a jump occurs the function peaks and then decreases
+by half following our specification.
+
 ## Variable Rate Jumps
 
 Now let's define a jump with a rate that is dependent on the differential
@@ -124,17 +136,10 @@ Using the same `affect!` we build a [`VariableRateJump`](@ref):
 jump = VariableRateJump(rate, affect!)
 ```
 
-To make things interesting, let's copy this jump:
+We now couple the jump to the `ODEProblem`:
 
 ```@example tut3
-jump2 = deepcopy(jump)
-```
-
-so that way we have two independent jump processes. We now couple these jumps
-to the `ODEProblem`:
-
-```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump, jump2)
+jump_prob = JumpProblem(prob, Direct(), jump)
 ```
 
 which we once again solve using an ODE solver:
@@ -143,6 +148,10 @@ which we once again solve using an ODE solver:
 sol = solve(jump_prob, Tsit5())
 plot(sol)
 ```
+
+Again, when a jump occurs the function peaks and then decreases by half.
+In contrast to our previous example, as the function value decreases the
+rate of jumps also decreases.
 
 In this way we have solved a mixed jump-ODE, i.e., a piecewise deterministic
 Markov process.
@@ -165,7 +174,7 @@ prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 and couple it to the jumps:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump, jump2)
+jump_prob = JumpProblem(prob, Direct(), jump)
 ```
 
 We then solve it using an SDE algorithm:
@@ -174,3 +183,8 @@ We then solve it using an SDE algorithm:
 sol = solve(jump_prob, SRIW1())
 plot(sol)
 ```
+
+The function now behaves different than before due to the diffusion
+component which drifts randomly around zero. Again, note that jumps are
+more frequent when the function obtains a higher value and the function
+sharply decreases by half anytime a jump takes place.

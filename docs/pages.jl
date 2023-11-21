@@ -1,14 +1,15 @@
 # Put in a separate page so it can be used by SciMLDocs.jl
 
 pages = ["index.md",
+    "getting_started.md",
     "Tutorials" => Any["tutorials/simple_poisson_process.md",
                        "tutorials/discrete_stochastic_example.md",
-                       "tutorials/point_processes.md",
                        "tutorials/jump_diffusion.md",
+                       "tutorials/point_process.md",
                        "tutorials/spatial.md",
                        ],
-    "FAQ" => "faq.md",
-    "Type Documentation" => Any["Jump types and JumpProblem" => "jump_types.md",
+    "Type Documentation" => Any["Jumps, JumpProblem, and Aggregators" => "jump_types.md",
                                 "Jump solvers" => "jump_solve.md"],
+    "FAQ" => "faq.md",
     "API" => "api.md",
 ]

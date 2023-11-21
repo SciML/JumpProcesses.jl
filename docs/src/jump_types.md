@@ -1,36 +1,6 @@
-# [Jump Problems](@id jump_problem_type)
+# [Jumps, JumpProblem, and Aggregators](@id jump_problem_type)
 
-## Mathematical Specification of a problem with jumps
-
-Jumps (or point) processes are stochastic processes with discrete state changes
-driven by a `rate` function. The homogeneous Poisson process is the canonical
-point process with a constant rate of change. Processes involving multiple jumps
-are known as compound jump (or point) processes.
-
-A compound Poisson process is a continuous-time Markov Chain where the time to
-the next jump is exponentially distributed as determined by the rate. Simulation
-algorithms for these types of processes are known in biology and chemistry as
-Gillespie methods or Stochastic Simulation Algorithms (SSA), with the time
-evolution that the probability these processes are in a given state at a given
-time satisfying the Chemical Master Equation (CME). In the statistics literature,
-the composition of Poisson processes is described by the superposition theorem.
-
-Any differential equation can be extended by jumps. For example, we have an ODE
-with jumps, denoted by
-
-```math
-\frac{du}{dt} = f(u,p,t) + \sum_{i}c_i(u,p,t)p_i(t)
-```
-
-where ``p_i`` is a Poisson counter of rate ``\lambda_i(u,p,t)``. Extending
-a stochastic differential equation to have jumps is commonly known as a Jump
-Diffusion, and is denoted by
-
-```math
-du(t) = f(u,p,t)dt + \sum_{j}g_j(u,t)dW_j(t) + \sum_{i}c_i(u,p,t)dp_i(t)
-```
-
-## Types of Jumps: Constant Rate, Mass Action, Variable Rate and Regular
+## [Jump Types: Constant Rate, Mass Action, Variable Rate and Regular](@id jump_types)
 
 Exact jump process simulation algorithms tend to describe the realization of
 each jump event chronologically. Individual jumps are usually associated with
@@ -266,7 +236,7 @@ RegularJump(rate, c, numjumps; mark_dist = nothing)
     equations and the number of `counts`.
   - `mark_dist` is the distribution for a mark.
 
-## Defining a Jump Problem
+## [JumpProblem](@id defining_jump_problem)
 
 To define a `JumpProblem`, one must first define the basic problem. This can be
 a `DiscreteProblem` if there is no differential equation, or an ODE/SDE/DDE/DAE

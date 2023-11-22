@@ -540,35 +540,37 @@ where ``\beta_1`` is the basal rate of infection, ``\alpha`` is the spike in the
 rate of infection, and ``\gamma`` is the rate at which the spike decreases. Here,
 we choose parameters such that infectivity rate due to a single infected
 individual returns to the basal rate after spiking to ``\beta_1 + \alpha``. In
-other words, we are modelling a situation in infected individuals gradually
-become less infectious prior to recovering. Our parameters are then
+other words, we are modelling a situation in which infected individuals gradually
+become less infectious prior to recovering. Finally, the vector parameters
+will include a vector of active infections ``H``. Our parameters are then
 
 ```@example tut2
 β1 = 0.001 / 1000.0
 α = 0.1 / 1000.0
 γ = 0.05
-p1 = (β1, ν, α, γ)
+H = zeros(Float64, 10)
+p1 = (β1, ν, α, γ, H)
 ```
 
-We define a vector `H` to hold the timestamp of active infections. Then, we
-define an infection reaction as a bounded `VariableRateJump`, requiring us to
-again provide `rate` and `affect` functions, but also give functions that
-calculate an upper-bound on the rate (`urate(u,p,t)`), an optional lower-bound
-on the rate (`lrate(u,p,t)`), and a time window over which the bounds are valid
-as long as any states these three rates depend on are unchanged
-(`rateinterval(u,p,t)`). The lower- and upper-bounds of the rate should be valid
-from the time they are computed `t` until `t + rateinterval(u, p, t)`:
+We define an infection reaction as a bounded `VariableRateJump`, requiring
+us to again provide `rate` and `affect` functions, but also give functions
+that calculate an upper-bound on the rate (`urate(u,p,t)`), an optional
+lower-bound on the rate (`lrate(u,p,t)`), and a time window over which the
+bounds are valid as long as any states these three rates depend on are
+unchanged (`rateinterval(u,p,t)`). The lower- and upper-bounds of the rate
+should be valid from the time they are computed `t` until `t + rateinterval(u, p, t)`:
 
 ```@example tut2
-H = zeros(Float64, 10)
-rate3(u, p, t) = p[1] * u[1] * u[2] + p[3] * u[1] * sum(exp(-p[4] * (t - _t)) for _t in H)
+function rate3(u, p, t)
+    p[1] * u[1] * u[2] + p[3] * u[1] * sum(exp(-p[4] * (t - _t)) for _t in p[5])
+end
 lrate = rate1              # β*S*I
 urate = rate3
 rateinterval(u, p, t) = 1 / (2 * urate(u, p, t))
 function affect3!(integrator)
     integrator.u[1] -= 1     # S -> S - 1
     integrator.u[2] += 1     # I -> I + 1
-    push!(H, integrator.t)
+    push!(integrator.p[5], integrator.t)
     nothing
 end
 jump3 = VariableRateJump(rate3, affect3!; lrate, urate, rateinterval)
@@ -580,14 +582,15 @@ required for bounded `VariableRateJump`s, we have for any `s` in `[t,t + rateint
 will hold provided the dependent states `u[1]` and `u[2]` have not changed.
 
 Next, we redefine the recovery jump's `affect!` such that a random infection is
-removed from `H` for every recovery.
+removed from `p[5]` for every recovery.
 
 ```@example tut2
 rate4(u, p, t) = p[2] * u[2]         # ν*I
 function affect4!(integrator)
     integrator.u[2] -= 1
     integrator.u[3] += 1
-    length(H) > 0 && deleteat!(H, rand(1:length(H)))
+    length(integrator.p[5]) > 0 &&
+        deleteat!(integrator.p[5], rand(1:length(integrator.p[5])))
     nothing
 end
 jump4 = ConstantRateJump(rate4, affect4!)
@@ -640,15 +643,15 @@ dynamics.
 
 Note that jumps act via DifferentialEquations.jl's [callback
 interface](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
-which defaults to saving at each event. This is required in order to accurately
-resolve every discontinuity exactly (and this is what allows for perfectly
-vertical lines in plots!). However, in many cases when using jump problems, you
-may wish to decrease the saving pressure given by large numbers of jumps. To do
-this, you set the `save_positions` keyword argument to `JumpProblem`. Just like
-for other
+which defaults to saving the state vector `u` at each event. This is
+required in order to accurately resolve every discontinuity exactly (and
+this is what allows for perfectly vertical lines in plots!). However, in
+many cases when using jump problems, you may wish to decrease the saving
+pressure given by large numbers of jumps. To do this, you set the
+`save_positions` keyword argument to `JumpProblem`. Just like for other
 [callbacks](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
-this is a tuple `(bool1, bool2)` which sets whether to save before or after a
-jump. If we do not want to save at every jump, we would thus pass:
+this is a tuple `(bool1, bool2)` which sets whether to save `u` before or
+after a jump. If we do not want to save at every jump, we would thus pass:
 
 ```@example tut2
 prob = DiscreteProblem(u₀, tspan, p)
@@ -676,6 +679,10 @@ time points. *It is important to note that interpolation of the solution object
 will no longer be exact for a pure jump process, as the solution values at jump
 times have not been stored. i.e for `t` a time we did not save at `sol(t)` will
 no longer give the exact value of the solution at `t`.*
+
+In summary, the jump callback will save the state variable `u` before and
+after the jump whenever `save_positions = (true, true)`. All other saving
+behaviour is delegated to the integrator and controlled via `saveat`.
 
 ## Defining the Jumps Directly: Mixing `ConstantRateJump`/`VariableRateJump` and `MassActionJump`
 

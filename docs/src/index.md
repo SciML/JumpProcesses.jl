@@ -7,19 +7,32 @@ methods, or Kinetic Monte Carlo methods. It also enables the incorporation of
 jump processes into hybrid jump-ODE and jump-SDE models, including jump
 diffusions.
 
+Historically, jump processes have been developed in the context of dynamical
+systems to describe dynamics with sudden changes — the jumps — in a
+system's value at random times. In contrast, the development of point processes
+has been more focused on describing the occurrence of random events — the
+points — over a support. In reality, jump and point processes share many
+things in common which make JumpProcesses ideal for both.
+
 JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
 and one of the core solver libraries included in
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/).
 
-The documentation includes
+The documentation includes tutorials and examples:
 
-  - [a tutorial on simulating basic Poisson processes](@ref poisson_proc_tutorial)
-  - [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial),
-  - [a tutorial on simulating jump-diffusion processes](@ref jump_diffusion_tutorial),
-  - [a reference on the types of jumps and available simulation methods](@ref jump_problem_type),
-  - [a reference on jump time stepping methods](@ref jump_solve)
-  - a [FAQ](@ref) with information on changing parameters between simulations and using callbacks.
-  - the [JumpProcesses.jl API](@ref) documentation.
+  - [Getting Started with JumpProcesses in Julia](@ref)
+  - [Simulating basic Poisson processes](@ref poisson_proc_tutorial)
+  - [Simulating jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial)
+  - [Simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
+  - [Temporal point processes (TPP)](@ref tpp_tutorial)
+  - [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses.jl)
+
+In addition to that the document contains references to guide you through:
+
+  - [References on the types of jumps and available simulation methods](@ref jump_problem_type)
+  - [References on jump time stepping methods](@ref jump_solve)
+  - [FAQ with information on changing parameters between simulations and using callbacks](@ref FAQ)
+  - [API documentation](@ref JumpProcesses.jl-API)
 
 ## Installation
 
@@ -51,7 +64,7 @@ Pkg.add("JumpProcesses")
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
   - There are a few community forums for getting help and asking questions:
-
+    
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the
@@ -107,10 +120,10 @@ projtoml = joinpath("..", "..", "Project.toml")
 version = TOML.parse(read(projtoml, String))["version"]
 name = TOML.parse(read(projtoml, String))["name"]
 link_manifest = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
-       "/assets/Manifest.toml"
+                "/assets/Manifest.toml"
 link_project = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
-       "/assets/Project.toml"
-Markdown.parse("""You can also download the
+               "/assets/Project.toml"
+Markdown.parse("""\nYou can also download the
 [manifest]($link_manifest)
 file and the
 [project]($link_project)

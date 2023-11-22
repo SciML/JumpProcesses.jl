@@ -12,7 +12,7 @@ SSAStepper
 reset_aggregated_jumps!
 ```
 
-## Types of Jumps
+## Jump Types
 
 ```@docs
 ConstantRateJump
@@ -22,7 +22,7 @@ RegularJump
 JumpSet
 ```
 
-## Aggregators
+## Aggregator Types
 
 Aggregators are the underlying algorithms used for sampling
 [`ConstantRateJump`](@ref)s, [`MassActionJump`](@ref)s, and

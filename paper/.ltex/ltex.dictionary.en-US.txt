@@ -48,3 +48,4 @@ ThinningMethod
 TimeViaThinning
 SSAs
 Doob
+piecewise-constant

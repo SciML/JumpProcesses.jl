@@ -4,7 +4,7 @@
     
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
-Jump Diffusion equations are stochastic differential equations (SDE) with discontinuous
+Jump Diffusion equations are stochastic differential equations (SDEs) with discontinuous
 jumps. These can be written as:
 
 ```math

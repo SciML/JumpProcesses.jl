@@ -1,16 +1,14 @@
 # [Simple Poisson Processes in JumpProcesses] (@id poisson_proc_tutorial)
 
 In this tutorial, we show how to simulate several Poisson jump processes, for
-several types of intensities and jump distributions. Readers interested
-primarily in chemical or population process models, where several types of jumps
-may occur, can skip directly to the [second tutorial](@ref ssa_tutorial) for a
-tutorial covering similar material but focused on the SIR model.
+several types of intensities and jump distributions.
 
-!!! note
-    
-    If you have a background in point process theory, we recommend that
-    you read our example on [modelling temporal point processes with
-    JumpProcesses](@ref tpp_tutorial)
+Readers interested primarily in chemical or population process models, where
+several types of jumps may occur, can skip directly to the [second
+tutorial](@ref ssa_tutorial) for a tutorial covering similar material but
+focused on the SIR model. Readers with a background in point process theory can
+skip directly to [modelling temporal point processes with JumpProcesses](@ref
+tpp_tutorial).
 
 JumpProcesses allows the simulation of jump processes where the transition rate,
 i.e., intensity or propensity, can be a function of the current solution, current

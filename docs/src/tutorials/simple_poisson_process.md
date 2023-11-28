@@ -188,9 +188,9 @@ deathcrj = ConstantRateJump(deathrate, deathaffect!)
 
 As the death rate is constant *between* jumps, we can encode this process as a
 second `ConstantRateJump`. Overall, we keep track of four different processes,
-the population size ``N``, total deaths ``D``, births ``Y_b`` and deaths
-``Y_d``. ``N`` and ``D`` are represented by ``u`` in our code, ``Y_b`` by `crj`
-and ``Y_d`` by `death_crj`. We then construct the corresponding problems,
+the population size ``N(t)``, total deaths ``D(t)``, births ``Y_b(t)`` and deaths
+``Y_d(t)``. The vector ``(N(t), D(t))`` is represented by ``u`` in our code, with ``Y_b(t)`` encoded by `crj`
+and ``Y_d(t)`` by `death_crj`. We then construct the corresponding problems,
 passing both jumps to `JumpProblem`, and can solve as before
 
 ```@example tut1

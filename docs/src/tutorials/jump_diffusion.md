@@ -12,10 +12,10 @@ du = f(u,p,t)dt + \sum_{j}g_j(u,p,t)dW_j(t) + \sum_{i}h_i(u,p,t)dN_i(t)
 ```
 
 The change in state vector ``u`` depends on three concurrent dynamics, (1)
-deterministic ``dt`` with size ``f(u, p, t)``, (2) stochastic diffusion
-``dW_j(t)`` with size ``g_j(u, p, t)``, and, (3) stochastic jump
-``dN_i(t)`` with size ``h_i(u, p, t)``. By diffusion we mean a continuous
-stochastic process which is usually represented as Gaussian white noise.
+deterministic drift ``dt`` with size ``f(u, p, t)``, (2) stochastic diffusions
+``dW_j(t)`` with sizes ``g_j(u, p, t)``, and, (3) stochastic jumps
+``dN_i(t)`` with sizes ``h_i(u, p, t)``. By diffusion we mean a continuous
+stochastic process which is usually represented as Gaussian white noise (i.e. ``W_j(t)`` is a Brownian Motion).
 By jump we mean a discrete stochastic process which is usually represented
 by a Poisson process.
 

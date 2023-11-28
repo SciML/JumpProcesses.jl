@@ -1,21 +1,52 @@
 # JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions
 
 JumpProcesses.jl, formerly DiffEqJump.jl, provides methods for simulating jump
-(or point) processes. Across different fields of science, such methods are also
+and point processes. Across different fields of science, such methods are also
 known as stochastic simulation algorithms (SSAs), Doob's method, Gillespie
-methods, or Kinetic Monte Carlo methods. It also enables the incorporation of
-jump processes into hybrid jump-ODE and jump-SDE models, including jump
-diffusions.
+methods, Kinetic Monte Carlo's methods, thinning method, Ogatha's method. It
+also enables the incorporation of jump processes into hybrid jump-ODE and
+jump-SDE models, including jump diffusions.
 
 Historically, jump processes have been developed in the context of dynamical
-systems to describe dynamics with sudden changes — the jumps — in a
-system's value at random times. In contrast, the development of point processes
-has been more focused on describing the occurrence of random events — the
-points — over a support. In reality, jump and point processes share many
-things in common which make JumpProcesses ideal for both.
+systems to describe dynamics with sudden changes — the jumps — in a system's
+value at random times. In contrast, the development of point processes has been
+more focused on describing the occurrence of random events — the points — over
+a support. In reality, jump and point processes share many things in common
+which make JumpProcesses ideal for both.
 
-JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
-and one of the core solver libraries included in
+Let ``dN_i(t)`` be a stochastic process such that ``dN_i(t) = 1`` with some
+probability and ``0`` otherwise. In a sense, ``dN_i(t)`` is a Bernoulli
+distribution over a tiny interval which represents our jump. The rate in which
+we observe jumps is given by the intensity rate, ``E(dN_i(t)) = \lambda_i(t) dt``. As ``dN_i(t)`` is a function of time, any differential equation
+can be extended by jumps.
+
+For example, we have an ODE with jumps ``i``, denoted by
+
+```math
+du = f(u,p,t)dt + \sum_{i} h_i(u,p,t) dN_i(t) 
+```
+
+Functions `f(u, p, t)` and `h(u, p, t)` represent the impact of the drift and
+jumps on the state variable respectively.
+
+Extending a stochastic differential equation (SDE) to have jumps is commonly
+known as a jump-diffusion, and is denoted by
+
+```math
+du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_i(u,p,t)dN_i(t)
+```
+
+By diffusion we mean a continuous stochastic process which is usually
+represented as Gaussian white noise (i.e. ``W_j(t)`` is a Brownian Motion).
+
+Concurrently, if we denote ``N(t) \equiv N[0, t)`` as the number of points
+since the start of time until ``t``, exclusive of ``t``, then ``N(t)`` is a
+stochastic random integer measure. In other words, we have a temporal point
+process (TPP).
+
+JumpProcesses is designed to simulate all jumps above. It is a component
+package in the [SciML](https://sciml.ai/) ecosystem, and one of the core solver
+libraries included in
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/).
 
 The documentation includes tutorials and examples:

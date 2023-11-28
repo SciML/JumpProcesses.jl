@@ -137,7 +137,7 @@ We next create a [`JumpProblem`](@ref) that wraps the discrete problem, and
 specifies which sampling algorithm, called an aggregator in JumpProcesses, to
 use for determining next jump times (and in the case of multiple possible jumps
 the next jump type). We call them aggregators because these algorithms are
-methods for aggregating a set of jumps to determine the next jump time.  Here
+methods for aggregating a set of jumps to determine the next jump time and type.  Here
 we use the classical `Direct` method, proposed by Gillespie in the chemical
 reaction context, but going back to earlier work by Doob and others (and also
 known as Kinetic Monte Carlo in the physics literature)

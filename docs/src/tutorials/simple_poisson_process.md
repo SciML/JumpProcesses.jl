@@ -270,9 +270,7 @@ recalculated (for example, due to depending on changed components in `u`).
 Internally, JumpProcesses preserves the relative ordering of jumps of each
 distinct type, but always reorders all `ConstantRateJump`s to appear
 before any `VariableRateJump`s. Irrespective of how `JumpProblem` is
-initialized, we can think that internally the jumps will get ordered as
-vector `[deathcrj, vrj1]`. This vector of jumps is not the same as our
-state variable `u`.
+initialized, internally the jumps will be ordered as the vector `[deathcrj, vrj1]`. Note, this vector of the jumps is distinct from our state variable vector, `u`.
 
 We assume the convention that jumps depends on themselves. With regards to
 `vrj1` that represents births, we have that when `vrj1` fires the

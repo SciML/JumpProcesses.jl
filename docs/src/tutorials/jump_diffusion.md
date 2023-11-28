@@ -99,14 +99,14 @@ end
 Then we build our jump:
 
 ```@example tut3
-jump = ConstantRateJump(rate, affect!)
+const_jump = ConstantRateJump(rate, affect!)
 ```
 
 Next, we extend our `ODEProblem` to a [`JumpProblem`](@ref) by attaching the
 jump:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), const_jump)
 ```
 
 We can now solve this extended problem using any ODE solver:
@@ -132,13 +132,13 @@ rate(u, p, t) = u[1]
 Using the same `affect!` we build a [`VariableRateJump`](@ref):
 
 ```@example tut3
-jump = VariableRateJump(rate, affect!)
+var_jump = VariableRateJump(rate, affect!)
 ```
 
 We now couple the jump to the `ODEProblem`:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), var_jump)
 ```
 
 which we once again solve using an ODE solver:
@@ -154,6 +154,23 @@ rate of jumps also decreases.
 
 In this way we have solved a mixed jump-ODE, i.e., a piecewise deterministic
 Markov process.
+
+## Multiple jumps
+
+In this section we allow for multiple jumps in the SDE. Let's assume that the dynamics of our SDE is affected by the two jumps we defined in the previous sections. It is easy to re-use all the elements we defined above and initialize a `JumpProblem` with multiple jumps.
+
+```@example tut3
+jump_prob = JumpProblem(prob, Direct(), const_jump, var_jump)
+```
+
+which we solve in the same manner using an ODE solver:
+
+```@example tut3
+sol = solve(jump_prob, Tsit5())
+plot(sol)
+```
+
+The constant jump ensures that the function jumps at more or less regular intervals, while the variable jump increases the frequency of jumps when the function reaches higher levels.
 
 ## Jump Diffusion
 
@@ -173,7 +190,7 @@ prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 and couple it to the jumps:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), const_jump, var_jump)
 ```
 
 We then solve it using an SDE algorithm:

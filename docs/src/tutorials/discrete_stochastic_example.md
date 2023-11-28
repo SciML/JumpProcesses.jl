@@ -550,7 +550,7 @@ insertions and deletions are ``\mathcal{O}(1)``. Our parameters are then
 β1 = 0.001 / 1000.0
 α = 0.1 / 1000.0
 γ = 0.05
-H = Dict(zip(1:10, zeros(Int, 10)))
+H = Dict(zip(1:10, zeros(Float64, 10)))
 sizehint!(H, 1000)
 p1 = (β1, ν, α, γ, H)
 ```

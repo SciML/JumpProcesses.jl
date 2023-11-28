@@ -17,8 +17,9 @@ which make JumpProcesses ideal for both.
 Let ``dN_i(t)`` be a stochastic process such that ``dN_i(t) = 1`` with some
 probability and ``0`` otherwise. In a sense, ``dN_i(t)`` is a Bernoulli
 distribution over a tiny interval which represents our jump. The rate in which
-we observe jumps is given by the intensity rate, ``E(dN_i(t)) = \lambda_i(t) dt``. As ``dN_i(t)`` is a function of time, any differential equation
-can be extended by jumps.
+we observe jumps is given by the intensity rate, ``E(dN_i(t)) = \lambda_i(t)
+dt``. As ``dN_i(t)`` is a function of time, any differential equation can be
+extended by jumps.
 
 For example, we have an ODE with jumps ``i``, denoted by
 
@@ -26,8 +27,8 @@ For example, we have an ODE with jumps ``i``, denoted by
 du = f(u,p,t)dt + \sum_{i} h_i(u,p,t) dN_i(t) 
 ```
 
-Functions `f(u, p, t)` and `h(u, p, t)` represent the impact of the drift and
-jumps on the state variable respectively.
+Functions ``f(u, p, t)`` and ``h(u, p, t)`` represent the impact of the drift
+and jumps on the state variable respectively.
 
 Extending a stochastic differential equation (SDE) to have jumps is commonly
 known as a jump-diffusion, and is denoted by

@@ -114,7 +114,6 @@ function recursivecopy!(dest::T, src::T) where {T <: ExtendedJumpArray}
     recursivecopy!(dest.jump_u, src.jump_u)
 end
 Base.show(io::IO, A::ExtendedJumpArray) = show(io, A.u)
-TreeViews.hastreeview(x::ExtendedJumpArray) = true
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 ## broadcasting

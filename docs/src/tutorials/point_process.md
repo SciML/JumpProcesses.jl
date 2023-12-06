@@ -1,8 +1,8 @@
 # [Temporal Point Processes (TPP) with JumpProcesses] (@id tpp_tutorial)
 
 JumpProcesses was initially developed to simulate the trajectory of jump
-processes. Therefore, those with a background in point process might find a lot
-of the nomenclature in this library confusing. In reality, jump and point
+processes. Therefore, those with a background in point process might find the
+nomenclature in the library documentation confusing. In reality, jump and point
 processes share many things in common, but diverge in scope. This tutorial will
 cover JumpProcesses from the perspective of point process theory.
 
@@ -13,29 +13,29 @@ more focused on describing the occurrence of random events — the points — ov
 a support. The fact that any temporal point process (TPP) that satisfies some
 basic assumptions can be described in terms of a stochastic differential
 equation (SDE) with discontinuous jumps — more commonly known as a jump process
-— makes TPP a good model for JumpProcesses.
+— means TPPs can be simulated with JumpProcesses.
 
 ## [TPP Theory](@id tpp_theory)
 
 TPPs describe a set of discrete points over continuous time. Conventionally, we
 assume that time starts at ``0``. We can represent a TPP as a random integer
 measure ``N( \cdot )``, this random function counts the number of points in
-a set of intervals over the Real line. For instance, ``N([5, 10])`` denotes the
+a set of intervals over the real line. For instance, ``N([5, 10])`` denotes the
 number of points (or events) in between time ``5`` and ``10`` inclusive. The
 number of points in this interval is a random variable. If ``N`` is a Poisson
-process with conditional intensity (or rate) equals to ``1``, then ``N[5, 10]``
+process with conditional intensity (or rate) equal to ``1``, then ``N[5, 10]``
 is distributed according to a Poisson distribution with parameter ``\lambda = 5``.
 
 For convenience, we denote ``N(t) \equiv N[0, t)`` as the number of points since
-the start of time until ``t``, exclusive of ``t``. A TPP is _simple_, if only
-a single event can occur in any unit of time ``t``, that is, ``\Pr(N[t, t + \epsilon) > 2) = 0``. We can then define a differential operator for ``N``
-— ``dN`` — which describes the change in ``N(t)`` over an infinitesimal amount
-of time.
+the start of time until ``t``, exclusive of ``t``. A TPP is _simple_, if only a
+single event can occur in any unit of time ``t``, that is, ``\Pr(N[t, t +
+\epsilon) > 2) = 0``. We can then define a differential of ``N``, ``dN``, which
+describes the change in ``N(t)`` over an infinitesimal amount of time.
 
 ```math
 dN(t) = \begin{cases}
   1 \text{ , if } N[t, t + \epsilon] = 1 \\
-  0 \text{ , if } N[t, t + \epsilon] = 0
+  0 \text{ , if } N[t, t + \epsilon] = 0.
 \end{cases}
 ```
 
@@ -65,17 +65,18 @@ A TPP is marked if, in addition to the temporal support ``\mathbb{R}``, there is
 a mark space ``\mathcal{K}`` such that ``N`` is a random integer measure over
 ``\mathbb{R} \times \mathcal{K}``. Intuitively, for every point in the process
 there is a mark associated with it. If the mark space is discrete, we have
-a multivariate TPP. There are different ways to slice and dice a TPP, we will
-play with this fact throughout the tutorial.
+a multivariate TPP. There are different ways to interpret TPPs, and we will
+move between these interpretations throughout the tutorial.
 
 To make the connection between the JumpProcesses library and point process
-theory, we will use the PointProcess library, which offers a common interface
-for marked TPPs. Since TPP sampling is more efficient if we split any marked TPP
-into a sparsely connected multivariate TPP, we define `SciMLPointProcess` as
-a multivariate TPP such that each sub-component is itself a marked TPP on
-a continuous space. Therefore, we have that our structure includes a vector of
-sub-TPPs `jumps`, a vector of mark distributions `mark_dist` and the sparsely
-connected graph `g`.
+theory, we will compare against the
+[PointProcess.jl](https://github.com/gdalle/PointProcesses.jl) library, which
+offers a common interface for marked TPPs. Since TPP sampling is more efficient
+if we split any marked TPP into a sparsely connected multivariate TPP, we define
+`SciMLPointProcess` as a multivariate TPP such that each sub-component is itself
+a marked TPP on a continuous space. Therefore, we have that our structure
+includes a vector of sub-TPP `jumps`, a vector of mark distributions `mark_dist`
+and the sparsely connected graph `g`.
 
 ```@example tpp
 using JumpProcesses

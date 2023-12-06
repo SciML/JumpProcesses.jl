@@ -685,7 +685,7 @@ no longer give the exact value of the solution at `t`.*
 
 In summary, the jump callback will save the state variable `u` before and
 after the jump whenever `save_positions = (true, true)`. All other saving
-behaviour is delegated to the integrator and controlled via `saveat`.
+behavior is delegated to the integrator and controlled via keyword arguments to `solve` such as `saveat`.
 
 ## Defining the Jumps Directly: Mixing `ConstantRateJump`/`VariableRateJump` and `MassActionJump`
 

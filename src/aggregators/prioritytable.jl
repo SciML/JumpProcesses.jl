@@ -139,7 +139,7 @@ end
 end
 
 """
-Adds extra groups to the table to accomodate a new maxpriority.
+Adds extra groups to the table to accommodate a new maxpriority.
 """
 function padtable!(pt::PriorityTable, pid, priority)
     @unpack maxpriority, groups, gsums = pt

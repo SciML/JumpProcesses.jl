@@ -72,7 +72,7 @@ function update_state!(p, integrator)
         @inbounds executerx!((@view integrator.u[:, jump.src]), rx_index,
                              p.rx_rates.ma_jumps)
     end
-    # save jump that was just exectued
+    # save jump that was just executed
     p.prev_jump = jump
     nothing
 end

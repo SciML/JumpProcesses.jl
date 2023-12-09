@@ -1,4 +1,4 @@
-# [Temporal Point Processes (TPP) with JumpProcesses] (@id tpp_tutorial)
+# [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses] (@id tpp_advanced)
 
 JumpProcesses was initially developed to simulate the trajectory of jump
 processes. Therefore, those with a background in point process might find the
@@ -6,18 +6,17 @@ nomenclature in the library documentation confusing. In reality, jump and point
 processes share many things in common, but diverge in scope. This tutorial will
 cover JumpProcesses from the perspective of point process theory.
 
-Historically, jump processes have been developed in the context of dynamical
-systems to describe dynamics with sudden changes — the jumps — in a system's
-value at random times. In contrast, the development of point processes has been
-more focused on describing the occurrence of random events — the points — over
-a support. The fact that any temporal point process (TPP) that satisfies some
-basic assumptions can be described in terms of a stochastic differential
-equation (SDE) with discontinuous jumps — more commonly known as a jump process
-— means TPPs can be simulated with JumpProcesses.
+The goal of this tutorial is to cover many different aspects usually
+discussed in point process theory. To make the connection between the
+JumpProcesses library and point process theory, we will enlist the
+[PointProcess.jl](https://github.com/gdalle/PointProcesses.jl) library,
+which offers a common interface for marked temporal point processes (TPPs). We will implement
+`SciMLPointProcess` which is a concrete implementation of
+`AbstractPointProcess` that using solvers from `SciML`.
 
 ## [TPP Theory](@id tpp_theory)
 
-TPPs describe a set of discrete points over continuous time. Conventionally, we
+TPP describe a set of discrete points over continuous time. Conventionally, we
 assume that time starts at ``0``. We can represent a TPP as a random integer
 measure ``N( \cdot )``, this random function counts the number of points in
 a set of intervals over the real line. For instance, ``N([5, 10])`` denotes the
@@ -28,8 +27,7 @@ is distributed according to a Poisson distribution with parameter ``\lambda = 5`
 
 For convenience, we denote ``N(t) \equiv N[0, t)`` as the number of points since
 the start of time until ``t``, exclusive of ``t``. A TPP is _simple_, if only a
-single event can occur in any unit of time ``t``, that is, ``\Pr(N[t, t +
-\epsilon) > 2) = 0``. We can then define a differential of ``N``, ``dN``, which
+single event can occur in any unit of time ``t``, that is, ``\Pr(N[t, t + \epsilon) > 2) = 0``. We can then define a differential of ``N``, ``dN``, which
 describes the change in ``N(t)`` over an infinitesimal amount of time.
 
 ```math
@@ -68,17 +66,15 @@ there is a mark associated with it. If the mark space is discrete, we have
 a multivariate TPP. There are different ways to interpret TPPs, and we will
 move between these interpretations throughout the tutorial.
 
-To make the connection between the JumpProcesses library and point process
-theory, we will compare against the
-[PointProcess.jl](https://github.com/gdalle/PointProcesses.jl) library, which
-offers a common interface for marked TPPs. Since TPP sampling is more efficient
-if we split any marked TPP into a sparsely connected multivariate TPP, we define
-`SciMLPointProcess` as a multivariate TPP such that each sub-component is itself
-a marked TPP on a continuous space. Therefore, we have that our structure
-includes a vector of sub-TPP `jumps`, a vector of mark distributions `mark_dist`
-and the sparsely connected graph `g`.
+Since TPP sampling is
+more efficient if we split any marked TPP into a sparsely connected
+multivariate TPP, we define `SciMLPointProcess` as a multivariate TPP such
+that each sub-component is itself a marked TPP on a continuous space.
+Therefore, we have that our structure includes a vector of sub-TPP
+`jumps`, a vector of mark distributions `mark_dist` and the sparsely
+connected graph `g`.
 
-```@example tpp
+```@example tpp-advanced
 using JumpProcesses
 using PointProcesses
 
@@ -101,7 +97,7 @@ end
 In alignment with `PointProcesses` API we define methods for extracting the
 boundaries of the time interval we will be working with.
 
-```@example tpp
+```@example tpp-advanced
 PointProcesses.min_time(pp::SciMLPointProcess) = pp.tmin
 PointProcesses.max_time(pp::SciMLPointProcess) = pp.tmax
 ```
@@ -110,7 +106,7 @@ As we want to keep `SciMLPointProcess` as general as possible we define two
 methods for initializing and resetting the parameters of the TPP. The usefulness
 of these methods will become apparent further below.
 
-```@example tpp
+```@example tpp-advanced
 params(pp::SciMLPointProcess) = pp.p(pp)
 params!(pp::SciMLPointProcess, p) = pp.p(pp, p)
 nothing # hide
@@ -153,7 +149,7 @@ end
 
 We define a method for resetting the history, which can be useful during simulation.
 
-```@example tpp
+```@example tpp-advanced
 function reset!(h::History)
     empty!(event_times(h))
     empty!(event_marks(h))
@@ -215,7 +211,7 @@ Then the conditional intensity can be re-written in terms of ``\phi_i^\ast (t_{N
 We translate these expressions to Julia by employing a closure which will allow
 us to obtain the rate for each node ``i`` in ``G``.
 
-```@example tpp
+```@example tpp-advanced
 function hawkes_rate(i::Int, g)
     function rate(u, p, t)
         (; λ, α, β, ϕ, T) = p
@@ -247,7 +243,7 @@ use the `Coevolve` algorithm for simulation — see below —, we need to define
 rate upper-bound, the interval for which the upper-bound is valid, and,
 optionally, a lower-bound for improved simulation efficiency.
 
-```@example tpp
+```@example tpp-advanced
 function hawkes_jump(i::Int, g, mark_dist)
     rate = hawkes_rate(i, g)
     urate = rate
@@ -274,7 +270,7 @@ nothing # hide
 To initialize `SciMLPointProcess` we also need to define a function for
 returning and resetting the parameters of our model.
 
-```@example tpp
+```@example tpp-advanced
 function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}) where {M, J, G, D, T}
     g = pp.g
     tmin = pp.tmin
@@ -299,7 +295,7 @@ nothing # hide
 
 Now, we are ready to initialze our `SciMLPointProcess` as a Hawkes process.
 
-```@example tpp
+```@example tpp-advanced
 using Graphs
 using Distributions
 V = 10
@@ -346,7 +342,7 @@ A stepper tells the solver how to step through time. When simulating TPPs, we do
 not need to evolve time incrementally by small deltas. The `SSAStepper` allow us
 to step through time one candidate at a time.
 
-```@example tpp
+```@example tpp-advanced
 using OrdinaryDiffEq
 using Random
 
@@ -384,7 +380,7 @@ end
 
 We can easily sample the Hawkes process introduced in the previous section.
 
-```@example tpp
+```@example tpp-advanced
 h = rand(hawkes)
 ```
 
@@ -394,7 +390,7 @@ samples, we propose a few options. First, we visualize our sample as a sequence
 of points though time, each line represents the realization of one of the
 sub-TPPs of `SciMLPointProcess`.
 
-```@example tpp
+```@example tpp-advanced
 using Plots
 @userplot BarcodePlot
 @recipe function f(x::BarcodePlot)
@@ -420,7 +416,7 @@ end
 
 Lets visualize our data as a barcode.
 
-```@example tpp
+```@example tpp-advanced
 barcodeplot(h, 1:10; legend = false)
 ```
 
@@ -429,7 +425,7 @@ Therefore, a fairer representation of the data would be as a scatter plot. We
 also plot the latent home locations which show that points are indeed clustered
 around them.
 
-```@example tpp
+```@example tpp-advanced
 scatter(map(m -> tuple(m[2]...), event_marks(h)), label = "events")
 scatter!(map(d -> tuple(mean(d)...), mark_dist), label = "cluster epicentre")
 ```
@@ -449,7 +445,7 @@ specific locations specified by the user. Our method computes the conditional
 intensity for each sub-TPP of the `SciMLPointProcess`, it returns the solution
 of the `DiscreteProblem` and the final parameters.
 
-```@example tpp
+```@example tpp-advanced
 function intensity(pp::SciMLPointProcess, t, h; saveat = [], save_positions = (true, true))
     p = params(pp)
     times = event_times(h)
@@ -482,7 +478,7 @@ nothing # hide
 As an illustration, we plot the conditional intensity of the first sub-TPP of
 our sampled Hawkes process.
 
-```@example tpp
+```@example tpp-advanced
 λ = intensity(hawkes, max_time(hawkes), h; saveat = 0.1)
 plot(λ, idxs = 1)
 ```
@@ -490,7 +486,7 @@ plot(λ, idxs = 1)
 Now, we can specialize a number of functions required by the interface defined
 in PointProcesses.
 
-```@example tpp
+```@example tpp-advanced
 function ground_intensity(pp::SciMLPointProcess, t, h)
     λ = intensity(pp, t, h; saveat = [t], save_positions = (false, false))
     ground_intensity(pp, t, λ)
@@ -534,7 +530,7 @@ nothing # hide
 
 We can then visualize the ground intensity.
 
-```@example tpp
+```@example tpp-advanced
 plot(ground_intensity(hawkes, λ.t, λ))
 ```
 
@@ -556,7 +552,7 @@ integrating over the marks.
 In Julia we can derive the compensator by simply integrating over the
 conditional intensity using an ODEProblem.
 
-```@example tpp
+```@example tpp-advanced
 function integrated_intensity(pp::SciMLPointProcess,
         t,
         h;
@@ -595,7 +591,7 @@ The PointProcess interface expects that we define a method for computing the
 compensator of the ground process for a given interval. This will be useful in
 the next section when we compute the log-likelihood.
 
-```@example tpp
+```@example tpp-advanced
 function integrated_ground_intensity(pp::SciMLPointProcess, h, a, b)
     Λ = integrated_intensity(pp,
         b,
@@ -614,7 +610,7 @@ intensity. In the Hawkes case, the conditional intensity is highly stiff as
 events will cause the intensity to spike. Therefore, we must select an ODE
 solver that can deal with stiff problems like `Rodas4P()`.
 
-```@example tpp
+```@example tpp-advanced
 Λ = integrated_intensity(hawkes,
     max_time(hawkes),
     h;
@@ -627,7 +623,7 @@ The compensator of the Hawkes process lends itself to an analytical solution
 which can be implemented in Julia as a `DiscreteProblem` much like the
 conditional intensity above.
 
-```@example tpp
+```@example tpp-advanced
 function hawkes_integrated_intensity(pp::SciMLPointProcess, t, h; saveat = [])
     (; λ, α, β) = params(pp)
     p = (λ = λ, α = α, β = β, h = h)
@@ -653,7 +649,7 @@ function hawkes_integrated_intensity(pp::SciMLPointProcess, t, h; saveat = [])
 end
 ```
 
-```@example tpp
+```@example tpp-advanced
 Λ_exact = hawkes_integrated_intensity(hawkes, max_time(hawkes), h)
 plot!(Λ_exact)
 ```
@@ -665,7 +661,7 @@ for our model and simulation algorithm.
 
 First, we define a method for filtering the history.
 
-```@example tpp
+```@example tpp-advanced
 function Base.filter(f, h::History)
     times = event_times(h)
     marks = event_marks(h)
@@ -687,7 +683,7 @@ end
 
 And a recipe for QQ-plots.
 
-```@example tpp
+```@example tpp-advanced
 @userplot QQPlot
 @recipe function f(x::QQPlot)
     empirical_quant, expected_quant = x.args
@@ -724,7 +720,7 @@ compensator to the input history. We take advantage of the fact that the
 compensator is an `ODESolution` which overloads an interpolation method in
 itself to produce the QQ-plot for the ground process.
 
-```@example tpp
+```@example tpp-advanced
 Δt̃ = []
 for _ in 1:250
     _h = rand(hawkes)
@@ -743,7 +739,7 @@ qqplot(empirical_quant, expected_quant; legend = false)
 
 Likewise, we can produce the QQ-plot for each sub-TPP.
 
-```@example tpp
+```@example tpp-advanced
 Δt̃ = [[] for _ in 1:nv(G)]
 for _ in 1:250
     _h = rand(hawkes)
@@ -777,7 +773,7 @@ Vere-Jones[^1].
 
 In Julia, we follow the PointProcess API to define a method for computing the log-likelihood.
 
-```@example tpp
+```@example tpp-advanced
 using DensityInterface
 
 function DensityInterface.logdensityof(pp::SciMLPointProcess, h)
@@ -789,7 +785,7 @@ function DensityInterface.logdensityof(pp::SciMLPointProcess, h)
     logλ = 0
     for (t, (i, m)) in zip(times, marks)
         logλ += log_intensity(pp, m, t, λ)
-        @info log_intensity(pp, m, t, λ), intensity(pp, m, t, λ)
+        log_intensity(pp, m, t, λ), intensity(pp, m, t, λ)
     end
     return logλ - Λ
 end
@@ -797,7 +793,7 @@ end
 
 This allow us to compute the log-likelihood of our sample.
 
-```@example tpp
+```@example tpp-advanced
 logdensityof(hawkes, h)
 ```
 

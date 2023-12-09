@@ -24,7 +24,7 @@ package for those with different backgrounds:
 
 - [Simulating basic Poisson processes](@ref poisson_proc_tutorial)
 - [Simulating jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial)
-- [Temporal point processes (TPP)](@ref tpp_tutorial)
+- [Simulating temporal point processes (TPPs)](@ref tpp_tutorial)
 
 These tutorials also explain the types of jump/point processes that can be
 mathematically modelled with JumpProcesses.jl. For more complicated models that
@@ -33,10 +33,15 @@ tutorial on
 
 - [Simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
 
-Finally, for jump processes that involve spatial transport on a graph/mesh, such
+For jump processes that involve spatial transport on a graph/mesh, such
 as Reaction-Diffusion Master Equation models, we provide a tutorial on
 
 - [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses.
+
+Finally, we provide application tutorials which are more extensive tutorials that
+interface with other libraries going deeper into a topic.
+
+- [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses](@ref tpp_advanced)
 
 We provide a mathematical overview of the library below, but note users may also
 skip to the appropriate tutorial listed above to get started with using

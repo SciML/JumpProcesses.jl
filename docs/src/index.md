@@ -36,7 +36,7 @@ tutorial on
 For jump processes that involve spatial transport on a graph/mesh, such
 as Reaction-Diffusion Master Equation models, we provide a tutorial on
 
-- [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses)
+- [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses.jl)
 
 Finally, we provide application tutorials which are more extensive tutorials that
 interface with other libraries going deeper into a topic.

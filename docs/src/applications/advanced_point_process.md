@@ -189,7 +189,8 @@ processes connected to it by ``alpha``. This influence will then decrease at
 rate ``\beta``.
 
 The conditional intensity of this process has a recursive formulation which we
-can use to our advantage to significantly speed simulation. Let ``t_{N_i} = \max \{t_{n_j} < t \mid j \in E_i\}`` and ``\phi_i^\ast(t)`` below.
+can use to our advantage to significantly speed simulation. Let ``t_{N_i} = \max
+\{t_{n_j} < t \mid j \in E_i\}`` and ``\phi_i^\ast(t)`` below.
 
 ```math
 \begin{split}
@@ -222,14 +223,30 @@ end
 nothing # hide
 ```
 
-We assume that each sup-process `i` is a marked TPP whose mark is drawn from
-a multivariate Gaussian distribution with mean ``\mu_i`` and standard deviation
-equal to ``I``. Therefore, the mark distribution can be represented as a mixture
-distribution.
+We assume that each sup-process `i` is a marked TPP. With probability ``(1 -
+\omega^\ast(t))``, we draw a mark from a 2-dimensional Gaussian
+distribution centered in ``\mu_i`` with ``\sigma_1`` standard deviation; and
+with probability ``\omega^\ast(t)`` we draw from a 2-dimensional Gaussian
+distribution centered on the last location visted by ``i`` with ``\sigma_2``
+standard deviation. Like the conditional intensity, ``\omega^\ast(t)`` decays
+exponentially with rate ``-\beta``.
 
 ```math
-f^\ast(k \mid t) = \frac{\lambda_i^\ast (t)}{\sum_i \lambda_i^\ast (t)}
-  \frac{1}{\sqrt{2\pi}} \exp \left[ -1/2 (m - \mu_i)^\top(m - \mu_i) \right]
+\omega^\ast(t) = \exp [ -\beta (t - t_{n_i}) ]
+```
+
+In other words, node ``i`` tends to gravitate around its home location, but
+given some recent activity the node will be more likely to be close to its most
+recent location. Let ``k \equiv (i, m)``, then the mark distribution can be
+represented as a mixture distribution.
+
+```math
+\begin{split}
+f^\ast(k \mid t) =
+  &\frac{\lambda_i^\ast (t)}{\sum_i \lambda_i^\ast (t)} \times \\
+  &\left[ (1 - \omega(t)) \frac{1}{\sigma_1 \sqrt{2\pi}} \exp \left( -\frac{(m - \mu_i)^\top(m - \mu_i)}{2 \sigma_1^2} \right) +  \right. \\
+  &\left. \omega(t) \frac{1}{\sigma_2 \sqrt{2\pi}} \exp \left( -\frac{(m_{n_i} - \mu_i)^\top(m_{n_i} - \mu_i)}{2 \sigma_2^2} \right) \right]
+\end{split}
 ```
 
 In Julia, we define a method for constructing Hawkes jumps. JumpProcesses define
@@ -254,12 +271,13 @@ function hawkes_jump(i::Int, g, mark_dist)
         return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)
     end
     function affect!(integrator)
-        (; λ, α, β, ϕ, T, h) = integrator.p
+        (; λ, α, β, ϕ, M, T, h) = integrator.p
+        ω = exp(-β * (integrator.t - T[i]))
         for j in g[i]
             ϕ[j] = α + exp(-β * (integrator.t - T[j])) * ϕ[j]
             T[j] = integrator.t
         end
-        m = rand(mark_dist[i])
+        m = rand() > ω ? rand(mark_dist[i]) : rand(MvNormal(collect(M[i]), [0.01, 0.01]))
         push!(h, integrator.t, (i, m); check = false)
     end
     return VariableRateJump(rate, affect!; lrate, urate, rateinterval)
@@ -280,6 +298,7 @@ function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}) where {M, J, G, D, T}
         α = 0.1,
         β = 2.0,
         ϕ = zeros(T, length(g)),
+        M = map(d -> tuple(mean(d)...), pp.mark_dist),
         T = zeros(T, length(g)),
         h = h)
 end
@@ -287,6 +306,7 @@ end
 function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}, p) where {M, J, G, D, T}
     reset!(p.h)
     p.ϕ .= zero(p.ϕ)
+    p.M .= map(d -> tuple(mean(d)...), pp.mark_dist)
     p.T .= zero(p.T)
 end
 
@@ -300,8 +320,8 @@ using Graphs
 using Distributions
 V = 10
 G = erdos_renyi(V, 0.2)
-g = [neighbors(G, i) for i in 1:nv(G)]
-mark_dist = [MvNormal(rand(2), [0.1, 0.1]) for i in 1:nv(G)]
+g = [[[i] ; neighbors(G, i)] for i in 1:nv(G)]
+mark_dist = [MvNormal(rand(2), [0.2, 0.2]) for i in 1:nv(G)]
 jumps = [hawkes_jump(i, g, mark_dist) for i in 1:nv(G)]
 tspan = (0.0, 50.0)
 hawkes = SciMLPointProcess{
@@ -321,7 +341,8 @@ hawkes = SciMLPointProcess{
 ## [Sampling](@id tpp_sampling)
 
 JumpProcesses shines in the simulation of SDEs with discontinuous jumps. The
-mapping we introduced in the [previous Section](@ref tpp_theory) whereby ``du = dN(t)`` implies that JumpProcesses also excels in simulating TPPs.
+mapping we introduced in the [previous Section](@ref tpp_theory) whereby ``du =
+dN(t)`` implies that JumpProcesses also excels in simulating TPPs.
 
 JumpProcesses offers a plethora of simulation algorithms for TPPs. The library
 call them _aggregators_ because these algorithms are methods for aggregating

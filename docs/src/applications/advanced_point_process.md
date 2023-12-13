@@ -9,8 +9,8 @@ cover JumpProcesses from the perspective of point process theory.
 In this application tutorial, we show how to interface JumpProcesses and the
 [PointProcesses.jl](https://github.com/gdalle/PointProcesses.jl) library, and
 leverage this interface to then illustrate many different aspects usually
-discussed in point process theory. PointProcesses.jl offers a common Julia
-interface for marked temporal point processes (TPPs). We will show how to link
+discussed in point process theory. PointProcesses.jl offers an interface for
+defining marked temporal point processes (TPPs). We will show how to link
 JumpProcesses into this interface by implementing `SciMLPointProcess`, which is
 a concrete implementation of PointProcesses' `AbstractPointProcess` that uses
 solvers from JumpProcesses and SciML.

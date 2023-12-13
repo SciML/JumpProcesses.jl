@@ -4,7 +4,7 @@ JumpProcesses.jl provides methods for simulating jump and point processes.
 Across different fields of science, such methods are also known as stochastic
 simulation algorithms (SSAs), Doob's method, Gillespie methods, Kinetic Monte
 Carlo's methods, thinning method, and Ogata's method. It also enables the
-incorporation of jump processes into hybrid jump-ODEs models, including
+incorporation of jump processes into hybrid jump-ODE models, including
 piecewise deterministic Markov processes, and into hybrid jump-SDE models,
 including jump diffusions. It is a component package in the
 [SciML](https://sciml.ai/) ecosystem, and one of the core solver libraries
@@ -67,11 +67,11 @@ temporal point process (TPP).
 
 In JumpProcesses.jl's language, we call ``\lambda_i`` a rate function, and
 expect users to provide a function, `rate(u,p,t)`, that returns its value at
-time `t`. Given a collection of rates``\{\lambda_i\}_{i=1}^I``, JumpProcesses
+time `t`. Given a collection of rates ``\{\lambda_i\}_{i=1}^I``, JumpProcesses
 can then generate exact realizations of pure jump processes of the form
 
 ```math
-du = \sum_{i=1}^I h_i(u,p,t) dN_i(t),
+du = \sum_{i=1}^I h_i(u,p,t) \, dN_i(t),
 ```
 where ``h_i(u,p,t)`` represents the amount that ``u(t)`` changes when ``N_i(t)``
 jumps. JumpProcesses encodes such changes via a user-provided `affect!`
@@ -92,17 +92,18 @@ algorithm to determine the time and type of jump that occurs, and a
 time-stepping method to advance the state from jump to jump. See the tutorials
 listed above, and reference links below, for more details and examples.
 
-JumpProcesses also allows such jumps to be coupled into ODE models, as in
-piecewise deterministic Markov Processes, or continuous-noise SDE models, as in
-jump-diffusions. For example, a jump-diffusion JumpProcesses can
+JumpProcesses also allows such jumps to be coupled into ODE models (i.e.
+piecewise deterministic Markov Processes), or continuous-noise SDE models (i.e.
+jump-diffusions). For example, a jump-diffusion JumpProcesses can
 simulate would be
 
 ```math
 du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_j(u,p,t)dN_j(t)
 ```
 
-where ``f`` encodes the drift of the process, ``g_i`` the strength of the
-diffusion of the process, and ``W_i(t)`` denotes a standard Brownian Motion.
+where ``f`` encodes the drift of the process, each ``g_i`` the strength of a
+diffusion component of the process, and each ``W_i(t)`` denotes an independent
+standard Brownian Motion.
 
 JumpProcesses is designed to simulate all the types of jumps described above.
 

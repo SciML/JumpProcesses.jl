@@ -24,7 +24,7 @@ JumpProcesses to TPP.
 
 TPPs describe a set of discrete points over continuous time.
 Conventionally, we assume that time starts at ``0``. We can represent
-a TPP as a random integer measure ``N( \cdot )``, this random function
+a TPP as a random integer measure ``N( \cdot )``. This random function
 counts the number of points in a set of intervals over the real line. For
 instance, ``N([5, 10])`` denotes the number of points (or events) in
 between time ``5`` and ``10`` inclusive. The number of points in this
@@ -63,7 +63,7 @@ loading our packages.
 using JumpProcesses, Plots
 ```
 
-In JumpProcesses a `ConstantRateJump` is a TPP whose rate is constant
+In JumpProcesses, a `ConstantRateJump` is a TPP whose rate is constant
 between points. To specify the homogenous Poisson process, we need to
 declare the rate function which takes three inputs, the current state of
 the system, `u`, the parameters, `p`, and the time, `t`. In this case, the
@@ -110,38 +110,46 @@ with our TPP.
 dprob = DiscreteProblem(u0, tspan)
 ```
 
-Apart from our base problem, we need to create a [`JumpProblem`](@ref)
-which in which we specify the simulation algorithm we intend to use for
-simulating the Poisson process. Here we use the `Direct` method which is
-a type of thinning algorithm for simulating TPPs with constant rate
-between points.
+Apart from our base problem, we need to create a [`JumpProblem`](@ref) in which
+we specify the simulation algorithm, i.e. the aggregator in JumpProcesses'
+language, we intend to use for simulating the Poisson process. This aggregator
+is responsible for sampling the times at which the process changes based on the
+provided `poisson_rate` function, and for calling the user `poisson_affect!`
+function to update the system state at these times. Here we use the `Direct`
+method which is a type of thinning algorithm for simulating TPPs with a constant
+rate between points.
 
 ```@example tpp-tutorial
 jprob = JumpProblem(dprob, Direct(), poisson_process)
 ```
 
-Finally, we can simulate one realization of our TPP. The solver requires
-that we specify a time-stepper, which is a method that handles
-time-evolution in our system. While the `Direct` algorithm above draws the
-next point in our process, the stepper ensures that the system reaches
-that point. We use `SSAStepper` which is a discrete stepper that only
-stops on the times proposed by our simulation algorithm.
+Finally, we can simulate one realization of our TPP. The solver requires that we
+specify a time-stepper, which is a method that handles time-evolution in our
+system. While the `Direct` algorithm above draws the next point in our process,
+the stepper advances the system in time to that point. We use `SSAStepper` which
+is a discrete stepper that only stops at the times proposed by our simulation
+algorithm.
 
 ```@example tpp-tutorial
 sol = solve(jprob, SSAStepper())
 plot(sol)
 ```
 
-While all the steps after the `poisson_process` declaration might feel
-convoluted, they allow us to mix TPPs with a variety of different
-problems. The base problem allow us to combine TPPs with other types of
-dynamics such as ODEs or SDEs. For instance, we can declare a conditional
-intensity function that follows an ODE. The jump problem allow us to
-combine multiple TPPs together as we will see in the next section. The
-simulation algorithm allows us to simulate different types of TPPs
-including processes with variable rates. The time-stepper allow us to
-specify the time-evolution that allows the most exotic dynamics to evolve
-in sync with base time.
+By breaking the problem formulation and solver selection into specifying a
+`DiscreteProblem`, a simulation algorithm (i.e. aggregator) via `JumpProblem`,
+and generating a realization via `solve`, JumpProcesses' has the flexibility to
+specify and simulate a broad variety of problem types. The base problem allow us
+to combine TPPs with other types of dynamics such as ODEs or SDEs, by replacing
+`DiscreteProblem` with `ODEProblem` or `SDEProblem` from
+[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/). For
+instance, we can declare a conditional intensity function that follows an ODE
+using `ODEProblem`. The `JumpProblem` allows us to combine multiple TPPs
+together as we will see in the next section. The simulation algorithm (i.e.
+aggregator) allows us to simulate different types of TPPs including processes
+with variable rates, using different algorithms that may offer improved
+performance over `Direct` depending on the number of TPPs and their properties.
+The time-stepper allow us to specify the time-evolution that allows the most
+exotic dynamics to evolve in sync with base time.
 
 ## Multivariate TPPs
 
@@ -154,16 +162,16 @@ the following dynamics:
 
 ```math
 \lambda_2(t) = \begin{cases}
-  1 + sin(t) if N_1(t) is even \\
-  1 + cos(t) if N_1(t) is odd
+  1 + \sin(t), & \text{if } N_1(t) \text{ is even} \\
+  1 + \cos(t), & \text{if } N_1(t) \text{ is odd}.
 \end{cases}
 ```
 
 In this case, the intensity rate of the second process is variable. It not
 only changes according to time but also according to the first process.
 
-In JumpProcesses a `VariableRateJump` is a TPP whose rate is allowed to
-vary. Again, we start by declaring the rate function and the affect.
+In JumpProcesses a `VariableRateJump` is a TPP whose rate is allowed to vary at
+arbitrary times. Again, we start by declaring the rate function and the affect.
 
 ```@example tpp-tutorial
 seasonal_rate(u, p, t) = 1 + (u[1] % 2 == 0 ? sin(t) : cos(t))
@@ -179,9 +187,9 @@ valid throughout time. The lower-bound is optional but can improve the
 speed of the simulation.
 
 ```@example tpp-tutorial
-urate(u, p, t) = 2
-rateinterval(u, p, t) = Inf
-lrate(u, p, t) = 1
+urate(u, p, t) = 2           # upper bound
+rateinterval(u, p, t) = Inf  # time window bound is valid over
+lrate(u, p, t) = 1           # lower bound
 ```
 
 Now, we can declare the seasonal process as a `VariableRateJump`.
@@ -201,21 +209,29 @@ tspan = (0.0, 10.0)
 dprob = DiscreteProblem(u0, tspan)
 ```
 
-We also need to modify [`JumpProblem`](@ref). In this case, we use the
-`Coevolve` method, which is another type of thinning algorithm for
-multivariate process and which is an improvement of Ogata thinning method. This
-method also requires a dependency graph that tells how each TPP modify
-each other's rates. Internally, JumpProcesses preserves the relative
-ordering of point processes of each
-distinct type, but always reorders all `ConstantRateJump`s to appear
-before any `VariableRateJump`s. Irrespective of how `JumpProblem` is
+We also need to modify [`JumpProblem`](@ref) to use a simulation algorithm (i.e.
+aggregator) that supports bounded `VariableRateJump`s. In this case, we use the
+`Coevolve` method, which is another type of thinning algorithm for multivariate
+process and which is an improvement of the Ogata thinning method. This method
+also requires a dependency graph that indicates for a given TPP which other TPPs
+have rates that depend on states/variables altered in its affect function. Note
+JumpProcesses' convention is that a given TPP should also always be a dependency
+of itself. Internally, JumpProcesses preserves the relative ordering of point
+processes of each distinct type, but always reorders all `ConstantRateJump`s to
+appear before any `VariableRateJump`s. Irrespective of how `JumpProblem` is
 initialized, internally the processes will be ordered as the vector
-`[poisson_process, seasonal_process]`. Note, this vector of the processes
-is distinct from our state variable vector, `u`. Therefore, we obtain the
-following dependency graph:
+`[poisson_process, seasonal_process]` so that these will have the internal
+indexes of `1` and `2` respectively. Note, this vector of the processes is
+distinct from our state variable vector, `u`. When `poisson_process` fires
+`u[1]` is altered, and as the rate for `seasonal_process` depends on it we have
+that the dependencies of `poisson_process` are `[1,2]`. In contrast, the rate of
+`poisson_process` is independent of `u[2]` which `seasonal_process` modifies,
+and hence the dependencies of `seasonal_process` are only `[2]`.
+
+Therefore, we obtain the following dependency graph:
 
 ```@example tpp-tutorial
-dep_graph = [[1], [1, 2]]
+dep_graph = [[1,2], [2]]
 ```
 
 We can then construct the corresponding problem `JumpProblem`, passing our
@@ -230,8 +246,9 @@ plot(sol, labels = ["N_1(t)" "N_2(t)"], xlabel = "t", legend = :topleft)
 
 ## More TPPs
 
-This tutorial demonstrated how to simulate simple TPPs. In addition to
-that, JumpProcesses and the SciML ecosystem can be a powerful tool in
-describing more general TPPs. We demonstrate this capability in the
-[advanced TPP tutorial](@ref tpp_advanced) which covers many different
-aspects usually studied in point process theory.
+This tutorial demonstrated how to simulate simple TPPs. In addition to that,
+JumpProcesses and the SciML ecosystem can be a powerful tool in describing more
+general TPPs. We demonstrate this capability in the [advanced TPP tutorial](@ref
+tpp_advanced), which shows how to interface JumpProcesses with
+[PointProcesses.jl](https://github.com/gdalle/PointProcesses.jl) and covers via
+this interface many different aspects usually studied in point process theory.

@@ -6,17 +6,18 @@ nomenclature in the library documentation confusing. In reality, jump and point
 processes share many things in common, but diverge in scope. This tutorial will
 cover JumpProcesses from the perspective of point process theory.
 
-The goal of this tutorial is to cover many different aspects usually
-discussed in point process theory. To make the connection between the
-JumpProcesses library and point process theory, we will enlist the
-[PointProcess.jl](https://github.com/gdalle/PointProcesses.jl) library,
-which offers a common interface for marked temporal point processes (TPPs). We will implement
-`SciMLPointProcess` which is a concrete implementation of
-`AbstractPointProcess` that using solvers from `SciML`.
+In this application tutorial, we show how to interface JumpProcesses and the
+[PointProcesses.jl](https://github.com/gdalle/PointProcesses.jl) library, and
+leverage this interface to then illustrate many different aspects usually
+discussed in point process theory. PointProcesses.jl offers a common Julia
+interface for marked temporal point processes (TPPs). We will show how to link
+JumpProcesses into this interface by implementing `SciMLPointProcess`, which is
+a concrete implementation of PointProcesses' `AbstractPointProcess` that uses
+solvers from JumpProcesses and SciML.
 
 ## [TPP Theory](@id tpp_theory)
 
-TPP describe a set of discrete points over continuous time. Conventionally, we
+TPPs describe a set of discrete points over continuous time. Conventionally, we
 assume that time starts at ``0``. We can represent a TPP as a random integer
 measure ``N( \cdot )``, this random function counts the number of points in
 a set of intervals over the real line. For instance, ``N([5, 10])`` denotes the

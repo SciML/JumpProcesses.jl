@@ -473,14 +473,14 @@ Benchmark results are listed in Table~\ref{tab:benchmark-biochemistry}. The tabl
 \toprule
                                  & \textbf{Diffusion} & \textbf{Multi-state} & \textbf{Gene I}     & \textbf{Gene II}   \\
 \cmidrule{1-5}
-\textbf{\texttt{Direct}}         & 7.18 s             & 0.16 s               & \underline{0.24 ms} & \underline{0.59 s} \\
-\textbf{\texttt{FRM}}            & 15.04 s            & 0.25 s               & 0.29 ms             & 0.78 s             \\
-\textbf{\texttt{SortingDirect}}  & 1.08 s             & \underline{0.11 s}   & \textbf{0.23 ms}    & \textbf{0.50 s}    \\
-\textbf{\texttt{NRM}}            & 0.75 s             & 0.25 s               & 0.39 ms             & 0.89 s             \\
-\textbf{\texttt{DirectCR}}       & \underline{0.51 s} & 0.21 s               & 0.47 ms             & 1.00 s             \\
-\textbf{\texttt{RSSA}}           & 1.42 s             & \textbf{0.10 s}      & 0.43 ms             & 0.65 s             \\
-\textbf{\texttt{RSSACR}}         & \textbf{0.46 s}    & 0.16 s               & 0.91 ms             & 1.07 s             \\
-\textbf{\texttt{Coevolve}}       & 0.90 s             & 0.36 s               & 0.59 ms             & 1.33 s             \\
+\textbf{\texttt{Direct}}         & 7.14 s             & 0.16 s               & \underline{0.24 ms} & \underline{0.59 s} \\
+\textbf{\texttt{FRM}}            & 15.76 s            & 0.25 s               & 0.29 ms             & 0.77 s             \\
+\textbf{\texttt{SortingDirect}}  & 1.06 s             & \underline{0.11 s}   & \textbf{0.24 ms}    & \textbf{0.53 s}    \\
+\textbf{\texttt{NRM}}            & 0.76 s             & 0.25 s               & 0.39 ms             & 0.90 s             \\
+\textbf{\texttt{DirectCR}}       & \underline{0.50 s} & 0.22 s               & 0.49 ms             & 1.09 s             \\
+\textbf{\texttt{RSSA}}           & 1.42 s             & \textbf{0.10 s}      & 0.43 ms             & 0.66 s             \\
+\textbf{\texttt{RSSACR}}         & \textbf{0.46 s}    & 0.15 s               & 0.91 ms             & 1.06 s             \\
+\textbf{\texttt{Coevolve}}       & 0.88 s             & 0.34 s               & 0.53 ms             & 1.29 s             \\
 \bottomrule
 \end{tabular}
 \caption{Median execution time. A 1-dimensional continuous time random walk approximation of a diffusion model (Diffusion), the multi-state model from Appendix A.6~\cite{marchetti2017} (Multi-state), a simple negative feedback gene expression model (Gene I) and the negative feedback gene expression from~\cite{gupta2018} (Gene II). Fastest time is \textbf{bold}, second fastest \underline{underlined}. Benchmark source code and dependencies are available in \texttt{SciMLBenchmarks.jl}, see first paragraph of Section~\ref{subsec:benchmark} for source references.}
@@ -549,25 +549,25 @@ Another parameter that can affect the precision and speed of the synapse benchma
  & \textbf{V} & \textbf{\textit{Inverse}} & \textbf{\texttt{Coevolve}} & \textbf{\textit{CHV}}    & & \textbf{\textit{Inverse}} & \textbf{\texttt{Coevolve}} & \textbf{\textit{CHV}}    & \textbf{\textit{CHV}}  & \textbf{\textit{Tick}} \\
  &            &                           &                            & \textbf{\textit{simple}} & &                           &                            & \textbf{\textit{simple}} & \textbf{\textit{full}} &  \\
 \cmidrule{1-11}
-\multirow{20}{*}{\textbf{Time}} & \textbf{1}  & 113.7 \( \mu \)s  & \textbf{4.8 \( \bm{\mu} \)s}& 174.2 \( \mu \) s   & & 112.1 \( \mu \)s & \underline{5.1 \( \mu \)s}    & 175.6 \( \mu \)s                & 173.1 \( \mu \)s             & 31.4 \( \mu \)s              \\
+\multirow{20}{*}{\textbf{Time}} & \textbf{1}  & 74.1 \( \mu \)s  & \textbf{4.8 \( \bm{\mu} \)s}& 203.1 \( \mu \) s   & & 76.6 \( \mu \)s   & \underline{5.0 \( \mu \)s}    & 201.5 \( \mu \)s                & 197.9 \( \mu \)s             & 30.7 \( \mu \)s              \\
                                 &             &                   &                             &                     & &                  &                               &                                 &                              &                              \\
-                                & \textbf{10} & 17.5 ms           & 211.8 \( \mu \)s            & 4.8 ms              & & 11.0 ms          & \textbf{76.1 \( \bm{\mu} \)s} &  432.4 \( \mu \)s               & 579.0 \( \mu \)s             & \underline{179.0 \( \mu \)s} \\
+                                & \textbf{10} & 10.0 ms           & 205.2 \( \mu \)s            & 5.1 ms              & & 3.8  ms          & \textbf{73.5 \( \bm{\mu} \)s} &  471.6 \( \mu \)s               & 607.3 \( \mu \)s             & \underline{175.0 \( \mu \)s} \\
                                 &             &                   &                             &                     & &                  &                               &                                 &                              &                              \\
-                                & \textbf{20} & 139.1 ms          & 1.5 ms                      & 50.7 ms             & & 59.3 ms          & \textbf{282.9 \( \bm{\mu} \)s}&  924.7 \( \mu \)s               & \underline{884.4 \( \mu \)s} & 1.2 ms                       \\
+                                & \textbf{20} & 89.6 ms           & 1.5 ms                      & 48.9 ms             & & 16.2 ms          & \textbf{265.8 \( \bm{\mu} \)s}&  964.1 \( \mu \)s               & \underline{902.3 \( \mu \)s} & 1.2 ms               \\
                                 &             &                   &                             &                     & &                  &                               &                                 &                              &                              \\
-                                & \textbf{30} & 415.3 ms          & 3.3 ms                      & 133.0 ms            & & 200.0 ms         & \textbf{516.9 \( \bm{\mu} \)s}&  1.7 ms                         & \underline{1.3 ms}           & 3.7 ms                       \\
-                                &             & \textit{n=25}     &                             &                     & &                  &                               &                                 &                              &                              \\
-                                & \textbf{40} & 2.2 s             & 8.2 ms                      & 342.0 ms            & & 1.6 s            & \textbf{1.0 ms}               &  2.5 ms                         & \underline{1.6 ms}           & 9.2 ms                       \\
-                                &             & \textit{n=5}      &                             & \textit{n=30}       & & \textit{n=7}     &                               &                                 &                              &                              \\
-                                & \textbf{50} & 5.1 s             & 16.9 ms                     & 722.0 ms            & & 3.4 s            & \textbf{1.6 ms}               &  3.7 ms                         & \underline{2.0 ms}           & 21.2 ms                      \\
-                                &             & \textit{n=2}      &                             & \textit{n=14}       & & \textit{n=3}     &                               &                                 &                              &                              \\
-                                & \textbf{60} & 8.5 s             & 37.7 ms                     & 1.3 s               & & 6.2 s            & \textbf{2.3 ms}               &  5.1 ms                         & \underline{2.5 ms}           & 45.0 ms                      \\
-                                &             & \textit{n=2}      &                             & \textit{n=8}        & & \textit{n=2}     &                               &                                 &                              &                              \\
-                                & \textbf{70} & 14.2 s            & 59.5 ms                     & 2.1 s               & & 10.9 s           & \underline{3.3 ms}            &  6.8 ms                         & \textbf{3.0 ms}              & 87.5 ms                      \\
-                                &             & \textit{n=1}      &                             & \textit{n=5}        & & \textit{n=1}     &                               &                                 &                              &                              \\
-                                & \textbf{80} & 22.2 s            & 88.3 ms                     & 3.3 s               & & 15.2 s           & \underline{4.2 ms}            &  9.0 ms                         & \textbf{3.3 ms}              & 142.2 ms                     \\
-                                &             & \textit{n=1}      &                             & \textit{n=3}        & & \textit{n=1}     &                               &                                 &                              &                              \\
-                                & \textbf{90} & 35.8 s            & 139.7 ms                    & 6.2 s               & & 24.6 s           & \underline{5.5 ms}            &  11.9 ms                        & \textbf{3.8 ms}              & 241.9 ms                     \\
+                                & \textbf{30} & 274.2 ms          & 3.3 ms                      & 129.5 ms            & & 45.7 ms          & \textbf{502.9 \( \bm{\mu} \)s}&  1.6 ms                         & \underline{1.3 ms}           & 3.7 ms                       \\
+                                &             & \textit{n=37}     &                             &                     & &                  &                               &                                 &                              &                              \\
+                                & \textbf{40} & 1.9 s             & 8.4 ms                      & 320.8 ms            & & 1.2 s            & \textbf{913.5 \( \bm{\mu} \)s}&  2.5 ms                         & \underline{1.6 ms}           & 9.3 ms                       \\
+                                &             & \textit{n=7}      &                             & \textit{n=31}       & & \textit{n=9}     &                               &                                 &                              &                              \\
+                                & \textbf{50} & 3.6 s             & 16.8 ms                     & 681.0 ms            & & 2.4 s            & \textbf{1.5 ms}               &  3.6 ms                         & \underline{2.0 ms}           & 21.7 ms                      \\
+                                &             & \textit{n=3}      &                             & \textit{n=15}       & & \textit{n=5}     &                               &                                 &                              &                              \\
+                                & \textbf{60} & 6.7 s             & 37.9 ms                     & 1.3 s               & & 4.1 s            & \textbf{2.2 ms}               &  5.1 ms                         & \underline{2.6 ms}           & 46.9 ms                      \\
+                                &             & \textit{n=2}      &                             & \textit{n=8}        & & \textit{n=3}     &                               &                                 &                              &                              \\
+                                & \textbf{70} & 10.6 s            & 58.5 ms                     & 2.2 s               & & 6.8 s            & \underline{3.0 ms}            &  6.9 ms                         & \textbf{3.0 ms}              & 89.5 ms                      \\
+                                &             & \textit{n=1}      &                             & \textit{n=5}        & & \textit{n=2}     &                               &                                 &                              &                              \\
+                                & \textbf{80} & 15.5 s            & 138.8 ms                    & 3.3 s               & & 10.6 s           & \underline{4.0 ms}            &  9.1 ms                         & \textbf{3.2 ms}              & 147.1 ms                     \\
+                                &             & \textit{n=1}      &                             & \textit{n=4}        & & \textit{n=1}     &                               &                                 &                              &                              \\
+                                & \textbf{90} & 27.86 s           & 139.7 ms                    & 5.6 s               & & 16.0 s           & \underline{5.3 ms}            &  11.8 ms                        & \textbf{3.9 ms}              & 233.4 ms                     \\
                                 &             & \textit{n=1}      &                             & \textit{n=2}        & & \textit{n=1}     &                               &                                 &                              &                              \\
 \bottomrule
 \end{tabular*}
@@ -582,8 +582,8 @@ Another parameter that can affect the precision and speed of the synapse benchma
  & \textbf{Time} & \textbf{Allocation}  \\
 \cmidrule{1-3}
 \textbf{\textit{Inverse}} & -  & - \\
-\textbf{\texttt{Coevolve}} & \underline{4.9 s} & \underline{95.2 Mb}  \\
-\textbf{\textit{CHV}} & \textbf{2.4 s} & \textbf{43.8 Mb} \\
+\textbf{\texttt{Coevolve}} & \underline{4.9 s} & \underline{94.0 Mb}  \\
+\textbf{\textit{CHV}} & \textbf{2.7 s} & \textbf{43.5 Mb} \\
 \bottomrule
 \end{tabular}
 \caption{Median execution time and memory allocation. All simulations were run 50 times, a dash indicates that no runs were successful. Fastest time is \textbf{bold}, second fastest \underline{underlined}. Benchmark source code and dependencies are available in \texttt{SciMLBenchmarks.jl}, see first paragraph of Section~\ref{subsec:benchmark} for source references.}

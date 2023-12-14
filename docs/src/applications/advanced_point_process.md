@@ -314,7 +314,7 @@ end
 nothing # hide
 ```
 
-Now, we are ready to initialze our `SciMLPointProcess` as a Hawkes process.
+Now, we are ready to initialize our `SciMLPointProcess` as a Hawkes process.
 
 ```@example tpp-advanced
 using Graphs

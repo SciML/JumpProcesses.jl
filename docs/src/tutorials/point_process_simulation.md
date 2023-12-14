@@ -53,9 +53,9 @@ says that the expected number of points changes according to
 ``\lambda(t)`` over time. For this reason, ``\lambda(t)`` can also be
 known as the rate of the TPP.
 
-## Homogenous Poisson Process
+## Homogeneous Poisson Process
 
-In this section, we specify a homogenous Poisson process with unit rate,
+In this section, we specify a homogeneous Poisson process with unit rate,
 which is the simplest TPP process with ``\lambda(t) = 1``. Let's start by
 loading our packages.
 
@@ -64,7 +64,7 @@ using JumpProcesses, Plots
 ```
 
 In JumpProcesses, a `ConstantRateJump` is a TPP whose rate is constant
-between points. To specify the homogenous Poisson process, we need to
+between points. To specify the homogeneous Poisson process, we need to
 declare the rate function which takes three inputs, the current state of
 the system, `u`, the parameters, `p`, and the time, `t`. In this case, the
 rate function is constant.
@@ -156,7 +156,7 @@ exotic dynamics to evolve in sync with base time.
 JumpProcesses allow us to simulate a multivariate TPP which is a TPP formed
 by multiple TPPs whose rates can influence one another. In this section we
 will illustrate a simple case with two TPPs. We assume that the first
-process ``N_1`` is the homogenous Poisson process from the previous
+process ``N_1`` is the homogeneous Poisson process from the previous
 section. The second process ``N_2`` is a TPP whose intensity rate obeys
 the following dynamics:
 

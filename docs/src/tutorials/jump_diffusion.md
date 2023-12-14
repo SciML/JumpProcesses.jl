@@ -4,7 +4,7 @@
     
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
-Jump Diffusion equations are stochastic differential equations (SDE) with discontinuous
+Jump Diffusion equations are stochastic differential equations (SDEs) with discontinuous
 jumps. These can be written as:
 
 ```math
@@ -12,10 +12,10 @@ du = f(u,p,t)dt + \sum_{j}g_j(u,p,t)dW_j(t) + \sum_{i}h_i(u,p,t)dN_i(t)
 ```
 
 The change in state vector ``u`` depends on three concurrent dynamics, (1)
-deterministic ``dt`` with size ``f(u, p, t)``, (2) stochastic diffusion
-``dW_j(t)`` with size ``g_j(u, p, t)``, and, (3) stochastic jump
-``dN_i(t)`` with size ``h_i(u, p, t)``. By diffusion we mean a continuous
-stochastic process which is usually represented as Gaussian white noise.
+deterministic drift ``dt`` with size ``f(u, p, t)``, (2) stochastic diffusions
+``dW_j(t)`` with sizes ``g_j(u, p, t)``, and, (3) stochastic jumps
+``dN_i(t)`` with sizes ``h_i(u, p, t)``. By diffusion we mean a continuous
+stochastic process which is usually represented as Gaussian white noise (i.e. ``W_j(t)`` is a Brownian Motion).
 By jump we mean a discrete stochastic process which is usually represented
 by a Poisson process.
 
@@ -99,14 +99,14 @@ end
 Then we build our jump:
 
 ```@example tut3
-jump = ConstantRateJump(rate, affect!)
+const_jump = ConstantRateJump(rate, affect!)
 ```
 
 Next, we extend our `ODEProblem` to a [`JumpProblem`](@ref) by attaching the
 jump:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), const_jump)
 ```
 
 We can now solve this extended problem using any ODE solver:
@@ -132,13 +132,13 @@ rate(u, p, t) = u[1]
 Using the same `affect!` we build a [`VariableRateJump`](@ref):
 
 ```@example tut3
-jump = VariableRateJump(rate, affect!)
+var_jump = VariableRateJump(rate, affect!)
 ```
 
 We now couple the jump to the `ODEProblem`:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), var_jump)
 ```
 
 which we once again solve using an ODE solver:
@@ -154,6 +154,23 @@ rate of jumps also decreases.
 
 In this way we have solved a mixed jump-ODE, i.e., a piecewise deterministic
 Markov process.
+
+## Multiple jumps
+
+In this section we allow for multiple jumps in the SDE. Let's assume that the dynamics of our SDE is affected by the two jumps we defined in the previous sections. It is easy to re-use all the elements we defined above and initialize a `JumpProblem` with multiple jumps.
+
+```@example tut3
+jump_prob = JumpProblem(prob, Direct(), const_jump, var_jump)
+```
+
+which we solve in the same manner using an ODE solver:
+
+```@example tut3
+sol = solve(jump_prob, Tsit5())
+plot(sol)
+```
+
+The constant jump ensures that the function jumps at more or less regular intervals, while the variable jump increases the frequency of jumps when the function reaches higher levels.
 
 ## Jump Diffusion
 
@@ -173,7 +190,7 @@ prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 and couple it to the jumps:
 
 ```@example tut3
-jump_prob = JumpProblem(prob, Direct(), jump)
+jump_prob = JumpProblem(prob, Direct(), const_jump, var_jump)
 ```
 
 We then solve it using an SDE algorithm:

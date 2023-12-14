@@ -459,5 +459,3 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
         println(io, "Have a regular jump")
     end
 end
-
-TreeViews.hastreeview(x::JumpProblem) = true

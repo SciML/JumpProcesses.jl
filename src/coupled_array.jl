@@ -57,6 +57,5 @@ add_idxs2(::Type{T}, expr) where {T <: CoupledArray} = :($(expr).u_control)
 end
 
 Base.show(io::IO, A::CoupledArray) = show(io, A.u)
-TreeViews.hastreeview(x::CoupledArray) = true
 plot_indices(A::CoupledArray) = eachindex(A)
 flip_u!(A::CoupledArray) = (A.order = !A.order)

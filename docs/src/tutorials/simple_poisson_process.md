@@ -1,16 +1,14 @@
 # [Simple Poisson Processes in JumpProcesses] (@id poisson_proc_tutorial)
 
 In this tutorial, we show how to simulate several Poisson jump processes, for
-several types of intensities and jump distributions. Readers interested
-primarily in chemical or population process models, where several types of jumps
-may occur, can skip directly to the [second tutorial](@ref ssa_tutorial) for a
-tutorial covering similar material but focused on the SIR model.
+several types of intensities and jump distributions.
 
-!!! note
-    
-    If you have a background in point process theory, we recommend that
-    you read our example on [modelling temporal point processes with
-    JumpProcesses](@ref tpp_tutorial)
+Readers interested primarily in chemical or population process models, where
+several types of jumps may occur, can skip directly to the [second
+tutorial](@ref ssa_tutorial) for a tutorial covering similar material but
+focused on the SIR model. Readers with a background in point process theory can
+skip directly to [modelling temporal point processes with JumpProcesses](@ref
+tpp_tutorial).
 
 JumpProcesses allows the simulation of jump processes where the transition rate,
 i.e., intensity or propensity, can be a function of the current solution, current
@@ -137,7 +135,7 @@ We next create a [`JumpProblem`](@ref) that wraps the discrete problem, and
 specifies which sampling algorithm, called an aggregator in JumpProcesses, to
 use for determining next jump times (and in the case of multiple possible jumps
 the next jump type). We call them aggregators because these algorithms are
-methods for aggregating a set of jumps to determine the next jump time.  Here
+methods for aggregating a set of jumps to determine the next jump time and type.  Here
 we use the classical `Direct` method, proposed by Gillespie in the chemical
 reaction context, but going back to earlier work by Doob and others (and also
 known as Kinetic Monte Carlo in the physics literature)
@@ -188,9 +186,9 @@ deathcrj = ConstantRateJump(deathrate, deathaffect!)
 
 As the death rate is constant *between* jumps, we can encode this process as a
 second `ConstantRateJump`. Overall, we keep track of four different processes,
-the population size ``N``, total deaths ``D``, births ``Y_b`` and deaths
-``Y_d``. ``N`` and ``D`` are represented by ``u`` in our code, ``Y_b`` by `crj`
-and ``Y_d`` by `death_crj`. We then construct the corresponding problems,
+the population size ``N(t)``, total deaths ``D(t)``, births ``Y_b(t)`` and deaths
+``Y_d(t)``. The vector ``(N(t), D(t))`` is represented by ``u`` in our code, with ``Y_b(t)`` encoded by `crj`
+and ``Y_d(t)`` by `death_crj`. We then construct the corresponding problems,
 passing both jumps to `JumpProblem`, and can solve as before
 
 ```@example tut1
@@ -270,18 +268,14 @@ recalculated (for example, due to depending on changed components in `u`).
 Internally, JumpProcesses preserves the relative ordering of jumps of each
 distinct type, but always reorders all `ConstantRateJump`s to appear
 before any `VariableRateJump`s. Irrespective of how `JumpProblem` is
-initialized, we can think that internally the jumps will get ordered as
-vector `[deathcrj, vrj1]`. This vector of jumps is not the same as our
-state variable `u`.
+initialized, internally the jumps will be ordered as the vector `[deathcrj, vrj1]`. Note, this vector of the jumps is distinct from our state variable vector, `u`.
 
 We assume the convention that jumps depends on themselves. With regards to
 `vrj1` that represents births, we have that when `vrj1` fires the
 population ``N(t)`` increases by 1. Since `deathcrj` is proportional to
 population size, then a birth event should trigger an update of the death
 rate. Conversely, death events do not modify the birth rate, since births
-only obey seasonal fluctuation. The graph below encodes the dependency we
-just described such that `dep_graph[1]` are the dependents of death events
-and `dep_graph[2]` are the dependents of birth events.
+only obey seasonal fluctuation. The dependency graph below, `dep_graph`, encodes this dependency such that `dep_graph[1]` is a vector of the dependents of death events and `dep_graph[2]` is a vector of the dependents of birth events.
 
 ```@example tut1
 dep_graph = [[1], [1, 2]]

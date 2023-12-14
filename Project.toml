@@ -1,7 +1,7 @@
 name = "JumpProcesses"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "9.8.0"
+version = "9.9.0"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
@@ -19,7 +19,6 @@ RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-TreeViews = "a2a6695c-b41b-5b7d-aed9-dbfdeacea5d7"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [weakdeps]
@@ -41,7 +40,6 @@ RecursiveArrayTools = "2"
 Reexport = "0.2, 1.0"
 SciMLBase = "1.51, 2"
 StaticArrays = "0.10, 0.11, 0.12, 1.0"
-TreeViews = "0.3"
 UnPack = "1.0.2"
 julia = "1.6"
 

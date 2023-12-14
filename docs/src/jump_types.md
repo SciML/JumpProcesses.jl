@@ -213,12 +213,7 @@ Note that
     checks in the bound functions.
   - In some circumstances with complex model of many variables it can be
     difficult to determine good a priori bounds on the ODE variables. For some
-    discussion on the bound setting problem see [1].
-
-[1] V. Lemaire, M. Thieullen and N. Thomas, Exact Simulation of the Jump
-Times of a Class of Piecewise Deterministic Markov Processes, Journal of
-Scientific Computing, 75 (3), 1776-1807 (2018).
-doi:10.1007/s10915-017-0607-4.
+    discussion on the bound setting problem see Lemaire *et al.* [^1].
 
 #### Defining a Regular Jump
 
@@ -286,36 +281,36 @@ time-step based (inexact) τ-leaping methods.
 The current aggregators are (note that an italicized name indicates the
 aggregator requires various types of dependency graphs, see the next section):
 
-  - `Direct`: The Gillespie Direct method SSA [1].
-  - `DirectFW`: the Gillespie Direct method SSA [1] with `FunctionWrappers`. This
+  - `Direct`: The Gillespie Direct method SSA [^2].
+  - `DirectFW`: the Gillespie Direct method SSA [^2] with `FunctionWrappers`. This
     aggregator uses a different internal storage format for collections of
     `ConstantRateJumps`.
-  - *`DirectCR`*: The Composition-Rejection Direct method of Slepoy et al [2]. For
+  - `DirectCR`: The Composition-Rejection Direct method of Slepoy *et al.* [^3]. For
     large networks and linear chain-type networks, it will often give better
-    performance than `Direct`.
-  - *`SortingDirect`*: The Sorting Direct Method of McCollum et al [3]. It will
+    performance than `Direct`. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+  - `SortingDirect`: The Sorting Direct Method of McCollum *et al.* [^4]. It will
     usually offer performance as good as `Direct`, and for some systems can offer
-    substantially better performance.
-  - *`RSSA`*: The Rejection SSA (RSSA) method of Thanh et al [4,5]. With `RSSACR`,
+    substantially better performance. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+  - `RSSA`: The Rejection SSA (RSSA) method of Thanh *et al.* [^5][^6]. With `RSSACR`,
     for very large reaction networks, it often offers the best performance of all
-    methods.
-  - *`RSSACR`*: The Rejection SSA (RSSA) with Composition-Rejection method of
-    Thanh et al [6]. With `RSSA`, for very large reaction networks, it often offers
-    the best performance of all methods.
-  - `RDirect`: A variant of Gillespie's Direct method [1] that uses rejection to
+    methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+  - `RSSACR`: The Rejection SSA (RSSA) with Composition-Rejection method of
+    Thanh *et al.* [^7]. With `RSSA`, for very large reaction networks, it often offers
+    the best performance of all methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+  - `RDirect`: A variant of Gillespie's Direct method [^2] that uses rejection to
     sample the next reaction.
-  - `FRM`: The Gillespie first reaction method SSA [1]. `Direct` should generally
+  - `FRM`: The Gillespie first reaction method SSA [^2]. `Direct` should generally
     offer better performance and be preferred to `FRM`.
-  - `FRMFW`: The Gillespie first reaction method SSA [1] with `FunctionWrappers`.
-  - *`NRM`*: The Gibson-Bruck Next Reaction Method [7]. For some reaction network
+  - `FRMFW`: The Gillespie first reaction method SSA [^2] with `FunctionWrappers`.
+  - `NRM`: The Gibson-Bruck Next Reaction Method [^8]. For some reaction network
     structures, this may offer better performance than `Direct` (for example,
-    large, linear chains of reactions).
-  - *`Coevolve`*: An improvement of the COEVOLVE algorithm of Farajtabar et al
-    [8]. Currently the only aggregator that also supports *bounded*
+    large, linear chains of reactions). [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+  - `Coevolve`: An improvement of the COEVOLVE algorithm of Farajtabar *et al.*
+    [^9]. Currently the only aggregator that also supports *bounded*
     `VariableRateJump`s. As opposed
     to COEVOLVE, this method syncs the thinning procedure with the stepper
     which allows it to handle dependencies on continuous dynamics. Essentially
-    reduces to `NRM` in handling `ConstantRateJump`s and `MassActionJump`s.
+    reduces to `NRM` in handling `ConstantRateJump`s and `MassActionJump`s. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
 
 To pass the aggregator, pass the instantiation of the type. For example:
 
@@ -325,41 +320,6 @@ JumpProblem(prob, Direct(), jump1, jump2)
 
 will build a problem where the jumps are simulated using Gillespie's Direct SSA
 method.
-
-[1] D. T. Gillespie, A general method for numerically simulating the stochastic
-time evolution of coupled chemical reactions, Journal of Computational Physics,
-22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
-
-[2] A. Slepoy, A.P. Thompson and S.J. Plimpton, A constant-time kinetic Monte
-Carlo algorithm for simulation of large biochemical reaction networks, Journal
-of Chemical Physics, 128 (20), 205101 (2008). doi:10.1063/1.2919546.
-
-[3] J. M. McCollum, G. D. Peterson, C. D. Cox, M. L. Simpson and N. F.
-Samatova, The sorting direct method for stochastic simulation of biochemical
-systems with varying reaction execution behavior, Computational Biology and
-Chemistry, 30 (1), 39049 (2006). doi:10.1016/j.compbiolchem.2005.10.007.
-
-[4] V. H. Thanh, C. Priami and R. Zunino, Efficient rejection-based simulation
-of biochemical reactions with stochastic noise and delays, Journal of Chemical
-Physics, 141 (13), 134116 (2014). doi:10.1063/1.4896985.
-
-[5] V. H. Thanh, R. Zunino and C. Priami, On the rejection-based algorithm for
-simulation and analysis of large-scale reaction networks, Journal of Chemical
-Physics, 142 (24), 244106 (2015). doi:10.1063/1.4922923.
-
-[6] V. H. Thanh, R. Zunino, and C. Priami, Efficient constant-time complexity
-algorithm for stochastic simulation of large reaction networks, IEEE/ACM
-Transactions on Computational Biology and Bioinformatics, 14 (3), 657-667
-(2017). doi:10.1109/TCBB.2016.2530066.
-
-[7] M. A. Gibson and J. Bruck, Efficient exact stochastic simulation of chemical
-systems with many species and many channels, Journal of Physical Chemistry A,
-104 (9), 1876-1889 (2000). doi:10.1021/jp993732q.
-
-[8] M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L. Song,
-COEVOLVE: a joint point process model for information diffusion and network
-evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
-10.5555/3122009.3122050.
 
 ## Jump Aggregators Requiring Dependency Graphs
 
@@ -501,3 +461,36 @@ jprob2 = remake(jprob, prob = dprob2, u0 = u02)
 
 as will trying to update either `p` or `tspan` while passing a new
 `DiscreteProblem` using the `prob` kwarg.
+
+## References
+
+[^1]: V. Lemaire, M. Thieullen and N. Thomas, Exact Simulation of the Jump
+    Times of a Class of Piecewise Deterministic Markov Processes, Journal of
+    Scientific Computing, 75 (3), 1776-1807 (2018). doi:10.1007/s10915-017-0607-4.
+[^2]: D. T. Gillespie, A general method for numerically simulating the stochastic
+    time evolution of coupled chemical reactions, Journal of Computational Physics,
+    22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
+[^3]: A. Slepoy, A.P. Thompson and S.J. Plimpton, A constant-time kinetic Monte
+    Carlo algorithm for simulation of large biochemical reaction networks, Journal
+    of Chemical Physics, 128 (20), 205101 (2008). doi:10.1063/1.2919546.
+[^4]: J. M. McCollum, G. D. Peterson, C. D. Cox, M. L. Simpson and N. F.
+    Samatova, The sorting direct method for stochastic simulation of biochemical
+    systems with varying reaction execution behavior, Computational Biology and
+    Chemistry, 30 (1), 39049 (2006). doi:10.1016/j.compbiolchem.2005.10.007.
+[^5]: V. H. Thanh, C. Priami and R. Zunino, Efficient rejection-based simulation
+    of biochemical reactions with stochastic noise and delays, Journal of Chemical
+    Physics, 141 (13), 134116 (2014). doi:10.1063/1.4896985.
+[^6]: V. H. Thanh, R. Zunino and C. Priami, On the rejection-based algorithm for
+    simulation and analysis of large-scale reaction networks, Journal of Chemical
+    Physics, 142 (24), 244106 (2015). doi:10.1063/1.4922923.
+[^7]: V. H. Thanh, R. Zunino, and C. Priami, Efficient constant-time complexity
+    algorithm for stochastic simulation of large reaction networks, IEEE/ACM
+    Transactions on Computational Biology and Bioinformatics, 14 (3), 657-667
+    (2017). doi:10.1109/TCBB.2016.2530066.
+[^8]: M. A. Gibson and J. Bruck, Efficient exact stochastic simulation of chemical
+    systems with many species and many channels, Journal of Physical Chemistry A,
+    104 (9), 1876-1889 (2000). doi:10.1021/jp993732q.
+[^9]: M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L. Song,
+    COEVOLVE: a joint point process model for information diffusion and network
+    evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
+    10.5555/3122009.3122050.

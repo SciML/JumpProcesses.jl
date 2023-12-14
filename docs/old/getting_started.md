@@ -1,45 +1,31 @@
 # Getting Started with JumpProcesses in Julia
 
-Jumps (or point) processes are stochastic processes with discrete state changes
-driven by a `rate` function. Historically, jump processes have been developed in
-the context of dynamical systems to describe dynamics with sudden changes —
-the jumps — in a system's value at random times. In contrast, the development
-of point processes has been more focused on describing the occurrence of random
-events — the points — over a support. In reality, jump and point processes
-share many things in common which make JumpProcesses ideal for both.
+Jumps and point processes are stochastic processes with discrete state changes
+``du`` driven by a rate function. Let ``dN_i(t)`` be a stochastic process such
+that ``dN_i(t) = 1`` with some probability and ``0`` otherwise. In a sense,
+``dN_i(t)`` is a Bernoulli distribution over a tiny interval which represents
+our jump. The rate in which we observe jumps is given by the intensity rate,
+``E(dN_i(t)) = \lambda_i(t) dt``. As ``dN_i(t)`` is a function of time, any
+differential equation can be extended by jumps.
 
-Processes involving multiple jumps are known as compound jump (or point)
-processes.
-
-```math
-du = \sum_{j} h_j(u,p,t) dN_j(t)
-```
-
-where ``N_j`` is a jump process with rate ``\lambda_i(u,p,t)``.
-
-The homogeneous Poisson process is the canonical point process with a constant
-rate of change. A compound Poisson process is a continuous-time Markov Chain
-where the time to the next jump is exponentially distributed as determined by
-the aggregate rate. In the statistics literature, the composition of Poisson
-processes is described by the superposition theorem. Simulation algorithms for
-these types of processes are known in biology and chemistry as Gillespie methods
-or Stochastic Simulation Algorithms (SSA), with the time evolution that the
-probability these processes are in a given state at a given time satisfying the
-Chemical Master Equation (CME).
-
-Any differential equation can be extended by jumps. For example, we have an ODE
-with jumps, denoted by
+For example, we have an ODE with jumps ``i``, denoted by
 
 ```math
-du = f(u,p,t)dt + \sum_{j} h_j(u,p,t) dN_j(t)
+du = f(u,p,t)dt + \sum_{i} h_i(u,p,t) dN_i(t) 
 ```
 
-Extending a stochastic differential equation (SDE) to have jumps is commonly known as a jump-
-diffusion, and is denoted by
+Functions ``f(u, p, t)`` and ``h(u, p, t)`` represent the impact of the drift and
+jumps on the state variable respectively.
+
+Extending a stochastic differential equation (SDE) to have jumps is commonly
+known as a jump-diffusion, and is denoted by
 
 ```math
 du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_i(u,p,t)dN_i(t)
 ```
+
+By diffusion we mean a continuous stochastic process which is usually
+represented as Gaussian white noise (i.e. ``W_j(t)`` is a Brownian Motion).
 
 The general workflow with any of the jump processes above is to define the base
 and jump problem, solve the jump problem and then analyze the solution. The full

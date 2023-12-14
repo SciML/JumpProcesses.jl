@@ -195,13 +195,13 @@ constant between jumps, we will use a
 [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
 This encodes that the state only changes at the jump times. We do this by giving
 the constructor `u₀`, the initial condition, and `tspan`, the timespan. Here, we
-will start with `999` susceptible people, `1` infected person, and `0` recovered
+will start with ``990`` susceptible people, ``10`` infected person, and `0` recovered
 people, and solve the problem from `t=0.0` to `t=250.0`. We use the parameters
 `β = 0.1/1000` and `ν = 0.01`. Thus, we build the problem via:
 
 ```@example tut2
 p = (:β => 0.1 / 1000, :ν => 0.01)
-u₀ = [:S => 999, :I => 10, :R => 0]
+u₀ = [:S => 990, :I => 10, :R => 0]
 tspan = (0.0, 250.0)
 prob = DiscreteProblem(sir_model, u₀, tspan, p)
 ```
@@ -333,7 +333,7 @@ end
 jump2 = ConstantRateJump(rate2, affect2!)
 ```
 
-We will start with `999` susceptible people, `1` infected person, and `0`
+We will start with `990` susceptible people, `10` infected people, and `0`
 recovered people, and solve the problem from `t=0.0` to `t=250.0` so that
 
 ```@example tut2
@@ -536,19 +536,22 @@ timestamps of all ``I(t)`` active infections. The rate of infection is then
 \beta_1 S(t) I(t) + \alpha S(t) \sum_{t_i \in H(t)} \exp(-\gamma (t - t_i))
 ```
 
-where ``\beta_1`` is the basal rate of infection, ``\alpha`` is the spike in the
-rate of infection, and ``\gamma`` is the rate at which the spike decreases. Here,
-we choose parameters such that infectivity rate due to a single infected
+where ``\beta_1`` is the basal rate of infection, ``\alpha`` is the spike in
+the rate of infection, and ``\gamma`` is the rate at which the spike decreases.
+Here, we choose parameters such that infectivity rate due to a single infected
 individual returns to the basal rate after spiking to ``\beta_1 + \alpha``. In
-other words, we are modelling a situation in which infected individuals gradually
-become less infectious prior to recovering. Finally, the vector parameters
-will include a vector of active infections ``H``. Our parameters are then
+other words, we are modelling a situation in which infected individuals
+gradually become less infectious prior to recovering. Finally, the vector
+parameters will include a structure of active infections ``H`` which is
+initialized with ``10`` random infections. We use a dictionary to ensure
+insertions and deletions are ``\mathcal{O}(1)``. Our parameters are then
 
 ```@example tut2
 β1 = 0.001 / 1000.0
 α = 0.1 / 1000.0
 γ = 0.05
-H = zeros(Float64, 10)
+H = Dict(zip(1:10, zeros(Float64, 10)))
+sizehint!(H, 1000)
 p1 = (β1, ν, α, γ, H)
 ```
 
@@ -562,7 +565,7 @@ should be valid from the time they are computed `t` until `t + rateinterval(u, p
 
 ```@example tut2
 function rate3(u, p, t)
-    p[1] * u[1] * u[2] + p[3] * u[1] * sum(exp(-p[4] * (t - _t)) for _t in p[5])
+    p[1] * u[1] * u[2] + p[3] * u[1] * sum(exp(-p[4] * (t - _t)) for _t in values(p[5]))
 end
 lrate = rate1              # β*S*I
 urate = rate3
@@ -570,7 +573,7 @@ rateinterval(u, p, t) = 1 / (2 * urate(u, p, t))
 function affect3!(integrator)
     integrator.u[1] -= 1     # S -> S - 1
     integrator.u[2] += 1     # I -> I + 1
-    push!(integrator.p[5], integrator.t)
+    integrator.p[5][integrator.u[2] + integrator.u[3] + 1] = integrator.t # S + R + 1
     nothing
 end
 jump3 = VariableRateJump(rate3, affect3!; lrate, urate, rateinterval)
@@ -590,7 +593,7 @@ function affect4!(integrator)
     integrator.u[2] -= 1
     integrator.u[3] += 1
     length(integrator.p[5]) > 0 &&
-        deleteat!(integrator.p[5], rand(1:length(integrator.p[5])))
+        delete!(integrator.p[5], rand(integrator.p[5]))
     nothing
 end
 jump4 = ConstantRateJump(rate4, affect4!)
@@ -682,7 +685,7 @@ no longer give the exact value of the solution at `t`.*
 
 In summary, the jump callback will save the state variable `u` before and
 after the jump whenever `save_positions = (true, true)`. All other saving
-behaviour is delegated to the integrator and controlled via `saveat`.
+behavior is delegated to the integrator and controlled via keyword arguments to `solve` such as `saveat`.
 
 ## Defining the Jumps Directly: Mixing `ConstantRateJump`/`VariableRateJump` and `MassActionJump`
 
@@ -725,7 +728,7 @@ function f(du, u, p, t)
     du[4] = u[2] * u[3] / 1e5 - u[1] * u[4] / 1e5
     nothing
 end
-u₀ = [999.0, 10.0, 0.0, 100.0]
+u₀ = [990.0, 10.0, 0.0, 100.0]
 prob = ODEProblem(f, u₀, tspan, p)
 ```
 
@@ -773,7 +776,7 @@ upper/lower bounds or a bounded `VariableRateJump`*.
 In the general case, solving the equation is exactly the same:
 
 ```@example tut2
-u₀ = [999.0, 10.0, 0.0, 1.0]
+u₀ = [990.0, 10.0, 0.0, 1.0]
 prob = ODEProblem(f, u₀, tspan, p)
 jump_prob = JumpProblem(prob, Direct(), jump, jump2, jump5)
 sol = solve(jump_prob, Tsit5())

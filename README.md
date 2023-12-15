@@ -1,5 +1,5 @@
 # JumpProcesses.jl
-
+ 
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
 [![Stable Release Docs](https://img.shields.io/badge/Stable%20Release%20Docs-SciML-blue)](https://docs.sciml.ai/JumpProcesses/stable/)
 [![Master Branch Docs](https://img.shields.io/badge/Master%20Branch%20Docs-SciML-blue)](https://docs.sciml.ai/JumpProcesses/dev/)

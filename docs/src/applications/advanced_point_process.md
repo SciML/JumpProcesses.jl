@@ -38,7 +38,7 @@ dN(t) = \begin{cases}
 \end{cases}
 ```
 
-Therefore, we can use any TPP to define a stochastic differential equations
+Therefore, we can use any TPP to define a stochastic differential equation
 (SDE) with discontinuous jumps.
 
 ```math
@@ -70,7 +70,7 @@ move between these interpretations throughout the tutorial.
 Since TPP sampling is
 more efficient if we split any marked TPP into a sparsely connected
 multivariate TPP, we define `SciMLPointProcess` as a multivariate TPP such
-that each sub-component is itself a marked TPP on a continuous space.
+that each subcomponent is itself a marked TPP on a continuous space.
 Therefore, we have that our structure includes a vector of sub-TPP
 `jumps`, a vector of mark distributions `mark_dist` and the sparsely
 connected graph `g`.
@@ -228,7 +228,7 @@ We assume that each sup-process `i` is a marked TPP. With probability ``(1 -
 \omega^\ast(t))``, we draw a mark from a 2-dimensional Gaussian
 distribution centered in ``\mu_i`` with ``\sigma_1`` standard deviation; and
 with probability ``\omega^\ast(t)`` we draw from a 2-dimensional Gaussian
-distribution centered on the last location visted by ``i`` with ``\sigma_2``
+distribution centered on the last location visited by ``i`` with ``\sigma_2``
 standard deviation. Like the conditional intensity, ``\omega^\ast(t)`` decays
 exponentially with rate ``-\beta``.
 
@@ -436,7 +436,7 @@ using Plots
 end
 ```
 
-Lets visualize our data as a barcode.
+Let's visualize our data as a barcode.
 
 ```@example tpp-advanced
 barcodeplot(h, 1:10; legend = false)
@@ -571,7 +571,7 @@ integrating over the marks.
 \Lambda(t) \equiv \int_0^t \sum_{k \in \mathcal{K}} \lambda^\ast (u, k) du
 ```
 
-In Julia we can derive the compensator by simply integrating over the
+In Julia, we can derive the compensator by simply integrating over the
 conditional intensity using an ODEProblem.
 
 ```@example tpp-advanced
@@ -736,7 +736,7 @@ end
 ```
 
 To produce the QQ-plots, we ran the simulation a reasonable number of times to
-ensure an accurate estimation of the empirical quantiles of the interarrival
+ensure an accurate estimation of the empirical quantiles of the inter-arrival
 times. The `time_change` method comes from PointProcess which applies the
 compensator to the input history. We take advantage of the fact that the
 compensator is an `ODESolution` which overloads an interpolation method in
@@ -813,7 +813,7 @@ function DensityInterface.logdensityof(pp::SciMLPointProcess, h)
 end
 ```
 
-This allow us to compute the log-likelihood of our sample.
+This allows us to compute the log-likelihood of our sample.
 
 ```@example tpp-advanced
 logdensityof(hawkes, h)
@@ -823,11 +823,11 @@ This tutorial demonstrated the versatility of the SciML library to model TPPs.
 We made extensive use of JumpProcesses and OrdinaryDiffEq to fulfill the
 interface specified by the PointProcess library. However, we have left out
 a discussion about fitting the parameters of a TPP to the data. In many cases,
-we cannot derive an analytical estimator via maximum likelihood and we must tap
+we cannot derive an analytical estimator via maximum likelihood, and we must tap
 into machine learning tools like gradient descent and expectation-maximization
 algorithms to minimize the log-likelihood function. Julia is a great tool for
-these kind of tasks with libraries such as Optimization and Flux which are
-outside of the scope this tutorial.
+these kinds of tasks with libraries such as Optimization and Flux which are
+outside the scope this tutorial.
 
 ## References
 

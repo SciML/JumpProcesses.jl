@@ -135,7 +135,7 @@ end
 """
     fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, u, t)
 
-reset all stucts, reevaluate all rates, repopulate the priority table
+reset all structs, reevaluate all rates, repopulate the priority table
 """
 function fill_rates_and_get_times!(aggregation::DirectCRDirectJumpAggregation, integrator, t)
     @unpack spatial_system, rx_rates, hop_rates, site_rates, rt = aggregation

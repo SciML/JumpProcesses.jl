@@ -117,7 +117,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
     nothing
 end
 
-# reevaulate all rates, recalculate all jump times, and reinit the priority queue
+# reevaluate all rates, recalculate all jump times, and reinit the priority queue
 function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
 
     # mass action jumps

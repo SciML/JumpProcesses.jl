@@ -294,7 +294,7 @@ Since Algorithm~\ref{algo:sim-queuing} can be mapped to a \textit{non-queued thi
 \begin{algorithmic}[1]
   \Procedure{QueueTime}{\( t \), \( \lambda^\ast \), \( H_{t} \),}
         \State update \( \lambda^\ast \)
-        \State find \( \bar{B}^\ast (t) \), \( \ubar{B}^\ast (t) \) and \( L^\ast(t) \) which satisfy Eq.~\ref{eq:thinning-condition}
+        \State find \( \bar{B}^\ast \), \( \ubar{B}^\ast \) and \( L^\ast(t) \) which satisfy Eq.~\ref{eq:thinning-condition}
         \State draw \( u \sim \exp(\bar{B}^\ast(t)) \)
         \If{ \( u > L^\ast(t) \)}
           \State \( \operatorname{accepted} \leftarrow \operatorname{false} \)
@@ -303,7 +303,7 @@ Since Algorithm~\ref{algo:sim-queuing} can be mapped to a \textit{non-queued thi
           \State \( \operatorname{accepted} \leftarrow \operatorname{true} \)
         \EndIf
         \State \( t \leftarrow t + u \)
-        \State \Return \( t, \bar{B}^\ast (t), \ubar{B}^\ast, \operatorname{accepted} \)
+        \State \Return \( t, \bar{B}^\ast, \ubar{B}^\ast, \operatorname{accepted} \)
   \EndProcedure
 \end{algorithmic}
 \caption{Generates the next candidate time for \textit{queued thinning}.}

@@ -453,11 +453,11 @@ latter determining the affect function.
 rateidxs = [1, 2]           # i.e., [β, ν]
 reactant_stoich = [
     [1 => 1, 2 => 1],         # 1*S and 1*I
-    [2 => 1],                  # 1*I
+    [2 => 1]                  # 1*I
 ]
 net_stoich = [
     [1 => -1, 2 => 1],        # -1*S and 1*I
-    [2 => -1, 3 => 1],         # -1*I and 1*R
+    [2 => -1, 3 => 1]         # -1*I and 1*R
 ]
 mass_act_jump = MassActionJump(reactant_stoich, net_stoich; param_idxs = rateidxs)
 ```
@@ -822,9 +822,11 @@ models with care.
 ```@example tut2
 function urate2(u, p, t)
     if u[1] > 0
-        1e-2 * max(u[4],
+        1e-2 * max(
+            u[4],
             (u[4] * exp(-1 * u[1] / 1e5) +
-             (u[2] * u[3] / u[1]) * (1 - exp(-1 * u[1] / 1e5))))
+             (u[2] * u[3] / u[1]) * (1 - exp(-1 * u[1] / 1e5))),
+        )
     else
         1e-2 * (u[4] + 1 * u[2] * u[3] / 1e5)
     end

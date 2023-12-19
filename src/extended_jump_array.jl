@@ -91,7 +91,7 @@ end
 
 # Ignore axes
 function Base.similar(A::ExtendedJumpArray, ::Type{S},
-                      axes::Tuple{Base.OneTo{Int}}) where {S}
+        axes::Tuple{Base.OneTo{Int}}) where {S}
     ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
 end
 
@@ -120,37 +120,48 @@ plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 # The jump array styles stores two sub-styles in the type,
 # one for the `u` array and one for the `jump_u` array
-struct ExtendedJumpArrayStyle{UStyle <: Broadcast.BroadcastStyle,
-                              JumpUStyle <: Broadcast.BroadcastStyle} <:
+struct ExtendedJumpArrayStyle{
+    UStyle <: Broadcast.BroadcastStyle,
+    JumpUStyle <: Broadcast.BroadcastStyle,
+} <:
        Broadcast.BroadcastStyle end
 # Init style based on type of u/jump_u
 function ExtendedJumpArrayStyle(::US, ::JumpUS) where {US, JumpUS}
     ExtendedJumpArrayStyle{US, JumpUS}()
 end
-function Base.BroadcastStyle(::Type{ExtendedJumpArray{T3, T1, UType, JumpUType}}) where {T3,
-                                                                                         T1,
-                                                                                         UType,
-                                                                                         JumpUType
-                                                                                         }
+function Base.BroadcastStyle(::Type{ExtendedJumpArray{T3, T1, UType, JumpUType}},
+) where {T3,
+        T1,
+        UType,
+        JumpUType,
+}
     ExtendedJumpArrayStyle(Base.BroadcastStyle(UType), Base.BroadcastStyle(JumpUType))
 end
 
 # Combine with other styles by combining individually with u/jump_u styles
-function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
-                             ::Style) where {UStyle, JumpUStyle,
-                                             Style <: Base.Broadcast.BroadcastStyle}
-    ExtendedJumpArrayStyle(Broadcast.result_style(UStyle(), Style()),
-                           Broadcast.result_style(JumpUStyle(), Style()))
+function Base.BroadcastStyle(
+        ::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
+        ::Style,
+) where {UStyle, JumpUStyle,
+        Style <: Base.Broadcast.BroadcastStyle}
+    ExtendedJumpArrayStyle(
+        Broadcast.result_style(UStyle(), Style()),
+        Broadcast.result_style(JumpUStyle(), Style()),
+    )
 end
 
 # Decay back to the DefaultArrayStyle for higher-order default styles, to support adding to raw vectors as needed
-function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
-                             ::Broadcast.DefaultArrayStyle{0}) where {UStyle, JumpUStyle}
+function Base.BroadcastStyle(
+        ::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
+        ::Broadcast.DefaultArrayStyle{0},
+) where {UStyle, JumpUStyle}
     ExtendedJumpArrayStyle(UStyle(), JumpUStyle())
 end
 
-function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
-                             ::Broadcast.DefaultArrayStyle{N}) where {N, UStyle, JumpUStyle}
+function Base.BroadcastStyle(
+        ::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
+        ::Broadcast.DefaultArrayStyle{N},
+) where {N, UStyle, JumpUStyle}
     Broadcast.DefaultArrayStyle{N}()
 end
 
@@ -163,8 +174,10 @@ find_eja(::Tuple{}) = nothing
 find_eja(a::ExtendedJumpArray, rest) = a
 find_eja(::Any, rest) = find_eja(rest)
 
-function Base.similar(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
-                      ::Type{ElType}) where {US, JumpUS, ElType}
+function Base.similar(
+        bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+        ::Type{ElType},
+) where {US, JumpUS, ElType}
     A = find_eja(bc)
     ExtendedJumpArray(similar(A.u, ElType), similar(A.jump_u, ElType))
 end
@@ -173,12 +186,16 @@ end
 @inline function repack(bc::Broadcast.Broadcasted{Style}, i) where {Style}
     Broadcast.Broadcasted{Style}(bc.f, repack_args(i, bc.args))
 end
-@inline function repack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
-                        i::Val{:u}) where {US, JumpUS}
+@inline function repack(
+        bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+        i::Val{:u},
+) where {US, JumpUS}
     Broadcast.Broadcasted{US}(bc.f, repack_args(i, bc.args))
 end
-@inline function repack(bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
-                        i::Val{:jump_u}) where {US, JumpUS}
+@inline function repack(
+        bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+        i::Val{:jump_u},
+) where {US, JumpUS}
     Broadcast.Broadcasted{JumpUS}(bc.f, repack_args(i, bc.args))
 end
 
@@ -197,11 +214,13 @@ end
     end
 end
 
-@inline function Base.copyto!(dest::ExtendedJumpArray,
-                              bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}}) where {
-                                                                                                    US,
-                                                                                                    JumpUS
-                                                                                                    }
+@inline function Base.copyto!(
+        dest::ExtendedJumpArray,
+        bc::Broadcast.Broadcasted{ExtendedJumpArrayStyle{US, JumpUS}},
+) where {
+        US,
+        JumpUS
+}
     copyto!(dest.u, repack(bc, Val(:u)))
     copyto!(dest.jump_u, repack(bc, Val(:jump_u)))
     dest

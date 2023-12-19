@@ -21,8 +21,9 @@ algs = JumpProcesses.JUMP_AGGREGATORS
 
 for n in 1:Nsims
     for ssa in algs
-        local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
-                                  rng = rng)
+        local jprob = JumpProblem(dprob, ssa, majump,
+            save_positions = (false, false),
+            rng = rng)
         local sol = solve(jprob, SSAStepper())
         @test sol[1, end] == 0
         @test sol.t[end] < Inf
@@ -33,8 +34,9 @@ u0 = SA[10]
 dprob = DiscreteProblem(u0, (0.0, 100.0), rates)
 
 for ssa in algs
-    local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
-                              rng = rng)
+    local jprob = JumpProblem(dprob, ssa, majump,
+        save_positions = (false, false),
+        rng = rng)
     local sol = solve(jprob, SSAStepper(), saveat = 100.0)
     @test sol[1, end] == 0
     @test sol.t[end] < Inf
@@ -51,7 +53,7 @@ function extinction_affect!(integrator)
     nothing
 end
 cb = DiscreteCallback(extinction_condition, extinction_affect!,
-                      save_positions = (false, false))
+    save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
@@ -67,7 +69,7 @@ function extinction_affect!(integrator)
     nothing
 end
 cb = DiscreteCallback(extinction_condition, extinction_affect!,
-                      save_positions = (false, false))
+    save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)

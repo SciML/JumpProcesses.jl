@@ -19,14 +19,18 @@ mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
 end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                            maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                            rng::RNG; num_specs, dep_graph = nothing,
-                            kwargs...) where {T, S, F1, F2, RNG}
+        maj::S, rs::F1,
+        affs!::F2, sps::Tuple{Bool, Bool},
+        rng::RNG; num_specs,
+        dep_graph = nothing,
+        kwargs...) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a dependency graph must be supplied.")
+            error(
+                "To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a dependency graph must be supplied.",
+            )
         else
             dg = make_dependency_graph(num_specs, maj)
         end
@@ -41,22 +45,23 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     affecttype = F2 <: Tuple ? F2 : Any
     NRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(pq)}(nj, nj, njt, et,
-                                                                          crs, sr, maj,
-                                                                          rs, affs!, sps,
-                                                                          rng, dg, pq)
+        crs, sr, maj,
+        rs, affs!, sps,
+        rng, dg, pq)
 end
 
 +############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(NRMJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; num_specs = length(u),
-                           kwargs...)
+        rates, affects!,
+        save_positions, rng; num_specs = length(u),
+        kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -96,8 +101,9 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
         oldrate = cur_rates[rx]
 
         # update the jump rate
-        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u,
-                                                      params, t, rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps,
+            rates, u,
+            params, t, rx)
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)

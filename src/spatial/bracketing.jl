@@ -6,7 +6,7 @@ struct LowHigh{T}
     high::T
 
     LowHigh(low::T, high::T) where {T} = new{T}(deepcopy(low), deepcopy(high))
-    LowHigh(pair::Tuple{T,T}) where {T} = new{T}(pair[1], pair[2])
+    LowHigh(pair::Tuple{T, T}) where {T} = new{T}(pair[1], pair[2])
     LowHigh(low_and_high::T) where {T} = new{T}(low_and_high, deepcopy(low_and_high))
 end
 
@@ -33,10 +33,11 @@ function getindex(low_high::LowHigh, i)
     return LowHigh(low_high.low[i], low_high.high[i])
 end
 
-function total_site_rate(rx_rates::LowHigh, hop_rates::LowHigh, site) 
+function total_site_rate(rx_rates::LowHigh, hop_rates::LowHigh, site)
     return LowHigh(
-        total_site_rate(rx_rates.low, hop_rates.low, site), 
-        total_site_rate(rx_rates.high, hop_rates.high, site))
+        total_site_rate(rx_rates.low, hop_rates.low, site),
+        total_site_rate(rx_rates.high, hop_rates.high, site),
+    )
 end
 
 function update_rx_rates!(rx_rates::LowHigh, rxs, u_low_high, integrator, site)

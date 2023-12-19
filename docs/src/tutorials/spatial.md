@@ -145,7 +145,8 @@ function animate_2d(sol, linear_size; species_labels, title, verbose = true)
     anim
 end
 # animate
-anim = animate_2d(solution, 5, species_labels = ["A", "B", "C"], title = "A + B <--> C",
+anim = animate_2d(solution, 5, species_labels = ["A", "B", "C"],
+    title = "A + B <--> C",
     verbose = false)
 fps = 5
 gif(anim, fps = fps)

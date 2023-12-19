@@ -12,8 +12,9 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
-           NRM(), RSSA(), DirectCR(), Coevolve())
+SSAalgs = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(),
+    SortingDirect(),
+    NRM(), RSSA(), DirectCR(), Coevolve())
 
 # numerical parameters
 Nsims = 8000
@@ -76,8 +77,8 @@ if doplot
     plothand = plot(reuse = false)
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
         local sol = solve(jump_prob, SSAStepper())
         plot!(plothand, sol.t, sol[3, :], seriestype = :steppost)
     end
@@ -89,13 +90,14 @@ if dotestmean
     means = zeros(Float64, length(SSAalgs))
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
         means[i] = runSSAs(jump_prob)
         relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans
-            println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ",
-                    relerr)
+            println("Mean from method: ", typeof(alg),
+                " is = ", means[i], ", rel err = ",
+                relerr)
         end
 
         # if dobenchmark

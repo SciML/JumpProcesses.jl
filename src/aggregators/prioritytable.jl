@@ -94,8 +94,9 @@ end
 Setup table from a vector of priorities. The id
 of a priority is its position within this vector.
 """
-function PriorityTable(priortogid::Function, priorities::AbstractVector, minpriority,
-                       maxpriority)
+function PriorityTable(priortogid::Function, priorities::AbstractVector,
+        minpriority,
+        maxpriority)
     numgroups = priortogid(maxpriority)
     numgroups -= one(typeof(numgroups))
     pidtype = typeof(numgroups)

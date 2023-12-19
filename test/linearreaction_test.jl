@@ -51,8 +51,9 @@ function A_to_B_tuple(N, method)
     jumps = ((jump for jump in jumpvec)...,)
     jset = JumpSet((), jumps, nothing, nothing)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
@@ -73,8 +74,9 @@ function A_to_B_vec(N, method)
     # convert jumpvec to tuple to send to JumpProblem...
     jset = JumpSet((), jumps, nothing, nothing)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
@@ -91,8 +93,9 @@ function A_to_B_ma(N, method)
     majumps = MassActionJump(rates, reactstoch, netstoch)
     jset = JumpSet((), (), nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
@@ -125,8 +128,9 @@ function A_to_B_hybrid(N, method)
     majumps = MassActionJump(rates[1:switchidx], reactstoch, netstoch)
     jset = JumpSet((), jumps, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
@@ -160,7 +164,7 @@ function A_to_B_hybrid_nojset(N, method)
     jumps = (constjumps..., majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions = (false, false),
-                            rng = rng, namedpars...)
+        rng = rng, namedpars...)
 
     jump_prob
 end
@@ -189,8 +193,9 @@ function A_to_B_hybrid_vecs(N, method)
     end
     jset = JumpSet((), jumpvec, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
@@ -219,8 +224,9 @@ function A_to_B_hybrid_vecs_scalars(N, method)
     end
     jset = JumpSet((), jumpvec, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
@@ -251,7 +257,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
     jumps = ((maj for maj in majumpsv)..., (jump for jump in jumpvec)...)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions = (false, false),
-                            rng = rng, namedpars...)
+        rng = rng, namedpars...)
 
     jump_prob
 end
@@ -281,14 +287,17 @@ function A_to_B_hybrid_tups(N, method)
     jumps = ((jump for jump in jumpvec)...,)
     jset = JumpSet((), jumps, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false),
+        rng = rng,
+        namedpars...)
 
     jump_prob
 end
 
-jump_prob_gens = [A_to_B_tuple, A_to_B_vec, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_nojset,
-    A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars, A_to_B_hybrid_tups,
+jump_prob_gens = [A_to_B_tuple, A_to_B_vec, A_to_B_ma, A_to_B_hybrid,
+    A_to_B_hybrid_nojset,
+    A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars,
+    A_to_B_hybrid_tups,
     A_to_B_hybrid_tups_scalars]
 #jump_prob_gens = [A_to_B_tuple, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars,A_to_B_hybrid_tups_scalars]
 
@@ -298,7 +307,7 @@ for method in SSAalgs
         meanval = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
-                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+                ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.0
 
@@ -317,7 +326,7 @@ for method in SSAalgs
         meanval = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
-                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+                ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.0
 

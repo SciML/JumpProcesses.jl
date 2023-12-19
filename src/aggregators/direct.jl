@@ -13,35 +13,37 @@ mutable struct DirectJumpAggregation{T, S, F1, F2, RNG} <:
     rng::RNG
 end
 function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
-                               rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
-                               kwargs...) where {T, S, F1, F2, RNG}
+        rs::F1, affs!::F2,
+        sps::Tuple{Bool, Bool}, rng::RNG;
+        kwargs...) where {T, S, F1, F2, RNG}
     affecttype = F2 <: Tuple ? F2 : Any
-    DirectJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr, maj, rs,
-                                                     affs!, sps, rng)
+    DirectJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr,
+        maj, rs,
+        affs!, sps, rng)
 end
 
 ############################# Required Functions #############################
 
 # creating the JumpAggregation structure (tuple-based constant jumps)
 function aggregate(aggregator::Direct, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using tuples
     rates, affects! = get_jump_info_tuples(constant_jumps)
 
     build_jump_aggregation(DirectJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; kwargs...)
+        rates, affects!, save_positions, rng; kwargs...)
 end
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::DirectFW, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(DirectJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; kwargs...)
+        rates, affects!, save_positions, rng; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -52,8 +54,9 @@ function initialize!(p::DirectJumpAggregation, integrator, u, params, t)
 end
 
 # execute one jump, changing the system state
-@inline function execute_jumps!(p::DirectJumpAggregation, integrator, u, params, t,
-                                affects!)
+@inline function execute_jumps!(p::DirectJumpAggregation,
+        integrator, u, params, t,
+        affects!)
     update_state!(p, integrator, u, affects!)
     nothing
 end
@@ -69,8 +72,9 @@ end
 ######################## SSA specific helper routines ########################
 
 # tuple-based constant jumps
-function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
-                           t) where {T, S, F1 <: Tuple}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u,
+        params,
+        t) where {T, S, F1 <: Tuple}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates
@@ -111,8 +115,9 @@ end
 end
 
 # function wrapper-based constant jumps
-function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
-                           t) where {T, S, F1 <: AbstractArray}
+function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u,
+        params,
+        t) where {T, S, F1 <: AbstractArray}
     prev_rate = zero(t)
     new_rate = zero(t)
     cur_rates = p.cur_rates

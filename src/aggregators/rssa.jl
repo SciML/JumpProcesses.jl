@@ -26,14 +26,18 @@ mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, VJMAP, JVMAP, BD, U} <:
 end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                             maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                             rng::RNG; u::U, vartojumps_map = nothing,
-                             jumptovars_map = nothing,
-                             bracket_data = nothing, kwargs...) where {T, S, F1, F2, RNG, U}
+        maj::S,
+        rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+        rng::RNG;
+        u::U, vartojumps_map = nothing,
+        jumptovars_map = nothing,
+        bracket_data = nothing, kwargs...) where {T, S, F1, F2, RNG, U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from variables to dependent jumps must be supplied.")
+            error(
+                "To use the RSSA algorithm a map from variables to dependent jumps must be supplied.",
+            )
         else
             vtoj_map = var_to_jumps_map(length(u), maj)
         end
@@ -43,7 +47,9 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     if jumptovars_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
+            error(
+                "To use the RSSA algorithm a map from jumps to dependent variables must be supplied.",
+            )
         else
             jtov_map = jump_to_vars_map(maj)
         end
@@ -64,24 +70,26 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     affecttype = F2 <: Tuple ? F2 : Any
     RSSAJumpAggregation{T, S, F1, affecttype, RNG, typeof(vtoj_map),
-                        typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
-                                                         crh_bnds, sr, maj, rs, affs!, sps,
-                                                         rng, vtoj_map, jtov_map, bd, ulow,
-                                                         uhigh)
+        typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
+        crh_bnds, sr, maj, rs,
+        affs!, sps,
+        rng, vtoj_map, jtov_map, bd, ulow,
+        uhigh)
 end
 
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::RSSA, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(RSSAJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; u = u,
-                           kwargs...)
+        rates,
+        affects!, save_positions, rng; u = u,
+        kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -120,7 +128,7 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     end
     rerl += randexp(rng)
     @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high,
-                             cur_rate_low, rng, u, jidx, params, t)
+        cur_rate_low, rng, u, jidx, params, t)
         # sample candidate reaction
         r = rand(rng) * sum_rate
         jidx = linear_search(cur_rate_high, r)

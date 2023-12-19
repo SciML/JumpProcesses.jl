@@ -21,8 +21,9 @@ p = (0.1 / 1000, 0.01)
 tspan = (0.0, 2500.0)
 
 dprob = DiscreteProblem(u0, tspan, p)
-jprob = JumpProblem(dprob, Direct(), jump, jump2, save_positions = (false, false),
-                    rng = rng)
+jprob = JumpProblem(dprob, Direct(), jump, jump2,
+    save_positions = (false, false),
+    rng = rng)
 sol = solve(jprob, SSAStepper())
 @test sol[3, end] == 1000
 

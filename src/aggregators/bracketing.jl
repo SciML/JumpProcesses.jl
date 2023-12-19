@@ -62,8 +62,9 @@ get brackets for the rate of reaction rx by first checking if the reaction is a 
     if rx <= num_majumps
         return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
     else
-        @inbounds return get_cjump_brackets(p.ulow, p.uhigh, p.rates[rx - num_majumps],
-                                            params, t)
+        @inbounds return get_cjump_brackets(p.ulow, p.uhigh,
+            p.rates[rx - num_majumps],
+            params, t)
     end
 end
 

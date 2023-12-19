@@ -14,7 +14,7 @@ function HopRates(hopping_constants::Vector{F}, spatial_system) where {F <: Numb
     HopRatesGraphDs(hopping_constants, num_sites(spatial_system))
 end
 function HopRates(hopping_constants::Vector{F},
-                  grid::CartesianGridRej) where {F <: Number}
+        grid::CartesianGridRej) where {F <: Number}
     HopRatesGraphDs(hopping_constants, num_sites(grid))
 end
 
@@ -22,37 +22,47 @@ function HopRates(hopping_constants::Matrix{F}, spatial_system) where {F <: Numb
     HopRatesGraphDsi(hopping_constants)
 end
 function HopRates(hopping_constants::Matrix{F},
-                  grid::CartesianGridRej) where {F <: Number}
+        grid::CartesianGridRej) where {F <: Number}
     HopRatesGraphDsi(hopping_constants)
 end
 
 function HopRates(hopping_constants::Matrix{Vector{F}}, spatial_system) where {F <: Number}
     HopRatesGraphDsij(hopping_constants)
 end
-function HopRates(hopping_constants::Matrix{Vector{F}},
-                  grid::CartesianGridRej) where {F <: Number}
+function HopRates(
+        hopping_constants::Matrix{Vector{F}},
+        grid::CartesianGridRej,
+) where {F <: Number}
     HopRatesGridDsij(hopping_constants, grid)
 end
 
-function HopRates(p::Pair{SpecHop, SiteHop},
-                  spatial_system) where {F <: Number, SpecHop <: Vector{F},
-                                         SiteHop <: Vector{Vector{F}}}
+function HopRates(
+        p::Pair{SpecHop, SiteHop},
+        spatial_system,
+) where {F <: Number, SpecHop <: Vector{F},
+        SiteHop <: Vector{Vector{F}}}
     HopRatesGraphDsLij(p...)
 end
-function HopRates(p::Pair{SpecHop, SiteHop},
-                  grid::CartesianGridRej) where
-    {F <: Number, SpecHop <: Vector{F}, SiteHop <: Vector{Vector{F}}}
+function HopRates(
+        p::Pair{SpecHop, SiteHop},
+        grid::CartesianGridRej,
+) where
+        {F <: Number, SpecHop <: Vector{F}, SiteHop <: Vector{Vector{F}}}
     HopRatesGridDsLij(p..., grid)
 end
 
-function HopRates(p::Pair{SpecHop, SiteHop},
-                  spatial_system) where {F <: Number, SpecHop <: Matrix{F},
-                                         SiteHop <: Vector{Vector{F}}}
+function HopRates(
+        p::Pair{SpecHop, SiteHop},
+        spatial_system,
+) where {F <: Number, SpecHop <: Matrix{F},
+        SiteHop <: Vector{Vector{F}}}
     HopRatesGraphDsiLij(p...)
 end
-function HopRates(p::Pair{SpecHop, SiteHop},
-                  grid::CartesianGridRej) where
-    {SpecHop <: Matrix{F}, SiteHop <: Vector{Vector{F}}} where {F <: Number}
+function HopRates(
+        p::Pair{SpecHop, SiteHop},
+        grid::CartesianGridRej,
+) where
+        {SpecHop <: Matrix{F}, SiteHop <: Vector{Vector{F}}} where {F <: Number}
     HopRatesGridDsiLij(p..., grid)
 end
 
@@ -61,8 +71,9 @@ end
 
 update rates of all specs in species at site
 """
-function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site,
-                           spatial_system)
+function update_hop_rates!(hop_rates::AbstractHopRates,
+        species::AbstractArray, u, site,
+        spatial_system)
     @inbounds for spec in species
         update_hop_rate!(hop_rates, spec, u, site, spatial_system)
     end
@@ -76,8 +87,9 @@ update rates of single species at site
 function update_hop_rate!(hop_rates::AbstractHopRates, species, u, site, spatial_system)
     rates = hop_rates.rates
     @inbounds old_rate = rates[species, site]
-    @inbounds rates[species, site] = evalhoprate(hop_rates, u, species, site,
-                                                 spatial_system)
+    @inbounds rates[species, site] = evalhoprate(hop_rates, u, species,
+        site,
+        spatial_system)
     @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
     old_rate
 end
@@ -106,8 +118,10 @@ end
 sample species to hop from site
 """
 function sample_species(hop_rates::AbstractHopRates, site, rng)
-    @inbounds linear_search((@view hop_rates.rates[:, site]),
-                            rand(rng) * total_site_hop_rate(hop_rates, site))
+    @inbounds linear_search(
+        (@view hop_rates.rates[:, site]),
+        rand(rng) * total_site_hop_rate(hop_rates, site),
+    )
 end
 
 """
@@ -135,8 +149,10 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDs)
     num_specs, num_sites = size(hop_rates.rates)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s} where s is species.")
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s} where s is species.",
+    )
 end
 
 """
@@ -175,8 +191,10 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsi)
     num_specs, num_sites = size(hop_rates.rates)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} where s is species, and i is source.")
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} where s is species, and i is source.",
+    )
 end
 
 """
@@ -215,8 +233,10 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsij)
     num_specs, num_sites = size(hop_rates.rates)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i,j} where s is species, i is source and j is destination.")
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i,j} where s is species, i is source and j is destination.",
+    )
 end
 
 """
@@ -224,16 +244,19 @@ end
 
 initializes HopRates with zero rates
 """
-function HopRatesGraphDsij(hopping_constants::Matrix{Vector{F}};
-                           do_cumsum = true) where {F <: Number}
+function HopRatesGraphDsij(
+        hopping_constants::Matrix{Vector{F}};
+        do_cumsum = true,
+) where {F <: Number}
     do_cumsum && (hopping_constants = map(cumsum, hopping_constants))
     rates = zeros(F, size(hopping_constants))
     sum_rates = zeros(F, size(rates, 2))
     HopRatesGraphDsij{F}(hopping_constants, rates, sum_rates)
 end
 
-function sample_target_site(hop_rates::HopRatesGraphDsij, site, species, rng,
-                            spatial_system)
+function sample_target_site(hop_rates::HopRatesGraphDsij, site,
+        species, rng,
+        spatial_system)
     @inbounds cum_hop_consts = hop_rates.hop_const_cumulative_sums[species, site]
     @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_nbr(spatial_system, site, n)
@@ -260,8 +283,10 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsij)
     num_specs, num_sites = size(hop_rates.rates)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form L_{s,i,j} where s is species, i is source and j is destination.")
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form L_{s,i,j} where s is species, i is source and j is destination.",
+    )
 end
 
 """
@@ -269,8 +294,10 @@ end
 
 initializes HopRates with zero rates
 """
-function HopRatesGridDsij(hopping_constants::Array{F, 3};
-                          do_cumsum = true) where {F <: Number}
+function HopRatesGridDsij(
+        hopping_constants::Array{F, 3};
+        do_cumsum = true,
+) where {F <: Number}
     do_cumsum && (hopping_constants = mapslices(cumsum, hopping_constants, dims = 1))
     rates = zeros(F, size(hopping_constants)[2:3])
     sum_rates = zeros(F, size(rates, 2))
@@ -279,7 +306,7 @@ end
 
 function HopRatesGridDsij(hopping_constants::Matrix{Vector{F}}, grid) where {F <: Number}
     new_hopping_constants = Array{F, 3}(undef, 2 * dimension(grid),
-                                        size(hopping_constants)...)
+        size(hopping_constants)...)
     for ci in CartesianIndices(hopping_constants)
         species, site = Tuple(ci)
         nb_constants = @view new_hopping_constants[:, species, site]
@@ -316,9 +343,11 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsLij)
     num_specs, num_sites = length(hop_rates.species_hop_constants),
-                           length(hop_rates.hop_const_cumulative_sums)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
+    length(hop_rates.hop_const_cumulative_sums)
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.",
+    )
 end
 
 """
@@ -327,16 +356,17 @@ end
 initializes HopRates with zero rates
 """
 function HopRatesGraphDsLij(species_hop_constants::Vector{F},
-                            site_hop_constants::Vector{Vector{F}};
-                            do_cumsum = true) where {F <: Number}
+        site_hop_constants::Vector{Vector{F}};
+        do_cumsum = true) where {F <: Number}
     do_cumsum && (site_hop_constants = map(cumsum, site_hop_constants))
     rates = zeros(F, length(species_hop_constants), length(site_hop_constants))
     sum_rates = zeros(size(rates, 2))
     HopRatesGraphDsLij{F}(species_hop_constants, site_hop_constants, rates, sum_rates)
 end
 
-function sample_target_site(hop_rates::HopRatesGraphDsLij, site, species, rng,
-                            spatial_system)
+function sample_target_site(hop_rates::HopRatesGraphDsLij,
+        site, species, rng,
+        spatial_system)
     @inbounds cum_hop_consts = hop_rates.hop_const_cumulative_sums[site]
     @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_nbr(spatial_system, site, n)
@@ -364,13 +394,15 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsLij)
     num_specs, num_sites = length(hop_rates.species_hop_constants),
-                           size(hop_rates.hop_const_cumulative_sums, 2)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
+    size(hop_rates.hop_const_cumulative_sums, 2)
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.",
+    )
 end
 
 function HopRatesGridDsLij(species_hop_constants::Vector{F}, site_hop_constants::Matrix{F};
-                           do_cumsum = true) where {F <: Number}
+        do_cumsum = true) where {F <: Number}
     do_cumsum && (site_hop_constants = mapslices(cumsum, site_hop_constants, dims = 1))
     rates = zeros(F, length(species_hop_constants), size(site_hop_constants, 2))
     sum_rates = zeros(size(rates, 2))
@@ -378,9 +410,9 @@ function HopRatesGridDsLij(species_hop_constants::Vector{F}, site_hop_constants:
 end
 
 function HopRatesGridDsLij(species_hop_constants::Vector{F},
-                           site_hop_constants::Vector{Vector{F}}, grid) where {F <: Number}
+        site_hop_constants::Vector{Vector{F}}, grid) where {F <: Number}
     new_hopping_constants = Matrix{F}(undef, 2 * dimension(grid),
-                                      length(site_hop_constants))
+        length(site_hop_constants))
     for site in 1:length(site_hop_constants)
         nb_constants = @view new_hopping_constants[:, site]
         pad_hop_vec!(nb_constants, grid, site, site_hop_constants[site])
@@ -417,13 +449,15 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsiLij)
     num_specs, num_sites = size(hop_rates.species_hop_constants)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.")
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.",
+    )
 end
 
 function HopRatesGraphDsiLij(species_hop_constants::Matrix{F},
-                             site_hop_constants::Vector{Vector{F}};
-                             do_cumsum = true) where {F <: Number}
+        site_hop_constants::Vector{Vector{F}};
+        do_cumsum = true) where {F <: Number}
     @assert size(species_hop_constants, 2) == length(site_hop_constants)
     do_cumsum && (site_hop_constants = map(cumsum, site_hop_constants))
     rates = zeros(F, length(species_hop_constants), length(site_hop_constants))
@@ -431,8 +465,9 @@ function HopRatesGraphDsiLij(species_hop_constants::Matrix{F},
     HopRatesGraphDsiLij{F}(species_hop_constants, site_hop_constants, rates, sum_rates)
 end
 
-function sample_target_site(hop_rates::HopRatesGraphDsiLij, site, species, rng,
-                            spatial_system)
+function sample_target_site(hop_rates::HopRatesGraphDsiLij,
+        site, species, rng,
+        spatial_system)
     @inbounds cum_hop_consts = hop_rates.hop_const_cumulative_sums[site]
     @inbounds n = searchsortedfirst(cum_hop_consts, rand(rng) * cum_hop_consts[end])
     return nth_nbr(spatial_system, site, n)
@@ -460,13 +495,15 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsiLij)
     num_specs, num_sites = length(hop_rates.species_hop_constants),
-                           size(hop_rates.hop_const_cumulative_sums, 2)
-    println(io,
-            "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.")
+    size(hop_rates.hop_const_cumulative_sums, 2)
+    println(
+        io,
+        "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.",
+    )
 end
 
 function HopRatesGridDsiLij(species_hop_constants::Matrix{F}, site_hop_constants::Matrix{F};
-                            do_cumsum = true) where {F <: Number}
+        do_cumsum = true) where {F <: Number}
     @assert size(species_hop_constants, 2) == size(site_hop_constants, 2)
     do_cumsum && (site_hop_constants = mapslices(cumsum, site_hop_constants, dims = 1))
     rates = zeros(F, size(species_hop_constants))
@@ -475,9 +512,9 @@ function HopRatesGridDsiLij(species_hop_constants::Matrix{F}, site_hop_constants
 end
 
 function HopRatesGridDsiLij(species_hop_constants::Matrix{F},
-                            site_hop_constants::Vector{Vector{F}}, grid) where {F <: Number}
+        site_hop_constants::Vector{Vector{F}}, grid) where {F <: Number}
     new_hopping_constants = Matrix{F}(undef, 2 * dimension(grid),
-                                      length(site_hop_constants))
+        length(site_hop_constants))
     for site in 1:length(site_hop_constants)
         nb_constants = @view new_hopping_constants[:, site]
         pad_hop_vec!(nb_constants, grid, site, site_hop_constants[site])

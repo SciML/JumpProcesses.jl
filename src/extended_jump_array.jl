@@ -154,6 +154,13 @@ function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
     Broadcast.DefaultArrayStyle{N}()
 end
 
+function Base.Broadcast.BroadcastStyle(::S, ::Base.Broadcast.Unknown) where {
+        UStyle, JumpUStyle, S<:JumpProcesses.ExtendedJumpArrayStyle{UStyle, JumpUStyle}}
+
+    return throw(ArgumentError("Cannot broadcast JumpProcesses.ExtendedJumpArray with" *
+                               " something of type Base.Broadcast.Unknown."),)
+end
+
 # Lookup the first ExtendedJumpArray to pick output container size
 "`A = find_eja(args)` returns the first ExtendedJumpArray among the arguments."
 find_eja(bc::Base.Broadcast.Broadcasted) = find_eja(bc.args)

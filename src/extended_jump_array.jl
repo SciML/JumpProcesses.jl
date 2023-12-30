@@ -157,7 +157,7 @@ end
 function Base.Broadcast.BroadcastStyle(::S, ::Base.Broadcast.Unknown) where {
         UStyle, JumpUStyle, S<:JumpProcesses.ExtendedJumpArrayStyle{UStyle, JumpUStyle}}
 
-    return throw(ArgumentError("Cannot broadcast JumpProcesse.ExtendedJumpArray with" *
+    return throw(ArgumentError("Cannot broadcast JumpProcesses.ExtendedJumpArray with" *
                                " something of type Base.Broadcast.Unknown."),)
 end
 

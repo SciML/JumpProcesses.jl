@@ -6,7 +6,7 @@ affect1!(integ) = (integ.u[1] += 1)
 affect2!(integ) = (integ.u[2] += 1)
 crj1 = ConstantRateJump(rate1, affect1!)
 crj2 = ConstantRateJump(rate2, affect2!)
-g = DiscreteFunction((du, u, p, t) -> nothing; sys = SymbolicIndexingInterface.SymbolCache([:a, :b], [:p1, :p2], :t)
+g = DiscreteFunction((du, u, p, t) -> nothing; sys = SymbolicIndexingInterface.SymbolCache([:a, :b], [:p1, :p2], :t))
 dprob = DiscreteProblem(g, [0, 10], (0.0, 10.0), [1.0, 2.0])
 jprob = JumpProblem(dprob, Direct(), crj1, crj2)
 

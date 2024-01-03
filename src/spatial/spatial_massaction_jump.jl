@@ -110,11 +110,11 @@ end
 using_params(smaj::SpatialMassActionJump) = false
 
 function rate_at_site(rx, site,
-                      smaj::SpatialMassActionJump{Nothing, B, S, U, V}) where {B, S, U, V}
+                      smaj::SpatialMassActionJump{Nothing})
     smaj.spatial_rates[rx, site]
 end
 function rate_at_site(rx, site,
-                      smaj::SpatialMassActionJump{A, Nothing, S, U, V}) where {A, S, U, V}
+                      smaj::SpatialMassActionJump{A, Nothing}) where {A <: AbstractVector}
     smaj.uniform_rates[rx]
 end
 function rate_at_site(rx, site,

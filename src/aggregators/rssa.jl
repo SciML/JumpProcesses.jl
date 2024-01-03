@@ -85,7 +85,8 @@ function aggregate(aggregator::RSSA, u, p, t, end_time, constant_jumps,
 end
 
 # set up a new simulation and calculate the first jump / jump time
-function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
+function initialize!(p::RSSAJumpAggregation, integrator::DiffEqBase.DEIntegrator,
+                     u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     set_bracketing!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)

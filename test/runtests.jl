@@ -2,6 +2,7 @@
 using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
+    @time @safetestset "Aqua" begin include("aqua.jl") end
     @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
     @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
     @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end

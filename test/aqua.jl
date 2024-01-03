@@ -15,9 +15,9 @@ using Aqua
     filter!(x -> pkg_match("JumpProcesses", pkgdir(last(x).module)), ambs)
 
     # Uncomment for debugging:
-    # for method_ambiguity in ambs
-    #     @show method_ambiguity
-    # end
+    for method_ambiguity in ambs
+        @show method_ambiguity
+    end
     @warn "Number of method ambiguities: $(length(ambs))"
     @test length(ambs) <= 8
 end

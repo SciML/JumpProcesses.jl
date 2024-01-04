@@ -49,3 +49,5 @@ TimeViaThinning
 SSAs
 Doob
 piecewise-constant
+StochasticDiffEq
+MassActionJumps

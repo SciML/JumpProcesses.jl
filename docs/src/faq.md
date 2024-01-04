@@ -50,7 +50,7 @@ vj2 = VariableRateJump(rate4, affect4!)
 vjtuple = (vj1, vj2)
 
 jset = JumpSet(; constant_jumps = cjvec, variable_jumps = vjtuple,
-               massaction_jumps = mass_act_jump)
+    massaction_jumps = mass_act_jump)
 ```
 
 ## How can I set the random number generator used in the jump process sampling algorithms (SSAs)?
@@ -62,7 +62,7 @@ argument. Continuing the previous example:
 #] add RandomNumbers
 using RandomNumbers
 jprob = JumpProblem(dprob, Direct(), maj,
-                    rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
+    rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
 ```
 
 uses the `Xoroshiro128Star` generator from
@@ -148,7 +148,7 @@ function paffect!(integrator)
     nothing
 end
 sol = solve(jprob, SSAStepper(), tstops = [20.0],
-            callback = DiscreteCallback(pcondit, paffect!))
+    callback = DiscreteCallback(pcondit, paffect!))
 ```
 
 Here at time `20.0` we turn off production of `u[2]` while activating production

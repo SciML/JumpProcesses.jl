@@ -12,8 +12,8 @@ mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, J
     end_time::T
     rx_rates::RX
     hop_rates::HOP
-    rates::F1 #rates for constant-rate jumps
-    affects!::F2 #affects! function determines the effect of constant-rate jumps
+    rates::F1 # legacy, not used
+    affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
@@ -94,7 +94,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
-    fill_rates_and_get_times!(p, u, t)
+    fill_rates_and_get_times!(p, integrator, t)
     generate_jumps!(p, integrator, params, u, t)
     nothing
 end
@@ -113,7 +113,7 @@ function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t, affects
     update_state!(p, integrator)
 
     # update current jump rates and times
-    update_dependent_rates_and_firing_times!(p, integrator.u, t)
+    update_dependent_rates_and_firing_times!(p, integrator, t)
     nothing
 end
 
@@ -121,10 +121,11 @@ end
 """
     fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
 
-reset all stucts, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
+reset all structs, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
-function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
+function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, integrator, t)
     @unpack spatial_system, rx_rates, hop_rates, rng = aggregation
+    u = integrator.u
 
     reset!(rx_rates)
     reset!(hop_rates)
@@ -135,7 +136,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
 
     pqdata = Vector{typeof(t)}(undef, num_nodes)
     @inbounds for site in 1:num_nodes
-        update_rx_rates!(rx_rates, rxs, u, site)
+        update_rx_rates!(rx_rates, rxs, integrator, site)
         update_hop_rates!(hop_rates, species, u, site, spatial_system)
         pqdata[site] = t + randexp(rng) / (total_site_rate(rx_rates, hop_rates, site))
     end
@@ -145,21 +146,22 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, u, t)
 end
 
 """
-    update_dependent_rates_and_firing_times!(p, u, t)
+    update_dependent_rates_and_firing_times!(p, integrator, t)
 
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
-function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, u, t)
+function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, integrator, t)
+    u = integrator.u
     jump = p.prev_jump
     if is_hop(p, jump)
         source_site = jump.src
         target_site = jump.dst
-        update_rates_after_hop!(p, u, source_site, target_site, jump.jidx)
+        update_rates_after_hop!(p, integrator, source_site, target_site, jump.jidx)
         update_site_time!(p, source_site, t)
         update_site_time!(p, target_site, t)
     else
         site = jump.src
-        update_rates_after_reaction!(p, u, site, reaction_id_from_jump(p, jump))
+        update_rates_after_reaction!(p, integrator, site, reaction_id_from_jump(p, jump))
         update_site_time!(p, site, t)
     end
     nothing

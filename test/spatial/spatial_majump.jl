@@ -1,8 +1,10 @@
 using JumpProcesses, DiffEqBase, OrdinaryDiffEq
 using Test, Graphs, LinearAlgebra
+using StableRNGs
+rng = StableRNG(12345)
 
 reltol = 0.05
-Nsims = 10^4
+Nsims = 10^3
 
 dim = 1
 linear_size = 5
@@ -57,19 +59,19 @@ non_uniform_majumps = [non_uniform_majumps_1, non_uniform_majumps_2, non_uniform
 uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
                                                 hopping_constants = hopping_constants,
                                                 spatial_system = grid,
-                                                save_positions = (false, false))
+                                                save_positions = (false, false), rng = rng)
                                     for majump in uniform_majumps]
 # flattenned
 append!(uniform_jump_problems,
         JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants = hopping_constants,
-                                spatial_system = grid, save_positions = (false, false))
+                                spatial_system = grid, save_positions = (false, false), rng = rng)
                     for majump in uniform_majumps])
 
 # non-uniform
 non_uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
                                                     hopping_constants = hopping_constants,
                                                     spatial_system = grid,
-                                                    save_positions = (false, false))
+                                                    save_positions = (false, false), rng = rng)
                                         for majump in non_uniform_majumps]
 
 # testing

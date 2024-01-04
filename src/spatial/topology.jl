@@ -120,7 +120,7 @@ end
 """
     CartesianGridRej(dims::Tuple)
 
-initialze CartesianGridRej
+initialize CartesianGridRej
 """
 function CartesianGridRej(dims::Tuple)
     dim = length(dims)

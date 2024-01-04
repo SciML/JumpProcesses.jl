@@ -29,6 +29,7 @@ g = [neighbors(G, i) for i in 1:nv(G)]
 gcolors = append!(palette(:default)[1:3], fill(colorant"black", V - 3))
 svg = gplot(G, nodefillc = gcolors, edgelinewidth = 0.5)
 draw(PDF("$(assets)/mediumG.pdf", 3.75cm, 3.75cm), svg)
+draw(SVG("$(assets)/mediumG.svg", 3.75cm, 3.75cm), svg)
 
 tspan = (0.0, 50.0)
 u = [0.0 for i in 1:nv(G)]
@@ -118,6 +119,7 @@ let sol = sols[1]
                           ylabel = "node index";
                           pgfkw...)
         savefig(fig, "$(assets)/hawkes-barcode.pdf")
+        savefig(fig, "$(assets)/hawkes-barcode.svg")
     end
 end
 
@@ -132,6 +134,7 @@ let sol = sols[1]
                    ylabel = "conditional rate";
                    pgfkw...)
         savefig(fig, "$(assets)/hawkes-intensity.pdf")
+        savefig(fig, "$(assets)/hawkes-intensity.svg")
     end
 end
 
@@ -225,5 +228,6 @@ let fig, pgfkw = copy(pgfkw)
                      alpha = 0.75;
                      pgfkw...)
         savefig(fig, "$(assets)/hawkes-qqplot.pdf")
+        savefig(fig, "$(assets)/hawkes-qqplot.svg")
     end
 end

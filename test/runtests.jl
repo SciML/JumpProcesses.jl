@@ -19,6 +19,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @static if VERSION >= v"1.9.0"
         @time @safetestset "Direct allocations test" begin include("allocations.jl") end
     end
+    @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
     @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
@@ -32,6 +33,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
     @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
     @time @safetestset "Topology" begin include("spatial/topology.jl") end
+    @time @safetestset "Spatial bracketing Tests" begin include("spatial/bracketing.jl") end
     @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
     @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
     @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end

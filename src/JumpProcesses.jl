@@ -3,7 +3,7 @@ module JumpProcesses
 using Reexport
 @reexport using DiffEqBase
 
-using RandomNumbers, TreeViews, LinearAlgebra, Markdown, DocStringExtensions
+using RandomNumbers, LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs
@@ -61,6 +61,7 @@ include("spatial/hop_rates.jl")
 include("spatial/reaction_rates.jl")
 include("spatial/flatten.jl")
 include("spatial/utils.jl")
+include("spatial/bracketing.jl")
 
 include("spatial/nsm.jl")
 include("spatial/directcrdirect.jl")

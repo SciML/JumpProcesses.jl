@@ -178,7 +178,7 @@ end
 make_kwarg(; kwargs...) = kwargs
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
-                     save_positions = typeof(prob) <: DiffEqBase.AbstractDiscreteProblem ?
+                     save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                                       (false, true) : (true, true),
                      rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
                      spatial_system = nothing, hopping_constants = nothing,
@@ -419,7 +419,7 @@ aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A
 
 @inline function extend_tstops!(tstops,
                                 jp::JumpProblem{P, A, C, J, J2}) where {P, A, C, J, J2}
-    !(typeof(jp.jump_callback.discrete_callbacks) <: Tuple{}) &&
+    !(jp.jump_callback.discrete_callbacks isa Tuple{}) &&
         push!(tstops, jp.jump_callback.discrete_callbacks[1].condition.next_jump_time)
 end
 
@@ -459,5 +459,3 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
         println(io, "Have a regular jump")
     end
 end
-
-TreeViews.hastreeview(x::JumpProblem) = true

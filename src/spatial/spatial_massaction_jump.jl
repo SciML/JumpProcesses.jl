@@ -1,7 +1,4 @@
-const AVecOrNothing = Union{AbstractVector, Nothing}
-const AMatOrNothing = Union{AbstractMatrix, Nothing}
-
-struct SpatialMassActionJump{A <: AVecOrNothing, B <: AMatOrNothing, S, U, V} <:
+struct SpatialMassActionJump{A <: AbstractVector, B <: AbstractMatrix, S, U, V} <:
        AbstractMassActionJump
     uniform_rates::A # reactions that are uniform in space
     spatial_rates::B # reactions whose rate depends on the site
@@ -16,12 +13,9 @@ struct SpatialMassActionJump{A <: AVecOrNothing, B <: AMatOrNothing, S, U, V} <:
                                                   reactant_stoch::S, net_stoch::U,
                                                   param_mapper::V, scale_rates::Bool,
                                                   useiszero::Bool,
-                                                  nocopy::Bool) where {A <: AVecOrNothing,
-                                                                       B <: AMatOrNothing,
+                                                  nocopy::Bool) where {A <: AbstractVector,
+                                                                       B <: AbstractMatrix,
                                                                        S, U, V}
-        uniform_rates = isnothing(uniform_rates) ? Vector{Float64}(undef, 0) : uniform_rates
-        spatial_rates = isnothing(spatial_rates) ? Matrix{Float64}(undef, 0, 0) : spatial_rates
-        
         uniform_rates = nocopy ? uniform_rates : copy(uniform_rates)
         spatial_rates = nocopy ? spatial_rates : copy(spatial_rates)
         
@@ -47,16 +41,16 @@ end
 
 function SpatialMassActionJump(urates::A, srates::B, rs, ns, pmapper = nothing;
                                scale_rates = true, useiszero = true,
-                               nocopy = false) where {A <: AVecOrNothing,
-                                                      B <: AMatOrNothing}
-    SpatialMassActionJump(urates, srates, rs, ns, pmapper, scale_rates,
+                               nocopy = false) where {A <: AbstractVector,
+                                                      B <: AbstractMatrix}
+    SpatialMassActionJump{A, B, typeof(rs), typeof(ns), typeof(pmapper)}(urates, srates, rs, ns, pmapper, scale_rates,
                                          useiszero, nocopy)
 end
 function SpatialMassActionJump(srates::AbstractMatrix, rs, ns, pmapper = nothing; kwargs...)
-    SpatialMassActionJump(nothing, srates, rs, ns, pmapper; kwargs...)
+    SpatialMassActionJump(Vector{eltype(srates)}(undef, 0), srates, rs, ns, pmapper; kwargs...)
 end
 function SpatialMassActionJump(urates::AbstractVector, rs::AbstractVector, ns, pmapper = nothing; kwargs...)
-    SpatialMassActionJump(urates, nothing, rs, ns, pmapper; kwargs...)
+    SpatialMassActionJump(urates, Matrix{eltype(urates)}(undef, 0, 0), rs, ns, pmapper; kwargs...)
 end
 function SpatialMassActionJump(ma_jumps::M; kwargs...) where {M <: MassActionJump}
     SpatialMassActionJump(ma_jumps.scaled_rates, ma_jumps.reactant_stoch,

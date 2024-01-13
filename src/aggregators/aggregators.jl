@@ -204,7 +204,7 @@ function select_aggregator(jumps::JumpSet; vartojumps_map=nothing, jumptovars_ma
     # if the number of jumps is small, return the Direct
     num_jumps(jumps) < 10 && return Direct
 
-    # if there are only massaction jumps, we can any build the species-jumps dependency graphs
+    # if there are only massaction jumps, we can build the species-jumps dependency graphs
     can_build_dependency_graphs = num_crjs(jumps) == 0 && num_vrjs(jumps) == 0
     have_species_to_jumps_dependency_graphs = !isnothing(vartojumps_map) && !isnothing(jumptovars_map)
 

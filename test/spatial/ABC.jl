@@ -57,7 +57,7 @@ push!(jump_problems,
       JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants,
                   spatial_system = grids[1], save_positions = (false, false), rng = rng))
 push!(jump_problems,
-JumpProblem(prob, majumps, hopping_constants = hopping_constants,
+      JumpProblem(prob, majumps, hopping_constants = hopping_constants,
             spatial_system = grids[1], save_positions = (false, false), rng = rng))
 # setup flattenned jump prob
 push!(jump_problems,

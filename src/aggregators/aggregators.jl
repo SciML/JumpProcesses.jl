@@ -195,18 +195,24 @@ function select_aggregator(jumps::JumpSet; vartojumps_map=nothing, jumptovars_ma
     # detect if a spatial SSA should be used
     !isnothing(spatial_system) && !isnothing(hopping_constants) && return DirectCRDirect
 
-    # if variable rate jumps are present, return the only SSA that supports them
-    num_vrjs(jumps) != 0 && return Coevolve
+    # if variable rate jumps are present, return one of the two SSAs that support them
+    if num_vrjs(jumps) != 0
+        any(isbounded, vrjs) && return Coevolve
+        return Direct
+    end
     
     # if the number of jumps is small, return the Direct
-    num_majumps(jumps) + num_crjs(jumps) < 10 && return Direct
+    num_jumps(jumps) < 10 && return Direct
 
-    # if there are only massaction jumps, we can any build dependency graph, so return the fastest aggregator
-    num_crjs(jumps) == 0 && num_vrjs(jumps) == 0 && return RSSACR
+    # if there are only massaction jumps, we can any build dependency graph
+    can_build_dependency_graphs = num_crjs(jumps) == 0 && num_vrjs(jumps) == 0
+    have_dependency_graphs = !isnothing(vartojumps_map) && !isnothing(jumptovars_map)
 
-    # in the presence of constant rate jumps, we rely on the given dependency graphs
-    if !isnothing(vartojumps_map) && !isnothing(jumptovars_map)
+    # if we have the species-jumps dependency graphs or can build them, use one of the Rejection-based methods
+    if can_build_dependency_graphs || have_dependency_graphs
+        num_jumps(jumps) < 100 && return RSSA
         return RSSACR
+    # if we have the jumps-jumps dependency graph, use the Composition-Rejection Direct method
     elseif !isnothing(dep_graph)
         return DirectCR
     else

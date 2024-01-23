@@ -18,11 +18,7 @@ function flatten(ma_jump, prob::DiscreteProblem, spatial_system, hopping_constan
         rx_rates = ma_jump.scaled_rates
     elseif isa(ma_jump, SpatialMassActionJump)
         num_nodes = num_sites(spatial_system)
-        if isnothing(ma_jump.uniform_rates) && isnothing(ma_jump.spatial_rates)
-            rx_rates = zeros(0, num_nodes)
-        elseif isnothing(ma_jump.uniform_rates)
-            rx_rates = ma_jump.spatial_rates
-        elseif isnothing(ma_jump.spatial_rates)
+        if isempty(ma_jump.spatial_rates)
             rx_rates = reshape(repeat(ma_jump.uniform_rates, num_nodes),
                                length(ma_jump.uniform_rates), num_nodes)
         else

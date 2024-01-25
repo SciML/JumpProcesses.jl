@@ -24,22 +24,31 @@ num_species = 3
 reactstoch = [[1 => 1, 2 => 1], [3 => 1]]
 netstoch = [[1 => -1, 2 => -1, 3 => 1], [1 => 1, 2 => 1, 3 => -1]]
 rates = [0.1, 1.0]
-num_rxs = length(rates)
 ma_jumps = MassActionJump(rates, reactstoch, netstoch)
 spatial_ma_jumps = SpatialMassActionJump(rates, reactstoch, netstoch)
+rate_fn = (u, p, t, site) -> 1.0
+affect_fn!(integrator) = nothing # a dummy reaction, does nothing
+cr_jumps = [ConstantRateJump(rate_fn, affect_fn!)]
+num_rxs = 3
 u = ones(Int, num_species, num_nodes)
 integrator = DummyIntegrator(u,nothing,nothing)
 rng = StableRNG(12345)
 
+# Test constructors
+@test JP.RxRates(num_nodes, ma_jumps).ma_jumps == ma_jumps
+@test JP.RxRates(num_nodes, spatial_ma_jumps).ma_jumps == spatial_ma_jumps
+@test JP.RxRates(num_nodes, cr_jumps).cr_jumps == cr_jumps
+
 # Tests for RxRates
-rx_rates_list = [JP.RxRates(num_nodes, ma_jumps), JP.RxRates(num_nodes, spatial_ma_jumps)]
+rx_rates_list = [JP.RxRates(num_nodes, ma_jumps, cr_jumps), JP.RxRates(num_nodes, spatial_ma_jumps, cr_jumps)]
 for rx_rates in rx_rates_list
-    @test JP.num_rxs(rx_rates) == length(rates)
+    @test JP.num_rxs(rx_rates) == num_rxs
     show(io, "text/plain", rx_rates)
     for site in 1:num_nodes
         JP.update_rx_rates!(rx_rates, 1:num_rxs, integrator, site)
-        @test JP.total_site_rx_rate(rx_rates, site) == 1.1
-        rx_props = [JP.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
+        @test JP.total_site_rx_rate(rx_rates, site) == 2.1
+        majump_props = [JP.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:2]
+        rx_props = [majump_props..., 1.0]
         rx_probs = rx_props / sum(rx_props)
         d = Dict{Int, Int}()
         for i in 1:num_samples

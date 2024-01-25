@@ -26,6 +26,23 @@ netstoch = [[1 => -1, 2 => -1, 3 => 1], [1 => 1, 2 => 1, 3 => -1]]
 rates = [0.1 / mesh_size, 1.0]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
+# equivalent constant rate jumps
+rate1(u,p,t,site) = u[1,site]*u[2,site] / 2
+rate2(u,p,t,site) = u[3,site]
+affect1!(integrator,site) = begin
+    integrator.u[1, site] -= 1
+    integrator.u[2, site] -= 1
+    integrator.u[3, site] += 1
+end
+affect2!(integrator,site) = begin
+    integrator.u[1, site] += 1
+    integrator.u[2, site] += 1
+    integrator.u[3, site] -= 1
+end
+crjumps = JumpSet([ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!)])
+dep_graph = [[1,2],[1,2]]
+jumptovars_map = [[1,2,3],[1,2,3]]
+
 # spatial system setup
 hopping_rate = diffusivity * (linear_size / domain_size)^2
 
@@ -56,6 +73,11 @@ jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
 push!(jump_problems,
       JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants,
                   spatial_system = grids[1], save_positions = (false, false), rng = rng))
+# setup constant rate jump problems
+push!(jump_problems, JumpProblem(prob, NSM(), crjumps, hopping_constants = hopping_constants,
+            spatial_system = CartesianGrid(dims), save_positions = (false, false), dep_graph = dep_graph, jumptovars_map = jumptovars_map, rng = rng))
+push!(jump_problems, JumpProblem(prob, DirectCRDirect(), crjumps, hopping_constants = hopping_constants,
+            spatial_system = CartesianGrid(dims), save_positions = (false, false), dep_graph = dep_graph, jumptovars_map = jumptovars_map, rng = rng))
 # setup flattenned jump prob
 push!(jump_problems,
       JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,

@@ -499,6 +499,7 @@ function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number
 end
 
 JumpSet(jump::ConstantRateJump) = JumpSet((), (jump,), nothing, nothing)
+JumpSet(jumps::AbstractVector{ConstantRateJump}) = JumpSet((), jumps, nothing, nothing)
 JumpSet(jump::VariableRateJump) = JumpSet((jump,), (), nothing, nothing)
 JumpSet(jump::RegularJump) = JumpSet((), (), jump, nothing)
 JumpSet(jump::AbstractMassActionJump) = JumpSet((), (), nothing, jump)

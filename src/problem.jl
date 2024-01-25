@@ -198,12 +198,15 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     ## Spatial jumps handling
     if spatial_system !== nothing && hopping_constants !== nothing
-        (num_crjs(jumps) == num_vrjs(jumps) == 0) ||
-            error("Spatial aggregators only support MassActionJumps currently.")
+        (num_vrjs(jumps) == 0) ||
+            error("Spatial aggregators currently only support MassActionJumps and ConstantRateJumps.")
 
         if is_spatial(aggregator)
             kwargs = merge((; hopping_constants, spatial_system), kwargs)
         else
+            if num_crjs(jumps) != 0
+                error("Use a spatial SSA, e.g. DirectCRDirect in order to use ConstantRateJumps.")
+            end 
             prob, maj = flatten(maj, prob, spatial_system, hopping_constants; kwargs...)
         end
     end

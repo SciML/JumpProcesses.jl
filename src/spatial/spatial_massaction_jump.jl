@@ -89,6 +89,12 @@ function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates
                           scale_rates = scale_rates, useiszero = useiszero, nocopy = nocopy)
 end
 
+function SpatialMassActionJump()
+    empty_majump = MassActionJump(Vector{Float64}(),
+            Vector{Vector{Pair{Int, Int}}}(),
+            Vector{Vector{Pair{Int, Int}}}())
+    SpatialMassActionJump(empty_majump)
+end
 ##############################################
 
 function get_num_majumps(smaj::SpatialMassActionJump{Nothing, Nothing, S, U, V}) where

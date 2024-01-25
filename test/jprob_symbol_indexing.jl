@@ -17,3 +17,5 @@ jprob = JumpProblem(dprob, Direct(), crj1, crj2)
 # these are no longer supported by SciMLBase
 @test getp(jprob,:p1)(jprob) == 1.0
 @test getp(jprob,:p2)(jprob) == 2.0
+@test jprob.ps[:p1] == 1.0
+@test jprob.ps[:p2] == 2.0

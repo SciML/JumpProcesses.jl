@@ -89,6 +89,14 @@ function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::Abstra
     mul!(c.u, A, u)
 end
 
+# To fix ambiguity. Required for non-diagonal noise
+function LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
+                            u::AbstractVector)
+    mul!(c.u, A, u)
+end
+
+
+
 # Ignore axes
 function Base.similar(A::ExtendedJumpArray, ::Type{S},
                       axes::Tuple{Base.OneTo{Int}}) where {S}
@@ -106,6 +114,11 @@ function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
     u .* u' .* false
 end
 function LinearAlgebra.ldiv!(A::LinearAlgebra.LU, b::ExtendedJumpArray)
+    LinearAlgebra.ldiv!(A, [vec(b.u); vec(b.jump_u)])
+end
+
+# to fix ambiguity
+function LinearAlgebra.ldiv!(A::LU{T,Tridiagonal{T,V}}, b::ExtendedJumpArray) where {T,V}
     LinearAlgebra.ldiv!(A, [vec(b.u); vec(b.jump_u)])
 end
 

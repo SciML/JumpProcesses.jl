@@ -128,8 +128,17 @@ function Base.setindex!(prob::JumpProblem, args...; kwargs...)
 end
 
 # when getindex is used.
-function Base.getindex(prob::JumpProblem, args...; kwargs...)
+Base.@propagate_inbounds function Base.getindex(prob::JumpProblem, args...; kwargs...)
     Base.getindex(prob.prob, args...; kwargs...)
+end
+
+# to resolve ambiguities with SciMLBase
+Base.@propagate_inbounds function Base.getindex(prob::JumpProblem, ::SII.SolvedVariables)
+    return getindex(prob, variable_symbols(prob))
+end
+
+Base.@propagate_inbounds function Base.getindex(prob::JumpProblem, ::SII.AllVariables)
+    return getindex(prob, all_variable_symbols(prob))
 end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip

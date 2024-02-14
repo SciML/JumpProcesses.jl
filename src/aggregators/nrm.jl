@@ -60,7 +60,8 @@ function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,
 end
 
 # set up a new simulation and calculate the first jump / jump time
-function initialize!(p::NRMJumpAggregation, integrator, u, params, t)
+function initialize!(p::NRMJumpAggregation, integrator::DiffEqBase.DEIntegrator, u,
+                     params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)

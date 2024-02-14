@@ -494,8 +494,16 @@ struct JumpSet{T1, T2, T3, T4} <: AbstractJump
     """Collection of [`MassActionJump`](@ref)s"""
     massaction_jump::T4
 end
-function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
-    JumpSet(vj, cj, rj, check_majump_type(maj))
+
+for vjtype in (AbstractArray, Tuple, Nothing)
+    for cjtype in (AbstractArray, Tuple, Nothing)
+        for rjtype in (RegularJump, Nothing)
+            @eval function JumpSet(vj::$vjtype, cj::$cjtype, rj::$rjtype,
+                             maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
+                JumpSet(vj, cj, rj, check_majump_type(maj))
+            end
+        end
+    end
 end
 
 JumpSet(jump::ConstantRateJump) = JumpSet((), (jump,), nothing, nothing)

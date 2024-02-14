@@ -53,9 +53,12 @@ jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
                                         hopping_constants = hopping_constants,
                                         spatial_system = grid,
                                         save_positions = (false, false), rng = rng) for grid in grids]
-push!(jump_problems,
-      JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false), rng = rng))
+
+# SSAs
+for alg in [DirectCRDirect(), DirectCRRSSA()]
+    push!(jump_problems, JumpProblem(prob, alg, majumps, hopping_constants = hopping_constants, spatial_system = grids[1], save_positions = (false, false), rng = rng))
+end
+
 # setup flattenned jump prob
 push!(jump_problems,
       JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,

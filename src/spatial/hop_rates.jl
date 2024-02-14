@@ -57,30 +57,22 @@ function HopRates(p::Pair{SpecHop, SiteHop},
 end
 
 """
-    update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site, spatial_system)
+    update_hop_rates!(hop_rates::AbstractHopRates, species_vec, u, site, spatial_system)
 
-update rates of all specs in species at site
+update rates of all species in species_vec at site
 """
-function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, u, site,
-                           spatial_system)
-    @inbounds for spec in species
-        update_hop_rate!(hop_rates, spec, u, site, spatial_system)
+function update_hop_rates!(hop_rates::AbstractHopRates, species_vec, u, site, spatial_system)
+    @inbounds for species in species_vec
+        rates = hop_rates.rates
+        old_rate = rates[species, site]
+        rates[species, site] = evalhoprate(hop_rates, u, species, site,
+                                                    spatial_system)
+        hop_rates.sum_rates[site] += rates[species, site] - old_rate
+        old_rate
     end
 end
 
-"""
-    update_hop_rate!(hop_rates::HopRatesGraphDsi, species, u, site, spatial_system)
-
-update rates of single species at site
-"""
-function update_hop_rate!(hop_rates::AbstractHopRates, species, u, site, spatial_system)
-    rates = hop_rates.rates
-    @inbounds old_rate = rates[species, site]
-    @inbounds rates[species, site] = evalhoprate(hop_rates, u, species, site,
-                                                 spatial_system)
-    @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
-    old_rate
-end
+hop_rate(hop_rates, species, site) = @inbounds hop_rates.rates[species, site]
 
 """
     total_site_hop_rate(hop_rates::AbstractHopRates, site)

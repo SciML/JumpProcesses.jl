@@ -188,6 +188,38 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 supports_variablerates(aggregator::AbstractAggregatorAlgorithm) = false
 supports_variablerates(aggregator::Coevolve) = true
 
+# true if aggregator supports hops, e.g. diffusion
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
+
+# return the fastest aggregator out of the available ones
+function select_aggregator(jumps::JumpSet; vartojumps_map=nothing, jumptovars_map=nothing, dep_graph=nothing, spatial_system=nothing, hopping_constants=nothing)
+    
+    # detect if a spatial SSA should be used
+    !isnothing(spatial_system) && !isnothing(hopping_constants) && return DirectCRDirect
+
+    # if variable rate jumps are present, return one of the two SSAs that support them
+    if num_vrjs(jumps) != 0
+        any(isbounded, vrjs) && return Coevolve
+        return Direct
+    end
+    
+    # if the number of jumps is small, return the Direct
+    num_jumps(jumps) < 10 && return Direct
+
+    # if there are only massaction jumps, we can build the species-jumps dependency graphs
+    can_build_dependency_graphs = num_crjs(jumps) == 0 && num_vrjs(jumps) == 0
+    have_species_to_jumps_dependency_graphs = !isnothing(vartojumps_map) && !isnothing(jumptovars_map)
+
+    # if we have the species-jumps dependency graphs or can build them, use one of the Rejection-based methods
+    if can_build_dependency_graphs || have_species_to_jumps_dependency_graphs
+        num_jumps(jumps) < 100 && return RSSA
+        return RSSACR
+    # if we have the jumps-jumps dependency graph, use the Composition-Rejection Direct method
+    elseif !isnothing(dep_graph)
+        return DirectCR
+    else
+        return Direct
+    end
+end

@@ -231,7 +231,7 @@ and hence the dependencies of `seasonal_process` are only `[2]`.
 Therefore, we obtain the following dependency graph:
 
 ```@example tpp-tutorial
-dep_graph = [[1,2], [2]]
+dep_graph = [[1, 2], [2]]
 ```
 
 We can then construct the corresponding problem `JumpProblem`, passing our

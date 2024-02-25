@@ -190,8 +190,7 @@ processes connected to it by ``alpha``. This influence will then decrease at
 rate ``\beta``.
 
 The conditional intensity of this process has a recursive formulation which we
-can use to our advantage to significantly speed simulation. Let ``t_{N_i} = \max
-\{t_{n_j} < t \mid j \in E_i\}`` and ``\phi_i^\ast(t)`` below.
+can use to our advantage to significantly speed simulation. Let ``t_{N_i} = \max \{t_{n_j} < t \mid j \in E_i\}`` and ``\phi_i^\ast(t)`` below.
 
 ```math
 \begin{split}
@@ -224,8 +223,7 @@ end
 nothing # hide
 ```
 
-We assume that each sup-process `i` is a marked TPP. With probability ``(1 -
-\omega^\ast(t))``, we draw a mark from a 2-dimensional Gaussian
+We assume that each sup-process `i` is a marked TPP. With probability ``(1 - \omega^\ast(t))``, we draw a mark from a 2-dimensional Gaussian
 distribution centered in ``\mu_i`` with ``\sigma_1`` standard deviation; and
 with probability ``\omega^\ast(t)`` we draw from a 2-dimensional Gaussian
 distribution centered on the last location visited by ``i`` with ``\sigma_2``
@@ -321,7 +319,7 @@ using Graphs
 using Distributions
 V = 10
 G = erdos_renyi(V, 0.2)
-g = [[[i] ; neighbors(G, i)] for i in 1:nv(G)]
+g = [[[i]; neighbors(G, i)] for i in 1:nv(G)]
 mark_dist = [MvNormal(rand(2), [0.2, 0.2]) for i in 1:nv(G)]
 jumps = [hawkes_jump(i, g, mark_dist) for i in 1:nv(G)]
 tspan = (0.0, 50.0)
@@ -330,7 +328,7 @@ hawkes = SciMLPointProcess{
     eltype(jumps),
     typeof(g),
     eltype(mark_dist),
-    eltype(tspan),
+    eltype(tspan)
 }(jumps,
     mark_dist,
     g,
@@ -342,8 +340,7 @@ hawkes = SciMLPointProcess{
 ## [Sampling](@id tpp_sampling)
 
 JumpProcesses shines in the simulation of SDEs with discontinuous jumps. The
-mapping we introduced in the [previous Section](@ref tpp_theory) whereby ``du =
-dN(t)`` implies that JumpProcesses also excels in simulating TPPs.
+mapping we introduced in the [previous Section](@ref tpp_theory) whereby ``du = dN(t)`` implies that JumpProcesses also excels in simulating TPPs.
 
 JumpProcesses offers a plethora of simulation algorithms for TPPs. The library
 call them _aggregators_ because these algorithms are methods for aggregating

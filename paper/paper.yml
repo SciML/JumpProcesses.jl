@@ -1,4 +1,4 @@
-title: "Extending JumpProcess.jl for fast point process simulation with time-varying intensities"
+title: "Extending JumpProcesses.jl for fast point process simulation with time-varying intensities"
 keywords:
   - Julia
   - Simulation

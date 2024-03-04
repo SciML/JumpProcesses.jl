@@ -51,3 +51,4 @@ Doob
 piecewise-constant
 StochasticDiffEq
 MassActionJumps
+non-exaustive

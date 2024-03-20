@@ -154,14 +154,12 @@ function JumpProblem(prob, jumps::AbstractJump...; kwargs...)
     JumpProblem(prob, JumpSet(jumps...); kwargs...)
 end
 
-function JumpProblem(
-        prob, aggregator::AbstractAggregatorAlgorithm, jumps::ConstantRateJump;
-        kwargs...)
+function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm,
+        jumps::ConstantRateJump; kwargs...)
     JumpProblem(prob, aggregator, JumpSet(jumps); kwargs...)
 end
-function JumpProblem(
-        prob, aggregator::AbstractAggregatorAlgorithm, jumps::VariableRateJump;
-        kwargs...)
+function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm,
+        jumps::VariableRateJump; kwargs...)
     JumpProblem(prob, aggregator, JumpSet(jumps); kwargs...)
 end
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::RegularJump;
@@ -324,8 +322,7 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
     end
 
     ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0,
-        [-randexp(rng, ttype) for i in 1:length(jumps)])
+    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
     remake(prob, f = SDEFunction{isinplace(prob)}(jump_f, jump_g), g = jump_g, u0 = u0)
 end
 
@@ -350,8 +347,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
     end
 
     ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0,
-        [-randexp(rng, ttype) for i in 1:length(jumps)])
+    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
     remake(prob, f = DDEFunction{isinplace(prob)}(jump_f), u0 = u0)
 end
 

@@ -131,6 +131,8 @@ function SII.set_parameter!(prob::JumpProblem, val, idx)
     if using_params(prob.massaction_jump)
         update_parameters!(prob.massaction_jump, prob.prob.p)
     end
+
+    ans
 end
 
 # when getindex is used.

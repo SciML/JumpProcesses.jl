@@ -34,3 +34,39 @@ p1setter(jprob, [4.0, 10.0])
 @test jprob.ps[:p1] == 4.0
 @test jprob.ps[:p2] == 10.0
 @test jprob.massaction_jump.scaled_rates == [4.0, 10.0]
+
+# integrator tests
+# note that `setu` is not currently supported as `set_u!` is not implemented for SSAStepper
+integ = init(jprob, SSAStepper())
+@test getu(integ, [:a, :b])(integ) == [20, 10]
+integ[[:b, :a]] = [40, 5]
+@test getu(integ, [:a, :b])(integ) == [5, 40]
+@test getp(integ, :p2)(integ) == 10.0
+setp(integ, :p2)(integ, 15.0)
+@test getp(integ, :p2)(integ) == 15.0
+@test jprob.massaction_jump.scaled_rates[2] == 10.0  # jump rate not updated
+reset_aggregated_jumps!(integ)
+@test jprob.massaction_jump.scaled_rates[2] == 15.0  # jump rate now updated
+
+# test updating problems via regular indexing still updates the mass action jump
+dprob = DiscreteProblem(g, [0, 10], (0.0, 10.0), [1.0, 2.0])
+jprob = JumpProblem(dprob, Direct(), crj1, crj2, maj)
+@test jprob.massaction_jump.scaled_rates[1] == 1.0
+jprob.ps[1] = 3.0
+@test jprob.ps[1] == 3.0
+@test jprob.massaction_jump.scaled_rates[1] == 3.0
+
+# test updating integrators via regular indexing
+dprob = DiscreteProblem(g, [0, 10], (0.0, 10.0), [1.0, 2.0])
+jprob = JumpProblem(dprob, Direct(), crj1, crj2, maj)
+integ = init(jprob, SSAStepper())
+integ.u .= [40, 5]
+@test getu(integ, [1, 2])(integ) == [40, 5]
+@test getp(integ, 2)(integ) == 2.0
+@test integ.p[2] == 2.0
+@test jprob.massaction_jump.scaled_rates[2] == 2.0
+setp(integ, 2)(integ, 15.0)
+@test integ.p[2] == 15.0
+@test getp(integ, 2)(integ) == 15.0
+reset_aggregated_jumps!(integ)
+@test jprob.massaction_jump.scaled_rates[2] == 15.0  # jump rate now updated

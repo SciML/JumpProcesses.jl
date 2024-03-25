@@ -56,8 +56,7 @@ end
 end
 
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
-        ::I) where {T, S, F1, F2 <: Tuple,
-        I <: DiffEqBase.DEIntegrator}
+        ::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
     nothing
 end
 

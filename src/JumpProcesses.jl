@@ -17,6 +17,7 @@ import Graphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
+import SymbolicIndexingInterface as SII
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end

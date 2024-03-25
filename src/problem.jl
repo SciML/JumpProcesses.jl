@@ -125,14 +125,11 @@ function Base.setindex!(prob::JumpProblem, args...; kwargs...)
 end
 
 # for updating parameters in JumpProblems to update MassActionJumps
-function SII.set_parameter!(prob::JumpProblem, val, idx)
-    ans = SII.set_parameter!(SII.parameter_values(prob), val, idx)
-
+function SII.finalize_parameters_hook!(prob::JumpProblem, p)
     if using_params(prob.massaction_jump)
         update_parameters!(prob.massaction_jump, prob.prob.p)
     end
-
-    ans
+    nothing
 end
 
 # when getindex is used.

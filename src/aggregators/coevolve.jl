@@ -69,7 +69,7 @@ end
 
 # executing jump at the next jump time
 function (p::CoevolveJumpAggregation)(integrator::I) where {I <:
-                                                                AbstractSSAIntegrator}
+                                                            AbstractSSAIntegrator}
     if !accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t)
         return nothing
     end

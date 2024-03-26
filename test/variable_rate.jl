@@ -40,8 +40,8 @@ sol = solve(jump_prob, Rosenbrock23())
 # @show sol[end]
 # display(sol[end])
 
-@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
-@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 
 g = function (du, u, p, t)
     du[1] = u[1]
@@ -52,8 +52,8 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
 
 sol = solve(jump_prob, SRIW1())
 
-@test maximum([sol[i][2] for i in 1:length(sol)]) <= 1e-12
-@test maximum([sol[i][3] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 
 function ff(du, u, p, t)
     if p == 0
@@ -95,16 +95,16 @@ jump = ConstantRateJump(rate2, affect2!)
 jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
 sol = solve(jump_prob, Tsit5())
 sol(4.0)
-sol[4]
+sol.u[4]
 
-rate2(u, p, t) = u[1]
+rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
-jump = VariableRateJump(rate2, affect2!)
+jump = VariableRateJump(rate2b, affect2!)
 jump2 = deepcopy(jump)
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
 sol = solve(jump_prob, Tsit5())
 sol(4.0)
-sol[4]
+sol.u[4]
 
 function g2(du, u, p, t)
     du[1] = u[1]
@@ -114,7 +114,7 @@ prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
 sol = solve(jump_prob, SRIW1())
 sol(4.0)
-sol[4]
+sol.u[4]
 
 function f3(du, u, p, t)
     du .= u
@@ -151,7 +151,7 @@ function drift(x, p, t)
     return p * x
 end
 
-function rate2(x, p, t)
+function rate2c(x, p, t)
     return 3 * max(0.0, x[1])
 end
 
@@ -160,7 +160,7 @@ function affect!2(integrator)
 end
 x0 = rand(2)
 prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
-jump = VariableRateJump(rate2, affect!2)
+jump = VariableRateJump(rate2c, affect!2)
 jump_prob = JumpProblem(prob, Direct(), jump)
 
 # test to check lack of dependency graphs is caught in Coevolve for systems with non-maj

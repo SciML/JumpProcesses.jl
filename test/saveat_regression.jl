@@ -18,7 +18,7 @@ sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(), saveat = ts,
     trajectories = Nsims)
 
 for i in 1:length(sol)
-    NA .+= sol[i][1, :]
+    NA .+= sol.u[i][1, :]
 end
 
 for i in 1:length(ts)
@@ -33,7 +33,7 @@ sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(), trajectories = N
 
 for i in 1:Nsims
     for n in 1:length(ts)
-        NA[n] += sol[i](ts[n])[1]
+        NA[n] += sol.u[i](ts[n])[1]
     end
 end
 

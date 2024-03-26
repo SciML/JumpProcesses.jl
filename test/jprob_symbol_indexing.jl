@@ -48,6 +48,18 @@ setp(integ, :p2)(integ, 15.0)
 reset_aggregated_jumps!(integ)
 @test jprob.massaction_jump.scaled_rates[2] == 15.0  # jump rate now updated
 
+# remake tests
+dprob = DiscreteProblem(g, [0, 10], (0.0, 10.0), [1.0, 2.0])
+jprob = JumpProblem(dprob, Direct(), crj1, crj2, maj)
+jprob = remake(jprob; u0 = [:a => -10, :b => 100], p = [:p2 => 3.5, :p1 => .5])
+@test jprob.prob.u0 == [-10, 100]
+@test jprob.prob.p == [.5, 3.5]
+@test jprob.massaction_jump.scaled_rates == [.5, 3.5]
+jprob = remake(jprob; u0 = [:b => 10], p = [:p2 => 4.5])
+@test jprob.prob.u0 == [-10, 10]
+@test jprob.prob.p == [.5, 4.5]
+@test jprob.massaction_jump.scaled_rates == [.5, 4.5]
+
 # test updating problems via regular indexing still updates the mass action jump
 dprob = DiscreteProblem(g, [0, 10], (0.0, 10.0), [1.0, 2.0])
 jprob = JumpProblem(dprob, Direct(), crj1, crj2, maj)
@@ -70,3 +82,15 @@ setp(integ, 2)(integ, 15.0)
 @test getp(integ, 2)(integ) == 15.0
 reset_aggregated_jumps!(integ)
 @test jprob.massaction_jump.scaled_rates[2] == 15.0  # jump rate now updated
+
+# remake tests for regular indexing
+dprob = DiscreteProblem(g, [0, 10], (0.0, 10.0), [1.0, 2.0])
+jprob = JumpProblem(dprob, Direct(), crj1, crj2, maj)
+jprob = remake(jprob; u0 = [-10, 100], p = [.5, 3.5])
+@test jprob.prob.u0 == [-10, 100]
+@test jprob.prob.p == [.5, 3.5]
+@test jprob.massaction_jump.scaled_rates == [.5, 3.5]
+jprob = remake(jprob; u0 = [2 => 10], p = [2 => 4.5])
+@test jprob.prob.u0 == [-10, 10]
+@test jprob.prob.p == [.5, 4.5]
+@test jprob.massaction_jump.scaled_rates == [.5, 4.5]

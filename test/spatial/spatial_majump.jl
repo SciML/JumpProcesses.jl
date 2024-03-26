@@ -116,8 +116,10 @@ for spatial_jump_prob in uniform_jump_problems
 end
 
 # birth and death zero outside of center site
-f(u, p, t) = L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + [0.0, 0.0, 1.0, 0.0, 0.0]
-ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
+function f2(u, p, t)
+    L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + [0.0, 0.0, 1.0, 0.0, 0.0]
+end
+ode_prob = ODEProblem(f2, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
 solution = solve(non_uniform_jump_problems[1], SSAStepper())
@@ -129,8 +131,8 @@ for (i, d) in enumerate(diff)
 end
 
 # birth everywhere, death only at center site
-f(u, p, t) = L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + ones(num_nodes)
-ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
+f3(u, p, t) = L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + ones(num_nodes)
+ode_prob = ODEProblem(f3, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
 solution = solve(non_uniform_jump_problems[2], SSAStepper())
@@ -142,8 +144,10 @@ for (i, d) in enumerate(diff)
 end
 
 # birth on left end, death on right end
-f(u, p, t) = L * u - diagm([0.0, 0.0, 0.0, 0.0, death_rate]) * u + [1.0, 0.0, 0.0, 0.0, 0.0]
-ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
+function f4(u, p, t)
+    L * u - diagm([0.0, 0.0, 0.0, 0.0, death_rate]) * u + [1.0, 0.0, 0.0, 0.0, 0.0]
+end
+ode_prob = ODEProblem(f4, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
 solution = solve(non_uniform_jump_problems[3], SSAStepper())

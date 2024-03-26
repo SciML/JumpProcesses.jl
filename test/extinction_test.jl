@@ -58,15 +58,15 @@ sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
 @test sol.t[end] < 1000.0
 
 # test terminate
-function extinction_condition(u, t, integrator)
+function extinction_condition2(u, t, integrator)
     u[1] == 1
 end
-function extinction_affect!(integrator)
+function extinction_affect!2(integrator)
     (saved, savedexactly) = savevalues!(integrator, true)
     terminate!(integrator)
     nothing
 end
-cb = DiscreteCallback(extinction_condition, extinction_affect!,
+cb = DiscreteCallback(extinction_condition2, extinction_affect!2,
     save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)

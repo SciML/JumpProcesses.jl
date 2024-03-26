@@ -12,11 +12,11 @@ jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
 monte_prob = EnsembleProblem(jump_prob)
 sol = solve(monte_prob, SRIW1(), EnsembleSerial(), trajectories = 3,
     save_everystep = false, dt = 0.001, adaptive = false)
-@test sol[1].t[2] != sol[2].t[2] != sol[3].t[2]
+@test sol.u[1].t[2] != sol.u[2].t[2] != sol.u[3].t[2]
 
 jump = ConstantRateJump(rate, affect!)
 jump_prob = JumpProblem(prob, Direct(), jump, save_positions = (true, false), rng = rng)
 monte_prob = EnsembleProblem(jump_prob)
 sol = solve(monte_prob, SRIW1(), EnsembleSerial(), trajectories = 3,
     save_everystep = false, dt = 0.001, adaptive = false)
-@test sol[1].t[2] != sol[2].t[2] != sol[3].t[2]
+@test sol.u[1].t[2] != sol.u[2].t[2] != sol.u[3].t[2]

@@ -73,7 +73,7 @@ function determine_reaction_type(eq_expr::Expr)
 end
 
 # Determine N_j, dependent on the reaction type
-function N_j(rate::Vector{Expr}, uprev::Vector{Int})
+function N_j_singlereaction(rate::Vector{Expr}, uprev::Vector{Int})
     N_j_values = Vector{Int}(undef, length(rate))
 
     for (eq_idx, eq_expr) in enumerate(rate)
@@ -99,6 +99,73 @@ function N_j(rate::Vector{Expr}, uprev::Vector{Int})
     return N_j_values
 end
 
+# Find in which rate functions an element is involved
+function find_involved_elements(rate::Vector{Expr},u, u_size::Int)
+    involved_elements = Dict{Int, Set{Int}}()
+
+    for i in 1:u_size
+        involved_elements[i] = Set{Int}()
+    end
+
+    for (eq_idx, eq_expr) in enumerate(rate)
+        # Extract the expression from the equation vector
+        expr_str = string(eq_expr)
+
+        # Extract u elements occurring in the expression
+        for i in 1:u_size
+            local_expr = :(u[$i])
+            if occursin(string(local_expr), expr_str)
+                involved_elements[i] = union(involved_elements[i], Set([eq_idx]))
+            end
+        end
+    end
+
+    count_involvement = []
+    for (key, indices) in involved_elements
+        num_indices = length(indices)
+        push!(count_involvement, num_indices)  
+    end
+    
+    return involved_elements, count_involvement
+
+end
+
+function determine_counts(rate_cache, uprev, u_size)
+    involved_elements, count_involvement = find_involved_elements(rate_cache, uprev, u_size)
+    counts = zero(rate_cache)
+    for j in count_involvement
+        if count_involvement[j] == 1
+            involved_rate = get(involved_elements, j)
+            N_j = N_j_singlereaction(rate_cache[involved_rate], uprev[j])
+            counts[involved_rate] .= rand(rng, Binomial(N_j, rate_cache/N_j))
+        
+        else
+            # Use simultaneous equation 
+            # 1. determine which processes to use the simultaneous equation for
+            involved_rates = Vector(involved_elements[j])
+            associated_N_j_values = N_j_singlereaction(rate_cache[involved_rates], uprev[j])
+            N_i = minimum(associated_N_j_values)
+            # 2. generate total reaction number
+            sum_involved_rates = sum(rate_cache[involved_rates])
+            total_reaction_number = rand(rng, Binomial(N_i, sum_involved_rates/N_i))
+            # 3. generate sample values for involved processess
+            total = total_reaction_number
+            for r in involved_rates
+                if total > 0
+                    counts[r] .= rand(rng, Binomial(total, sum_involved_rates/N_j))
+                    total -= counts[r]
+                else
+                    counts[r] = 0
+           
+                end
+            end
+        end
+    end
+    
+    return counts
+end
+
+
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::BinomialTauLeaping;
         seed = nothing,
         dt = error("dt is required for BinomialTauLeaping."))
@@ -122,6 +189,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::BinomialTauLeaping;
     u0 = copy(prob.u0)
     du = similar(u0)
     rate_cache = zeros(float(eltype(u0)), numjumps)
+    u_size = length(u0)
 
     tspan = prob.tspan
     p = prob.p
@@ -139,9 +207,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::BinomialTauLeaping;
         tprev = t[i - 1]
         rate(rate_cache, uprev, p, tprev)
         rate_cache .*= dt # multiply by the width of the time interval
-        N_j = N_j(rate_cache, uprev)
         
-        counts .= rand(rng, Binomial(N_j, rate_cache/N_j))
+        counts = determine_counts(rate_cache, uprev, u_size)
         c(du, uprev, p, tprev, counts, mark)
         u[i] = du + uprev
     end
@@ -152,4 +219,3 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::BinomialTauLeaping;
 end
 
 export BinomialTauLeaping
-

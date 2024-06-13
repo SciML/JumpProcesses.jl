@@ -25,15 +25,12 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 [weakdeps]
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 
-[extensions]
-JumpProcessFastBroadcastExt = "FastBroadcast"
-
 [compat]
 ArrayInterface = "7.9"
 DataStructures = "0.18"
 DiffEqBase = "6.148"
 DocStringExtensions = "0.9"
-FastBroadcast = "0.2, 0.3"
+FastBroadcast = "0.3"
 FunctionWrappers = "1.1"
 Graphs = "1.9"
 PoissonRandom = "0.4"

@@ -166,7 +166,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     else
         cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[end])
         if seed === nothing
-            Random.seed!(cb.condition.rng, seed_multiplier() * rand(UInt64))
+            Random.seed!(cb.condition.rng, rand(UInt64))
         else
             Random.seed!(cb.condition.rng, seed)
         end

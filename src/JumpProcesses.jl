@@ -27,17 +27,8 @@ abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
               DiffEqBase.DEIntegrator{Alg, IIP, U, T} end
 
 import Base.Threads
-@static if VERSION < v"1.3"
-    seed_multiplier() = Threads.threadid()
-else
-    seed_multiplier() = 1
-end
 
-@static if VERSION >= v"1.7.0"
-    const DEFAULT_RNG = Random.default_rng()
-else
-    const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
-end
+const DEFAULT_RNG = Random.default_rng()
 
 include("jumps.jl")
 include("massaction_rates.jl")

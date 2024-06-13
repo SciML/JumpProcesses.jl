@@ -39,7 +39,7 @@ function resetted_jump_problem(_jump_prob, seed)
     if !isempty(jump_prob.jump_callback.discrete_callbacks)
         if seed === nothing
             Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,
-                seed_multiplier() * rand(UInt64))
+                rand(UInt64))
         else
             Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
         end

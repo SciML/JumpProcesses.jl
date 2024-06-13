@@ -28,6 +28,7 @@ For information on using the package,
 [in-development documentation](https://docs.sciml.ai/JumpProcesses/dev/) for the version of
 the documentation which contains unreleased features.
 
+
 The documentation includes
 
   - [a tutorial on simulating basic Poisson processes](https://docs.sciml.ai/JumpProcesses/stable/tutorials/simple_poisson_process/)

@@ -4,11 +4,11 @@ methods for stochastically modeled population processes. IMA J Numer Anal 2015;
 35 (4): 1757-1778. doi: 10.1093/imanum/dru044
 """
 function SplitCoupledJumpProblem(prob::DiffEqBase.AbstractJumpProblem,
-                                 prob_control::DiffEqBase.AbstractJumpProblem,
-                                 aggregator::AbstractAggregatorAlgorithm,
-                                 coupling_map::Vector{Tuple{Int, Int}}; kwargs...)
+        prob_control::DiffEqBase.AbstractJumpProblem,
+        aggregator::AbstractAggregatorAlgorithm,
+        coupling_map::Vector{Tuple{Int, Int}}; kwargs...)
     JumpProblem(cat_problems(prob.prob, prob_control.prob), aggregator,
-                build_split_jumps(prob, prob_control, coupling_map)...; kwargs...)
+        build_split_jumps(prob, prob_control, coupling_map)...; kwargs...)
 end
 
 # make new problem by joining initial_data
@@ -18,7 +18,7 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiscreteProblem)
 end
 
 function cat_problems(prob::DiffEqBase.AbstractODEProblem,
-                      prob_control::DiffEqBase.AbstractODEProblem)
+        prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
 
     _f = SciMLBase.unwrapped_f(prob.f)
@@ -34,7 +34,7 @@ end
 
 function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
-    if !(typeof(prob.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
+    if !(prob.f isa typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
         @warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
     end
 
@@ -50,7 +50,7 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractOD
 end
 
 function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
-                      prob_control::DiffEqBase.AbstractSDEProblem)
+        prob_control::DiffEqBase.AbstractSDEProblem)
     l = length(prob.u0)
     new_f = function (du, u, p, t)
         prob.f(@view(du[1:l]), u.u, p, t)
@@ -65,7 +65,7 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
 end
 
 function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
-                      prob_control::DiffEqBase.AbstractODEProblem)
+        prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0)
 
     _f = SciMLBase.unwrapped_f(prob.f)
@@ -87,7 +87,7 @@ end
 
 function cat_problems(prob::DiffEqBase.AbstractSDEProblem, prob_control::DiscreteProblem)
     l = length(prob.u0)
-    if !(typeof(prob_control.f) <: typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
+    if !(prob_control.f isa typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
         @warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
     end
     new_f = function (du, u, p, t)
@@ -111,14 +111,14 @@ function cat_problems(prob_control::DiscreteProblem, prob::DiffEqBase.AbstractSD
     cat_problems(prob, prob_control)
 end
 function cat_problems(prob_control::DiffEqBase.AbstractODEProblem,
-                      prob::DiffEqBase.AbstractSDEProblem)
+        prob::DiffEqBase.AbstractSDEProblem)
     cat_problems(prob, prob_control)
 end
 
 # this only depends on the jumps in prob, not prob.prob
 function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
-                           prob_control::DiffEqBase.AbstractJumpProblem,
-                           coupling_map::Vector{Tuple{Int, Int}})
+        prob_control::DiffEqBase.AbstractJumpProblem,
+        coupling_map::Vector{Tuple{Int, Int}})
     num_jumps = length(prob.discrete_jump_aggregation.rates)
     num_jumps_control = length(prob_control.discrete_jump_aggregation.rates)
     jumps = []

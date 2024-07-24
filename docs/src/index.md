@@ -1,25 +1,121 @@
 # JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions
 
-JumpProcesses.jl, formerly DiffEqJump.jl, provides methods for simulating jump
-(or point) processes. Across different fields of science, such methods are also
-known as stochastic simulation algorithms (SSAs), Doob's method, Gillespie
-methods, or Kinetic Monte Carlo methods. It also enables the incorporation of
-jump processes into hybrid jump-ODE and jump-SDE models, including jump
-diffusions.
-
-JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
-and one of the core solver libraries included in
+JumpProcesses.jl provides methods for simulating jump and point processes.
+Across different fields of science, such methods are also known as stochastic
+simulation algorithms (SSAs), Doob's method, Gillespie methods, Kinetic Monte
+Carlo's methods, thinning method, and Ogata's method. It also enables the
+incorporation of jump processes into hybrid jump-ODE models, including
+piecewise deterministic Markov processes, and into hybrid jump-SDE models,
+including jump diffusions. It is a component package in the
+[SciML](https://sciml.ai/) ecosystem, and one of the core solver libraries
+included in
 [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/).
 
-The documentation includes
+Historically, jump processes have been developed in the context of dynamical
+systems to describe dynamics with discontinuous changes — the jumps — in a system's
+value at random times. In contrast, the development of point processes has been
+more focused on describing the occurrence of random events — the points — over
+a support. However, both jump and point processes share many things in common
+which make JumpProcesses ideal for their study.
 
-  - [a tutorial on simulating basic Poisson processes](@ref poisson_proc_tutorial)
-  - [a tutorial and details on using JumpProcesses to simulate jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial),
-  - [a tutorial on simulating jump-diffusion processes](@ref jump_diffusion_tutorial),
-  - [a reference on the types of jumps and available simulation methods](@ref jump_problem_type),
-  - [a reference on jump time stepping methods](@ref jump_solve)
-  - a [FAQ](@ref) with information on changing parameters between simulations and using callbacks.
-  - the [JumpProcesses.jl API](@ref) documentation.
+As jump and point processes are often considered from a variety of perspectives
+across different fields, JumpProcesses provides three tutorials on using the
+package for those with different backgrounds:
+
+  - [Simulating basic Poisson processes](@ref poisson_proc_tutorial)
+  - [Simulating jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial)
+  - [Simulating temporal point processes (TPPs)](@ref tpp_tutorial)
+
+These tutorials also explain the types of jump/point processes that can be
+mathematically modelled with JumpProcesses.jl. For more complicated models that
+couple ODEs and/or SDEs with continuous noise to jump processes, we provide a
+tutorial on
+
+  - [Simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
+
+For jump processes that involve spatial transport on a graph/mesh, such
+as Reaction-Diffusion Master Equation models, we provide a tutorial on
+
+  - [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses.jl)
+
+Finally, we provide application tutorials which are more extensive tutorials that
+interface with other libraries going deeper into a topic.
+
+  - [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses](@ref tpp_advanced)
+
+We provide a mathematical overview of the library below, but note users may also
+skip to the appropriate tutorial listed above to get started with using
+JumpProcesses.
+
+## Mathematical Overview
+
+Let ``dN_i(t)`` be a stochastic process such that ``dN_i(t) = 1`` with some
+probability and ``0`` otherwise. That is, ``dN_i(t)`` encodes that a "jump" in
+the value of ``N_i(t)`` by one occurs at time ``t``. Denote the rate, i.e.
+probability per time, that such jumps occur by the intensity function,
+``\lambda_i(u(t), p, t)``. Here ``u(t)`` represents a vector of dynamic state
+variables, that may change when ``N_i(t)`` jumps. For example, these could be
+the size of a population changing due to births or deaths, or the number of
+mRNAs and proteins within a cell (which jump when a gene is transcribed or an
+mRNA is translated). ``p`` represents parameters the intensity may depend on.
+
+In different fields ``\lambda_i`` can also be called a propensity, transition
+rate function, or a hazard function. Note, if we denote ``N(t) \equiv N[0, t)``
+as the number of points since the start of time until ``t``, exclusive of ``t``,
+then ``N(t)`` is a stochastic random integer measure. In other words, we have a
+temporal point process (TPP).
+
+In JumpProcesses.jl's language, we call ``\lambda_i`` a rate function, and
+expect users to provide a function, `rate(u,p,t)`, that returns its value at
+time `t`. Given a collection of rates ``\{\lambda_i\}_{i=1}^I``, JumpProcesses
+can then generate exact realizations of pure jump processes of the form
+
+```math
+du = \sum_{i=1}^I h_i(u,p,t) \, dN_i(t),
+```
+
+where ``h_i(u,p,t)`` represents the amount that ``u(t)`` changes when ``N_i(t)``
+jumps. JumpProcesses encodes such changes via a user-provided `affect!`
+function, which allows even more general changes to the state, ``u(t)``, when
+``N_i(t)`` jumps than just incrementing it by ``h_i(u,p,t)``. For example, such
+changes can themselves be random, allowing for the calculation of marks. In the
+special case of just one jump, ``I = 1``, with ``h_1 = 1``, we recover the
+temporal point process mentioned above.
+
+JumpProcesses provides a variety of algorithms, called *aggregators*, for
+determining the next time that a jump occurs, and which ``N_i(t)`` jumps at that
+time. Many of these are optimized for contexts in which each ``N_i(t)`` only
+changes the values of a few components in ``u(t)``, as common in many
+applications such as stochastic chemical kinetics (where each ``N_i``
+corresponds to a different reaction, and each component of ``u`` a different
+species). To simulate ``u(t)`` users must then specify both an aggregator
+algorithm to determine the time and type of jump that occurs, and a
+time-stepping method to advance the state from jump to jump. See the tutorials
+listed above, and reference links below, for more details and examples.
+
+JumpProcesses also allows such jumps to be coupled into ODE models (i.e.
+piecewise deterministic Markov Processes), or continuous-noise SDE models (i.e.
+jump-diffusions). For example, a jump-diffusion JumpProcesses can
+simulate would be
+
+```math
+du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_j(u,p,t)dN_j(t)
+```
+
+where ``f`` encodes the drift of the process, each ``g_i`` the strength of a
+diffusion component of the process, and each ``W_i(t)`` denotes an independent
+standard Brownian Motion.
+
+JumpProcesses is designed to simulate all the types of jumps described above.
+
+## Reference Documentation
+
+In addition to the tutorials linked above, the documentation contains
+
+  - [References on the types of jumps and available simulation methods](@ref jump_problem_type)
+  - [References on jump time stepping methods](@ref jump_solve)
+  - [An FAQ with information on changing parameters between simulations and using callbacks](@ref FAQ)
+  - [API documentation](@ref JumpProcesses.jl-API)
 
 ## Installation
 
@@ -100,34 +196,20 @@ Pkg.status(; mode = PKGMODE_MANIFEST) # hide
 </details>
 ```
 
-```@raw html
-You can also download the
-<a href="
-```
-
 ```@eval
 using TOML
+using Markdown
 projtoml = joinpath("..", "..", "Project.toml")
 version = TOML.parse(read(projtoml, String))["version"]
 name = TOML.parse(read(projtoml, String))["name"]
-link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
-       "/assets/Manifest.toml"
-```
-
-```@raw html
-">manifest</a> file and the
-<a href="
-```
-
-```@eval
-using TOML
-projtoml = joinpath("..", "..", "Project.toml")
-version = TOML.parse(read(projtoml, String))["version"]
-name = TOML.parse(read(projtoml, String))["name"]
-link = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
-       "/assets/Project.toml"
-```
-
-```@raw html
-">project</a> file.
+link_manifest = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
+                "/assets/Manifest.toml"
+link_project = "https://github.com/SciML/" * name * ".jl/tree/gh-pages/v" * version *
+               "/assets/Project.toml"
+Markdown.parse("""\nYou can also download the
+[manifest]($link_manifest)
+file and the
+[project]($link_project)
+file.
+""")
 ```

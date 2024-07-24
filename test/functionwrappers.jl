@@ -9,12 +9,12 @@ let
         nothing
     end
     jump = VariableRateJump(rate, affect!; urate = (u, p, t) -> 10.0,
-                            rateinterval = (u, p, t) -> 0.1)
+        rateinterval = (u, p, t) -> 0.1)
 
     prob = DiscreteProblem([0.0], (0.0, 2.0), [1.0])
     jprob = JumpProblem(prob, Coevolve(), jump; dep_graph = [[1]], rng)
     agg = jprob.discrete_jump_aggregation
-    @test typeof(agg.affects!) <: Vector{Any}
+    @test agg.affects! isa Vector{Any}
 
     integ = init(jprob, SSAStepper())
     T = Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{typeof(integ)}}}

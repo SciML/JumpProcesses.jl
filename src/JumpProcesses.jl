@@ -3,7 +3,7 @@ module JumpProcesses
 using Reexport
 @reexport using DiffEqBase
 
-using RandomNumbers, TreeViews, LinearAlgebra, Markdown, DocStringExtensions
+using RandomNumbers, LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs
@@ -17,6 +17,7 @@ import Graphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
+import SymbolicIndexingInterface as SII
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
@@ -26,17 +27,8 @@ abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
               DiffEqBase.DEIntegrator{Alg, IIP, U, T} end
 
 import Base.Threads
-@static if VERSION < v"1.3"
-    seed_multiplier() = Threads.threadid()
-else
-    seed_multiplier() = 1
-end
 
-@static if VERSION >= v"1.7.0"
-    const DEFAULT_RNG = Random.default_rng()
-else
-    const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
-end
+const DEFAULT_RNG = Random.default_rng()
 
 include("jumps.jl")
 include("massaction_rates.jl")

@@ -28,6 +28,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
     @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
     @time @safetestset "Remake tests" begin include("remake_test.jl") end
+    @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
     @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
     @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end
     @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
@@ -37,5 +38,4 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
     @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
     @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
-    @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
 end

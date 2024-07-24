@@ -61,9 +61,9 @@ function hawkes_jump(u, g, h; uselrate = true)
 end
 
 function hawkes_problem(p, agg::Coevolve; u = [0.0],
-                        tspan = (0.0, 50.0),
-                        save_positions = (false, true),
-                        g = [[1]], h = [[]], uselrate = true)
+        tspan = (0.0, 50.0),
+        save_positions = (false, true),
+        g = [[1]], h = [[]], uselrate = true)
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
     jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
@@ -76,8 +76,8 @@ function f!(du, u, p, t)
 end
 
 function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
-                        save_positions = (false, true),
-                        g = [[1]], h = [[]], kwargs...)
+        save_positions = (false, true),
+        g = [[1]], h = [[]], kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
     jprob = JumpProblem(oprob, agg, jumps...; save_positions, rng)
@@ -113,7 +113,7 @@ Nsims = 250
 
 for (i, alg) in enumerate(algs)
     jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[i])
-    if typeof(alg) <: Coevolve
+    if alg isa Coevolve
         stepper = SSAStepper()
     else
         stepper = Tsit5()
@@ -123,7 +123,7 @@ for (i, alg) in enumerate(algs)
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
-    if typeof(alg) <: Coevolve
+    if alg isa Coevolve
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
     else
         cols = length(sols[1].u[1].u)
@@ -154,7 +154,7 @@ let alg = Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
     jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng,
-                        use_vrj_bounds = false)
+        use_vrj_bounds = false)
     @test length(jprob.variable_jumps) == 1
     sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims

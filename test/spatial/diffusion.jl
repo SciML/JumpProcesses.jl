@@ -45,7 +45,7 @@ starting_state = zeros(Int, length(u0), num_nodes)
 center_node = trunc(Int, (num_nodes + 1) / 2)
 starting_state[:, center_node] = copy(u0)
 tspan = (0.0, tf)
-prob = DiscreteProblem(starting_state, tspan, [])
+prob = DiscreteProblem(starting_state, tspan)
 
 hopping_rate = diffusivity * (linear_size / domain_size)^2
 hopping_constants = [hopping_rate for i in starting_state]
@@ -64,25 +64,26 @@ times = 0.0:(tf / num_time_points):tf
 algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps,
-                                        hopping_constants = hopping_constants,
-                                        spatial_system = grid,
-                                        save_positions = (false, false), rng = rng) for grid in grids]
+                                hopping_constants = hopping_constants,
+                                spatial_system = grid,
+                                save_positions = (false, false), rng = rng)
+                            for grid in grids]
 sizehint!(jump_problems, 15 + length(jump_problems))
 
 # flattenned jump prob
 push!(jump_problems,
-      JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false), rng = rng))
+    JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
+        spatial_system = grids[1], save_positions = (false, false), rng = rng))
 
 # hop rates of form D_s
 hop_constants = [hopping_rate]
 for alg in algs
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[1], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
+            spatial_system = grids[1], save_positions = (false, false), rng = rng))
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[end], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
+            spatial_system = grids[end], save_positions = (false, false), rng = rng))
 end
 
 # hop rates of form L_{s,i,j}
@@ -90,15 +91,15 @@ hop_constants = Matrix{Vector{Float64}}(undef, size(hopping_constants))
 for ci in CartesianIndices(hop_constants)
     (species, site) = Tuple(ci)
     hop_constants[ci] = repeat([hopping_constants[species, site]],
-                               outdegree(grids[1], site))
+        outdegree(grids[1], site))
 end
 for alg in algs
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[1], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
+            spatial_system = grids[1], save_positions = (false, false), rng = rng))
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
-                      spatial_system = grids[end], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps, hopping_constants = hop_constants,
+            spatial_system = grids[end], save_positions = (false, false), rng = rng))
 end
 
 # hop rates of form D_s * L_{i,j}
@@ -109,13 +110,13 @@ for site in 1:num_nodes
 end
 for alg in algs
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps,
-                      hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[1], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps,
+            hopping_constants = Pair(species_hop_constants, site_hop_constants),
+            spatial_system = grids[1], save_positions = (false, false), rng = rng))
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps,
-                      hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[end], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps,
+            hopping_constants = Pair(species_hop_constants, site_hop_constants),
+            spatial_system = grids[end], save_positions = (false, false), rng = rng))
 end
 
 # hop rates of form D_{s,i} * L_{i,j}
@@ -126,13 +127,13 @@ for site in 1:num_nodes
 end
 for alg in algs
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps,
-                      hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[1], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps,
+            hopping_constants = Pair(species_hop_constants, site_hop_constants),
+            spatial_system = grids[1], save_positions = (false, false), rng = rng))
     push!(jump_problems,
-          JumpProblem(prob, alg, majumps,
-                      hopping_constants = Pair(species_hop_constants, site_hop_constants),
-                      spatial_system = grids[end], save_positions = (false, false), rng = rng))
+        JumpProblem(prob, alg, majumps,
+            hopping_constants = Pair(species_hop_constants, site_hop_constants),
+            spatial_system = grids[end], save_positions = (false, false), rng = rng))
 end
 
 # testing
@@ -161,10 +162,10 @@ for ci in CartesianIndices(hopping_constants)
 end
 starting_state = 25 * ones(Int, length(u0), num_nodes)
 tspan = (0.0, 10.0)
-prob = DiscreteProblem(starting_state, tspan, [])
+prob = DiscreteProblem(starting_state, tspan)
 
 jp = JumpProblem(prob, NSM(), majumps, hopping_constants = hopping_constants,
-                 spatial_system = grid, save_positions = (false, false), rng = rng)
+    spatial_system = grid, save_positions = (false, false), rng = rng)
 sol = solve(jp, SSAStepper())
 
 @test sol.u[end][1, 1] == sum(sol.u[end])

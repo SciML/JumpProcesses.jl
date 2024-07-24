@@ -53,7 +53,7 @@ reactstoch = [
     [2 => 1],
     [3 => 1],
     [1 => 1, 3 => 1],
-    [4 => 1],
+    [4 => 1]
 ]
 netstoch = [
     [2 => 1],
@@ -61,7 +61,7 @@ netstoch = [
     [2 => -1],
     [3 => -1],
     [1 => -1, 3 => -1, 4 => 1],
-    [1 => 1, 3 => 1, 4 => -1],
+    [1 => 1, 3 => 1, 4 => -1]
 ]
 spec_to_dep_jumps = [[1, 5], [2, 3], [4, 5], [6]]
 jump_to_dep_specs = [[2], [3], [2], [3], [1, 3, 4], [1, 3, 4]]
@@ -76,8 +76,8 @@ if doplot
     plothand = plot(reuse = false)
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
         local sol = solve(jump_prob, SSAStepper())
         plot!(plothand, sol.t, sol[3, :], seriestype = :steppost)
     end
@@ -89,13 +89,13 @@ if dotestmean
     means = zeros(Float64, length(SSAalgs))
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
         means[i] = runSSAs(jump_prob)
         relerr = abs(means[i] - expected_avg) / expected_avg
         if doprintmeans
             println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ",
-                    relerr)
+                relerr)
         end
 
         # if dobenchmark

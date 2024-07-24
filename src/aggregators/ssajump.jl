@@ -46,7 +46,7 @@ end
 end
 
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator,
-                                     ::I) where {I <: DiffEqBase.DEIntegrator}
+        ::I) where {I <: DiffEqBase.DEIntegrator}
     if (p.affects! isa Vector) &&
        !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
@@ -56,8 +56,7 @@ end
 end
 
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
-                                     ::I) where {T, S, F1, F2 <: Tuple,
-                                                 I <: DiffEqBase.DEIntegrator}
+        ::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
     nothing
 end
 
@@ -88,8 +87,9 @@ function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: DiffEqBase.DE
     nothing
 end
 
-function (p::AbstractSSAJumpAggregator{T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where
-    {T, S, F1, F2 <: Union{Tuple, Nothing}}
+function (p::AbstractSSAJumpAggregator{
+        T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where
+        {T, S, F1, F2 <: Union{Tuple, Nothing}}
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
@@ -117,14 +117,14 @@ end
 Helper routine for setting up standard fields of SSA jump aggregations.
 """
 function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
-                                affects!, save_positions, rng; kwargs...)
+        affects!, save_positions, rng; kwargs...)
 
     # mass action jumps
     majumps = ma_jumps
     if majumps === nothing
         majumps = MassActionJump(Vector{typeof(t)}(),
-                                 Vector{Vector{Pair{Int, eltype(u)}}}(),
-                                 Vector{Vector{Pair{Int, eltype(u)}}}())
+            Vector{Vector{Pair{Int, eltype(u)}}}(),
+            Vector{Vector{Pair{Int, eltype(u)}}}())
     end
 
     # current jump rates, allows mass action rates and constant jumps
@@ -134,7 +134,7 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
     next_jump = 0
     next_jump_time = typemax(typeof(t))
     jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-                  majumps, rates, affects!, save_positions, rng; kwargs...)
+        majumps, rates, affects!, save_positions, rng; kwargs...)
 end
 
 """
@@ -196,7 +196,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
         @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,
-                                                      params, t, rx)
+            params, t, rx)
         sum_rate += cur_rates[rx]
     end
 
@@ -229,7 +229,7 @@ Execute `p.next_jump`.
 end
 
 @generated function update_state!(p::AbstractSSAJumpAggregator, integrator, u,
-                                  affects!::T) where {T <: Tuple}
+        affects!::T) where {T <: Tuple}
     quote
         @unpack ma_jumps, next_jump = p
         num_ma_rates = get_num_majumps(ma_jumps)
@@ -296,8 +296,9 @@ end
 
 Perform rejection sampling test (used in RSSA methods).
 """
-@inline function rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u,
-                          jidx, params, t)
+@inline function rejectrx(
+        ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u,
+        jidx, params, t)
     # rejection test
     @inbounds r2 = rand(rng) * cur_rate_high[jidx]
     @inbounds crlow = cur_rate_low[jidx]

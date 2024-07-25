@@ -31,7 +31,7 @@ end
 
 # test isdenseplot gives correct values for SSAStepper and non-SSAStepper models
 let
-    rate(u, p, t) = max(u[1],0.0)
+    rate(u, p, t) = max(u[1], 0.0)
     affect!(integ) = (integ.u[1] -= 1; nothing)
     crj = ConstantRateJump(rate, affect!)
     u0 = [10.0]
@@ -41,19 +41,18 @@ let
 
     # for pure jump problems dense = save_everystep
     vals = (true, true, true, false)
-    for (sp,val) in zip(sps, vals)
+    for (sp, val) in zip(sps, vals)
         jprob = JumpProblem(dprob, Direct(), crj; save_positions = sp, rng)
         sol = solve(jprob, SSAStepper())
         @test SciMLBase.isdenseplot(sol) == val
     end
 
     # for mixed problems sol.dense currently ignores save_positions
-    oprob = ODEProblem((du,u,p,t) -> du[1] = .1, u0, tspan)
+    oprob = ODEProblem((du, u, p, t) -> du[1] = 0.1, u0, tspan)
     for sp in sps
         jprob = JumpProblem(oprob, Direct(), crj; save_positions = sp, rng)
         sol = solve(jprob, Tsit5())
         @test sol.dense == true
         @test SciMLBase.isdenseplot(sol) == true
     end
-
 end

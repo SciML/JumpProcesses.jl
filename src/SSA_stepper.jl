@@ -332,6 +332,8 @@ end
 
 export SSAStepper
 
-function SciMLBase.isdenseplot(sol::ODESolution{T, N, uType, uType2, DType, tType, rateType, discType, P, SSAStepper}) where {T, N, uType, uType2, DType, tType, rateType, discType, P}
+function SciMLBase.isdenseplot(sol::ODESolution{
+        T, N, uType, uType2, DType, tType, rateType, discType, P,
+        SSAStepper}) where {T, N, uType, uType2, DType, tType, rateType, discType, P}
     sol.dense
 end

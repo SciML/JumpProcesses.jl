@@ -54,5 +54,9 @@ let
         sol = solve(jprob, Tsit5())
         @test sol.dense == true
         @test SciMLBase.isdenseplot(sol) == true
+
+        sol = solve(jprob, Tsit5(); dense = false)
+        @test sol.dense == false
+        @test SciMLBase.isdenseplot(sol) == false
     end
 end

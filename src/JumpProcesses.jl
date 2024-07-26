@@ -7,7 +7,7 @@ using RandomNumbers, LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs
-using SciMLBase: SciMLBase
+using SciMLBase: SciMLBase, isdenseplot
 using Base.FastMath: add_fast
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!

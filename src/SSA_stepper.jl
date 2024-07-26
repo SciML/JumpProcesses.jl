@@ -183,11 +183,11 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         u = typeof(prob.u0)[]
     end
 
-    sol = DiffEqBase.build_solution(prob, alg, t, u, dense = false,
+    save_everystep = any(cb.save_positions)
+    sol = DiffEqBase.build_solution(prob, alg, t, u, dense = save_everystep,
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
         interp = DiffEqBase.ConstantInterpolation(t, u))
-    save_everystep = any(cb.save_positions)
 
     if saveat isa Number
         _saveat = prob.tspan[1]:saveat:prob.tspan[2]
@@ -331,3 +331,9 @@ function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = ReturnCode.T
 end
 
 export SSAStepper
+
+function SciMLBase.isdenseplot(sol::ODESolution{
+        T, N, uType, uType2, DType, tType, rateType, discType, P,
+        SSAStepper}) where {T, N, uType, uType2, DType, tType, rateType, discType, P}
+    sol.dense
+end

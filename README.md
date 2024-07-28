@@ -39,7 +39,7 @@ The documentation includes
   - [the JumpProcesses.jl API documentation](https://docs.sciml.ai/JumpProcesses/stable/api/).
 
 ## Help wanted
-Post in the `help wanted` issue or pick any PR and give it a review. Contributions, no matter how small, are always welcome and appreciated, 
+Post in the [`Help wanted`](https://github.com/SciML/JumpProcesses.jl/issues/431) issue or pick any PR and give it a review. Contributions, no matter how small, are always welcome and appreciated, 
 including reviewing PRs and documentation writing. See the [contribution section](#contributing-and-getting-help).
 
 ## Installation

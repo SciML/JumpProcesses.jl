@@ -38,6 +38,10 @@ The documentation includes
   - [a FAQ](https://docs.sciml.ai/JumpProcesses/stable/faq) with information on changing parameters between simulations and using callbacks,
   - [the JumpProcesses.jl API documentation](https://docs.sciml.ai/JumpProcesses/stable/api/).
 
+## Help wanted
+Post in the `help wanted` issue or pick any PR and give it a review. Contributions, no matter how small, are always welcome and appreciated, 
+including reviewing PRs and documentation writing. See the [contribution section](#contributing-and-getting-help).
+
 ## Installation
 
 There are two ways to install `JumpProcesses.jl`. First, users may install the meta

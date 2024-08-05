@@ -672,13 +672,13 @@ sol = solve(jump_prob, SSAStepper(); saveat = 10.0)
 plot(sol, label = ["S(t)" "I(t)" "R(t)"])
 ```
 
-Notice that our plot (and the solution objects) are now defined at precisely the
-specified time points, and for time values in between those points
-piecewise-linear interpolation is used in evaluating the solution. Therefore,
-*it is important to note that interpolation of the solution object will no
-longer be exact for a pure jump process, as the solution values at jump times
-have not been stored. i.e for `t` a time for which we did not save the state,
-`sol(t)` will no longer give the exact value of the solution at `t`.*
+Notice that our plot is now defined at precisely the specified time points, and
+for time values in between those points piecewise-linear interpolation is used
+in graphing the solution. Therefore, *it is important to note that neither
+plotting or interpolation of the solution object will no longer be exact for a
+pure jump process, as the solution values at jump times have not been stored.
+i.e for `t` a time for which we did not save the state, `sol(t)` will no longer
+give the exact value of the solution at `t`.*
 
 In summary, the jump callback will save the state variable `u` before and after
 the jump whenever `save_positions = (true, true)`. All other saving behavior is

@@ -21,7 +21,7 @@ chemical kinetics (i.e., Gillespie) models. It is not necessary to have read the
     τ-leaping methods.
 
 !!! note
-    
+
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 We begin by demonstrating how to build jump processes using
@@ -653,7 +653,7 @@ many cases when using jump problems, you may wish to decrease the saving
 pressure given by large numbers of jumps. To do this, you set the
 `save_positions` keyword argument to `JumpProblem`. Just like for other
 [callbacks](https://docs.sciml.ai/DiffEqDocs/stable/features/callback_functions/),
-this is a tuple `(bool1, bool2)` which sets whether to save `u` before or
+this is a tuple `(bool1, bool2)` which sets whether to save `u` before and/or
 after a jump. If we do not want to save at every jump, we would thus pass:
 
 ```@example tut2
@@ -669,23 +669,21 @@ spaced grid:
 
 ```@example tut2
 sol = solve(jump_prob, SSAStepper(); saveat = 10.0)
-
-# we plot each solution component separately since
-# the graph should no longer be a step function
-plot(sol.t, sol[1, :]; marker = :o, label = "S(t)", xlabel = "t")
-plot!(sol.t, sol[2, :]; marker = :x, label = "I(t)", xlabel = "t")
-plot!(sol.t, sol[3, :]; marker = :d, label = "R(t)", xlabel = "t")
+plot(sol, label = ["S(t)" "I(t)" "R(t)"])
 ```
 
-Notice that our plot (and solutions) are now defined at precisely the specified
-time points. *It is important to note that interpolation of the solution object
-will no longer be exact for a pure jump process, as the solution values at jump
-times have not been stored. i.e for `t` a time we did not save at `sol(t)` will
-no longer give the exact value of the solution at `t`.*
+Notice that our plot (and the solution objects) are now defined at precisely the
+specified time points, and for time values in between those points
+piecewise-linear interpolation is used in evaluating the solution. Therefore,
+*it is important to note that interpolation of the solution object will no
+longer be exact for a pure jump process, as the solution values at jump times
+have not been stored. i.e for `t` a time for which we did not save the state,
+`sol(t)` will no longer give the exact value of the solution at `t`.*
 
-In summary, the jump callback will save the state variable `u` before and
-after the jump whenever `save_positions = (true, true)`. All other saving
-behavior is delegated to the integrator and controlled via keyword arguments to `solve` such as `saveat`.
+In summary, the jump callback will save the state variable `u` before and after
+the jump whenever `save_positions = (true, true)`. All other saving behavior is
+delegated to the integrator and controlled via keyword arguments to `solve` such
+as `saveat`.
 
 ## Defining the Jumps Directly: Mixing `ConstantRateJump`/`VariableRateJump` and `MassActionJump`
 

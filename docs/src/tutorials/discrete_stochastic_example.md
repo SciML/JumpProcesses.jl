@@ -669,16 +669,24 @@ spaced grid:
 
 ```@example tut2
 sol = solve(jump_prob, SSAStepper(); saveat = 10.0)
-plot(sol, label = ["S(t)" "I(t)" "R(t)"])
+plot(sol, label = ["S(t)" "I(t)" "R(t)"], marker = :o)
 ```
 
 Notice that our plot is now defined at precisely the specified time points, and
 for time values in between those points piecewise-linear interpolation is used
-in graphing the solution. Therefore, *it is important to note that neither
-plotting or interpolation of the solution object will no longer be exact for a
-pure jump process, as the solution values at jump times have not been stored.
-i.e for `t` a time for which we did not save the state, `sol(t)` will no longer
-give the exact value of the solution at `t`.*
+in graphing the solution. Note, however, that evaluation of the solution object
+still treats the solution as piecewise constant, and so `sol` should not be
+explicitly evaluated at any times besides the times at which it was saved, i.e.
+notice that `sol(15.0)` does not interpolate the solution vectors at times `10`
+and `20` below, but is instead the same as the solution at time `10`:
+```@example tut2
+sol(10.0), sol(15.0), sol(20.0)
+```
+*It is important to keep in mind that neither plotting or evaluation of the
+solution object will be exact for a pure jump process when using `saveat` except
+for the times given via `saveat`. This is because the solution values at jump
+times have not been stored. i.e for `t` a time for which we did not save the
+state, `sol(t)` will no longer give the exact value of the solution at `t`.*
 
 In summary, the jump callback will save the state variable `u` before and after
 the jump whenever `save_positions = (true, true)`. All other saving behavior is

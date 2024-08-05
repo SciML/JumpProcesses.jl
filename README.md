@@ -38,9 +38,9 @@ The documentation includes
   - [a FAQ](https://docs.sciml.ai/JumpProcesses/stable/faq) with information on changing parameters between simulations and using callbacks,
   - [the JumpProcesses.jl API documentation](https://docs.sciml.ai/JumpProcesses/stable/api/).
 
-## Help wanted
-Post in the [`Help wanted`](https://github.com/SciML/JumpProcesses.jl/issues/431) issue or pick any PR and give it a review. Contributions, no matter how small, are always welcome and appreciated, 
-including reviewing PRs and documentation writing. See the [contribution section](#contributing-and-getting-help).
+## Contributions welcomed!
+Contact us in sciml-bridged on Slack to discuss where to get started, the [`Help wanted`](https://github.com/SciML/JumpProcesses.jl/issues/431) issue, or just open a PR to address an open issue or add new functionality. Contributions, no matter how small, are always welcome and appreciated, 
+including documentation editing/writing. See also the [contribution section](#contributing-and-getting-help).
 
 ## Installation
 

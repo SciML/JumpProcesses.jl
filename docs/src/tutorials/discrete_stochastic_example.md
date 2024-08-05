@@ -21,7 +21,7 @@ chemical kinetics (i.e., Gillespie) models. It is not necessary to have read the
     τ-leaping methods.
 
 !!! note
-
+    
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 We begin by demonstrating how to build jump processes using
@@ -679,9 +679,11 @@ still treats the solution as piecewise constant, and so `sol` should not be
 explicitly evaluated at any times besides the times at which it was saved, i.e.
 notice that `sol(15.0)` does not interpolate the solution vectors at times `10`
 and `20` below, but is instead the same as the solution at time `10`:
+
 ```@example tut2
 sol(10.0), sol(15.0), sol(20.0)
 ```
+
 *It is important to keep in mind that neither plotting or evaluation of the
 solution object will be exact for a pure jump process when using `saveat` except
 for the times given via `saveat`. This is because the solution values at jump

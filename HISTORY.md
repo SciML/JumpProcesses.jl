@@ -15,10 +15,10 @@
   jprob = JumpProblem(dprob, crj)
   sol = solve(jprob, SSAStepper())
   ```
-- For `JumpProblem`s over `DiscreteProblem`s that only have `MassActionJump`s
-  and `ConstantRateJump`s one no longer needs to specify `SSAStepper()` when
-  calling `solve`, i.e. the following now works for the previous example and is
-  equivalent to manually passing `SSAStepper()`:
+- For `JumpProblem`s over `DiscreteProblem`s that only have `MassActionJump`s,
+  `ConstantRateJump`s, and bounded `VariableRateJump`s, one no longer needs to
+  specify `SSAStepper()` when calling `solve`, i.e. the following now works for
+  the previous example and is equivalent to manually passing `SSAStepper()`:
   ```julia
   sol = solve(jprob)
   ```

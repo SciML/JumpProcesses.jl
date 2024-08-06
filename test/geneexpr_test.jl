@@ -12,8 +12,8 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (JumpProcesses.NullAggregator(), RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
-           NRM(), RSSA(), DirectCR(), Coevolve())
+SSAalgs = (JumpProcesses.NullAggregator(), RDirect(), RSSACR(), Direct(),
+    DirectFW(), FRM(), FRMFW(), SortingDirect(), NRM(), RSSA(), DirectCR(), Coevolve())
 
 # numerical parameters
 Nsims = 8000
@@ -118,9 +118,8 @@ end
 # end
 
 # no-aggregator tests
-jump_prob = JumpProblem(prob, majumps, save_positions = (false, false),
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
+jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
+    vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs, rng)
 @test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
 
 jump_prob = JumpProblem(prob, majumps, save_positions = (false, false), rng = rng)

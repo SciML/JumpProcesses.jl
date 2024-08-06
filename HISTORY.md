@@ -2,7 +2,7 @@
 
 ## JumpProcesses unreleased (master branch)
 
-## 9.12
+## 9.13
 
   - Added a default aggregator selection algorithm based on the number of passed
     in jumps. i.e. the following now auto-selects an aggregator (`Direct` in this

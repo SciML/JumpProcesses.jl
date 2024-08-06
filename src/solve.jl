@@ -7,6 +7,13 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
     integrator.sol
 end
 
+# if passed a JumpProblem and no aggregator is selected use SSAStepper
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
+        timeseries = [], ts = [], ks = [], recompile::Type{Val{recompile_flag}} = Val{true};
+        kwargs...) where {P, recompile_flag}
+    DiffEqBase.__solve(jump_prob, SSAStepper(), timeseries, ts, ks, recompile)
+end
+
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
         recompile::Type{Val{recompile_flag}} = Val{true};

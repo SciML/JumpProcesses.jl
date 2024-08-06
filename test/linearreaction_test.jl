@@ -21,7 +21,7 @@ SSAs_to_exclude = (DirectFW(), FRM(), FRMFW())
 
 vartojumps_map = [collect(1:Nrxs), []]
 jumptovars_map = [[1, 2] for i in 1:Nrxs]
-namedpars = (vartojumps_map, jumptovars_map)
+namedpars = (; vartojumps_map, jumptovars_map)
 rates = ones(Float64, Nrxs) * baserate;
 cumsum!(rates, rates)
 exactmeanval = exactmean(tf, rates)

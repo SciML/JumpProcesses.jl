@@ -208,7 +208,7 @@ function select_aggregator(jumps::JumpSet; vartojumps_map = nothing,
     end
 
     # if the number of jumps is small, return the Direct
-    num_jumps(jumps) < 20 && return Direct
+    num_jumps(jumps) < USE_DIRECT_THRESHOLD && return Direct
 
     # if there are only massaction jumps, we can build the species-jumps dependency graphs
     can_build_dgs = num_crjs(jumps) == 0 && num_vrjs(jumps) == 0
@@ -216,10 +216,10 @@ function select_aggregator(jumps::JumpSet; vartojumps_map = nothing,
 
     # if we have the species-jumps dgs or can build them, use a Rejection-based methods
     if can_build_dgs || have_species_to_jumps_dgs
-        (num_jumps(jumps) < 100) && return RSSA
+        (num_jumps(jumps) < USE_RSSA_THRESHOLD) && return RSSA
         return RSSACR
     elseif !isnothing(dep_graph)   # if only have a normal dg
-        (num_jumps(jumps) < 200) && return SortingDirect
+        (num_jumps(jumps) < USE_SORTINGDIRECT_THRESHOLD) && return SortingDirect
         return DirectCR
     else
         return Direct

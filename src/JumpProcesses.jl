@@ -30,6 +30,12 @@ import Base.Threads
 
 const DEFAULT_RNG = Random.default_rng()
 
+# thresholds for auto-alg below which the listed alg is used
+# see select_aggregator for details
+const USE_DIRECT_THRESHOLD = 20
+const USE_RSSA_THRESHOLD = 100
+const USE_SORTINGDIRECT_THRESHOLD = 200
+
 include("jumps.jl")
 include("massaction_rates.jl")
 include("aggregators/aggregators.jl")

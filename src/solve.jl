@@ -8,10 +8,8 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
 end
 
 # if passed a JumpProblem and no aggregator is selected use SSAStepper
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        timeseries = [], ts = [], ks = [], recompile::Type{Val{recompile_flag}} = Val{true};
-        kwargs...) where {P, recompile_flag}
-    DiffEqBase.__solve(jump_prob, SSAStepper(), timeseries, ts, ks, recompile)
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...)
+    DiffEqBase.__solve(jump_prob, SSAStepper(); kwargs...)
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},

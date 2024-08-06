@@ -12,7 +12,7 @@ doprint = false
 #using Plots; plotlyjs()
 doplot = false
 
-methods = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator)
+methods = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 # one reaction case, mass action jump, vector of data
 rate = [2.0]

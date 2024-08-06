@@ -16,7 +16,7 @@ tf = 0.1
 baserate = 0.1
 A0 = 100
 exactmean = (t, ratevec) -> A0 * exp(-sum(ratevec) * t)
-SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator)
+SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 SSAs_to_exclude = (DirectFW(), FRM(), FRMFW())
 
 vartojumps_map = [collect(1:Nrxs), []]

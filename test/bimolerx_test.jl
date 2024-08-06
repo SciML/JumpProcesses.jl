@@ -14,7 +14,7 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator)
+SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 Nsims = 32000
 tf = 0.01

@@ -45,7 +45,7 @@ function mastereqmean(u, rates)
 end
 mastereq_mean = mastereqmean(u0, rates)
 
-algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator)
+algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 relative_tolerance = 0.01
 for alg in algs
     local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false),

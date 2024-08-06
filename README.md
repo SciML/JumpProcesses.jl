@@ -74,10 +74,10 @@ using JumpProcesses, Plots
 # here we order S = 1, I = 2, and R = 3
 # substrate stoichiometry:
 substoich = [[1 => 1, 2 => 1],    # 1*S + 1*I
-    [2 => 1]]            # 1*I
+    [2 => 1]]                     # 1*I
 # net change by each jump type
 netstoich = [[1 => -1, 2 => 1],   # S -> S-1, I -> I+1
-    [2 => -1, 3 => 1]]   # I -> I-1, R -> R+1
+    [2 => -1, 3 => 1]]            # I -> I-1, R -> R+1
 # rate constants for each jump
 p = (0.1 / 1000, 0.01)
 
@@ -91,10 +91,10 @@ tspan = (0.0, 250.0)
 dprob = DiscreteProblem(u₀, tspan, p)
 
 # use the Direct method to simulate
-jprob = JumpProblem(dprob, Direct(), maj)
+jprob = JumpProblem(dprob, maj)
 
 # solve as a pure jump process, i.e. using SSAStepper
-sol = solve(jprob, SSAStepper())
+sol = solve(jprob)
 plot(sol)
 ```
 
@@ -117,8 +117,8 @@ function affect2!(integrator)
     integrator.u[3] += 1        # R -> R + 1
 end
 jump2 = ConstantRateJump(rate2, affect2!)
-jprob = JumpProblem(dprob, Direct(), jump, jump2)
-sol = solve(jprob, SSAStepper())
+jprob = JumpProblem(dprob, jump, jump2)
+sol = solve(jprob)
 ```
 
 ### Jump-ODE Example
@@ -164,7 +164,7 @@ plot(sol)
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
   - There are a few community forums for getting help and asking questions:
-    
+
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the

@@ -22,7 +22,7 @@
   ```julia
   sol = solve(jprob)
   ```
-- Plotting a solution generated with `save_positions = (false, false)` no uses
+- Plotting a solution generated with `save_positions = (false, false)` now uses
   piecewise linear plots between any saved time points specified via `saveat`
   instead (previously the plots appeared piecewise constant even though each
   jump was not being shown). Note that solution objects still use piecewise

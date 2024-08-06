@@ -12,8 +12,7 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = (RDirect(), RSSACR(), Direct(), DirectFW(), FRM(), FRMFW(), SortingDirect(),
-    NRM(), RSSA(), DirectCR(), Coevolve())
+SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 # numerical parameters
 Nsims = 8000
@@ -23,10 +22,10 @@ expected_avg = 5.926553750000000e+02
 reltol = 0.01
 
 # average number of proteins in a simulation
-function runSSAs(jump_prob)
+function runSSAs(jump_prob; use_stepper = true)
     Psamp = zeros(Int, Nsims)
     for i in 1:Nsims
-        sol = solve(jump_prob, SSAStepper())
+        sol = use_stepper ? solve(jump_prob, SSAStepper()) : solve(jump_prob)
         Psamp[i] = sol[3, end]
     end
     mean(Psamp)
@@ -86,33 +85,28 @@ end
 
 # test the means
 if dotestmean
-    means = zeros(Float64, length(SSAalgs))
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
             vartojumps_map = spec_to_dep_jumps,
             jumptovars_map = jump_to_dep_specs, rng = rng)
-        means[i] = runSSAs(jump_prob)
-        relerr = abs(means[i] - expected_avg) / expected_avg
-        if doprintmeans
-            println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ",
-                relerr)
-        end
+        means = runSSAs(jump_prob)
+        relerr = abs(means - expected_avg) / expected_avg
+        doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
+            ", rel err = ", relerr)
+        @test abs(means - expected_avg) < reltol * expected_avg
 
-        # if dobenchmark
-        #     @btime (runSSAs($jump_prob);)
-        # end
-
-        @test abs(means[i] - expected_avg) < reltol * expected_avg
+        means = runSSAs(jump_prob; use_stepper = false)
+        relerr = abs(means - expected_avg) / expected_avg
+        @test abs(means - expected_avg) < reltol * expected_avg
     end
 end
 
-# benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs, rng=rng)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
+# no-aggregator tests
+jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
+    vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs, rng)
+@test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
+@test abs(runSSAs(jump_prob; use_stepper = false) - expected_avg) < reltol * expected_avg
+
+jump_prob = JumpProblem(prob, majumps, save_positions = (false, false), rng = rng)
+@test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
+@test abs(runSSAs(jump_prob; use_stepper = false) - expected_avg) < reltol * expected_avg

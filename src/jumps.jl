@@ -383,7 +383,7 @@ end
 using_params(maj::MassActionJump{T, S, U, Nothing}) where {T, S, U} = false
 using_params(maj::MassActionJump) = true
 using_params(maj::Nothing) = false
-@inline get_num_majumps(maj::MassActionJump) = length(maj.scaled_rates)
+@inline get_num_majumps(maj::MassActionJump) = length(maj.net_stoch)
 @inline get_num_majumps(maj::Nothing) = 0
 
 struct MassActionJumpParamMapper{U}

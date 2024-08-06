@@ -107,9 +107,7 @@ function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
     integrator.u_modified = bool
 end
 
-function DiffEqBase.__solve(jump_prob::JumpProblem,
-        alg::SSAStepper;
-        kwargs...)
+function DiffEqBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol

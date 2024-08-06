@@ -7,6 +7,17 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
     integrator.sol
 end
 
+# if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
+# SSAStepper
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P};
+        kwargs...) where {P <: DiscreteProblem}
+    DiffEqBase.__solve(jump_prob, SSAStepper(); kwargs...)
+end
+
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...)
+    error("Auto-solver selection is currently only implemented for JumpProblems defined over DiscreteProblems. Please explicitly specify a solver algorithm in calling solve.")
+end
+
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
         recompile::Type{Val{recompile_flag}} = Val{true};

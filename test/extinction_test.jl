@@ -17,7 +17,7 @@ dg = [[1]]
 majump = MassActionJump(rates, reactstoch, netstoch)
 u0 = [100000]
 dprob = DiscreteProblem(u0, (0.0, 1e5), rates)
-algs = JumpProcesses.JUMP_AGGREGATORS
+algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator)
 
 for n in 1:Nsims
     for ssa in algs

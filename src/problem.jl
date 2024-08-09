@@ -300,7 +300,7 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
     u0 = ExtendedJumpArray(prob.u0,
         [-randexp(rng, ttype) for i in 1:length(jumps)])
     f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
-            observed = prob.f.observed)
+        observed = prob.f.observed)
     remake(prob; f, u0)
 end
 
@@ -337,7 +337,7 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
     f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
-            observed = prob.f.observed)
+        observed = prob.f.observed)
     remake(prob; f, g = jump_g, u0)
 end
 
@@ -364,7 +364,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
     f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
-            observed = prob.f.observed)
+        observed = prob.f.observed)
     remake(prob; f, u0)
 end
 
@@ -393,7 +393,7 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
     u0 = ExtendedJumpArray(prob.u0,
         [-randexp(rng, ttype) for i in 1:length(jumps)])
     f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
-            observed = prob.f.observed)
+        observed = prob.f.observed)
     remake(prob; f, u0)
 end
 

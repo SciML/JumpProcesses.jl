@@ -299,7 +299,9 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
         [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = ODEFunction{isinplace(prob)}(jump_f), u0 = u0)
+    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
@@ -334,7 +336,9 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
 
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = SDEFunction{isinplace(prob)}(jump_f, jump_g), g = jump_g, u0 = u0)
+    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, g = jump_g, u0)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
@@ -359,7 +363,9 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
 
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = DDEFunction{isinplace(prob)}(jump_f), u0 = u0)
+    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
@@ -386,7 +392,9 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0,
         [-randexp(rng, ttype) for i in 1:length(jumps)])
-    remake(prob, f = DAEFunction{isinplace(prob)}(jump_f), u0 = u0)
+    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, u0)
 end
 
 function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)

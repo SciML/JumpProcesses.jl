@@ -26,7 +26,7 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
 @inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.Δu
 
 # Get brackets ((1-fluctrate)*u, (1+fluctrate)*u) for species i.
-@inline function get_spec_brackets(bd, i, u)
+@inline function get_spec_brackets(bd, i, u::Integer)
     if u == zero(u)
         return zero(u), zero(u)
     elseif u < gettv(bd, i)
@@ -35,6 +35,19 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
     else
         δ = getfr(bd, i)
         return trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u)
+    end
+end
+
+# don't truncate non-integer types
+@inline function get_spec_brackets(bd, i, u)
+    if u == zero(u)
+        return zero(u), zero(u)
+    elseif u < gettv(bd, i)
+        Δu = getΔu(bd, i)
+        return max(zero(Δu), u - Δu), u + Δu
+    else
+        δ = getfr(bd, i)
+        return ((one(δ) - δ) * u), ((one(δ) + δ) * u)
     end
 end
 

@@ -103,6 +103,26 @@ end
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
 (integrator::SSAIntegrator)(out, t) = (out .= integrator.u)
 
+function DiffEqBase.get_tstops(integrator::SSAIntegrator)
+    @view integrator.tstops[(integrator.tstops_idx):end]
+end
+DiffEqBase.get_tstops_array(integrator::SSAIntegrator) = DiffEqBase.get_tstops(integrator)
+
+# ODE integrators seem to add tf into tstops which SSAIntegrator does not do
+# so must account for it here
+function DiffEqBase.get_max_tstops(integrator::SSAIntegrator)
+    tstops = DiffEqBase.get_tstops_array(integrator)
+    tf = integrator.sol.prob.tspan[2]
+    if !isempty(tstops)
+        return max(maximum(tstops), tf)
+    else
+        return tf
+    end
+end
+
+# no integrator.iter field
+DiffEqBase.hasiter(::SSAIntegrator) = false
+
 function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
     integrator.u_modified = bool
 end
@@ -226,8 +246,10 @@ function DiffEqBase.add_tstop!(integrator::SSAIntegrator, tstop)
     if tstop > integrator.t
         future_tstops = @view integrator.tstops[(integrator.tstops_idx):end]
         insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
+        @show insert_index
         Base.insert!(integrator.tstops, insert_index, tstop)
     end
+    @show integrator.t,tstop,integrator.tstops
 end
 
 # The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator

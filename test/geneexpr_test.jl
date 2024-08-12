@@ -1,4 +1,4 @@
-using DiffEqBase, JumpProcesses
+using JumpProcesses
 using Test, Statistics
 using StableRNGs
 rng = StableRNG(12345)
@@ -70,6 +70,10 @@ majumps = MassActionJump(rates, reactstoch, netstoch)
 # TESTING:
 prob = DiscreteProblem(u0, (0.0, tf), rates)
 
+# floating point u0 tests
+u0f = Float64.(u0)
+probf = DiscreteProblem(u0f, (0.0, tf), rates)
+
 # plotting one full trajectory
 if doplot
     plothand = plot(reuse = false)
@@ -97,6 +101,15 @@ if dotestmean
 
         means = runSSAs(jump_prob; use_stepper = false)
         relerr = abs(means - expected_avg) / expected_avg
+        @test abs(means - expected_avg) < reltol * expected_avg
+
+        jump_probf = JumpProblem(probf, alg, majumps, save_positions = (false, false),
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
+        means = runSSAs(jump_probf)
+        relerr = abs(means - expected_avg) / expected_avg
+        doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
+            ", rel err = ", relerr)
         @test abs(means - expected_avg) < reltol * expected_avg
     end
 end

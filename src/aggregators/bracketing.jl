@@ -25,8 +25,9 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
 @inline getΔu(bd::BracketData{T1, AbstractVector{T2}}, i) where {T1, T2} = bd.Δu[i]
 @inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.Δu
 
-@inline delta_bracket(u::Integer, δ) =
-    trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u)
+@inline function delta_bracket(u::Integer, δ)
+    (trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u))
+end
 
 @inline delta_bracket(u, δ) = ((one(δ) - δ) * u), ((one(δ) + δ) * u)
 

@@ -11,7 +11,7 @@ using SciMLBase: SciMLBase, isdenseplot
 using Base.FastMath: add_fast
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!,
-                   get_tstops, get_tstops_array, get_max_tstops, hasiter
+                   get_tstops, get_tstops_array, get_tstops_max
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 import DataStructures: update!
 import Graphs: neighbors, outdegree

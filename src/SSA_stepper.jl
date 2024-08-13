@@ -110,7 +110,7 @@ DiffEqBase.get_tstops_array(integrator::SSAIntegrator) = DiffEqBase.get_tstops(i
 
 # ODE integrators seem to add tf into tstops which SSAIntegrator does not do
 # so must account for it here
-function DiffEqBase.get_max_tstops(integrator::SSAIntegrator)
+function DiffEqBase.get_tstops_max(integrator::SSAIntegrator)
     tstops = DiffEqBase.get_tstops_array(integrator)
     tf = integrator.sol.prob.tspan[2]
     if !isempty(tstops)
@@ -119,9 +119,6 @@ function DiffEqBase.get_max_tstops(integrator::SSAIntegrator)
         return tf
     end
 end
-
-# no integrator.iter field
-DiffEqBase.hasiter(::SSAIntegrator) = false
 
 function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
     integrator.u_modified = bool

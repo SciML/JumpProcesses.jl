@@ -163,7 +163,6 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         tstops = nothing,
         alias_tstops = false,
         numsteps_hint = 100)
-
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
@@ -264,10 +263,10 @@ function DiffEqBase.add_tstop!(integrator::SSAIntegrator, tstop)
             tstops = integrator.tstops
         else
             integrator.copied_tstops = true
-            tstops = copy(integrator.tstops)
+            integrator.tstops = copy(integrator.tstops)
         end
 
-        Base.insert!(tstops, insert_index, tstop)
+        Base.insert!(integrator.tstops, insert_index, tstop)
     end
     nothing
 end

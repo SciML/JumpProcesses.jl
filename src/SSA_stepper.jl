@@ -243,10 +243,9 @@ function DiffEqBase.add_tstop!(integrator::SSAIntegrator, tstop)
     if tstop > integrator.t
         future_tstops = @view integrator.tstops[(integrator.tstops_idx):end]
         insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
-        @show insert_index
         Base.insert!(integrator.tstops, insert_index, tstop)
     end
-    @show integrator.t,tstop,integrator.tstops
+    nothing
 end
 
 # The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator

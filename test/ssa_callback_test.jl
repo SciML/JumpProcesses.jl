@@ -133,3 +133,27 @@ affectpresets!(integrator) = integrator.u[1] += 10
 cb = PresetTimeCallback(cbtimes, affectpresets!)
 jsol = solve(jprob, SSAStepper(), saveat = 0.1, callback = cb)
 @test (jsol(20.00000000001) - jsol(19.9999999999))[1] == 10
+
+# tests for periodic callbacks working, i.e. #417
+let
+    rate(u,p,t) = 0.0
+    affect!(integ) = (nothing)
+    crj = ConstantRateJump(rate, affect!)
+    dprob = DiscreteProblem([0], (0.0, 10.0))
+    cbfun(integ) = (integ.u[1] += 1; nothing)
+    cb = PeriodicCallback(cbfun, 1.0)
+    jprob = JumpProblem(dprob, crj; rng)
+    sol = solve(jprob; callback = cb)
+    @test sol[1,end] == 9
+
+    cb = PeriodicCallback(cbfun, 1.0; initial_affect = true)
+    jprob = JumpProblem(dprob, crj; rng)
+    sol = solve(jprob; callback = cb)
+    @test sol[1,end] == 10
+
+    cb = PeriodicCallback(cbfun, 1.0; initial_affect = true, final_affect = true)
+    jprob = JumpProblem(dprob, crj; rng)
+    sol = solve(jprob; callback = cb)
+    @test sol[1,end] == 11
+
+end

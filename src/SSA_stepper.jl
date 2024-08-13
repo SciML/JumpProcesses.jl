@@ -124,6 +124,12 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     end
     integrator.t = end_time
 
+    # check callbacks one last time
+    if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
+        DiffEqBase.apply_discrete_callback!(integrator,
+            integrator.opts.callback.discrete_callbacks...)
+    end
+
     if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
         while integrator.cur_saveat <= length(integrator.saveat) &&
@@ -194,7 +200,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         stats = DiffEqBase.Stats(0),
         interp = DiffEqBase.ConstantInterpolation(t, u))
 
-    _saveat = (saveat isa Number) ? prob.tspan[1]:saveat:prob.tspan[2] : saveat
+    _saveat = (saveat isa Number) ? (prob.tspan[1]:saveat:prob.tspan[2]) : saveat
     if _saveat !== nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
         cur_saveat = 2
     else

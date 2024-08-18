@@ -261,10 +261,8 @@ function DiffEqBase.add_tstop!(integrator::SSAIntegrator, tstop)
         future_tstops = @view integrator.tstops[(integrator.tstops_idx):end]
         insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
 
-        # if aliasing or have already copied the user tstops array
-        if integrator.alias_tstops || integrator.copied_tstops
-            tstops = integrator.tstops
-        else
+        # if not aliasing and have not already copied the user tstops array
+        if !integrator.alias_tstops && !integrator.copied_tstops
             integrator.copied_tstops = true
             integrator.tstops = copy(integrator.tstops)
         end

@@ -161,8 +161,11 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         saveat = nothing,
         callback = nothing,
         tstops = nothing,
-        alias_tstops = false,
         numsteps_hint = 100)
+
+    # hack until alias system is in place
+    alias_tstops = false
+
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end

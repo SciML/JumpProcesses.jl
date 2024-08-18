@@ -28,7 +28,7 @@ FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 [compat]
 ArrayInterface = "7.9"
 DataStructures = "0.18"
-DiffEqBase = "6.148"
+DiffEqBase = "6.154"
 DocStringExtensions = "0.9"
 FastBroadcast = "0.3"
 FunctionWrappers = "1.1"

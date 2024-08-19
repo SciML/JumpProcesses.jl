@@ -183,4 +183,5 @@ let
     integ = init(jprob, SSAStepper(); callback = cb, tstops)
     solve!(integ)
     @test integ.tstops !== tstops
+    @test isempty(tstops)
 end

@@ -167,14 +167,20 @@ let
     cb = PeriodicCallback(cbfun, 1.0)
     jprob = JumpProblem(dprob, crj; rng)
     tstops = Float64[]
-    sol = solve(jprob; callback = cb, tstops, alias_tstops = true)
-    @test sol[1, end] == 9
-    @test tstops == 1.0:9.0
-    empty!(tstops)
-    sol = solve(jprob; callback = cb, tstops, alias_tstops = false)
-    @test sol[1, end] == 9
-    @test isempty(tstops)
+    # tests for when aliasing system is in place
+    #sol = solve(jprob; callback = cb, tstops, alias_tstops = true) 
+    # @test sol[1, end] == 9
+    #@test tstops == 1.0:9.0    
+    # empty!(tstops)
+    # sol = solve(jprob; callback = cb, tstops, alias_tstops = false)
+    # @test sol[1, end] == 9
+    # @test isempty(tstops)
     sol = solve(jprob; callback = cb, tstops)
     @test sol[1, end] == 9
     @test isempty(tstops)
+
+    empty!(tstops)
+    integ = init(jprob, SSAStepper(); callback = cb, tstops)
+    solve!(integ)
+    @test integ.tstops !== tstops
 end

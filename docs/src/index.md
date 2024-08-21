@@ -22,26 +22,26 @@ As jump and point processes are often considered from a variety of perspectives
 across different fields, JumpProcesses provides three tutorials on using the
 package for those with different backgrounds:
 
-- [Simulating basic Poisson processes](@ref poisson_proc_tutorial)
-- [Simulating jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial)
-- [Simulating temporal point processes (TPPs)](@ref tpp_tutorial)
+  - [Simulating basic Poisson processes](@ref poisson_proc_tutorial)
+  - [Simulating jump processes via SSAs (i.e., Gillespie methods)](@ref ssa_tutorial)
+  - [Simulating temporal point processes (TPPs)](@ref tpp_tutorial)
 
 These tutorials also explain the types of jump/point processes that can be
 mathematically modelled with JumpProcesses.jl. For more complicated models that
 couple ODEs and/or SDEs with continuous noise to jump processes, we provide a
 tutorial on
 
-- [Simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
+  - [Simulating jump-diffusion processes](@ref jump_diffusion_tutorial)
 
 For jump processes that involve spatial transport on a graph/mesh, such
 as Reaction-Diffusion Master Equation models, we provide a tutorial on
 
-- [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses.jl)
+  - [Spatial SSAs](@ref Spatial-SSAs-with-JumpProcesses.jl)
 
 Finally, we provide application tutorials which are more extensive tutorials that
 interface with other libraries going deeper into a topic.
 
-- [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses](@ref tpp_advanced)
+  - [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses](@ref tpp_advanced)
 
 We provide a mathematical overview of the library below, but note users may also
 skip to the appropriate tutorial listed above to get started with using
@@ -73,6 +73,7 @@ can then generate exact realizations of pure jump processes of the form
 ```math
 du = \sum_{i=1}^I h_i(u,p,t) \, dN_i(t),
 ```
+
 where ``h_i(u,p,t)`` represents the amount that ``u(t)`` changes when ``N_i(t)``
 jumps. JumpProcesses encodes such changes via a user-provided `affect!`
 function, which allows even more general changes to the state, ``u(t)``, when
@@ -146,7 +147,7 @@ Pkg.add("JumpProcesses")
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
   - There are a few community forums for getting help and asking questions:
-
+    
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the

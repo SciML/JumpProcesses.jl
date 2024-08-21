@@ -18,7 +18,7 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", jump::SpatialJump)
     println(io,
-            "SpatialJump with source $(jump.src), destination $(jump.dst) and index $(jump.jidx).")
+        "SpatialJump with source $(jump.src), destination $(jump.dst) and index $(jump.jidx).")
 end
 
 ######################## helper routines for all spatial SSAs ########################

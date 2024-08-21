@@ -166,7 +166,7 @@ struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 struct DirectCRRSSA <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve())
+    FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -190,7 +190,41 @@ needs_vartojumps_map(aggregator::RSSACR) = true
 supports_variablerates(aggregator::AbstractAggregatorAlgorithm) = false
 supports_variablerates(aggregator::Coevolve) = true
 
+# true if aggregator supports hops, e.g. diffusion
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
 is_spatial(aggregator::DirectCRRSSA) = true
+
+# return the fastest aggregator out of the available ones
+function select_aggregator(jumps::JumpSet; vartojumps_map = nothing,
+        jumptovars_map = nothing, dep_graph = nothing, spatial_system = nothing,
+        hopping_constants = nothing)
+
+    # detect if a spatial SSA should be used
+    !isnothing(spatial_system) && !isnothing(hopping_constants) && return DirectCRDirect
+
+    # if variable rate jumps are present, return one of the two SSAs that support them
+    if num_vrjs(jumps) > 0
+        (num_bndvrjs(jumps) > 0) && return Coevolve
+        return Direct
+    end
+
+    # if the number of jumps is small, return the Direct
+    num_jumps(jumps) < USE_DIRECT_THRESHOLD && return Direct
+
+    # if there are only massaction jumps, we can build the species-jumps dependency graphs
+    can_build_dgs = num_crjs(jumps) == 0 && num_vrjs(jumps) == 0
+    have_species_to_jumps_dgs = !isnothing(vartojumps_map) && !isnothing(jumptovars_map)
+
+    # if we have the species-jumps dgs or can build them, use a Rejection-based methods
+    if can_build_dgs || have_species_to_jumps_dgs
+        (num_jumps(jumps) < USE_RSSA_THRESHOLD) && return RSSA
+        return RSSACR
+    elseif !isnothing(dep_graph)   # if only have a normal dg
+        (num_jumps(jumps) < USE_SORTINGDIRECT_THRESHOLD) && return SortingDirect
+        return DirectCR
+    else
+        return Direct
+    end
+end

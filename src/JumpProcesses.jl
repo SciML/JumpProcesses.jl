@@ -7,7 +7,7 @@ using RandomNumbers, LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs
-using SciMLBase: SciMLBase
+using SciMLBase: SciMLBase, isdenseplot
 using Base.FastMath: add_fast
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
@@ -17,6 +17,7 @@ import Graphs: neighbors, outdegree
 
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
+import SymbolicIndexingInterface as SII
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
@@ -26,17 +27,14 @@ abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
               DiffEqBase.DEIntegrator{Alg, IIP, U, T} end
 
 import Base.Threads
-@static if VERSION < v"1.3"
-    seed_multiplier() = Threads.threadid()
-else
-    seed_multiplier() = 1
-end
 
-@static if VERSION >= v"1.7.0"
-    const DEFAULT_RNG = Random.default_rng()
-else
-    const DEFAULT_RNG = Xorshifts.Xoroshiro128Star(rand(UInt64))
-end
+const DEFAULT_RNG = Random.default_rng()
+
+# thresholds for auto-alg below which the listed alg is used
+# see select_aggregator for details
+const USE_DIRECT_THRESHOLD = 20
+const USE_RSSA_THRESHOLD = 100
+const USE_SORTINGDIRECT_THRESHOLD = 200
 
 include("jumps.jl")
 include("massaction_rates.jl")

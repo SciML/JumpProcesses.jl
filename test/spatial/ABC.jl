@@ -61,8 +61,8 @@ end
 
 # setup flattenned jump prob
 push!(jump_problems,
-      JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
-                  spatial_system = grids[1], save_positions = (false, false), rng = rng))
+    JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
+        spatial_system = grids[1], save_positions = (false, false), rng = rng))
 # test
 for spatial_jump_prob in jump_problems
     solution = solve(spatial_jump_prob, SSAStepper())

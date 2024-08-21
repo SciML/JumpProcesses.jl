@@ -25,6 +25,12 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
 @inline getΔu(bd::BracketData{T1, AbstractVector{T2}}, i) where {T1, T2} = bd.Δu[i]
 @inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.Δu
 
+@inline function delta_bracket(u::Integer, δ)
+    (trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u))
+end
+
+@inline delta_bracket(u, δ) = ((one(δ) - δ) * u), ((one(δ) + δ) * u)
+
 # Get brackets ((1-fluctrate)*u, (1+fluctrate)*u) for species i.
 @inline function get_spec_brackets(bd, i, u)
     if u == zero(u)
@@ -34,7 +40,7 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
         return max(zero(Δu), u - Δu), u + Δu
     else
         δ = getfr(bd, i)
-        return trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u)
+        return delta_bracket(u, δ)
     end
 end
 
@@ -63,7 +69,7 @@ get brackets for the rate of reaction rx by first checking if the reaction is a 
         return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
     else
         @inbounds return get_cjump_brackets(p.ulow, p.uhigh, p.rates[rx - num_majumps],
-                                            params, t)
+            params, t)
     end
 end
 

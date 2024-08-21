@@ -9,12 +9,12 @@ u0 = [0]
 prob = DiscreteProblem(u0, (0.0, 100.0))
 jump_prob = JumpProblem(prob, Direct(), j1, j2; rng = rng)
 sol = solve(EnsembleProblem(jump_prob), FunctionMap(), trajectories = 3)
-@test Array(sol[1]) !== Array(sol[2])
-@test Array(sol[1]) !== Array(sol[3])
-@test Array(sol[2]) !== Array(sol[3])
-@test eltype(sol[1].u[1]) == Int
+@test Array(sol.u[1]) !== Array(sol.u[2])
+@test Array(sol.u[1]) !== Array(sol.u[3])
+@test Array(sol.u[2]) !== Array(sol.u[3])
+@test eltype(sol.u[1].u[1]) == Int
 sol = solve(EnsembleProblem(jump_prob), SSAStepper(), trajectories = 3)
-@test Array(sol[1]) !== Array(sol[2])
-@test Array(sol[1]) !== Array(sol[3])
-@test Array(sol[2]) !== Array(sol[3])
-@test eltype(sol[1].u[1]) == Int
+@test Array(sol.u[1]) !== Array(sol.u[2])
+@test Array(sol.u[1]) !== Array(sol.u[3])
+@test Array(sol.u[2]) !== Array(sol.u[3])
+@test eltype(sol.u[1].u[1]) == Int

@@ -17,12 +17,12 @@ dg = [[1]]
 majump = MassActionJump(rates, reactstoch, netstoch)
 u0 = [100000]
 dprob = DiscreteProblem(u0, (0.0, 1e5), rates)
-algs = JumpProcesses.JUMP_AGGREGATORS
+algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 for n in 1:Nsims
     for ssa in algs
         local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
-                                  rng = rng)
+            rng = rng)
         local sol = solve(jprob, SSAStepper())
         @test sol[1, end] == 0
         @test sol.t[end] < Inf
@@ -34,7 +34,7 @@ dprob = DiscreteProblem(u0, (0.0, 100.0), rates)
 
 for ssa in algs
     local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
-                              rng = rng)
+        rng = rng)
     local sol = solve(jprob, SSAStepper(), saveat = 100.0)
     @test sol[1, end] == 0
     @test sol.t[end] < Inf
@@ -51,23 +51,23 @@ function extinction_affect!(integrator)
     nothing
 end
 cb = DiscreteCallback(extinction_condition, extinction_affect!,
-                      save_positions = (false, false))
+    save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
 @test sol.t[end] < 1000.0
 
 # test terminate
-function extinction_condition(u, t, integrator)
+function extinction_condition2(u, t, integrator)
     u[1] == 1
 end
-function extinction_affect!(integrator)
+function extinction_affect!2(integrator)
     (saved, savedexactly) = savevalues!(integrator, true)
     terminate!(integrator)
     nothing
 end
-cb = DiscreteCallback(extinction_condition, extinction_affect!,
-                      save_positions = (false, false))
+cb = DiscreteCallback(extinction_condition2, extinction_affect!2,
+    save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)

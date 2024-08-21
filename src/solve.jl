@@ -1,18 +1,29 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
-                            alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
-                            recompile::Type{Val{recompile_flag}} = Val{true};
-                            kwargs...) where {P, recompile_flag}
+        alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
+        recompile::Type{Val{recompile_flag}} = Val{true};
+        kwargs...) where {P, recompile_flag}
     integrator = init(jump_prob, alg, timeseries, ts, ks, recompile; kwargs...)
     solve!(integrator)
     integrator.sol
 end
 
+# if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
+# SSAStepper
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P};
+        kwargs...) where {P <: DiscreteProblem}
+    DiffEqBase.__solve(jump_prob, SSAStepper(); kwargs...)
+end
+
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...)
+    error("Auto-solver selection is currently only implemented for JumpProblems defined over DiscreteProblems. Please explicitly specify a solver algorithm in calling solve.")
+end
+
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-                           alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
-                           recompile::Type{Val{recompile_flag}} = Val{true};
-                           callback = nothing, seed = nothing,
-                           alias_jump = Threads.threadid() == 1,
-                           kwargs...) where {P, recompile_flag}
+        alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
+        recompile::Type{Val{recompile_flag}} = Val{true};
+        callback = nothing, seed = nothing,
+        alias_jump = Threads.threadid() == 1,
+        kwargs...) where {P, recompile_flag}
     if alias_jump
         jump_prob = _jump_prob
         reset_jump_problem!(jump_prob, seed)
@@ -24,13 +35,13 @@ function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
     if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
         # callback comes after jump consistent with SSAStepper
         integrator = init(jump_prob.prob, alg, timeseries, ts, ks;
-                          callback = CallbackSet(jump_prob.jump_callback, callback),
-                          kwargs...)
+            callback = CallbackSet(jump_prob.jump_callback, callback),
+            kwargs...)
     else
         # callback comes after jump consistent with SSAStepper
         integrator = init(jump_prob.prob, alg, timeseries, ts, ks, recompile;
-                          callback = CallbackSet(jump_prob.jump_callback, callback),
-                          kwargs...)
+            callback = CallbackSet(jump_prob.jump_callback, callback),
+            kwargs...)
     end
 end
 
@@ -39,7 +50,7 @@ function resetted_jump_problem(_jump_prob, seed)
     if !isempty(jump_prob.jump_callback.discrete_callbacks)
         if seed === nothing
             Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,
-                         seed_multiplier() * rand(UInt64))
+                rand(UInt64))
         else
             Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
         end

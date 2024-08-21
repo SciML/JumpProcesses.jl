@@ -14,7 +14,7 @@ dotestmean = true
 doprintmeans = false
 
 # SSAs to test
-SSAalgs = JumpProcesses.JUMP_AGGREGATORS
+SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 Nsims = 32000
 tf = 0.01
@@ -40,14 +40,14 @@ reactstoch = [
     [2 => 1],
     [1 => 1, 2 => 1],
     [3 => 1],
-    [3 => 3],
+    [3 => 3]
 ]
 netstoch = [
     [1 => -2, 2 => 1],
     [1 => 2, 2 => -1],
     [1 => -1, 2 => -1, 3 => 1],
     [1 => 1, 2 => 1, 3 => -1],
-    [1 => 3, 3 => -3],
+    [1 => 3, 3 => -3]
 ]
 rates = [1.0, 2.0, 0.5, 0.75, 0.25]
 spec_to_dep_jumps = [[1, 3], [2, 3], [4, 5]]
@@ -55,10 +55,10 @@ jump_to_dep_specs = [[1, 2], [1, 2], [1, 2, 3], [1, 2, 3], [1, 3]]
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
 # average number of proteins in a simulation
-function runSSAs(jump_prob)
+function runSSAs(jump_prob; use_stepper = true)
     Psamp = zeros(Int, Nsims)
     for i in 1:Nsims
-        sol = solve(jump_prob, SSAStepper())
+        sol = use_stepper ? solve(jump_prob, SSAStepper()) : solve(jump_prob)
         Psamp[i] = sol[1, end]
     end
     mean(Psamp)
@@ -71,8 +71,8 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 if doplot
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
         local sol = solve(jump_prob, SSAStepper())
         local plothand = plot(sol, seriestype = :steppost, reuse = false)
         display(plothand)
@@ -81,36 +81,22 @@ end
 
 # test the means
 if dotestmean
-    means = zeros(Float64, length(SSAalgs))
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-                                      vartojumps_map = spec_to_dep_jumps,
-                                      jumptovars_map = jump_to_dep_specs, rng = rng)
-        means[i] = runSSAs(jump_prob)
-        relerr = abs(means[i] - expected_avg) / expected_avg
-        if doprintmeans
-            println("Mean from method: ", typeof(alg), " is = ", means[i], ", rel err = ",
-                    relerr)
-        end
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
+        means = runSSAs(jump_prob)
+        relerr = abs(means - expected_avg) / expected_avg
+        doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
+            ", rel err = ", relerr)
+        @test abs(means - expected_avg) < reltol * expected_avg
 
-        # if dobenchmark
-        #      @btime (runSSAs($jump_prob);)
-        # end
-
-        @test abs(means[i] - expected_avg) < reltol * expected_avg
+        # test not specifying SSAStepper
+        means = runSSAs(jump_prob; use_stepper = false)
+        relerr = abs(means - expected_avg) / expected_avg
+        @test abs(means - expected_avg) < reltol * expected_avg
     end
 end
-
-# benchmark performance
-# if dobenchmark
-#     # exact methods
-#     for alg in SSAalgs
-#         println("Solving with method: ", typeof(alg), ", using SSAStepper")
-#         jump_prob = JumpProblem(prob, alg, majumps, vartojumps_map=spec_to_dep_jumps, jumptovars_map=jump_to_dep_specs, rng=rng)
-#         @btime solve($jump_prob, SSAStepper())
-#     end
-#     println()
-# end
 
 # add a test for passing MassActionJumps individually (tests combining)
 if dotestmean
@@ -120,13 +106,13 @@ if dotestmean
     end
     jset = JumpSet((), (), nothing, majump_vec)
     jump_prob = JumpProblem(prob, Direct(), jset, save_positions = (false, false),
-                            vartojumps_map = spec_to_dep_jumps,
-                            jumptovars_map = jump_to_dep_specs, rng = rng)
+        vartojumps_map = spec_to_dep_jumps,
+        jumptovars_map = jump_to_dep_specs, rng = rng)
     meanval = runSSAs(jump_prob)
     relerr = abs(meanval - expected_avg) / expected_avg
     if doprintmeans
         println("Using individual MassActionJumps; Mean from method: ", typeof(Direct()),
-                " is = ", meanval, ", rel err = ", relerr)
+            " is = ", meanval, ", rel err = ", relerr)
     end
     @test abs(meanval - expected_avg) < reltol * expected_avg
 end

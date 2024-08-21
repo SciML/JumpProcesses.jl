@@ -33,7 +33,7 @@ nums = Int[]
 @time for i in 1:10000
     local jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
     local sol = solve(jump_prob, FunctionMap())
-    push!(nums, sol[end])
+    push!(nums, sol.u[end])
 end
 
 @test mean(nums) - 45 < 1
@@ -47,7 +47,7 @@ nums = Int[]
 @time for i in 1:10000
     local jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
     local sol = solve(jump_prob, FunctionMap())
-    push!(nums, sol[2])
+    push!(nums, sol.u[2])
 end
 
 @test sum(nums .== 0) / 10000 - 0.33 < 0.02

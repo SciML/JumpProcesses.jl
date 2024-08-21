@@ -4,10 +4,10 @@
 [![Stable Release Docs](https://img.shields.io/badge/Stable%20Release%20Docs-SciML-blue)](https://docs.sciml.ai/JumpProcesses/stable/)
 [![Master Branch Docs](https://img.shields.io/badge/Master%20Branch%20Docs-SciML-blue)](https://docs.sciml.ai/JumpProcesses/dev/)
 
-[![Coverage Status](https://coveralls.io/repos/github/SciML/JumpProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/JumpProcesses.jl?branch=master)
-[![codecov](https://codecov.io/gh/SciML/JumpProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/JumpProcesses.jl)
-[![Build Status](https://github.com/SciML/JumpProcesses.jl/workflows/CI/badge.svg)](https://github.com/SciML/JumpProcesses.jl/actions?query=workflow%3ACI)
+<!-- [![Coverage Status](https://coveralls.io/repos/github/SciML/JumpProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/JumpProcesses.jl?branch=master)
+[![codecov](https://codecov.io/gh/SciML/JumpProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/JumpProcesses.jl) -->
 
+[![Build Status](https://github.com/SciML/JumpProcesses.jl/workflows/CI/badge.svg)](https://github.com/SciML/JumpProcesses.jl/actions?query=workflow%3ACI)
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
@@ -37,6 +37,11 @@ The documentation includes
   - [a reference on jump time stepping methods](https://docs.sciml.ai/JumpProcesses/stable/jump_solve/),
   - [a FAQ](https://docs.sciml.ai/JumpProcesses/stable/faq) with information on changing parameters between simulations and using callbacks,
   - [the JumpProcesses.jl API documentation](https://docs.sciml.ai/JumpProcesses/stable/api/).
+
+## Contributions welcomed!
+
+Contact us in sciml-bridged on Slack to discuss where to get started, the [`Help wanted`](https://github.com/SciML/JumpProcesses.jl/issues/431) issue, or just open a PR to address an open issue or add new functionality. Contributions, no matter how small, are always welcome and appreciated,
+including documentation editing/writing. See also the [contribution section](#contributing-and-getting-help).
 
 ## Installation
 
@@ -74,10 +79,10 @@ using JumpProcesses, Plots
 # here we order S = 1, I = 2, and R = 3
 # substrate stoichiometry:
 substoich = [[1 => 1, 2 => 1],    # 1*S + 1*I
-    [2 => 1]]            # 1*I
+    [2 => 1]]                     # 1*I
 # net change by each jump type
 netstoich = [[1 => -1, 2 => 1],   # S -> S-1, I -> I+1
-    [2 => -1, 3 => 1]]   # I -> I-1, R -> R+1
+    [2 => -1, 3 => 1]]            # I -> I-1, R -> R+1
 # rate constants for each jump
 p = (0.1 / 1000, 0.01)
 
@@ -91,10 +96,10 @@ tspan = (0.0, 250.0)
 dprob = DiscreteProblem(u₀, tspan, p)
 
 # use the Direct method to simulate
-jprob = JumpProblem(dprob, Direct(), maj)
+jprob = JumpProblem(dprob, maj)
 
 # solve as a pure jump process, i.e. using SSAStepper
-sol = solve(jprob, SSAStepper())
+sol = solve(jprob)
 plot(sol)
 ```
 
@@ -117,8 +122,8 @@ function affect2!(integrator)
     integrator.u[3] += 1        # R -> R + 1
 end
 jump2 = ConstantRateJump(rate2, affect2!)
-jprob = JumpProblem(dprob, Direct(), jump, jump2)
-sol = solve(jprob, SSAStepper())
+jprob = JumpProblem(dprob, jump, jump2)
+sol = solve(jprob)
 ```
 
 ### Jump-ODE Example

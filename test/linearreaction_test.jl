@@ -16,11 +16,12 @@ tf = 0.1
 baserate = 0.1
 A0 = 100
 exactmean = (t, ratevec) -> A0 * exp(-sum(ratevec) * t)
-SSAalgs = [RSSACR(), Direct(), RSSA()]
+SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
+SSAs_to_exclude = (DirectFW(), FRM(), FRMFW())
 
-spec_to_dep_jumps = [collect(1:Nrxs), []]
-jump_to_dep_specs = [[1, 2] for i in 1:Nrxs]
-namedpars = (vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs)
+vartojumps_map = [collect(1:Nrxs), []]
+jumptovars_map = [[1, 2] for i in 1:Nrxs]
+namedpars = (; vartojumps_map, jumptovars_map)
 rates = ones(Float64, Nrxs) * baserate;
 cumsum!(rates, rates)
 exactmeanval = exactmean(tf, rates)
@@ -51,8 +52,8 @@ function A_to_B_tuple(N, method)
     jumps = ((jump for jump in jumpvec)...,)
     jset = JumpSet((), jumps, nothing, nothing)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -73,8 +74,8 @@ function A_to_B_vec(N, method)
     # convert jumpvec to tuple to send to JumpProblem...
     jset = JumpSet((), jumps, nothing, nothing)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -91,8 +92,8 @@ function A_to_B_ma(N, method)
     majumps = MassActionJump(rates, reactstoch, netstoch)
     jset = JumpSet((), (), nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -125,8 +126,8 @@ function A_to_B_hybrid(N, method)
     majumps = MassActionJump(rates[1:switchidx], reactstoch, netstoch)
     jset = JumpSet((), jumps, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -160,7 +161,7 @@ function A_to_B_hybrid_nojset(N, method)
     jumps = (constjumps..., majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions = (false, false),
-                            rng = rng, namedpars...)
+        rng, namedpars...)
 
     jump_prob
 end
@@ -189,8 +190,8 @@ function A_to_B_hybrid_vecs(N, method)
     end
     jset = JumpSet((), jumpvec, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -219,8 +220,8 @@ function A_to_B_hybrid_vecs_scalars(N, method)
     end
     jset = JumpSet((), jumpvec, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -251,7 +252,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
     jumps = ((maj for maj in majumpsv)..., (jump for jump in jumpvec)...)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions = (false, false),
-                            rng = rng, namedpars...)
+        rng, namedpars...)
 
     jump_prob
 end
@@ -281,8 +282,8 @@ function A_to_B_hybrid_tups(N, method)
     jumps = ((jump for jump in jumpvec)...,)
     jset = JumpSet((), jumps, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
-    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng = rng,
-                            namedpars...)
+    jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
+        namedpars...)
 
     jump_prob
 end
@@ -293,36 +294,34 @@ jump_prob_gens = [A_to_B_tuple, A_to_B_vec, A_to_B_ma, A_to_B_hybrid, A_to_B_hyb
 #jump_prob_gens = [A_to_B_tuple, A_to_B_ma, A_to_B_hybrid, A_to_B_hybrid_vecs, A_to_B_hybrid_vecs_scalars,A_to_B_hybrid_tups_scalars]
 
 for method in SSAalgs
+
+    # skip methods that use regular dep graphs
+    (needs_depgraph(method) || (method in SSAs_to_exclude)) && continue
+
     for jump_prob_gen in jump_prob_gens
         local jump_prob = jump_prob_gen(Nrxs, method)
         meanval = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
-                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+                ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.0
-
-        # if dobenchmark
-        #     @btime (runSSAs($jump_prob);)
-        # end
     end
 end
 
 # for dependency graph methods just test with mass action jumps
-SSAalgs = [RDirect(), NRM(), SortingDirect(), DirectCR(), Coevolve()]
 jump_prob_gens = [A_to_B_ma]
 for method in SSAalgs
+    # skip methods that don't use a normal dep graph
+    (!needs_depgraph(method) || method in SSAs_to_exclude) && continue
+
     for jump_prob_gen in jump_prob_gens
         local jump_prob = jump_prob_gen(Nrxs, method)
         meanval = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
-                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+                ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.0
-
-        # if dobenchmark
-        #     @btime (runSSAs($jump_prob);)
-        # end
     end
 end

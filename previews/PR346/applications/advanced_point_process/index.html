@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Temporal Point Processes (TPP) with JumpProcesses and PointProcesses · JumpProcesses.jl</title><meta name="title" content="Temporal Point Processes (TPP) with JumpProcesses and PointProcesses · JumpProcesses.jl"/><meta property="og:title" content="Temporal Point Processes (TPP) with JumpProcesses and PointProcesses · JumpProcesses.jl"/><meta property="twitter:title" content="Temporal Point Processes (TPP) with JumpProcesses and PointProcesses · JumpProcesses.jl"/><meta name="description" content="Documentation for JumpProcesses.jl."/><meta property="og:description" content="Documentation for JumpProcesses.jl."/><meta property="twitter:description" content="Documentation for JumpProcesses.jl."/><meta property="og:url" content="https://docs.sciml.ai/JumpProcesses/applications/advanced_point_process/"/><meta property="twitter:url" content="https://docs.sciml.ai/JumpProcesses/applications/advanced_point_process/"/><link rel="canonical" href="https://docs.sciml.ai/JumpProcesses/applications/advanced_point_process/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="JumpProcesses.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">JumpProcesses.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../../tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses</a></li><li><a class="tocitem" href="../../tutorials/discrete_stochastic_example/">Continuous-Time Jump Processes and Gillespie Methods</a></li><li><a class="tocitem" href="../../tutorials/point_process_simulation/">Temporal Point Process (TPP) Simulation</a></li><li><a class="tocitem" href="../../tutorials/jump_diffusion/">Piecewise Deterministic Markov Processes and Jump Diffusion Equations</a></li><li><a class="tocitem" href="../../tutorials/spatial/">Spatial SSAs with JumpProcesses.jl</a></li></ul></li><li><span class="tocitem">Applications</span><ul><li class="is-active"><a class="tocitem" href>Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a><ul class="internal"><li><a class="tocitem" href="#tpp_theory"><span>TPP Theory</span></a></li><li><a class="tocitem" href="#marked_hawkes"><span>Marked Hawkes Process</span></a></li><li><a class="tocitem" href="#tpp_sampling"><span>Sampling</span></a></li><li><a class="tocitem" href="#tpp_conditional_intensity"><span>The Conditional Intensity</span></a></li><li><a class="tocitem" href="#tpp_compensator"><span>The Compensator</span></a></li><li><a class="tocitem" href="#tpp_loglikelihood"><span>The Log-Likelihood</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li></ul></li><li><span class="tocitem">Type Documentation</span><ul><li><a class="tocitem" href="../../jump_types/">Jumps, JumpProblem, and Aggregators</a></li><li><a class="tocitem" href="../../jump_solve/">Jump solvers</a></li></ul></li><li><a class="tocitem" href="../../faq/">FAQ</a></li><li><a class="tocitem" href="../../api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Applications</a></li><li class="is-active"><a href>Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/JumpProcesses.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/JumpProcesses.jl/blob/master/docs/src/applications/advanced_point_process.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="tpp_advanced"><a class="docs-heading-anchor" href="#tpp_advanced">Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a><a id="tpp_advanced-1"></a><a class="docs-heading-anchor-permalink" href="#tpp_advanced" title="Permalink"></a></h1><p>JumpProcesses was initially developed to simulate the trajectory of jump processes. Therefore, those with a background in point process might find the nomenclature in the library documentation confusing. In reality, jump and point processes share many things in common, but diverge in scope. This tutorial will cover JumpProcesses from the perspective of point process theory.</p><p>In this application tutorial, we show how to interface JumpProcesses and the <a href="https://github.com/gdalle/PointProcesses.jl">PointProcesses.jl</a> library, and leverage this interface to then illustrate many different aspects usually discussed in point process theory. PointProcesses.jl offers an interface for defining marked temporal point processes (TPPs). We will show how to link JumpProcesses into this interface by implementing <code>SciMLPointProcess</code>, which is a concrete implementation of PointProcesses&#39; <code>AbstractPointProcess</code> that uses solvers from JumpProcesses and SciML.</p><h2 id="tpp_theory"><a class="docs-heading-anchor" href="#tpp_theory">TPP Theory</a><a id="tpp_theory-1"></a><a class="docs-heading-anchor-permalink" href="#tpp_theory" title="Permalink"></a></h2><p>TPPs describe a set of discrete points over continuous time. Conventionally, we assume that time starts at <span>$0$</span>. We can represent a TPP as a random integer measure <span>$N( \cdot )$</span>, this random function counts the number of points in a set of intervals over the real line. For instance, <span>$N([5, 10])$</span> denotes the number of points (or events) in between time <span>$5$</span> and <span>$10$</span> inclusive. The number of points in this interval is a random variable. If <span>$N$</span> is a Poisson process with conditional intensity (or rate) equal to <span>$1$</span>, then <span>$N[5, 10]$</span> is distributed according to a Poisson distribution with parameter <span>$\lambda = 5$</span>.</p><p>For convenience, we denote <span>$N(t) \equiv N[0, t)$</span> as the number of points since the start of time until <span>$t$</span>, exclusive of <span>$t$</span>. A TPP is <em>simple</em>, if only a single event can occur in any unit of time <span>$t$</span>, that is, <span>$\Pr(N[t, t + \epsilon) &gt; 2) = 0$</span>. We can then define a differential of <span>$N$</span>, <span>$dN$</span>, which describes the change in <span>$N(t)$</span> over an infinitesimal amount of time.</p><p class="math-container">\[dN(t) = \begin{cases}
+  1 \text{ , if } N[t, t + \epsilon] = 1 \\
+  0 \text{ , if } N[t, t + \epsilon] = 0.
+\end{cases}\]</p><p>Therefore, we can use any TPP to define a stochastic differential equation (SDE) with discontinuous jumps.</p><p class="math-container">\[du = f(u,p,t)dt + g(u,p,t) dW(t) + h(u,p,t) dN(t)\]</p><p>In the jump literature, <span>$N$</span> is usually a Poisson process which allows for a number of convenient properties for jump modelling. See Björk <sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup> and Hanson <sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup> for more theoretical discussions of SDE with discontinuous jumps.</p><p>We can start implementing our TPP interface in Julia by working with the following SDE with discontinuous jumps.</p><p class="math-container">\[du = dN(t)\]</p><p>In this case, <span>$u(t)$</span> is a monotonic function which counts the total number of points since the start of time. Therefore, there is a one-to-one map between <span>$N$</span> and <span>$u$</span>.</p><p>A TPP is marked if, in addition to the temporal support <span>$\mathbb{R}$</span>, there is a mark space <span>$\mathcal{K}$</span> such that <span>$N$</span> is a random integer measure over <span>$\mathbb{R} \times \mathcal{K}$</span>. Intuitively, for every point in the process there is a mark associated with it. If the mark space is discrete, we have a multivariate TPP. There are different ways to interpret TPPs, and we will move between these interpretations throughout the tutorial.</p><p>Since TPP sampling is more efficient if we split any marked TPP into a sparsely connected multivariate TPP, we define <code>SciMLPointProcess</code> as a multivariate TPP such that each subcomponent is itself a marked TPP on a continuous space. Therefore, we have that our structure includes a vector of sub-TPP <code>jumps</code>, a vector of mark distributions <code>mark_dist</code> and the sparsely connected graph <code>g</code>.</p><pre><code class="language-julia hljs">using JumpProcesses
+using PointProcesses
+
+struct SciMLPointProcess{M, J &lt;: JumpProcesses.AbstractJump, G, D, T &lt;: Real} &lt;:
+       AbstractPointProcess{M}
+    jumps::Vector{J}
+    mark_dist::Vector{D}
+    g::G
+    p::Any
+    tmin::T
+    tmax::T
+end
+
+function Base.show(io::IO, pp::SciMLPointProcess)
+    println(io,
+        &quot;SciMLPointProcess with $(length(pp.jumps)) processes on the interval [$(pp.tmin), $(pp.tmax)).&quot;)
+end</code></pre><p>In alignment with <code>PointProcesses</code> API we define methods for extracting the boundaries of the time interval we will be working with.</p><pre><code class="language-julia hljs">PointProcesses.min_time(pp::SciMLPointProcess) = pp.tmin
+PointProcesses.max_time(pp::SciMLPointProcess) = pp.tmax</code></pre><p>As we want to keep <code>SciMLPointProcess</code> as general as possible we define two methods for initializing and resetting the parameters of the TPP. The usefulness of these methods will become apparent further below.</p><pre><code class="language-julia hljs">params(pp::SciMLPointProcess) = pp.p(pp)
+params!(pp::SciMLPointProcess, p) = pp.p(pp, p)</code></pre><p>The likelihood of any <em>simple</em> TPP is fully characterized by its conditional intensity <span>$\lambda^\ast (t, k) \equiv \lambda^\ast(t) \times f^\ast (k \mid t)$</span>, where <span>$f^\ast(k \mid t)$</span> is the mark distribution and <span>$\lambda^\ast(t)$</span> is the conditional intensity of the ground process which can be further factorized as:</p><p class="math-container">\[\lambda^\ast (t) \equiv \lambda(t \mid H_{t^-} ) =
+  \frac{p^\ast(t)}{1 - \int_{t^-}^{t_n} p^\ast(u) \, du},\]</p><p>The internal history of the process up to but not including <span>$t$</span> is <span>$H_{t^-} \equiv \{ (t_n, k_n) \mid 0 \leq t_n \leq t \}$</span>. Following the convention in the TPP literature, the superscript <span>$\ast$</span> denotes the conditioning of any function on <span>$H_{t^-}$</span>. So, <span>$p^\ast(t) \equiv p(t \mid H_{t^-})$</span> is the density function corresponding to the probability of an event taking place at time <span>$t$</span> given <span>$H_{t^-}$</span>. The mark distribution denotes the density function corresponding to the probability of observing mark <span>$k$</span> given the occurrence of an event at time <span>$t$</span> and internal history <span>$H_{t^-}$</span>. In summary, the conditional intensity is the likelihood of observing a point in the next infinitesimal unit of time, given that no point has occurred since the last observed point in <span>$H_{t^-}$</span>. Alternatively, we can interpret it as the number of points that we expect to see in the next marginal interval <span>$E[dNt(dt \times d\mu(k))] = \lambda^\ast (t, k) dt d\mu(k)$</span>. For more details, see Chapter 7, Daley and Vere-Jones<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>.</p><p>PointProcesses provides a convenient interface for keeping track of the history of a marked TPP called <code>History</code>.</p><pre><code class="language-julia hljs">mutable struct History{M, T &lt;: Real}
+    times::Vector{T}
+    marks::Vector{M}
+    tmin::T
+    tmax::T
+end</code></pre><p>We define a method for resetting the history, which can be useful during simulation.</p><pre><code class="language-julia hljs">function reset!(h::History)
+    empty!(event_times(h))
+    empty!(event_marks(h))
+end</code></pre><h2 id="marked_hawkes"><a class="docs-heading-anchor" href="#marked_hawkes">Marked Hawkes Process</a><a id="marked_hawkes-1"></a><a class="docs-heading-anchor-permalink" href="#marked_hawkes" title="Permalink"></a></h2><p>Until now, everything has been fairly theoretical. But we have enough to start walking through a concrete example. Throughout this tutorial we will implement a case of the Hawkes process. Hawkes processes are classic TPP models that show self-exciting behavior whereby the occurrence of an event increases the likelihood of other events nearby. They are useful models to describe earthquakes, gang violence, bank defaults, etc. For a complete treatment of Hawkes processes see Laub, Lee and Taimre <sup class="footnote-reference"><a id="citeref-4" href="#footnote-4">[4]</a></sup>.</p><p>In this tutorial we propose a spatial Hawkes process as a simple model for call detail records (CDRs). CDR records the time and location when a user starts a mobile data session. Behind the scenes, anytime a user sees a message from someone in their network, they are more likely to use their phone. In addition to that, users tend to gravitate around their home, so the locations they visit are spread around their home according to a Gaussian distribution.</p><p>Formally, consider a graph <span>$G$</span> with <span>$V$</span> nodes. Our Hawkes process is characterized by <span>$V$</span> TPPs such that the conditional intensity rate of node <span>$i$</span> connected to a set of nodes <span>$E_i$</span> in the graph <span>$G$</span> is given by:</p><p class="math-container">\[\lambda_i^\ast (t) = \lambda
+  + \sum_{j \in E_i} \sum_{t_{n_j} &lt; t} \alpha \exp \left[ -\beta (t - t_{n_j}) \right]\]</p><p>This conditional intensity is known as a self-exciting, because the occurrence of an event <span>$j$</span> at <span>$t_{n_j}$</span> will increase the conditional intensity of all processes connected to it by <span>$alpha$</span>. This influence will then decrease at rate <span>$\beta$</span>.</p><p>The conditional intensity of this process has a recursive formulation which we can use to our advantage to significantly speed simulation. Let <span>$t_{N_i} = \max \{t_{n_j} &lt; t \mid j \in E_i\}$</span> and <span>$\phi_i^\ast(t)$</span> below.</p><p class="math-container">\[\begin{split}
+  \phi_i^\ast (t)
+    &amp;= \sum_{j \in E_i} \sum_{t_{n_j} &lt; t} \alpha \exp \left[-\beta (t - t_{N_i} + t_{N_i} - t_{n_j}) \right] \\
+    &amp;= \exp \left[ -\beta (t - t_{N_i}) \right]
+      \sum_{j \in E_i} \sum_{t_{n_j} \leq t_{N_i}} \alpha \exp \left[-\beta (t_{N_i} - t_{n_j}) \right] \\
+    &amp;= \exp \left[ -\beta (t - t_{N_i}) \right] \left( \alpha + \phi_i^\ast (t_{N_i}) \right)
+\end{split}\]</p><p>Then the conditional intensity can be re-written in terms of <span>$\phi_i^\ast (t_{N_i})$</span>.</p><p class="math-container">\[\lambda_i^\ast (t) = \lambda + \phi_i^\ast (t) =
+    \lambda + \exp \left[ -\beta (t - t_{N_i}) \right] \left( \alpha + \phi_i^\ast (t_{N_i}) \right)\]</p><p>We translate these expressions to Julia by employing a closure which will allow us to obtain the rate for each node <span>$i$</span> in <span>$G$</span>.</p><pre><code class="language-julia hljs">function hawkes_rate(i::Int, g)
+    function rate(u, p, t)
+        (; λ, α, β, ϕ, T) = p
+        return λ + exp(-β * (t - T[i])) * ϕ[i]
+    end
+    return rate
+end</code></pre><p>We assume that each sup-process <code>i</code> is a marked TPP. With probability <span>$(1 - \omega^\ast(t))$</span>, we draw a mark from a 2-dimensional Gaussian distribution centered in <span>$\mu_i$</span> with <span>$\sigma_1$</span> standard deviation; and with probability <span>$\omega^\ast(t)$</span> we draw from a 2-dimensional Gaussian distribution centered on the last location visited by <span>$i$</span> with <span>$\sigma_2$</span> standard deviation. Like the conditional intensity, <span>$\omega^\ast(t)$</span> decays exponentially with rate <span>$-\beta$</span>.</p><p class="math-container">\[\omega^\ast(t) = \exp [ -\beta (t - t_{n_i}) ]\]</p><p>In other words, node <span>$i$</span> tends to gravitate around its home location, but given some recent activity the node will be more likely to be close to its most recent location. Let <span>$k \equiv (i, m)$</span>, then the mark distribution can be represented as a mixture distribution.</p><p class="math-container">\[\begin{split}
+f^\ast(k \mid t) =
+  &amp;\frac{\lambda_i^\ast (t)}{\sum_i \lambda_i^\ast (t)} \times \\
+  &amp;\left[ (1 - \omega(t)) \frac{1}{\sigma_1 \sqrt{2\pi}} \exp \left( -\frac{(m - \mu_i)^\top(m - \mu_i)}{2 \sigma_1^2} \right) +  \right. \\
+  &amp;\left. \omega(t) \frac{1}{\sigma_2 \sqrt{2\pi}} \exp \left( -\frac{(m_{n_i} - \mu_i)^\top(m_{n_i} - \mu_i)}{2 \sigma_2^2} \right) \right]
+\end{split}\]</p><p>In Julia, we define a method for constructing Hawkes jumps. JumpProcesses define different types of jumps that vary according to the behavior of the conditional intensity and the intended simulation algorithm. Since the conditional intensity of our Hawkes process is not fixed, we will use <code>VariableRateJump</code> to construct the Hawkes jumps. The structure requires a <code>rate</code> which we defined above and an <code>affect!</code> which tells the program what happens when a jump occurs and is when we draw the marks from our distribution. In addition to that, since we intend to use the <code>Coevolve</code> algorithm for simulation — see below —, we need to define the rate upper-bound, the interval for which the upper-bound is valid, and, optionally, a lower-bound for improved simulation efficiency.</p><pre><code class="language-julia hljs">function hawkes_jump(i::Int, g, mark_dist)
+    rate = hawkes_rate(i, g)
+    urate = rate
+    lrate(u, p, t) = p.λ
+    rateinterval = (u, p, t) -&gt; begin
+        _lrate = lrate(u, p, t)
+        _urate = urate(u, p, t)
+        return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)
+    end
+    function affect!(integrator)
+        (; λ, α, β, ϕ, M, T, h) = integrator.p
+        ω = exp(-β * (integrator.t - T[i]))
+        for j in g[i]
+            ϕ[j] = α + exp(-β * (integrator.t - T[j])) * ϕ[j]
+            T[j] = integrator.t
+        end
+        m = rand() &gt; ω ? rand(mark_dist[i]) : rand(MvNormal(collect(M[i]), [0.01, 0.01]))
+        push!(h, integrator.t, (i, m); check = false)
+    end
+    return VariableRateJump(rate, affect!; lrate, urate, rateinterval)
+end</code></pre><p>To initialize <code>SciMLPointProcess</code> we also need to define a function for returning and resetting the parameters of our model.</p><pre><code class="language-julia hljs">function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}) where {M, J, G, D, T}
+    g = pp.g
+    tmin = pp.tmin
+    tmax = pp.tmax
+    h = History(; times = T[], marks = Tuple{Int, M}[], tmin = tmin, tmax = tmax)
+    return (λ = 0.5,
+        α = 0.1,
+        β = 2.0,
+        ϕ = zeros(T, length(g)),
+        M = map(d -&gt; tuple(mean(d)...), pp.mark_dist),
+        T = zeros(T, length(g)),
+        h = h)
+end
+
+function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}, p) where {M, J, G, D, T}
+    reset!(p.h)
+    p.ϕ .= zero(p.ϕ)
+    p.M .= map(d -&gt; tuple(mean(d)...), pp.mark_dist)
+    p.T .= zero(p.T)
+end</code></pre><p>Now, we are ready to initialize our <code>SciMLPointProcess</code> as a Hawkes process.</p><pre><code class="language-julia hljs">using Graphs
+using Distributions
+V = 10
+G = erdos_renyi(V, 0.2)
+g = [[[i]; neighbors(G, i)] for i in 1:nv(G)]
+mark_dist = [MvNormal(rand(2), [0.2, 0.2]) for i in 1:nv(G)]
+jumps = [hawkes_jump(i, g, mark_dist) for i in 1:nv(G)]
+tspan = (0.0, 50.0)
+hawkes = SciMLPointProcess{
+    Vector{Real},
+    eltype(jumps),
+    typeof(g),
+    eltype(mark_dist),
+    eltype(tspan)
+}(jumps,
+    mark_dist,
+    g,
+    hawkes_p,
+    tspan[1],
+    tspan[2])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">SciMLPointProcess with 10 processes on the interval [0.0, 50.0).
+</code></pre><h2 id="tpp_sampling"><a class="docs-heading-anchor" href="#tpp_sampling">Sampling</a><a id="tpp_sampling-1"></a><a class="docs-heading-anchor-permalink" href="#tpp_sampling" title="Permalink"></a></h2><p>JumpProcesses shines in the simulation of SDEs with discontinuous jumps. The mapping we introduced in the <a href="#tpp_theory">previous Section</a> whereby <span>$du = dN(t)$</span> implies that JumpProcesses also excels in simulating TPPs.</p><p>JumpProcesses offers a plethora of simulation algorithms for TPPs. The library call them <em>aggregators</em> because these algorithms are methods for aggregating a set of jumps to determine the next jump time. In <a href="../../jump_types/#Jump-Aggregators-for-Exact-Simulation">Jump Aggregators for Exact Simulation</a>, we discuss the trade-off between different simulation algorithms.</p><p>To simulate a <code>SciMLPointProcess</code>, we start by overloading <code>Base.rand</code>. In our implementation, we initialize a <code>JumpProblem</code> with the jumps and parameters passed to the <code>SciMLPointProcess</code> as well as with the desired simulation algorithm. In this tutorial we use the <code>Coevolve</code> <em>aggregator</em> which is an algorithm inspired by Ogata&#39;s algorithm for bounded TPPs with modifications to improve efficiency and to allow for the concurrent evolution of the TPP and simulation time.</p><p>Finally, we sample a path from our <code>JumpProblem</code> using the <code>SSAStepper</code>. A stepper tells the solver how to step through time. When simulating TPPs, we do not need to evolve time incrementally by small deltas. The <code>SSAStepper</code> allow us to step through time one candidate at a time.</p><pre><code class="language-julia hljs">using OrdinaryDiffEq
+using Random
+
+function Base.rand(rng::AbstractRNG, pp::SciMLPointProcess)
+    return rand(rng, pp, min_time(pp), max_time(pp), 1)[1]
+end
+
+function Base.rand(rng::AbstractRNG, pp::SciMLPointProcess, n::Int)
+    return rand(rng, pp, min_time(pp), max_time(pp), n)
+end
+
+function Base.rand(pp::SciMLPointProcess, n::Int)
+    return rand(Random.default_rng(), pp, min_time(pp), max_time(pp), n)
+end
+
+function Base.rand(rng::AbstractRNG,
+        pp::SciMLPointProcess{M, J, G, D, T},
+        tmin::T,
+        tmax::T,
+        n::Int) where {M, J, G, D, T &lt;: Real}
+    tspan = (tmin, tmax)
+    save_positions = (false, false)
+    out = Array{History, 1}(undef, n)
+    p = params(pp)
+    dprob = DiscreteProblem([0], tspan, p)
+    jprob = JumpProblem(dprob, Coevolve(), jumps...; dep_graph = pp.g, save_positions, rng)
+    for i in 1:n
+        params!(pp, p)
+        solve(jprob, SSAStepper())
+        out[i] = deepcopy(p.h)
+    end
+    return out
+end</code></pre><p>We can easily sample the Hawkes process introduced in the previous section.</p><pre><code class="language-julia hljs">h = rand(hawkes)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">History{Tuple{Int64, Vector{Real}},Float64} with 294 events on interval [0.0, 50.0)</code></pre><p>It would be useful to visualize our sampled points to get a good feeling of our simulation. Since PointProcesses does not offer recipes for visualizing TPP samples, we propose a few options. First, we visualize our sample as a sequence of points though time, each line represents the realization of one of the sub-TPPs of <code>SciMLPointProcess</code>.</p><pre><code class="language-julia hljs">using Plots
+@userplot BarcodePlot
+@recipe function f(x::BarcodePlot)
+    h, ix = x.args
+    times = event_times(h)
+    marks = event_marks(h)
+    histories = [times[filter(n -&gt; marks[n][1] == i, 1:length(times))] for i in ix]
+    seriestype := :scatter
+    yticks --&gt; (1:length(ix), ix)
+    alpha --&gt; 0.5
+    markerstrokewidth --&gt; 0
+    markerstrokealpha --&gt; 0
+    markershape --&gt; :circle
+    ylims --&gt; (0.0, length(ix) + 1.0)
+    for i in 1:length(ix)
+        @series begin
+            label := ix[i]
+            histories[i], fill(i, length(histories[i]))
+        end
+    end
+end</code></pre><p>Let&#39;s visualize our data as a barcode.</p><pre><code class="language-julia hljs">barcodeplot(h, 1:10; legend = false)</code></pre><img src="632e47ac.svg" alt="Example block output"/><p>In reality, we do not observe which components generated which points. Therefore, a fairer representation of the data would be as a scatter plot. We also plot the latent home locations which show that points are indeed clustered around them.</p><pre><code class="language-julia hljs">scatter(map(m -&gt; tuple(m[2]...), event_marks(h)), label = &quot;events&quot;)
+scatter!(map(d -&gt; tuple(mean(d)...), mark_dist), label = &quot;cluster epicentre&quot;)</code></pre><img src="97dfad2f.svg" alt="Example block output"/><h2 id="tpp_conditional_intensity"><a class="docs-heading-anchor" href="#tpp_conditional_intensity">The Conditional Intensity</a><a id="tpp_conditional_intensity-1"></a><a class="docs-heading-anchor-permalink" href="#tpp_conditional_intensity" title="Permalink"></a></h2><p>The first Section of this tutorial introduced the conditional intensity. Here we will delve deeper into this concept which plays a prominent role in TPP theory due to its ability to fully characterize any TPP.</p><p>The conditional intensity is a stochastic process since it depends on the realization of <span>$N$</span>. Given a history of events <span>$H_{t^-}$</span>, we can recover the conditional intensity of any jump by evaluating its rate function. We can take advantage of OrdinaryDiffEq to build a <code>DiscreteProblem</code> which we solve with the <code>FunctionMap</code> stepper, which steps through time stopping on each event and on specific locations specified by the user. Our method computes the conditional intensity for each sub-TPP of the <code>SciMLPointProcess</code>, it returns the solution of the <code>DiscreteProblem</code> and the final parameters.</p><pre><code class="language-julia hljs">function intensity(pp::SciMLPointProcess, t, h; saveat = [], save_positions = (true, true))
+    p = params(pp)
+    times = event_times(h)
+    marks = event_marks(h)
+    tmin, tmax = min_time(pp), t
+    tstops = typeof(saveat) &lt;: Number ? collect(tmin:saveat:tmax) : copy(saveat)
+    append!(tstops, times)
+    sort!(tstops)
+    unique!(tstops)
+    rates(u, p, t) = [jump.rate(nothing, p, t) for jump in pp.jumps]
+    condition(u, t, integrator) = t ∈ times
+    function affect!(integrator)
+        n = searchsortedfirst(times, integrator.t)
+        mark = marks[n]
+        ix = mark[1]
+        pp.jumps[ix].affect!(integrator)
+        # overwrite history with true mark
+        integrator.p.h.marks[n] = mark
+        integrator.u = rates(integrator.u, integrator.p, integrator.t)
+    end
+    callback = DiscreteCallback(condition, affect!; save_positions)
+    dprob = DiscreteProblem(rates, rates(nothing, p, tmin), (tmin, tmax), p; callback,
+        tstops, saveat)
+    sol = solve(dprob, FunctionMap())
+    return sol
+end</code></pre><p>As an illustration, we plot the conditional intensity of the first sub-TPP of our sampled Hawkes process.</p><pre><code class="language-julia hljs">λ = intensity(hawkes, max_time(hawkes), h; saveat = 0.1)
+plot(λ, idxs = 1)</code></pre><img src="5e2043d3.svg" alt="Example block output"/><p>Now, we can specialize a number of functions required by the interface defined in PointProcesses.</p><pre><code class="language-julia hljs">function ground_intensity(pp::SciMLPointProcess, t, h)
+    λ = intensity(pp, t, h; saveat = [t], save_positions = (false, false))
+    ground_intensity(pp, t, λ)
+end
+
+function ground_intensity(pp::SciMLPointProcess, t, λ::ODESolution)
+    return vec(sum(λ(t), dims = 1))
+end
+
+function ground_intensity(pp::SciMLPointProcess, t::T, λ::ODESolution) where {T &lt;: Number}
+    return sum(λ(t))
+end
+
+function mark_distribution(pp::SciMLPointProcess, t, h)
+    λ = intensity(pp, t, h)
+    mark_distribution(pp, t, λ)
+end
+
+function mark_distribution(pp::SciMLPointProcess, t, λ)
+    λt = λ(t)
+    d = MixtureModel(pp.mark_dist, λt ./ sum(λt))
+    return d
+end
+
+function intensity(pp::SciMLPointProcess, m, t, h)
+    λ = intensity(pp, t, h)
+    intensity(pp, m, t, λ)
+end
+
+function intensity(pp::SciMLPointProcess, m, t, λ::ODESolution)
+    λt = λ(t)
+    return sum([densityof(pp.mark_dist[i], m) * λt[i] for i in 1:length(pp.jumps)])
+end
+
+function log_intensity(pp::SciMLPointProcess, m, t, h)
+    return log(intensity(pp, m, t, h))
+end</code></pre><p>We can then visualize the ground intensity.</p><pre><code class="language-julia hljs">plot(ground_intensity(hawkes, λ.t, λ))</code></pre><img src="c7d1041d.svg" alt="Example block output"/><h2 id="tpp_compensator"><a class="docs-heading-anchor" href="#tpp_compensator">The Compensator</a><a id="tpp_compensator-1"></a><a class="docs-heading-anchor-permalink" href="#tpp_compensator" title="Permalink"></a></h2><p>The compensator is defined as the integral of the conditional intensity.</p><p class="math-container">\[\Lambda(t, k) \equiv \int_0^t \lambda^\ast (u, k) du\]</p><p>With some abuse of notation, we obtain the compensator of the ground process by integrating over the marks.</p><p class="math-container">\[\Lambda(t) \equiv \int_0^t \sum_{k \in \mathcal{K}} \lambda^\ast (u, k) du\]</p><p>In Julia, we can derive the compensator by simply integrating over the conditional intensity using an ODEProblem.</p><pre><code class="language-julia hljs">function integrated_intensity(pp::SciMLPointProcess,
+        t,
+        h;
+        alg = nothing,
+        saveat = [],
+        save_positions = (true, true))
+    p = params(pp)
+    times = event_times(h)
+    marks = event_marks(h)
+    tspan = (min_time(pp), t)
+    rates(u, p, t) = [jump.rate(nothing, p, t) for jump in pp.jumps]
+    condition(u, t, integrator) = t ∈ times
+    function affect!(integrator)
+        n = searchsortedfirst(times, integrator.t)
+        mark = marks[n]
+        ix = mark[1]
+        pp.jumps[ix].affect!(integrator)
+        integrator.p.h.marks[n] = mark
+    end
+    callback = DiscreteCallback(condition, affect!; save_positions)
+    prob = ODEProblem(rates,
+        zeros(eltype(times), length(pp.jumps)),
+        tspan,
+        p;
+        tstops = times,
+        callback,
+        saveat)
+    sol = solve(prob, alg)
+    return sol
+end</code></pre><p>The PointProcess interface expects that we define a method for computing the compensator of the ground process for a given interval. This will be useful in the next section when we compute the log-likelihood.</p><pre><code class="language-julia hljs">function integrated_ground_intensity(pp::SciMLPointProcess, h, a, b)
+    Λ = integrated_intensity(pp,
+        b,
+        h;
+        alg = Rodas4P(),
+        saveat = [a, b],
+        save_positions = (false, false))
+    return sum(Λ(b)) - sum(Λ(a))
+end</code></pre><p>In practice, we must pay close attention to the shape of the conditional intensity. In the Hawkes case, the conditional intensity is highly stiff as events will cause the intensity to spike. Therefore, we must select an ODE solver that can deal with stiff problems like <code>Rodas4P()</code>.</p><pre><code class="language-julia hljs">Λ = integrated_intensity(hawkes,
+    max_time(hawkes),
+    h;
+    saveat = event_times(h),
+    alg = Rodas4P())
+plot(Λ)</code></pre><img src="c7c9bcb3.svg" alt="Example block output"/><p>The compensator of the Hawkes process lends itself to an analytical solution which can be implemented in Julia as a <code>DiscreteProblem</code> much like the conditional intensity above.</p><pre><code class="language-julia hljs">function hawkes_integrated_intensity(pp::SciMLPointProcess, t, h; saveat = [])
+    (; λ, α, β) = params(pp)
+    p = (λ = λ, α = α, β = β, h = h)
+    saveat = typeof(saveat) &lt;: Number ? collect(min_time(h):saveat:t) : copy(saveat)
+    tstops = copy(event_times(h))
+    function compensator(u, p, t)
+        (; λ, α, β, h) = p
+        u = zeros(typeof(t), length(pp.jumps))
+        for (i, Ei) in enumerate(pp.g)
+            u[i] += λ * t
+            for (_t, (_j, _)) in zip(event_times(h), event_marks(h))
+                _t &gt;= t &amp;&amp; break
+                _j ∉ Ei &amp;&amp; continue
+                u[i] += (α / β) * (1 - exp(-β * (t - _t)))
+            end
+        end
+        return u
+    end
+    dprob = DiscreteProblem(compensator, zeros(eltype(event_times(h)), length(pp.jumps)),
+        (min_time(h), t), p; tstops, saveat)
+    sol = solve(dprob, FunctionMap())
+    return sol
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">hawkes_integrated_intensity (generic function with 1 method)</code></pre><pre><code class="language-julia hljs">Λ_exact = hawkes_integrated_intensity(hawkes, max_time(hawkes), h)
+plot!(Λ_exact)</code></pre><img src="f3335146.svg" alt="Example block output"/><p>Time-change theorems for TPPs show that the compensator transforms a complex TPP into a Poisson process with unit rate. We can interpret the compensator as making the TPP as random as possible. We can check that this is indeed the case for our model and simulation algorithm.</p><p>First, we define a method for filtering the history.</p><pre><code class="language-julia hljs">function Base.filter(f, h::History)
+    times = event_times(h)
+    marks = event_marks(h)
+    filtered_times = eltype(times)[]
+    filtered_marks = eltype(marks)[]
+    for (t, mark) in zip(times, marks)
+        if f(t, mark)
+            push!(filtered_times, t)
+            push!(filtered_marks, mark)
+        end
+    end
+    return History(;
+        times = filtered_times,
+        marks = filtered_marks,
+        tmin = min_time(h),
+        tmax = max_time(h))
+end</code></pre><p>And a recipe for QQ-plots.</p><pre><code class="language-julia hljs">@userplot QQPlot
+@recipe function f(x::QQPlot)
+    empirical_quant, expected_quant = x.args
+    max_empirical_quant = maximum(maximum, empirical_quant)
+    max_expected_quant = maximum(expected_quant)
+    upperlim = ceil(maximum([max_empirical_quant, max_expected_quant]))
+    @series begin
+        seriestype := :line
+        linecolor := :lightgray
+        label --&gt; &quot;&quot;
+        (x) -&gt; x
+    end
+    @series begin
+        seriestype := :scatter
+        aspect_ratio := :equal
+        xlims := (0.0, upperlim)
+        ylims := (0.0, upperlim)
+        xaxis --&gt; &quot;Expected quantile&quot;
+        yaxis --&gt; &quot;Empirical quantile&quot;
+        markerstrokewidth --&gt; 0
+        markerstrokealpha --&gt; 0
+        markersize --&gt; 1.5
+        size --&gt; (400, 500)
+        label --&gt; permutedims([&quot;quantiles $i&quot; for i in 1:length(empirical_quant)])
+        expected_quant, empirical_quant
+    end
+end</code></pre><p>To produce the QQ-plots, we ran the simulation a reasonable number of times to ensure an accurate estimation of the empirical quantiles of the inter-arrival times. The <code>time_change</code> method comes from PointProcess which applies the compensator to the input history. We take advantage of the fact that the compensator is an <code>ODESolution</code> which overloads an interpolation method in itself to produce the QQ-plot for the ground process.</p><pre><code class="language-julia hljs">Δt̃ = []
+for _ in 1:250
+    _h = rand(hawkes)
+    _Λ = integrated_intensity(hawkes,
+        max_time(hawkes),
+        _h;
+        saveat = event_times(_h),
+        alg = Rodas4P())
+    _h̃ = time_change(_h, (t) -&gt; sum(_Λ(t)))
+    append!(Δt̃, diff(event_times(_h̃)))
+end
+empirical_quant = quantile(Δt̃, 0.01:0.01:0.99)
+expected_quant = quantile(Exponential(1.0), 0.01:0.01:0.99)
+qqplot(empirical_quant, expected_quant; legend = false)</code></pre><img src="b5d4d59a.svg" alt="Example block output"/><p>Likewise, we can produce the QQ-plot for each sub-TPP.</p><pre><code class="language-julia hljs">Δt̃ = [[] for _ in 1:nv(G)]
+for _ in 1:250
+    _h = rand(hawkes)
+    _Λ = integrated_intensity(hawkes,
+        max_time(hawkes),
+        _h;
+        saveat = event_times(_h),
+        alg = Rodas4P())
+    for i in 1:nv(G)
+        _h̃ = time_change(filter((t, mark) -&gt; mark[1] == i, _h), (t) -&gt; Λ(t; idxs = i))
+        append!(Δt̃[i], diff(event_times(_h̃)))
+    end
+end
+empirical_quant = map(t -&gt; quantile(t, 0.01:0.01:0.99), Δt̃)
+expected_quant = quantile(Exponential(1.0), 0.01:0.01:0.99)
+qqplot(empirical_quant, expected_quant)</code></pre><img src="7f65681b.svg" alt="Example block output"/><h2 id="tpp_loglikelihood"><a class="docs-heading-anchor" href="#tpp_loglikelihood">The Log-Likelihood</a><a id="tpp_loglikelihood-1"></a><a class="docs-heading-anchor-permalink" href="#tpp_loglikelihood" title="Permalink"></a></h2><p>Once we know how to compute the conditional intensity and the compensator, it is very easy to obtain the log-likelihood of a TPP because it is simply the sum of the log-conditional intensity at event times minus the compensator up to the end of the observed time. For a full derivation, see Chapter 7, Daley and Vere-Jones<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>.</p><p class="math-container">\[\ell (H_{T^-}) = \sum_{n=1}^N \left( \log \lambda^\ast(t_n, k_n) \right)
+  - \int_0^T \sum_{k \in \mathcal{K}} \lambda^\ast (u, k) du\]</p><p>In Julia, we follow the PointProcess API to define a method for computing the log-likelihood.</p><pre><code class="language-julia hljs">using DensityInterface
+
+function DensityInterface.logdensityof(pp::SciMLPointProcess, h)
+    T = max_time(pp)
+    times = event_times(h)
+    marks = event_marks(h)
+    Λ = integrated_ground_intensity(pp, h, min_time(h), T)
+    λ = intensity(pp, T, h; saveat = times, save_positions = (false, false))
+    logλ = 0
+    for (t, (i, m)) in zip(times, marks)
+        logλ += log_intensity(pp, m, t, λ)
+        log_intensity(pp, m, t, λ), intensity(pp, m, t, λ)
+    end
+    return logλ - Λ
+end</code></pre><p>This allows us to compute the log-likelihood of our sample.</p><pre><code class="language-julia hljs">logdensityof(hawkes, h)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">167.44026216541954</code></pre><p>This tutorial demonstrated the versatility of the SciML library to model TPPs. We made extensive use of JumpProcesses and OrdinaryDiffEq to fulfill the interface specified by the PointProcess library. However, we have left out a discussion about fitting the parameters of a TPP to the data. In many cases, we cannot derive an analytical estimator via maximum likelihood, and we must tap into machine learning tools like gradient descent and expectation-maximization algorithms to minimize the log-likelihood function. Julia is a great tool for these kinds of tasks with libraries such as Optimization and Flux which are outside the scope this tutorial.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>D. J. Daley and D. Vere-Jones, An Introduction to the Theory of Point Processes: Volume I: Elementary Theory and Methods, Springer-Verlag (2003). doi:10.1007/b97277.</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>T., Björk, Point Processes and Jump Diffusions: An Introduction with Finance Applications, Cambridge University Press (2021). doi:10.1017/9781009002127.</li><li class="footnote" id="footnote-3"><a class="tag is-link" href="#citeref-3">3</a>F. B. Hanson, Applied Stochastic Processes and Control for Jump-Diffusions: Modeling, Analysis and Computation, Society for Industrial and Applied Mathematics (2007). doi:10.1137/1.9780898718638.</li><li class="footnote" id="footnote-4"><a class="tag is-link" href="#citeref-4">4</a>P. J. Laub, Y. Lee and T. Taimre, The Elements of Hawkes Processes, Springer International Publishing (2021). doi:10.1007/978-3-030-84639-8.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../tutorials/spatial/">« Spatial SSAs with JumpProcesses.jl</a><a class="docs-footer-nextpage" href="../../jump_types/">Jumps, JumpProblem, and Aggregators »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Wednesday 21 August 2024 06:00">Wednesday 21 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

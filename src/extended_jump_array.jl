@@ -114,7 +114,6 @@ function recursivecopy!(dest::T, src::T) where {T <: ExtendedJumpArray}
     recursivecopy!(dest.jump_u, src.jump_u)
 end
 Base.show(io::IO, A::ExtendedJumpArray) = show(io, A.u)
-TreeViews.hastreeview(x::ExtendedJumpArray) = true
 plot_indices(A::ExtendedJumpArray) = eachindex(A.u)
 
 ## broadcasting
@@ -153,6 +152,13 @@ end
 function Base.BroadcastStyle(::ExtendedJumpArrayStyle{UStyle, JumpUStyle},
                              ::Broadcast.DefaultArrayStyle{N}) where {N, UStyle, JumpUStyle}
     Broadcast.DefaultArrayStyle{N}()
+end
+
+function Base.Broadcast.BroadcastStyle(::S, ::Base.Broadcast.Unknown) where {
+        UStyle, JumpUStyle, S<:JumpProcesses.ExtendedJumpArrayStyle{UStyle, JumpUStyle}}
+
+    return throw(ArgumentError("Cannot broadcast JumpProcesses.ExtendedJumpArray with" *
+                               " something of type Base.Broadcast.Unknown."),)
 end
 
 # Lookup the first ExtendedJumpArray to pick output container size

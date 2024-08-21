@@ -113,7 +113,7 @@ Nsims = 250
 
 for (i, alg) in enumerate(algs)
     jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[i])
-    if typeof(alg) <: Coevolve
+    if alg isa Coevolve
         stepper = SSAStepper()
     else
         stepper = Tsit5()
@@ -123,7 +123,7 @@ for (i, alg) in enumerate(algs)
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
-    if typeof(alg) <: Coevolve
+    if alg isa Coevolve
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
     else
         cols = length(sols[1].u[1].u)

@@ -157,13 +157,8 @@ end
 
 ######################## SSA specific helper routines ########################
 # Return true if site is accepted.
-function accept_jump(p, u, jump)
-    if is_hop(p, jump)
-        return accept_hop(p, u, jump)
-    else
-        return accept_rx(p, u, jump)
-    end
-end
+@inline accept_jump(p, u, jump) = is_hop(p, jump) ? accept_hop(p, u, jump) : accept_rx(p, u, jump)  
+
 
 function accept_hop(p, u, jump)
     @unpack hop_rates, spatial_system, rng = p

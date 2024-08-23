@@ -86,4 +86,10 @@ let
     u = sol[1,:]
     @test length(u) > 2
     @test all(>(u0[1]), u[3:end])
+    u0 = deepcopy(jprob2.prob.u0)
+    u0.u .= 0
+    jprob3 = remake(jprob2; u0)
+    sol = solve(jprob3, Tsit5())
+    @test all(==(0.0), sol[1,:])    
+    @test_throws ErrorException jprob4=remake(jprob, u0 = 1)
 end

@@ -9,7 +9,7 @@ using FunctionWrappers, UnPack
 using Graphs
 using SciMLBase: SciMLBase, isdenseplot
 using Base.FastMath: add_fast
-using Setfield: @set
+using Setfield: @set, @set!
 
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge

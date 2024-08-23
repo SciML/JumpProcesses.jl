@@ -107,15 +107,16 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
     !issubset(keys(kwargs), (:u0, :p, :tspan, :prob)) && error(errmesg)
 
     if :prob ∉ keys(kwargs)
-
         # update u0 when we are wrapping with ExtendedJumpArrays
+        _kwargs = kwargs
         prob = jprob.prob
         if (prob.u0 isa ExtendedJumpArray) && (:u0 in keys(kwargs))
-            if typeof(kwargs[:u0]) == typeof(prob.u0.u)
-                u0 = remake_extended_u0(prob, kwargs[:u0], jprob.rng)
-                _kwargs = (@set kwargs[:u0] = u0)
-            else
-                error("Type of passed in u0 differs from current wrapped type of $typeof(jprob.prob.u0.u).")
+            newu0 = kwargs[:u0]
+            if typeof(newu0) == typeof(prob.u0.u)
+                u0 = remake_extended_u0(prob, newu0, jprob.rng)
+                @set! _kwargs[:u0] = u0
+            elseif typeof(newu0) != typeof(prob.u0)
+                error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
             end
         else
             _kwargs = kwargs

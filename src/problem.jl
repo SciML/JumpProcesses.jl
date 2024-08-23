@@ -300,7 +300,7 @@ end
 
 # extendes prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
 # of type prob.tspan
-function extend_u0(prob, Njumps, rng) 
+function extend_u0(prob, Njumps, rng)
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:Njumps])
     return u0
@@ -331,7 +331,7 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys, 
+    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end

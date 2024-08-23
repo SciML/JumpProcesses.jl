@@ -77,19 +77,19 @@ let
     vrj = VariableRateJump(rrate, aaffect!)
     jprob = JumpProblem(prob, vrj; rng)
     sol = solve(jprob, Tsit5())
-    @test all(==(0.0), sol[1,:])    
+    @test all(==(0.0), sol[1, :])
     u0 = [4.0]
     jprob2 = remake(jprob; u0)
     @test jprob2.prob.u0 isa ExtendedJumpArray
     @test jprob2.prob.u0.u === u0
     sol = solve(jprob2, Tsit5())
-    u = sol[1,:]
+    u = sol[1, :]
     @test length(u) > 2
     @test all(>(u0[1]), u[3:end])
     u0 = deepcopy(jprob2.prob.u0)
     u0.u .= 0
     jprob3 = remake(jprob2; u0)
     sol = solve(jprob3, Tsit5())
-    @test all(==(0.0), sol[1,:])    
+    @test all(==(0.0), sol[1, :])
     @test_throws ErrorException jprob4=remake(jprob, u0 = 1)
 end

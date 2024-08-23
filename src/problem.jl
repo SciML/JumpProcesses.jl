@@ -109,22 +109,23 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
     if :prob ∉ keys(kwargs)
         # Update u0 when we are wrapping via ExtendedJumpArrays. If the user passes an
         # ExtendedJumpArray we assume they properly initialized it
-        _kwargs = kwargs
         prob = jprob.prob
         if (prob.u0 isa ExtendedJumpArray) && (:u0 in keys(kwargs))
             newu0 = kwargs[:u0]
             # if newu0 is of the wrapped type, initialize a new ExtendedJumpArray
             if typeof(newu0) == typeof(prob.u0.u)
                 u0 = remake_extended_u0(prob, newu0, jprob.rng)
-                @set! _kwargs[:u0] = u0
+                _kwargs = @set! kwargs[:u0] = u0
             elseif typeof(newu0) != typeof(prob.u0)
                 error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
+            else
+                _kwargs = kwargs
             end
+            dprob = DiffEqBase.remake(jprob.prob; _kwargs...)
         else
-            _kwargs = kwargs
+            dprob = DiffEqBase.remake(jprob.prob; kwargs...)
         end
-        dprob = DiffEqBase.remake(jprob.prob; _kwargs...)
-
+        
         # if the parameters were changed we must remake the MassActionJump too
         if (:p ∈ keys(kwargs)) && using_params(jprob.massaction_jump)
             update_parameters!(jprob.massaction_jump, dprob.p; kwargs...)

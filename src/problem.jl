@@ -113,7 +113,7 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
         prob = jprob.prob
         if (prob.u0 isa ExtendedJumpArray) && (:u0 in keys(kwargs))
             newu0 = kwargs[:u0]
-            # if u0 is the wrapped type, create and initialize a new ExtendedJumpArray
+            # if newu0 is of the wrapped type, initialize a new ExtendedJumpArray
             if typeof(newu0) == typeof(prob.u0.u)
                 u0 = remake_extended_u0(prob, newu0, jprob.rng)
                 @set! _kwargs[:u0] = u0

@@ -125,7 +125,7 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
         else
             dprob = DiffEqBase.remake(jprob.prob; kwargs...)
         end
-        
+
         # if the parameters were changed we must remake the MassActionJump too
         if (:p ∈ keys(kwargs)) && using_params(jprob.massaction_jump)
             update_parameters!(jprob.massaction_jump, dprob.p; kwargs...)
@@ -299,7 +299,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         solkwargs)
 end
 
-# extendes prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
+# extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
 # of type prob.tspan
 function extend_u0(prob, Njumps, rng)
     ttype = eltype(prob.tspan)

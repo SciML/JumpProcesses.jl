@@ -136,7 +136,7 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
         newprob = kwargs[:prob]
 
         # when passing a new wrapped problem directly we require u0 has the correct type
-        (typeof(newprob.u0) == typeof(jprob.prob.u0)) || 
+        (typeof(newprob.u0) == typeof(jprob.prob.u0)) ||
             error("The new u0 within the passed prob does not have the same type as the existing u0. Please pass a u0 of type $(typeof(jprob.prob.u0)).")
 
         # we can't know if p was changed, so we must remake the MassActionJump

@@ -93,3 +93,27 @@ let
     @test all(==(0.0), sol[1, :])
     @test_throws ErrorException jprob4=remake(jprob, u0 = 1)
 end
+
+# tests when changing u0 via a passed in prob
+let
+    f(du, u, p, t) = (du .= 0; nothing)
+    prob = ODEProblem(f, [0.0], (0.0, 1.0))
+    rrate(u, p, t) = u[1]
+    aaffect!(integrator) = (integrator.u[1] += 1; nothing)
+    vrj = VariableRateJump(rrate, aaffect!)
+    jprob = JumpProblem(prob, vrj; rng)
+    sol = solve(jprob, Tsit5())
+    @test all(==(0.0), sol[1, :])
+    u0 = [4.0]
+    prob2 = remake(jprob.prob; u0)
+    @test_throws ErrorException jprob2=remake(jprob; prob = prob2)
+    u0eja = JumpProcesses.remake_extended_u0(jprob.prob, u0, rng)
+    prob3 = remake(jprob.prob; u0 = u0eja)
+    jprob3 = remake(jprob; prob = prob3)
+    @test jprob3.prob.u0 isa ExtendedJumpArray
+    @test jprob3.prob.u0 === u0eja
+    sol = solve(jprob3, Tsit5())
+    u = sol[1, :]
+    @test length(u) > 2
+    @test all(>(u0[1]), u[3:end])
+end

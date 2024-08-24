@@ -121,27 +121,31 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
             else
                 _kwargs = kwargs
             end
-            dprob = DiffEqBase.remake(jprob.prob; _kwargs...)
+            newprob = DiffEqBase.remake(jprob.prob; _kwargs...)
         else
-            dprob = DiffEqBase.remake(jprob.prob; kwargs...)
+            newprob = DiffEqBase.remake(jprob.prob; kwargs...)
         end
 
         # if the parameters were changed we must remake the MassActionJump too
         if (:p ∈ keys(kwargs)) && using_params(jprob.massaction_jump)
-            update_parameters!(jprob.massaction_jump, dprob.p; kwargs...)
+            update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
         end
     else
         any(k -> k in keys(kwargs), (:u0, :p, :tspan)) &&
             error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
-        dprob = kwargs[:prob]
+        newprob = kwargs[:prob]
+
+        # when passing a new wrapped problem directly we require u0 has the correct type
+        (typeof(newprob.u0) == typeof(jprob.prob.u0)) || 
+            error("The new u0 within the passed prob does not have the same type as the existing u0. Please pass a u0 of type $(typeof(jprob.prob.u0)).")
 
         # we can't know if p was changed, so we must remake the MassActionJump
         if using_params(jprob.massaction_jump)
-            update_parameters!(jprob.massaction_jump, dprob.p; kwargs...)
+            update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
         end
     end
 
-    T(dprob, jprob.aggregator, jprob.discrete_jump_aggregation, jprob.jump_callback,
+    T(newprob, jprob.aggregator, jprob.discrete_jump_aggregation, jprob.jump_callback,
         jprob.variable_jumps, jprob.regular_jump, jprob.massaction_jump, jprob.rng,
         jprob.kwargs)
 end

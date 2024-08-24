@@ -1,4 +1,4 @@
-using JumpProcesses, DiffEqBase
+using JumpProcesses, DiffEqBase, OrdinaryDiffEq
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -67,3 +67,29 @@ sol3 = solve(jprob3, SSAStepper())
 # test error handling
 @test_throws ErrorException jprob4=remake(jprob, prob = dprob2, p = p2)
 @test_throws ErrorException jprob5=remake(jprob, aggregator = RSSA())
+
+# test for #446
+let
+    f(du, u, p, t) = (du .= 0; nothing)
+    prob = ODEProblem(f, [0.0], (0.0, 1.0))
+    rrate(u, p, t) = u[1]
+    aaffect!(integrator) = (integrator.u[1] += 1; nothing)
+    vrj = VariableRateJump(rrate, aaffect!)
+    jprob = JumpProblem(prob, vrj; rng)
+    sol = solve(jprob, Tsit5())
+    @test all(==(0.0), sol[1, :])
+    u0 = [4.0]
+    jprob2 = remake(jprob; u0)
+    @test jprob2.prob.u0 isa ExtendedJumpArray
+    @test jprob2.prob.u0.u === u0
+    sol = solve(jprob2, Tsit5())
+    u = sol[1, :]
+    @test length(u) > 2
+    @test all(>(u0[1]), u[3:end])
+    u0 = deepcopy(jprob2.prob.u0)
+    u0.u .= 0
+    jprob3 = remake(jprob2; u0)
+    sol = solve(jprob3, Tsit5())
+    @test all(==(0.0), sol[1, :])
+    @test_throws ErrorException jprob4=remake(jprob, u0 = 1)
+end

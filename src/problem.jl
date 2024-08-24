@@ -86,10 +86,20 @@ function JumpProblem(p::P, a::A, dj::J, jc::C, vj::J2, rj::J3, mj::J4,
     JumpProblem{iip, P, A, C, J, J2, J3, J4, R, K}(p, a, dj, jc, vj, rj, mj, rng, kwargs)
 end
 
-# for remaking
+######## remaking ######
+
+# for a problem where prob.u0 is an ExtendedJumpArray, create an ExtendedJumpArray that 
+# aliases and resets prob.u0.jump_u while having newu0 as the new u component.
+function remake_extended_u0(prob, newu0, rng)
+    jump_u = prob.u0.jump_u
+    ttype = eltype(prob.tspan)
+    @. jump_u = -randexp(rng, ttype)
+    ExtendedJumpArray(newu0, jump_u)
+end
+
 Base.@pure remaker_of(prob::T) where {T <: JumpProblem} = DiffEqBase.parameterless_type(T)
-function DiffEqBase.remake(thing::JumpProblem; kwargs...)
-    T = remaker_of(thing)
+function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
+    T = remaker_of(jprob)
 
     errmesg = """
     JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem. Feel free to open an issue on JumpProcesses to discuss further.
@@ -97,11 +107,28 @@ function DiffEqBase.remake(thing::JumpProblem; kwargs...)
     !issubset(keys(kwargs), (:u0, :p, :tspan, :prob)) && error(errmesg)
 
     if :prob ∉ keys(kwargs)
-        dprob = DiffEqBase.remake(thing.prob; kwargs...)
+        # Update u0 when we are wrapping via ExtendedJumpArrays. If the user passes an
+        # ExtendedJumpArray we assume they properly initialized it
+        prob = jprob.prob
+        if (prob.u0 isa ExtendedJumpArray) && (:u0 in keys(kwargs))
+            newu0 = kwargs[:u0]
+            # if newu0 is of the wrapped type, initialize a new ExtendedJumpArray
+            if typeof(newu0) == typeof(prob.u0.u)
+                u0 = remake_extended_u0(prob, newu0, jprob.rng)
+                _kwargs = @set! kwargs[:u0] = u0
+            elseif typeof(newu0) != typeof(prob.u0)
+                error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
+            else
+                _kwargs = kwargs
+            end
+            dprob = DiffEqBase.remake(jprob.prob; _kwargs...)
+        else
+            dprob = DiffEqBase.remake(jprob.prob; kwargs...)
+        end
 
         # if the parameters were changed we must remake the MassActionJump too
-        if (:p ∈ keys(kwargs)) && using_params(thing.massaction_jump)
-            update_parameters!(thing.massaction_jump, dprob.p; kwargs...)
+        if (:p ∈ keys(kwargs)) && using_params(jprob.massaction_jump)
+            update_parameters!(jprob.massaction_jump, dprob.p; kwargs...)
         end
     else
         any(k -> k in keys(kwargs), (:u0, :p, :tspan)) &&
@@ -109,14 +136,14 @@ function DiffEqBase.remake(thing::JumpProblem; kwargs...)
         dprob = kwargs[:prob]
 
         # we can't know if p was changed, so we must remake the MassActionJump
-        if using_params(thing.massaction_jump)
-            update_parameters!(thing.massaction_jump, dprob.p; kwargs...)
+        if using_params(jprob.massaction_jump)
+            update_parameters!(jprob.massaction_jump, dprob.p; kwargs...)
         end
     end
 
-    T(dprob, thing.aggregator, thing.discrete_jump_aggregation, thing.jump_callback,
-        thing.variable_jumps, thing.regular_jump, thing.massaction_jump, thing.rng,
-        thing.kwargs)
+    T(dprob, jprob.aggregator, jprob.discrete_jump_aggregation, jprob.jump_callback,
+        jprob.variable_jumps, jprob.regular_jump, jprob.massaction_jump, jprob.rng,
+        jprob.kwargs)
 end
 
 # when setindex! is used.
@@ -272,6 +299,14 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         solkwargs)
 end
 
+# extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
+# of type prob.tspan
+function extend_u0(prob, Njumps, rng)
+    ttype = eltype(prob.tspan)
+    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:Njumps])
+    return u0
+end
+
 function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
     error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
@@ -296,9 +331,7 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
         end
     end
 
-    ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0,
-        [-randexp(rng, ttype) for i in 1:length(jumps)])
+    u0 = extend_u0(prob, length(jumps), rng)
     f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
@@ -334,8 +367,7 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
         end
     end
 
-    ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
+    u0 = extend_u0(prob, length(jumps), rng)
     f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, g = jump_g, u0)
@@ -361,8 +393,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
         end
     end
 
-    ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:length(jumps)])
+    u0 = extend_u0(prob, length(jumps), rng)
     f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
@@ -389,9 +420,7 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
         end
     end
 
-    ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0,
-        [-randexp(rng, ttype) for i in 1:length(jumps)])
+    u0 = extend_u0(prob, length(jumps), rng)
     f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)

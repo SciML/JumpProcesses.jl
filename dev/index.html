@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions · JumpProcesses.jl</title><meta name="title" content="JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions · JumpProcesses.jl"/><meta property="og:title" content="JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions · JumpProcesses.jl"/><meta property="twitter:title" content="JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions · JumpProcesses.jl"/><meta name="description" content="Documentation for JumpProcesses.jl."/><meta property="og:description" content="Documentation for JumpProcesses.jl."/><meta property="twitter:description" content="Documentation for JumpProcesses.jl."/><meta property="og:url" content="https://docs.sciml.ai/JumpProcesses/"/><meta property="twitter:url" content="https://docs.sciml.ai/JumpProcesses/"/><link rel="canonical" href="https://docs.sciml.ai/JumpProcesses/"/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="JumpProcesses.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>JumpProcesses.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a><ul class="internal"><li><a class="tocitem" href="#Mathematical-Overview"><span>Mathematical Overview</span></a></li><li><a class="tocitem" href="#Reference-Documentation"><span>Reference Documentation</span></a></li><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Contributing-and-Getting-Help"><span>Contributing and Getting Help</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses</a></li><li><a class="tocitem" href="tutorials/discrete_stochastic_example/">Continuous-Time Jump Processes and Gillespie Methods</a></li><li><a class="tocitem" href="tutorials/point_process_simulation/">Temporal Point Process (TPP) Simulation</a></li><li><a class="tocitem" href="tutorials/jump_diffusion/">Piecewise Deterministic Markov Processes and Jump Diffusion Equations</a></li><li><a class="tocitem" href="tutorials/spatial/">Spatial SSAs with JumpProcesses.jl</a></li></ul></li><li><span class="tocitem">Applications</span><ul><li><a class="tocitem" href="applications/advanced_point_process/">Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a></li></ul></li><li><span class="tocitem">Type Documentation</span><ul><li><a class="tocitem" href="jump_types/">Jumps, JumpProblem, and Aggregators</a></li><li><a class="tocitem" href="jump_solve/">Jump solvers</a></li></ul></li><li><a class="tocitem" href="faq/">FAQ</a></li><li><a class="tocitem" href="api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/JumpProcesses.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/JumpProcesses.jl/blob/master/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions"><a class="docs-heading-anchor" href="#JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions">JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a><a id="JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions-1"></a><a class="docs-heading-anchor-permalink" href="#JumpProcesses.jl:-Stochastic-Simulation-Algorithms-for-Jump-Processes,-Jump-ODEs,-and-Jump-Diffusions" title="Permalink"></a></h1><p>JumpProcesses.jl provides methods for simulating jump and point processes. Across different fields of science, such methods are also known as stochastic simulation algorithms (SSAs), Doob&#39;s method, Gillespie methods, Kinetic Monte Carlo&#39;s methods, thinning method, and Ogata&#39;s method. It also enables the incorporation of jump processes into hybrid jump-ODE models, including piecewise deterministic Markov processes, and into hybrid jump-SDE models, including jump diffusions. It is a component package in the <a href="https://sciml.ai/">SciML</a> ecosystem, and one of the core solver libraries included in <a href="https://docs.sciml.ai/DiffEqDocs/stable/">DifferentialEquations.jl</a>.</p><p>Historically, jump processes have been developed in the context of dynamical systems to describe dynamics with discontinuous changes — the jumps — in a system&#39;s value at random times. In contrast, the development of point processes has been more focused on describing the occurrence of random events — the points — over a support. However, both jump and point processes share many things in common which make JumpProcesses ideal for their study.</p><p>As jump and point processes are often considered from a variety of perspectives across different fields, JumpProcesses provides three tutorials on using the package for those with different backgrounds:</p><ul><li><a href="tutorials/simple_poisson_process/#poisson_proc_tutorial">Simulating basic Poisson processes</a></li><li><a href="tutorials/discrete_stochastic_example/#ssa_tutorial">Simulating jump processes via SSAs (i.e., Gillespie methods)</a></li><li><a href="tutorials/point_process_simulation/#tpp_tutorial">Simulating temporal point processes (TPPs)</a></li></ul><p>These tutorials also explain the types of jump/point processes that can be mathematically modelled with JumpProcesses.jl. For more complicated models that couple ODEs and/or SDEs with continuous noise to jump processes, we provide a tutorial on</p><ul><li><a href="tutorials/jump_diffusion/#jump_diffusion_tutorial">Simulating jump-diffusion processes</a></li></ul><p>For jump processes that involve spatial transport on a graph/mesh, such as Reaction-Diffusion Master Equation models, we provide a tutorial on</p><ul><li><a href="tutorials/spatial/#Spatial-SSAs-with-JumpProcesses.jl">Spatial SSAs</a></li></ul><p>Finally, we provide application tutorials which are more extensive tutorials that interface with other libraries going deeper into a topic.</p><ul><li><a href="applications/advanced_point_process/#tpp_advanced">Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a></li></ul><p>We provide a mathematical overview of the library below, but note users may also skip to the appropriate tutorial listed above to get started with using JumpProcesses.</p><h2 id="Mathematical-Overview"><a class="docs-heading-anchor" href="#Mathematical-Overview">Mathematical Overview</a><a id="Mathematical-Overview-1"></a><a class="docs-heading-anchor-permalink" href="#Mathematical-Overview" title="Permalink"></a></h2><p>Let <span>$dN_i(t)$</span> be a stochastic process such that <span>$dN_i(t) = 1$</span> with some probability and <span>$0$</span> otherwise. That is, <span>$dN_i(t)$</span> encodes that a &quot;jump&quot; in the value of <span>$N_i(t)$</span> by one occurs at time <span>$t$</span>. Denote the rate, i.e. probability per time, that such jumps occur by the intensity function, <span>$\lambda_i(u(t), p, t)$</span>. Here <span>$u(t)$</span> represents a vector of dynamic state variables, that may change when <span>$N_i(t)$</span> jumps. For example, these could be the size of a population changing due to births or deaths, or the number of mRNAs and proteins within a cell (which jump when a gene is transcribed or an mRNA is translated). <span>$p$</span> represents parameters the intensity may depend on.</p><p>In different fields <span>$\lambda_i$</span> can also be called a propensity, transition rate function, or a hazard function. Note, if we denote <span>$N(t) \equiv N[0, t)$</span> as the number of points since the start of time until <span>$t$</span>, exclusive of <span>$t$</span>, then <span>$N(t)$</span> is a stochastic random integer measure. In other words, we have a temporal point process (TPP).</p><p>In JumpProcesses.jl&#39;s language, we call <span>$\lambda_i$</span> a rate function, and expect users to provide a function, <code>rate(u,p,t)</code>, that returns its value at time <code>t</code>. Given a collection of rates <span>$\{\lambda_i\}_{i=1}^I$</span>, JumpProcesses can then generate exact realizations of pure jump processes of the form</p><p class="math-container">\[du = \sum_{i=1}^I h_i(u,p,t) \, dN_i(t),\]</p><p>where <span>$h_i(u,p,t)$</span> represents the amount that <span>$u(t)$</span> changes when <span>$N_i(t)$</span> jumps. JumpProcesses encodes such changes via a user-provided <code>affect!</code> function, which allows even more general changes to the state, <span>$u(t)$</span>, when <span>$N_i(t)$</span> jumps than just incrementing it by <span>$h_i(u,p,t)$</span>. For example, such changes can themselves be random, allowing for the calculation of marks. In the special case of just one jump, <span>$I = 1$</span>, with <span>$h_1 = 1$</span>, we recover the temporal point process mentioned above.</p><p>JumpProcesses provides a variety of algorithms, called <em>aggregators</em>, for determining the next time that a jump occurs, and which <span>$N_i(t)$</span> jumps at that time. Many of these are optimized for contexts in which each <span>$N_i(t)$</span> only changes the values of a few components in <span>$u(t)$</span>, as common in many applications such as stochastic chemical kinetics (where each <span>$N_i$</span> corresponds to a different reaction, and each component of <span>$u$</span> a different species). To simulate <span>$u(t)$</span> users must then specify both an aggregator algorithm to determine the time and type of jump that occurs, and a time-stepping method to advance the state from jump to jump. See the tutorials listed above, and reference links below, for more details and examples.</p><p>JumpProcesses also allows such jumps to be coupled into ODE models (i.e. piecewise deterministic Markov Processes), or continuous-noise SDE models (i.e. jump-diffusions). For example, a jump-diffusion JumpProcesses can simulate would be</p><p class="math-container">\[du = f(u,p,t)dt + \sum_{i}g_i(u,t)dW_i(t) + \sum_{j}h_j(u,p,t)dN_j(t)\]</p><p>where <span>$f$</span> encodes the drift of the process, each <span>$g_i$</span> the strength of a diffusion component of the process, and each <span>$W_i(t)$</span> denotes an independent standard Brownian Motion.</p><p>JumpProcesses is designed to simulate all the types of jumps described above.</p><h2 id="Reference-Documentation"><a class="docs-heading-anchor" href="#Reference-Documentation">Reference Documentation</a><a id="Reference-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#Reference-Documentation" title="Permalink"></a></h2><p>In addition to the tutorials linked above, the documentation contains</p><ul><li><a href="jump_types/#jump_problem_type">References on the types of jumps and available simulation methods</a></li><li><a href="jump_solve/#jump_solve">References on jump time stepping methods</a></li><li><a href="faq/#FAQ">An FAQ with information on changing parameters between simulations and using callbacks</a></li><li><a href="api/#JumpProcesses.jl-API">API documentation</a></li></ul><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>There are two ways to install <code>JumpProcesses.jl</code>. First, users may install the meta <code>DifferentialEquations.jl</code> package, which installs and wraps <code>OrdinaryDiffEq.jl</code> for solving ODEs, <code>StochasticDiffEq.jl</code> for solving SDEs, and <code>JumpProcesses.jl</code>, along with a number of other useful packages for solving models involving ODEs, SDEs and/or jump process. This single install will provide the user with all the facilities for developing and solving Jump problems.</p><p>To install the <code>DifferentialEquations.jl</code> package, refer to the following link for complete <a href="https://docs.sciml.ai/DiffEqDocs/stable">installation details</a>.</p><p>If the user wishes to install the <code>JumpProcesses.jl</code> library separately, which is a lighter dependency than <code>DifferentialEquations.jl</code>, then the following code will install <code>JumpProcesses.jl</code> using the Julia package manager:</p><pre><code class="language-julia hljs">using Pkg
 Pkg.add(&quot;JumpProcesses&quot;)</code></pre><h2 id="Contributing-and-Getting-Help"><a class="docs-heading-anchor" href="#Contributing-and-Getting-Help">Contributing and Getting Help</a><a id="Contributing-and-Getting-Help-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing-and-Getting-Help" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums for getting help and asking questions:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>The <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also the <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/JumpProcesses.jl/JumpProcesses.jl/docs/Project.toml`
-  [479239e8] Catalyst v14.3.2
+  [479239e8] Catalyst v14.4.0
   [b429d917] DensityInterface v0.4.0
   [0c46a032] DifferentialEquations v7.13.0
   [31c24e10] Distributions v0.25.111
   [e30172f5] Documenter v1.6.0
   [86223c79] Graphs v1.11.2
   [ccbc3e58] JumpProcesses v9.13.4 `~/work/JumpProcesses.jl/JumpProcesses.jl`
-  [1dea7af3] OrdinaryDiffEq v6.88.0
-  [91a5bcdd] Plots v1.40.5
+  [1dea7af3] OrdinaryDiffEq v6.89.0
+  [91a5bcdd] Plots v1.40.8
   [af0b7596] PointProcesses v0.5.0
   [860ef19b] StableRNGs v1.0.2
-  [789caeaf] StochasticDiffEq v6.68.0</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.10.4
-Commit 48d4fd48430 (2024-06-04 10:41 UTC)
+  [789caeaf] StochasticDiffEq v6.68.0</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.10.5
+Commit 6f3fdf7b362 (2024-08-27 14:19 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
@@ -32,15 +32,16 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [ec485272] ArnoldiMethod v0.4.0
   [4fba245c] ArrayInterface v7.15.0
   [4c555306] ArrayLayouts v1.10.3
-  [aae01518] BandedMatrices v1.7.3
-  [e2ed5e7c] Bijections v0.1.7
+  [aae01518] BandedMatrices v1.7.4
+  [e2ed5e7c] Bijections v0.1.9
   [d1d4a3ce] BitFlags v0.1.9
   [62783981] BitTwiddlingConvenienceFunctions v0.1.6
+  [8e7c35d0] BlockArrays v1.1.0
   [764a87c0] BoundaryValueDiffEq v5.9.1
   [fa961155] CEnum v0.5.0
   [2a0fbf3d] CPUSummary v0.2.6
   [00ebfdb7] CSTParser v3.4.3
-  [479239e8] Catalyst v14.3.2
+  [479239e8] Catalyst v14.4.0
   [d360d2e6] ChainRulesCore v1.24.0
   [fb6a15b2] CloseOpenIntervals v0.1.13
   [944b1d66] CodecZlib v0.7.6
@@ -69,18 +70,18 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [8bb1440f] DelimitedFiles v1.9.1
   [b429d917] DensityInterface v0.4.0
   [2b5f629d] DiffEqBase v6.154.0
-  [459566f4] DiffEqCallbacks v3.8.0
+  [459566f4] DiffEqCallbacks v3.9.0
   [77a26b50] DiffEqNoiseProcess v5.23.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
   [0c46a032] DifferentialEquations v7.13.0
-  [a0c0ee7d] DifferentiationInterface v0.5.14
+  [a0c0ee7d] DifferentiationInterface v0.5.15
   [b4f34e82] Distances v0.10.11
   [31c24e10] Distributions v0.25.111
   [ffbed154] DocStringExtensions v0.9.3
   [e30172f5] Documenter v1.6.0
   [5b8099bc] DomainSets v0.7.14
-⌅ [7c1d4256] DynamicPolynomials v0.5.7
+  [7c1d4256] DynamicPolynomials v0.6.0
 ⌅ [06fc5a27] DynamicQuantities v0.13.2
   [4e289a0a] EnumX v1.0.4
   [f151be2c] EnzymeCore v0.7.8
@@ -93,7 +94,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [7034ab61] FastBroadcast v0.3.5
   [9aa1b823] FastClosures v0.3.2
   [29a986be] FastLapackInterface v2.0.4
-  [1a297f60] FillArrays v1.12.0
+  [1a297f60] FillArrays v1.13.0
   [64ca27bc] FindFirstFunctions v1.3.0
   [6a86dc24] FiniteDiff v2.24.0
   [53c48c17] FixedPointNumbers v0.8.5
@@ -115,19 +116,19 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [b5f81e59] IOCapture v0.2.5
   [615f187c] IfElse v0.1.1
   [d25df0c9] Inflate v0.1.5
+  [18e54dd8] IntegerMathUtils v0.1.2
   [8197267c] IntervalSets v0.7.10
   [3587e190] InverseFunctions v0.1.16
   [92d709cd] IrrationalConstants v0.2.2
   [82899510] IteratorInterfaceExtensions v1.0.0
   [1019f520] JLFzf v0.1.8
-  [692b3bcd] JLLWrappers v1.5.0
+  [692b3bcd] JLLWrappers v1.6.0
   [682c06a0] JSON v0.21.4
   [98e50ef6] JuliaFormatter v1.0.60
   [ccbc3e58] JumpProcesses v9.13.4 `~/work/JumpProcesses.jl/JumpProcesses.jl`
   [ef3ab10e] KLU v0.6.0
   [ba0b0d4f] Krylov v0.9.6
   [b964fa9f] LaTeXStrings v1.3.1
-  [2ee39098] LabelledArrays v1.16.0
   [984bce1d] LambertW v0.4.6
   [23fbe1c1] Latexify v0.16.5
   [10f19ff3] LayoutPointers v0.1.17
@@ -148,7 +149,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [739be429] MbedTLS v1.1.9
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.2.0
-⌃ [961ee093] ModelingToolkit v9.32.0
+  [961ee093] ModelingToolkit v9.35.1
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.6
   [d8a4904e] MutableArithmetics v1.4.6
@@ -160,10 +161,10 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [4d8831e6] OpenSSL v1.4.3
   [429524aa] Optim v1.9.4
   [bac558e1] OrderedCollections v1.6.3
-  [1dea7af3] OrdinaryDiffEq v6.88.0
+  [1dea7af3] OrdinaryDiffEq v6.89.0
   [89bda076] OrdinaryDiffEqAdamsBashforthMoulton v1.1.0
   [6ad6398a] OrdinaryDiffEqBDF v1.1.0
-  [bbf590c4] OrdinaryDiffEqCore v1.2.0
+  [bbf590c4] OrdinaryDiffEqCore v1.3.0
   [50262376] OrdinaryDiffEqDefault v1.1.0
   [4302a76b] OrdinaryDiffEqDifferentiation v1.1.0
   [9286f039] OrdinaryDiffEqExplicitRK v1.1.0
@@ -176,7 +177,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [9f002381] OrdinaryDiffEqIMEXMultistep v1.1.0
   [521117fe] OrdinaryDiffEqLinear v1.1.0
   [1344f307] OrdinaryDiffEqLowOrderRK v1.1.0
-  [b0944070] OrdinaryDiffEqLowStorageRK v1.1.0
+  [b0944070] OrdinaryDiffEqLowStorageRK v1.2.0
   [127b3ac7] OrdinaryDiffEqNonlinearSolve v1.1.0
   [c9986a66] OrdinaryDiffEqNordsieck v1.1.0
   [5dd0a6cf] OrdinaryDiffEqPDIRK v1.1.0
@@ -185,7 +186,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [af6ede74] OrdinaryDiffEqRKN v1.1.0
   [43230ef6] OrdinaryDiffEqRosenbrock v1.1.0
   [2d112036] OrdinaryDiffEqSDIRK v1.1.0
-  [669c94d9] OrdinaryDiffEqSSPRK v1.1.0
+  [669c94d9] OrdinaryDiffEqSSPRK v1.2.0
   [e3e12d00] OrdinaryDiffEqStabilizedIRK v1.1.0
   [358294b1] OrdinaryDiffEqStabilizedRK v1.1.0
   [fa646aed] OrdinaryDiffEqSymplecticRK v1.1.0
@@ -198,7 +199,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [b98c9c47] Pipe v1.3.0
   [ccf2f8ad] PlotThemes v3.2.0
   [995b91a9] PlotUtils v1.4.1
-  [91a5bcdd] Plots v1.40.5
+  [91a5bcdd] Plots v1.40.8
   [af0b7596] PointProcesses v0.5.0
   [e409e4f3] PoissonRandom v0.4.4
   [f517fe37] Polyester v0.7.16
@@ -207,8 +208,9 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [d236fae5] PreallocationTools v0.4.24
   [aea7be01] PrecompileTools v1.2.1
   [21216c6a] Preferences v1.4.3
-  [43287f4e] PtrArrays v1.2.0
-  [1fd47b50] QuadGK v2.10.1
+  [27ebfcd6] Primes v0.5.6
+  [43287f4e] PtrArrays v1.2.1
+  [1fd47b50] QuadGK v2.11.0
   [74087812] Random123 v1.7.0
   [e6cf234a] RandomNumbers v1.6.0
   [3cdcf5f2] RecipesBase v1.3.4
@@ -224,9 +226,9 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [7e49a35a] RuntimeGeneratedFunctions v0.5.13
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.43
-  [0bca4576] SciMLBase v2.50.2
-  [c0aeaf25] SciMLOperators v0.3.9
-  [53ae85a6] SciMLStructures v1.4.2
+  [0bca4576] SciMLBase v2.51.0
+  [c0aeaf25] SciMLOperators v0.3.10
+  [53ae85a6] SciMLStructures v1.5.0
   [6c6a2e73] Scratch v1.2.1
   [efcf1570] Setfield v1.1.1
   [992d4aef] Showoff v1.0.3
@@ -247,18 +249,18 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [82ae8749] StatsAPI v1.7.0
   [2913bbd2] StatsBase v0.34.3
   [4c63d2b9] StatsFuns v1.3.1
-  [9672c7b4] SteadyStateDiffEq v2.3.0
+  [9672c7b4] SteadyStateDiffEq v2.3.1
   [789caeaf] StochasticDiffEq v6.68.0
   [7792a7ef] StrideArraysCore v0.5.7
   [c3572dad] Sundials v4.25.0
   [2efcf032] SymbolicIndexingInterface v0.3.28
-⌃ [19f23fe9] SymbolicLimits v0.2.1
-⌅ [d1185830] SymbolicUtils v2.1.3
-⌅ [0c5d862f] Symbolics v5.36.0
+  [19f23fe9] SymbolicLimits v0.2.2
+  [d1185830] SymbolicUtils v3.5.0
+  [0c5d862f] Symbolics v6.5.0
   [3783bdb8] TableTraits v1.0.1
   [bd369af6] Tables v1.12.0
   [62fd8b95] TensorCore v0.1.1
-⌅ [8ea1fca8] TermInterface v0.4.1
+  [8ea1fca8] TermInterface v2.0.0
   [8290d209] ThreadingUtilities v0.5.2
   [a759f4b9] TimerOutputs v0.5.24
   [0796e94c] Tokenize v0.5.29
@@ -291,7 +293,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [7746bdde] Glib_jll v2.80.2+0
   [3b182d85] Graphite2_jll v1.3.14+0
   [2e76f6c2] HarfBuzz_jll v8.3.1+0
-  [1d5cc7b8] IntelOpenMP_jll v2024.2.0+0
+  [1d5cc7b8] IntelOpenMP_jll v2024.2.1+0
   [aacddb02] JpegTurbo_jll v3.0.3+0
   [c1c5ebd0] LAME_jll v3.100.2+0
 ⌅ [88015f11] LERC_jll v3.0.0+1
@@ -309,7 +311,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [e7412a2a] Ogg_jll v1.3.5+1
   [458c3c95] OpenSSL_jll v3.0.14+0
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
-  [91d4177d] Opus_jll v1.3.2+0
+  [91d4177d] Opus_jll v1.3.3+0
   [36c8627f] Pango_jll v1.54.1+0
   [30392449] Pixman_jll v0.43.4+0
   [c0090381] Qt6Base_jll v6.7.1+1
@@ -356,14 +358,14 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [0ac62f75] libass_jll v0.15.2+0
   [1183f4f0] libdecor_jll v0.2.2+0
   [2db6ffa8] libevdev_jll v1.11.0+0
-  [f638f0a6] libfdk_aac_jll v2.0.2+0
+  [f638f0a6] libfdk_aac_jll v2.0.3+0
   [36db933b] libinput_jll v1.18.0+0
   [b53b4c65] libpng_jll v1.6.43+1
   [f27f6e37] libvorbis_jll v1.3.7+2
   [009596ad] mtdev_jll v1.1.6+0
   [1317d2d5] oneTBB_jll v2021.12.0+0
-  [1270edf5] x264_jll v2021.5.5+0
-  [dfaa095f] x265_jll v3.5.0+0
+⌅ [1270edf5] x264_jll v2021.5.5+0
+⌅ [dfaa095f] x265_jll v3.5.0+0
   [d8fb68d0] xkbcommon_jll v1.4.1+1
   [0dad84c5] ArgTools v1.1.1
   [56f22d72] Artifacts
@@ -410,7 +412,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [efcefdf7] PCRE2_jll v10.42.0+1
   [bea87d4a] SuiteSparse_jll v7.2.1+1
   [83775a58] Zlib_jll v1.2.13+1
-  [8e850b90] libblastrampoline_jll v5.8.0+1
+  [8e850b90] libblastrampoline_jll v5.11.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+2
-Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.13.4/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.13.4/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Saturday 24 August 2024 13:21">Saturday 24 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.13.4/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.13.4/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Saturday 31 August 2024 20:13">Saturday 31 August 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

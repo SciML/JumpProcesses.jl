@@ -41,17 +41,21 @@ for ssa in algs
 end
 
 # test callback
-function extinction_condition(u, t, integrator)
-    integrator.cb.affect!.next_jump_time == Inf
+Base.@kwdef mutable struct ExtinctionTest
+    cnt::Int = 0
 end
-function extinction_affect!(integrator)
+function (e::ExtinctionTest)(u, t, integrator)
+    (e.cnt == 0) && (integrator.cb.affect!.next_jump_time == Inf)
+end
+function (e::ExtinctionTest)(integrator)
     (saved, savedexactly) = savevalues!(integrator, true)
     @test saved == true
     @test savedexactly == true
+    e.cnt += 1
     nothing
 end
-cb = DiscreteCallback(extinction_condition, extinction_affect!,
-    save_positions = (false, false))
+et = ExtinctionTest()
+cb = DiscreteCallback(et, et, save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)

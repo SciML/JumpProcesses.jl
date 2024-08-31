@@ -133,3 +133,55 @@ affectpresets!(integrator) = integrator.u[1] += 10
 cb = PresetTimeCallback(cbtimes, affectpresets!)
 jsol = solve(jprob, SSAStepper(), saveat = 0.1, callback = cb)
 @test (jsol(20.00000000001) - jsol(19.9999999999))[1] == 10
+
+# test periodic callbacks working, i.e. #417
+let
+    rate(u, p, t) = 0.0
+    affect!(integ) = (nothing)
+    crj = ConstantRateJump(rate, affect!)
+    dprob = DiscreteProblem([0], (0.0, 10.0))
+    cbfun(integ) = (integ.u[1] += 1; nothing)
+    cb = PeriodicCallback(cbfun, 1.0)
+    jprob = JumpProblem(dprob, crj; rng)
+    sol = solve(jprob; callback = cb)
+    @test sol[1, end] == 9
+
+    cb = PeriodicCallback(cbfun, 1.0; initial_affect = true)
+    jprob = JumpProblem(dprob, crj; rng)
+    sol = solve(jprob; callback = cb)
+    @test sol[1, end] == 10
+
+    cb = PeriodicCallback(cbfun, 1.0; initial_affect = true, final_affect = true)
+    jprob = JumpProblem(dprob, crj; rng)
+    sol = solve(jprob; callback = cb)
+    @test sol[1, end] == 11
+end
+
+# test for tstops aliasing, i.e.#442
+let
+    rate(u, p, t) = 0.0
+    affect!(integ) = (nothing)
+    crj = ConstantRateJump(rate, affect!)
+    dprob = DiscreteProblem([0], (0.0, 10.0))
+    cbfun(integ) = (integ.u[1] += 1; nothing)
+    cb = PeriodicCallback(cbfun, 1.0)
+    jprob = JumpProblem(dprob, crj; rng)
+    tstops = Float64[]
+    # tests for when aliasing system is in place
+    #sol = solve(jprob; callback = cb, tstops, alias_tstops = true) 
+    # @test sol[1, end] == 9
+    #@test tstops == 1.0:9.0    
+    # empty!(tstops)
+    # sol = solve(jprob; callback = cb, tstops, alias_tstops = false)
+    # @test sol[1, end] == 9
+    # @test isempty(tstops)
+    sol = solve(jprob; callback = cb, tstops)
+    @test sol[1, end] == 9
+    @test isempty(tstops)
+
+    empty!(tstops)
+    integ = init(jprob, SSAStepper(); callback = cb, tstops)
+    solve!(integ)
+    @test integ.tstops !== tstops
+    @test isempty(tstops)
+end

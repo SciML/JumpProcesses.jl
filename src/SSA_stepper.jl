@@ -98,6 +98,10 @@ mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <
     tstops_idx::Int
     u_modified::Bool
     keep_stepping::Bool          # false if should terminate a simulation
+    """If true, will write tstops into the user-passed array"""
+    alias_tstops::Bool
+    """If true indicates we have already allocated the tstops array"""
+    copied_tstops::Bool
 end
 
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
@@ -119,6 +123,12 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
         step!(integrator)
     end
     integrator.t = end_time
+
+    # check callbacks one last time
+    if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
+        DiffEqBase.apply_discrete_callback!(integrator,
+            integrator.opts.callback.discrete_callbacks...)
+    end
 
     if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
@@ -150,12 +160,19 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         alias_jump = Threads.threadid() == 1,
         saveat = nothing,
         callback = nothing,
-        tstops = eltype(jump_prob.prob.tspan)[],
+        tstops = nothing,
         numsteps_hint = 100)
+
+    # hack until alias system is in place
+    alias_tstops = false
+
     if !(jump_prob.prob isa DiscreteProblem)
         error("SSAStepper only supports DiscreteProblems.")
     end
-    @assert isempty(jump_prob.jump_callback.continuous_callbacks)
+    prob = jump_prob.prob
+
+    isempty(jump_prob.jump_callback.continuous_callbacks) ||
+        error("SSAStepper does not support continuous callbacks. Please use an ODE/SDE solver over ODE or SDE problems instead.")
     if alias_jump
         cb = jump_prob.jump_callback.discrete_callbacks[end]
         if seed !== nothing
@@ -169,9 +186,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
             Random.seed!(cb.condition.rng, seed)
         end
     end
-
     opts = (callback = CallbackSet(callback),)
-    prob = jump_prob.prob
 
     if save_start
         t = [prob.tspan[1]]
@@ -180,19 +195,14 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         t = typeof(prob.tspan[1])[]
         u = typeof(prob.u0)[]
     end
-
     save_everystep = any(cb.save_positions)
+
     sol = DiffEqBase.build_solution(prob, alg, t, u, dense = save_everystep,
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
         interp = DiffEqBase.ConstantInterpolation(t, u))
 
-    if saveat isa Number
-        _saveat = prob.tspan[1]:saveat:prob.tspan[2]
-    else
-        _saveat = saveat
-    end
-
+    _saveat = (saveat isa Number) ? (prob.tspan[1]:saveat:prob.tspan[2]) : saveat
     if _saveat !== nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
         cur_saveat = 2
     else
@@ -214,20 +224,52 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     (tdir <= 0) &&
         error("The time interval to solve over is non-increasing, i.e. tspan[2] <= tspan[1]. This is not allowed for pure jump problem.")
 
+    if tstops === nothing
+        alias_tstops = true
+        _tstops = eltype(jump_prob.prob.tspan)[]
+    else
+        _tstops = tstops
+    end
+
     integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
         prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
-        save_end, cur_saveat, opts, tstops, 1, false, true)
+        save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false)
     cb.initialize(cb, integrator.u, prob.tspan[1], integrator)
     DiffEqBase.initialize!(opts.callback, integrator.u, prob.tspan[1], integrator)
     integrator
+end
+
+function DiffEqBase.get_tstops(integrator::SSAIntegrator)
+    @view integrator.tstops[(integrator.tstops_idx):end]
+end
+DiffEqBase.get_tstops_array(integrator::SSAIntegrator) = DiffEqBase.get_tstops(integrator)
+
+# ODE integrators seem to add tf into tstops which SSAIntegrator does not do
+# so must account for it here.
+function DiffEqBase.get_tstops_max(integrator::SSAIntegrator)
+    tstops = DiffEqBase.get_tstops_array(integrator)
+    tf = integrator.sol.prob.tspan[2]
+    if !isempty(tstops)
+        return max(maximum(tstops), tf)
+    else
+        return tf
+    end
 end
 
 function DiffEqBase.add_tstop!(integrator::SSAIntegrator, tstop)
     if tstop > integrator.t
         future_tstops = @view integrator.tstops[(integrator.tstops_idx):end]
         insert_index = integrator.tstops_idx + searchsortedfirst(future_tstops, tstop) - 1
+
+        # if not aliasing and have not already copied the user tstops array
+        if !integrator.alias_tstops && !integrator.copied_tstops
+            integrator.copied_tstops = true
+            integrator.tstops = copy(integrator.tstops)
+        end
+
         Base.insert!(integrator.tstops, insert_index, tstop)
     end
+    nothing
 end
 
 # The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator

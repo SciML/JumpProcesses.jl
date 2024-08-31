@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Spatial SSAs with JumpProcesses.jl · JumpProcesses.jl</title><meta name="title" content="Spatial SSAs with JumpProcesses.jl · JumpProcesses.jl"/><meta property="og:title" content="Spatial SSAs with JumpProcesses.jl · JumpProcesses.jl"/><meta property="twitter:title" content="Spatial SSAs with JumpProcesses.jl · JumpProcesses.jl"/><meta name="description" content="Documentation for JumpProcesses.jl."/><meta property="og:description" content="Documentation for JumpProcesses.jl."/><meta property="twitter:description" content="Documentation for JumpProcesses.jl."/><meta property="og:url" content="https://docs.sciml.ai/JumpProcesses/tutorials/spatial/"/><meta property="twitter:url" content="https://docs.sciml.ai/JumpProcesses/tutorials/spatial/"/><link rel="canonical" href="https://docs.sciml.ai/JumpProcesses/tutorials/spatial/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="JumpProcesses.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">JumpProcesses.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../simple_poisson_process/">Simple Poisson Processes in JumpProcesses</a></li><li><a class="tocitem" href="../discrete_stochastic_example/">Continuous-Time Jump Processes and Gillespie Methods</a></li><li><a class="tocitem" href="../point_process_simulation/">Temporal Point Process (TPP) Simulation</a></li><li><a class="tocitem" href="../jump_diffusion/">Piecewise Deterministic Markov Processes and Jump Diffusion Equations</a></li><li class="is-active"><a class="tocitem" href>Spatial SSAs with JumpProcesses.jl</a><ul class="internal"><li><a class="tocitem" href="#Reversible-binding-model-on-a-grid"><span>Reversible binding model on a grid</span></a></li><li><a class="tocitem" href="#Animation"><span>Animation</span></a></li><li><a class="tocitem" href="#Making-changes-to-the-model"><span>Making changes to the model</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li></ul></li><li><span class="tocitem">Applications</span><ul><li><a class="tocitem" href="../../applications/advanced_point_process/">Temporal Point Processes (TPP) with JumpProcesses and PointProcesses</a></li></ul></li><li><span class="tocitem">Type Documentation</span><ul><li><a class="tocitem" href="../../jump_types/">Jumps, JumpProblem, and Aggregators</a></li><li><a class="tocitem" href="../../jump_solve/">Jump solvers</a></li></ul></li><li><a class="tocitem" href="../../faq/">FAQ</a></li><li><a class="tocitem" href="../../api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Spatial SSAs with JumpProcesses.jl</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Spatial SSAs with JumpProcesses.jl</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/JumpProcesses.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/JumpProcesses.jl/blob/master/docs/src/tutorials/spatial.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Spatial-SSAs-with-JumpProcesses.jl"><a class="docs-heading-anchor" href="#Spatial-SSAs-with-JumpProcesses.jl">Spatial SSAs with JumpProcesses.jl</a><a id="Spatial-SSAs-with-JumpProcesses.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Spatial-SSAs-with-JumpProcesses.jl" title="Permalink"></a></h1><p>This tutorial shows how to use spatial solvers.</p><h2 id="Reversible-binding-model-on-a-grid"><a class="docs-heading-anchor" href="#Reversible-binding-model-on-a-grid">Reversible binding model on a grid</a><a id="Reversible-binding-model-on-a-grid-1"></a><a class="docs-heading-anchor-permalink" href="#Reversible-binding-model-on-a-grid" title="Permalink"></a></h2><p>A 5 by 5 Cartesian grid:</p><table><tr><th style="text-align: left">&lt;!– –&gt;</th><th style="text-align: left">&lt;!– –&gt;</th><th style="text-align: left">&lt;!– –&gt;</th><th style="text-align: left">&lt;!– –&gt;</th><th style="text-align: left">&lt;!– –&gt;</th></tr><tr><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">B</td></tr><tr><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td></tr><tr><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td></tr><tr><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td></tr><tr><td style="text-align: left">A</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td><td style="text-align: left">.</td></tr></table><p>Suppose we have a reversible binding system described by <span>$A+B \to C$</span> at rate <span>$k_1$</span> and <span>$C \to A+B$</span> at rate <span>$k_2$</span>. Further, suppose that all <span>$A$</span> molecules start in the lower-left corner, while all <span>$B$</span> molecules start in the upper-right corner of a 5 by 5 grid. There are no <span>$C$</span> molecules at the start.</p><p>We first create the grid:</p><pre><code class="language-julia hljs">using JumpProcesses
+dims = (5, 5)
+num_nodes = prod(dims) # number of sites
+grid = CartesianGrid(dims) # or use Graphs.grid(dims)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">A Cartesian grid with dimensions (5, 5)
+</code></pre><p>Now we set the initial state of the simulation. It has to be a matrix with entry <span>$(s,i)$</span> being the number of species <span>$s$</span> at site <span>$i$</span> (with the standard column-major ordering of the grid).</p><pre><code class="language-julia hljs">num_species = 3
+starting_state = zeros(Int, num_species, num_nodes)
+starting_state[1, 1] = 25
+starting_state[2, end] = 25
+starting_state</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3×25 Matrix{Int64}:
+ 25  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0   0
+  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  25
+  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0   0</code></pre><p>We now set the time-span of the simulation and the reaction rates. These can be chosen arbitrarily.</p><pre><code class="language-julia hljs">tspan = (0.0, 3.0)
+rates = [6.0, 0.05] # k_1 = rates[1], k_2 = rates[2]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{Float64}:
+ 6.0
+ 0.05</code></pre><p>Now we can create the <code>DiscreteProblem</code>:</p><pre><code class="language-julia hljs">prob = DiscreteProblem(starting_state, tspan, rates)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr38_2" style="color:#56b6c2">DiscreteProblem</span> with uType <span class="sgr38_2" style="color:#56b6c2">Matrix{Int64}</span> and tType <span class="sgr38_2" style="color:#56b6c2">Float64</span>. In-place: <span class="sgr38_2" style="color:#56b6c2">true</span>
+timespan: (0.0, 3.0)
+u0: 3×25 Matrix{Int64}:
+ 25  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0   0
+  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  25
+  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0   0</code></pre><p>Since both reactions are <a href="https://en.wikipedia.org/wiki/Law_of_mass_action">mass action reactions</a>, we put them together in a <code>MassActionJump</code>. In order to do that, we create two stoichiometry vectors. The net stoichiometry vector describes which molecules change in number and how much after each reaction; for example, <code>[1 =&gt; -1]</code> is the first molecule disappearing. The reaction stoichiometry vector describes what the reactants of each reaction are; for example, <code>[1 =&gt; 1, 2 =&gt; 1]</code> would mean that the reactants are one molecule of type 1, and one molecule of type 2.</p><pre><code class="language-julia hljs">netstoch = [[1 =&gt; -1, 2 =&gt; -1, 3 =&gt; 1], [1 =&gt; 1, 2 =&gt; 1, 3 =&gt; -1]]
+reactstoch = [[1 =&gt; 1, 2 =&gt; 1], [3 =&gt; 1]]
+majumps = MassActionJump(rates, reactstoch, netstoch)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">MassActionJump{Vector{Float64}, Vector{Vector{Pair{Int64, Int64}}}, Vector{Vector{Pair{Int64, Int64}}}, Nothing}([6.0, 0.05], [[1 =&gt; 1, 2 =&gt; 1], [3 =&gt; 1]], [[1 =&gt; -1, 2 =&gt; -1, 3 =&gt; 1], [1 =&gt; 1, 2 =&gt; 1, 3 =&gt; -1]], nothing)</code></pre><p>The last thing to set up is the hopping constants – the probability per time of an individual molecule of each species hopping from one site to another site. In practice, this parameter, as well as reaction rates, are obtained empirically. Suppose that molecule <span>$C$</span> cannot diffuse, while molecules <span>$A$</span> and <span>$B$</span> diffuse at probability per time 1 (i.e., the time of the diffusive hop is exponentially distributed with mean 1). Entry <span>$(s,i)$</span> of <code>hopping_constants</code> is the hopping rate of species <span>$s$</span> at site <span>$i$</span> to any of its neighboring sites (diagonal hops are not allowed).</p><pre><code class="language-julia hljs">hopping_constants = ones(num_species, num_nodes)
+hopping_constants[3, :] .= 0.0
+hopping_constants</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3×25 Matrix{Float64}:
+ 1.0  1.0  1.0  1.0  1.0  1.0  1.0  1.0  …  1.0  1.0  1.0  1.0  1.0  1.0  1.0
+ 1.0  1.0  1.0  1.0  1.0  1.0  1.0  1.0     1.0  1.0  1.0  1.0  1.0  1.0  1.0
+ 0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0     0.0  0.0  0.0  0.0  0.0  0.0  0.0</code></pre><p>We are now ready to set up the <code>JumpProblem</code> with the Next Subvolume Method.</p><pre><code class="language-julia hljs">alg = NSM()
+jump_prob = JumpProblem(prob, alg, majumps, hopping_constants = hopping_constants,
+    spatial_system = grid, save_positions = (true, false))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr38_2" style="color:#56b6c2">JumpProblem</span> with problem <span class="sgr38_2" style="color:#56b6c2">DiscreteProblem</span> with aggregator <span class="sgr38_2" style="color:#56b6c2">NSM
+Number of jumps with discrete aggregation: 0
+Number of jumps with continuous aggregation: 0
+Number of mass action jumps: 2
+</span></code></pre><p>The <code>save_positions</code> keyword tells the solver to save the positions just before the jumps. To solve the jump problem do</p><pre><code class="language-julia hljs">solution = solve(jump_prob, SSAStepper())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">retcode: Success
+Interpolation: Piecewise constant interpolation
+t: 390-element Vector{Float64}:
+ 0.0
+ 0.023109114576908896
+ 0.02519042817660625
+ 0.037366908705019325
+ 0.04836752217241226
+ 0.049960569258442104
+ 0.0553978807476181
+ 0.05972164248292616
+ 0.06733720637493137
+ 0.06988596121417819
+ ⋮
+ 2.955717406909969
+ 2.959355825528264
+ 2.9639043023960534
+ 2.9722947846218704
+ 2.9781891542150922
+ 2.985669509990837
+ 2.9906566365406433
+ 2.996521006155482
+ 3.0
+u: 390-element Vector{Matrix{Int64}}:
+ [25 0 … 0 0; 0 0 … 0 25; 0 0 … 0 0]
+ [24 0 … 0 0; 0 0 … 0 25; 0 0 … 0 0]
+ [25 0 … 0 0; 0 0 … 0 25; 0 0 … 0 0]
+ [24 1 … 0 0; 0 0 … 0 25; 0 0 … 0 0]
+ [23 1 … 0 0; 0 0 … 0 25; 0 0 … 0 0]
+ [23 1 … 0 0; 0 0 … 0 24; 0 0 … 0 0]
+ [23 1 … 0 0; 0 0 … 0 23; 0 0 … 0 0]
+ [22 1 … 0 0; 0 0 … 0 23; 0 0 … 0 0]
+ [21 2 … 0 0; 0 0 … 0 23; 0 0 … 0 0]
+ [21 2 … 0 0; 0 0 … 1 22; 0 0 … 0 0]
+ ⋮
+ [1 3 … 0 0; 0 0 … 3 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 3 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 4 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 4 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 5 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 5 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 5 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 5 1; 0 0 … 0 0]
+ [1 3 … 0 0; 0 0 … 5 1; 0 0 … 0 0]</code></pre><h2 id="Animation"><a class="docs-heading-anchor" href="#Animation">Animation</a><a id="Animation-1"></a><a class="docs-heading-anchor-permalink" href="#Animation" title="Permalink"></a></h2><p>Visualizing solutions of spatial jump problems is best done with animations.</p><pre><code class="language-julia hljs">using Plots
+is_static(spec) = (spec == 3) # true if spec does not hop
+&quot;&quot;&quot;
+get frame k
+&quot;&quot;&quot;
+function get_frame(k, sol, linear_size, labels, title)
+    num_species = length(labels)
+    h = 1 / linear_size
+    t = sol.t[k]
+    state = sol.u[k]
+    xlim = (0, 1 + 3h / 2)
+    ylim = (0, 1 + 3h / 2)
+    plt = plot(xlim = xlim, ylim = ylim, title = &quot;$title, $(round(t, sigdigits=3)) seconds&quot;)
+
+    species_seriess_x = [[] for i in 1:num_species]
+    species_seriess_y = [[] for i in 1:num_species]
+    CI = CartesianIndices((linear_size, linear_size))
+    for ci in CartesianIndices(state)
+        species, site = Tuple(ci)
+        x, y = Tuple(CI[site])
+        num_molecules = state[ci]
+        sizehint!(species_seriess_x[species], num_molecules)
+        sizehint!(species_seriess_y[species], num_molecules)
+        if !is_static(species)
+            randsx = rand(num_molecules)
+            randsy = rand(num_molecules)
+        else
+            randsx = zeros(num_molecules)
+            randsy = zeros(num_molecules)
+        end
+        for k in 1:num_molecules
+            push!(species_seriess_x[species], x * h - h / 4 + 0.5h * randsx[k])
+            push!(species_seriess_y[species], y * h - h / 4 + 0.5h * randsy[k])
+        end
+    end
+    for species in 1:num_species
+        scatter!(plt, species_seriess_x[species], species_seriess_y[species],
+            label = labels[species], marker = 6)
+    end
+    xticks!(plt, range(xlim..., length = linear_size + 1))
+    yticks!(plt, range(ylim..., length = linear_size + 1))
+    xgrid!(plt, 1, 0.7)
+    ygrid!(plt, 1, 0.7)
+    return plt
+end
+
+&quot;&quot;&quot;
+make an animation of solution sol in 2 dimensions
+&quot;&quot;&quot;
+function animate_2d(sol, linear_size; species_labels, title, verbose = true)
+    num_frames = length(sol.t)
+    anim = @animate for k in 1:num_frames
+        verbose &amp;&amp; println(&quot;Making frame $k&quot;)
+        get_frame(k, sol, linear_size, species_labels, title)
+    end
+    anim
+end
+# animate
+anim = animate_2d(solution, 5, species_labels = [&quot;A&quot;, &quot;B&quot;, &quot;C&quot;], title = &quot;A + B &lt;--&gt; C&quot;,
+    verbose = false)
+fps = 5
+gif(anim, fps = fps)</code></pre><img src="9f741f6d.gif" alt="Example block output"/><h2 id="Making-changes-to-the-model"><a class="docs-heading-anchor" href="#Making-changes-to-the-model">Making changes to the model</a><a id="Making-changes-to-the-model-1"></a><a class="docs-heading-anchor-permalink" href="#Making-changes-to-the-model" title="Permalink"></a></h2><p>Now suppose we want to make some changes to the reversible binding model above. There are three &quot;dimensions&quot; that can be changed: the topology of the system, the structure of hopping rates and the solver. The supported topologies are <code>CartesianGrid</code> – used above, and any <code>AbstractGraph</code> from <code>Graphs</code>. The supported forms of hopping rates are <span>$D_{s,i}, D_{s,i,j}, D_s * L_{i,j}$</span>, and <span>$D_{s,i} * L_{i,j}$</span>, where <span>$s$</span> denotes the species, <span>$i$</span> – the source site, and <span>$j$</span> – the destination. The supported solvers are <code>NSM</code>, <code>DirectCRDirect</code> and any of the standard non-spatial solvers.</p><h3 id="Topology"><a class="docs-heading-anchor" href="#Topology">Topology</a><a id="Topology-1"></a><a class="docs-heading-anchor-permalink" href="#Topology" title="Permalink"></a></h3><p>If our mesh is a grid (1D, 2D and 3D are supported), we can create the mesh as follows.</p><pre><code class="language-julia hljs">dims = (2, 3, 4) # can pass in a 1-Tuple, a 2-Tuple or a 3-Tuple
+num_nodes = prod(dims)
+grid = CartesianGrid(dims)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">A Cartesian grid with dimensions (2, 3, 4)
+</code></pre><p>The interface is the same as for <a href="https://juliagraphs.org/Graphs.jl/dev/core_functions/simplegraphs_generators/#Graphs.SimpleGraphs.grid-Union%7BTuple%7BAbstractVector%7BT%7D%7D,%20Tuple%7BT%7D%7D%20where%20T%3C:Integer"><code>Graphs.grid</code></a>. If we want to use an unstructured mesh, we can simply use any <code>AbstractGraph</code> from <code>Graphs</code> as follows:</p><pre><code class="language-julia hljs">using Graphs
+graph = cycle_digraph(5) # directed cyclic graph on 5 nodes</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">{5, 5} directed simple Int64 graph</code></pre><p>Now, either <code>graph</code> or <code>grid</code> can be used as <code>spatial_system</code> in creation of the <code>JumpProblem</code>.</p><h3 id="Hopping-rates"><a class="docs-heading-anchor" href="#Hopping-rates">Hopping rates</a><a id="Hopping-rates-1"></a><a class="docs-heading-anchor-permalink" href="#Hopping-rates" title="Permalink"></a></h3><p>The most general form of hopping rates that is supported is <span>$D_{s,i,j}$</span> – each (species, source, destination) triple gets its own independent hopping rate. To use this, <code>hopping_constants</code> must be of type <code>Matrix{Vector{F}} where F &lt;: Number</code> (usually <code>F</code> is <code>Float64</code>) with <code>hopping_constants[s,i][j]</code> being the hopping rate of species <span>$s$</span> at site <span>$i$</span> to neighbor at index <span>$j$</span>. Note that neighbors are in ascending order, like in <code>Graphs</code>. Here is an example where only hopping up and left is allowed.</p><pre><code class="language-julia hljs">hopping_constants = Matrix{Vector{Float64}}(undef, num_species, num_nodes)
+for ci in CartesianIndices(hopping_constants)
+    (species, site) = Tuple(ci)
+    hopping_constants[species, site] = zeros(outdegree(grid, site))
+    for (n, nb) in enumerate(neighbors(grid, site))
+        if nb &lt; site
+            hopping_constants[species, site][n] = 1.0
+        end
+    end
+end</code></pre><p>To pass in <code>hopping_constants</code> of form <span>$D_s * L_{i,j}$</span> we need two vectors – one for <span>$D_s$</span> and one for <span>$L_{i,j}$</span>. Here is an example.</p><pre><code class="language-julia hljs">species_hop_constants = ones(num_species)
+site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    site_hop_constants[site] = ones(outdegree(grid, site))
+end
+hopping_constants = Pair(species_hop_constants, site_hop_constants)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[1.0, 1.0, 1.0] =&gt; [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0]  …  [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]</code></pre><p>We must combine both vectors into a pair, as in the last line above.</p><p>Finally, to use in <code>hopping_constants</code> of form <span>$D_{s,i} * L_{i,j}$</span> we construct a matrix instead of a vector for <span>$D_{s,j}$</span>.</p><pre><code class="language-julia hljs">species_hop_constants = ones(num_species, num_nodes)
+site_hop_constants = Vector{Vector{Float64}}(undef, num_nodes)
+for site in 1:num_nodes
+    site_hop_constants[site] = ones(outdegree(grid, site))
+end
+hopping_constants = Pair(species_hop_constants, site_hop_constants)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[1.0 1.0 … 1.0 1.0; 1.0 1.0 … 1.0 1.0; 1.0 1.0 … 1.0 1.0] =&gt; [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0]  …  [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]</code></pre><p>We can use either of the four versions of <code>hopping_constants</code> to construct a <code>JumpProblem</code> with the same syntax as in the original example. The different forms of hopping rates are supported not only for convenience, but also for better memory usage and performance. So it is recommended that the most specialized form of hopping rates is used.</p><h3 id="Solvers"><a class="docs-heading-anchor" href="#Solvers">Solvers</a><a id="Solvers-1"></a><a class="docs-heading-anchor-permalink" href="#Solvers" title="Permalink"></a></h3><p>There are currently two specialized &quot;spatial&quot; solvers: <code>NSM</code> and <code>DirectCRDirect</code>. The former stands for Next Subvolume Method <sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>. The latter employs Composition-Rejection to sample the next site to fire, similar to the ordinary DirectCR method. For larger networks <code>DirectCRDirect</code> is expected to be faster. Both methods can be used interchangeably.</p><p>Additionally, all standard solvers are supported as well, although they are expected to use more memory and be slower. They &quot;flatten&quot; the problem, i.e., turn all hops into reactions, resulting in a much larger system. For example, to use the Next Reaction Method (<code>NRM</code>), simply pass in <code>NRM()</code> instead of <code>NSM()</code> in the construction of the <code>JumpProblem</code>. Importantly, you <em>must</em> pass in <code>hopping_constants</code> in the <code>D_{s,i,j}</code> or <code>D_{s,i}</code> form to use any of the non-specialized solvers.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>Elf, Johan and Ehrenberg, Mäns. “Spontaneous separation of bi-stable biochemical systems into spatial domains of opposite phases”. In: <em>Systems biology</em> 1.2 (2004), pp. 230–236.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../jump_diffusion/">« Piecewise Deterministic Markov Processes and Jump Diffusion Equations</a><a class="docs-footer-nextpage" href="../../applications/advanced_point_process/">Temporal Point Processes (TPP) with JumpProcesses and PointProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Saturday 31 August 2024 20:31">Saturday 31 August 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

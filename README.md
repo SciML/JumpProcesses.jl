@@ -14,7 +14,7 @@ JumpProcesses.jl provides methods for simulating jump processes, known as
 stochastic simulation algorithms (SSAs), Doob's method, Gillespie methods, or
 Kinetic Monte Carlo methods across different fields of science. It also enables the
 incorporation of jump processes into hybrid jump-ODE and jump-SDE models,
-including jump diffusions.
+including piecewise deterministic Markov processes (PDMPs) and jump diffusions.
 
 JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
 and one of the core solver libraries included in

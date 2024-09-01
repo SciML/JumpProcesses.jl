@@ -220,6 +220,9 @@ function c(du, u, p, t, counts, mark)
 end
 
 rj = RegularJump(rate!, c, 2)
+
+## Notes
+- `mark_dist` is not currently used or supported in τ-leaping methods.
 ```
 """
 struct RegularJump{iip, R, C, MD}

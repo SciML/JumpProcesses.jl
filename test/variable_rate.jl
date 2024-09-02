@@ -261,9 +261,10 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
+    @test allunique(sjm_prob.prob.u0.jump_u)
     u0old = copy(sjm_prob.prob.u0.jump_u)
     for i in 1:Nsims
-        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
+        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])        
         @test allunique(sjm_prob.prob.u0.jump_u)
         @test all(u0old != sjm_prob.prob.u0.jump_u)
         u0old .= sjm_prob.prob.u0.jump_u
@@ -272,7 +273,8 @@ end
 
 # accuracy test based on 
 # https://github.com/SciML/JumpProcesses.jl/issues/320
-# note that testing that precisely is not trivial
+# note that even with the seeded StableRNG this test is not 
+# deterministic for some reason.
 let
     rng = StableRNG(12345)
     b = 2.0
@@ -304,7 +306,7 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
     dt = .1
     tsave = range(tspan[1], tspan[2]; step = dt)
     umean = zeros(length(tsave))

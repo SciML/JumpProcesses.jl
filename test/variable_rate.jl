@@ -264,7 +264,7 @@ let
     @test allunique(sjm_prob.prob.u0.jump_u)
     u0old = copy(sjm_prob.prob.u0.jump_u)
     for i in 1:Nsims
-        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])        
+        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
         @test allunique(sjm_prob.prob.u0.jump_u)
         @test all(u0old != sjm_prob.prob.u0.jump_u)
         u0old .= sjm_prob.prob.u0.jump_u
@@ -279,12 +279,12 @@ let
     rng = StableRNG(12345)
     b = 2.0
     d = 1.0
-    n0 = 1 
+    n0 = 1
     tspan = (0.0, 4.0)
     Nsims = 10000
-    n(t) = n0 * exp((b - d)*t)
+    n(t) = n0 * exp((b - d) * t)
     u0 = [n0]
-    p = [b,d]
+    p = [b, d]
 
     function ode_fxn(du, u, p, t)
         du .= 0
@@ -293,7 +293,7 @@ let
 
     b_rate(u, p, t) = (u[1] * p[1])
     function birth!(integrator)
-        integrator.u[1] += 1 
+        integrator.u[1] += 1
         nothing
     end
     b_jump = VariableRateJump(b_rate, birth!)
@@ -307,7 +307,7 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
-    dt = .1
+    dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
     umean = zeros(length(tsave))
     for i in 1:Nsims
@@ -315,5 +315,5 @@ let
         umean .+= Array(sol(tsave; idxs = 1))
     end
     umean ./= Nsims
-    @test all(abs.(umean .- n.(tsave)) .< .05 * n.(tsave))
+    @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
 end

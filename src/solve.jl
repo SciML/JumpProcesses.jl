@@ -58,8 +58,8 @@ function resetted_jump_problem(_jump_prob, seed)
 
     if !isempty(jump_prob.variable_jumps)
         @assert jump_prob.prob.u0 isa ExtendedJumpArray
-        ttype = eltype(_jump_prob.prob.tspan)
-        @. jump_prob.prob.u0.jump_u = -randexp(_jump_prob.rng, ttype)
+        randexp!(_jump_prob.rng, jump_prob.prob.u0.jump_u)
+        jump_prob.prob.u0.jump_u .*= -1
     end
     jump_prob
 end
@@ -71,7 +71,7 @@ function reset_jump_problem!(jump_prob, seed)
 
     if !isempty(jump_prob.variable_jumps)
         @assert jump_prob.prob.u0 isa ExtendedJumpArray
-        ttype = eltype(jump_prob.prob.tspan)
-        @. jump_prob.prob.u0.jump_u = -randexp(jump_prob.rng, ttype)
+        randexp!(jump_prob.rng, jump_prob.prob.u0.jump_u)
+        jump_prob.prob.u0.jump_u .*= -1
     end
 end

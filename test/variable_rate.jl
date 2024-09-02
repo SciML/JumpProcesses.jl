@@ -229,3 +229,45 @@ let
         solve(jprob, SSAStepper())
     end
 end
+
+# test u0 resets correctly
+let
+    b = 2.0
+    d = 1.0
+    n0 = 1 
+    tspan = (0.0, 4.0)
+    Nsims = 10    
+    u0 = [n0]
+    p = [b,d]
+
+    function ode_fxn(du, u, p, t)
+        du .= 0
+        nothing
+    end
+    b_rate(u, p, t) = (u[1] * p[1])
+    function birth!(integrator)
+        integrator.u[1] += 1 
+        nothing
+    end
+    b_jump = VariableRateJump(b_rate, birth!)
+    
+    d_rate(u, p, t) = (u[1] * p[2])
+    function death!(integrator)
+        integrator.u[1] -= 1
+        nothing
+    end
+    d_jump = VariableRateJump(d_rate, death!)
+        
+    ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
+    u0old = copy(sjm_prob.prob.u0.jump_u)
+    dt = .1
+    tsave = range(tspan[1], tspan[2]; step = dt)
+    umean = zeros(length(tsave))
+    for i in 1:Nsims
+        sol = solve(sjm_prob, Tsit5(); saveat = dt)
+        @test allunique(sjm_prob.prob.u0.jump_u)
+        @test all(u0old != sjm_prob.prob.u0.jump_u)
+        u0old .= sjm_prob.prob.u0.jump_u
+    end    
+end

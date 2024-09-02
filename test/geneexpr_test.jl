@@ -1,4 +1,4 @@
-using JumpProcesses
+using JumpProcesses, OrdinaryDiffEq
 using Test, Statistics
 using StableRNGs
 rng = StableRNG(12345)
@@ -26,6 +26,15 @@ function runSSAs(jump_prob; use_stepper = true)
     Psamp = zeros(Int, Nsims)
     for i in 1:Nsims
         sol = use_stepper ? solve(jump_prob, SSAStepper()) : solve(jump_prob)
+        Psamp[i] = sol[3, end]
+    end
+    mean(Psamp)
+end
+
+function runSSAs_ode(jump_prob)
+    Psamp = zeros(Int, Nsims)
+    for i in 1:Nsims
+        sol = solve(jump_prob, Tsit5(); saveat = jump_prob.prob.tspan[2])
         Psamp[i] = sol[3, end]
     end
     mean(Psamp)
@@ -123,3 +132,59 @@ jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
 jump_prob = JumpProblem(prob, majumps, save_positions = (false, false), rng = rng)
 @test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
 @test abs(runSSAs(jump_prob; use_stepper = false) - expected_avg) < reltol * expected_avg
+
+# crj/vrj accuracy test
+#     k1, DNA --> mRNA + DNA
+#     k2, mRNA --> mRNA + P
+#     k3, mRNA --> 0
+#     k4, P --> 0
+#     k5, DNA + P --> DNAR
+#     k6, DNAR --> DNA + P
+#    DNA = 1, mRNA = 2, P = 3, DNAR = 4
+let
+    r1(u, p, t) = p[1] * u[1]
+    r2(u, p, t) = p[2] * u[2]
+    r3(u, p, t) = p[3] * u[2]
+    r4(u, p, t) = p[4] * u[3]
+    r5(u, p, t) = p[5] * u[1] * u[3]
+    r6(u, p, t) = p[6] * u[4]
+    a1!(integ) = (integ.u[2] += 1; nothing)
+    a2!(integ) = (integ.u[3] += 1; nothing)
+    a3!(integ) = (integ.u[2] -= 1; nothing)
+    a4!(integ) = (integ.u[3] -= 1; nothing)
+    function a5!(integ)
+        integ.u[1] -= 1
+        integ.u[3] -= 1
+        integ.u[4] += 1
+        nothing
+    end
+    function a6!(integ)
+        integ.u[1] += 1
+        integ.u[3] += 1
+        integ.u[4] -= 1
+        nothing
+    end
+    crjs = JumpSet(ConstantRateJump(r1, a1!), ConstantRateJump(r2, a2!),
+        ConstantRateJump(r3, a3!), ConstantRateJump(r4, a4!), ConstantRateJump(r5, a5!),
+        ConstantRateJump(r6, a6!))
+    vrjs = JumpSet(VariableRateJump(r1, a1!; save_positions = (false, false)),
+        VariableRateJump(r2, a2!, save_positions = (false, false)),
+        VariableRateJump(r3, a3!, save_positions = (false, false)),
+        VariableRateJump(r4, a4!, save_positions = (false, false)),
+        VariableRateJump(r5, a5!, save_positions = (false, false)),
+        VariableRateJump(r6, a6!, save_positions = (false, false)))
+
+    prob = DiscreteProblem(u0, (0.0, tf), rates)
+    crjprob = JumpProblem(prob, crjs; save_positions = (false, false), rng)
+    @test abs(runSSAs(crjprob) - expected_avg) < reltol * expected_avg
+
+    # vrjs are very slow so test on a shorter time span and compare to the crjs
+    prob = DiscreteProblem(u0, (0.0, tf / 5), rates)
+    crjprob = JumpProblem(prob, crjs; save_positions = (false, false), rng)
+    crjmean = runSSAs(crjprob)
+    f(du, u, p, t) = (du .= 0; nothing)
+    oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
+    vrjprob = JumpProblem(oprob, vrjs; save_positions = (false, false), rng)
+    vrjmean = runSSAs_ode(vrjprob)
+    @test abs(vrjmean - crjmean) < reltol * crjmean
+end

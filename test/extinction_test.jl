@@ -73,7 +73,8 @@ end
 cb = DiscreteCallback(extinction_condition2, extinction_affect!2,
     save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
-jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
+jprob = JumpProblem(dprob, majump; save_positions = (false, false), rng)
+sol = solve(jprob; callback = cb, save_end = false)
 @test sol[1, end] == 1
 @test sol.retcode == ReturnCode.Terminated
+@test sol.t[end] < 1000.0

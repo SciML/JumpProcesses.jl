@@ -122,27 +122,31 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     while should_continue_solve(integrator) # It stops before adding a tstop over
         step!(integrator)
     end
-    integrator.t = end_time
 
-    # check callbacks one last time
-    if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
-        DiffEqBase.apply_discrete_callback!(integrator,
-            integrator.opts.callback.discrete_callbacks...)
-    end
+    # if the user terminated the solve we shouldn't advance in time any more
+    if integrator.sol.retcode !== ReturnCode.Terminated
+        integrator.t = end_time
 
-    if integrator.saveat !== nothing && !isempty(integrator.saveat)
-        # Split to help prediction
-        while integrator.cur_saveat <= length(integrator.saveat) &&
-            integrator.saveat[integrator.cur_saveat] < integrator.t
-            push!(integrator.sol.t, integrator.saveat[integrator.cur_saveat])
-            push!(integrator.sol.u, copy(integrator.u))
-            integrator.cur_saveat += 1
+        # check callbacks one last time
+        if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
+            DiffEqBase.apply_discrete_callback!(integrator,
+                integrator.opts.callback.discrete_callbacks...)
         end
-    end
 
-    if integrator.save_end && integrator.sol.t[end] != end_time
-        push!(integrator.sol.t, end_time)
-        push!(integrator.sol.u, copy(integrator.u))
+        if integrator.saveat !== nothing && !isempty(integrator.saveat)
+            # Split to help prediction
+            while integrator.cur_saveat <= length(integrator.saveat) &&
+                integrator.saveat[integrator.cur_saveat] < integrator.t
+                push!(integrator.sol.t, integrator.saveat[integrator.cur_saveat])
+                push!(integrator.sol.u, copy(integrator.u))
+                integrator.cur_saveat += 1
+            end
+        end
+
+        if integrator.save_end && integrator.sol.t[end] != end_time
+            push!(integrator.sol.t, end_time)
+            push!(integrator.sol.u, copy(integrator.u))
+        end
     end
 
     DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)

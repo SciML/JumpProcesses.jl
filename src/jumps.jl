@@ -195,11 +195,50 @@ end
 """
 $(TYPEDEF)
 
+Representation for encoding rates and multiple simultaneous jumps via τ-leaping type
+methods.
+
+### Constructors
+- `RegularJump(rate, c, numjumps; mark_dist = nothing)`
+
+## Fields
+
+$(FIELDS)
+
+## Examples
+```julia
+function rate!(out, u, p, t)
+    out[1] = (0.1 / 1000.0) * u[1] * u[2]
+    out[2] = 0.01u[2]
+    nothing
+end
+
+const dc = zeros(3,2)
+function c(du, u, p, t, counts, mark) 
+    mul!(du, dc, counts)
+    nothing
+end
+
+rj = RegularJump(rate!, c, 2)
+
+## Notes
+- `mark_dist` is not currently used or supported in τ-leaping methods.
+```
 """
 struct RegularJump{iip, R, C, MD}
+    """
+    Function `rate!(rate_vals, u, p, t)` that returns the current rates, i.e.
+    intensities or propensities, for all possible jumps.
+    """
     rate::R
+    """
+    Function `c(du, u, p, t, counts, mark)` that executes the `i`th jump `counts[i]` times,
+    saving the output in `c[i]`.
+    """
     c::C
+    """ Number of jumps in the system."""
     numjumps::Int
+    """ A distribution for marks. Not currently used or supported. """
     mark_dist::MD
     function RegularJump{iip}(rate, c, numjumps::Int; mark_dist = nothing) where {iip}
         new{iip, typeof(rate), typeof(c), typeof(mark_dist)}(rate, c, numjumps, mark_dist)

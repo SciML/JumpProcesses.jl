@@ -195,7 +195,7 @@ end
 """
 $(TYPEDEF)
 
-Representation for encoding rates and multiple simultaneous jumps via τ-leaping type
+Representation for encoding rates and multiple simultaneous jumps for use in τ-leaping type
 methods.
 
 ### Constructors
@@ -228,12 +228,12 @@ rj = RegularJump(rate!, c, 2)
 struct RegularJump{iip, R, C, MD}
     """
     Function `rate!(rate_vals, u, p, t)` that returns the current rates, i.e.
-    intensities or propensities, for all possible jumps.
+    intensities or propensities, for all possible jumps in `rate_vals`.
     """
     rate::R
     """
     Function `c(du, u, p, t, counts, mark)` that executes the `i`th jump `counts[i]` times,
-    saving the output in `c[i]`.
+    saving the output in `du[i]`.
     """
     c::C
     """ Number of jumps in the system."""

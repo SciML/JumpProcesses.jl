@@ -57,6 +57,7 @@ end
     lastpid
 end
 
+
 function Base.show(io::IO, pg::PriorityGroup)
     println(io, "  ", summary(pg))
     println(io, "  maxpriority = ", pg.maxpriority)
@@ -128,7 +129,7 @@ end
 ########################## ACCESSORS ##########################
 @inline function numgroups(pt::PriorityTable)
     length(pt.groups)
-end
+    endpt.groups[gid]
 
 @inline function numpriorities(pt::PriorityTable)
     length(pt.pidtogroup)
@@ -137,6 +138,7 @@ end
 @inline function groupsum(pt::PriorityTable)
     pt.gsum
 end
+
 
 """
 Adds extra groups to the table to accommodate a new maxpriority.
@@ -226,6 +228,10 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     nothing
 end
 
+function rebuild!(pt::PriorityTable) 
+    
+end
+
 function reset!(pt::PriorityTable{F, S, T, U}) where {F, S, T, U}
     @unpack groups, gsums, pidtogroup = pt
     pt.gsum = zero(F)
@@ -311,4 +317,70 @@ function sample(pt::PriorityTable, priorities, rng = DEFAULT_RNG)
 
     # sample element within the group
     @inbounds sample(groups[gid], priorities, rng)
+end
+
+##########################
+### Routines for CCNRM ###
+##########################
+
+mutable struct PriorityTimeTable{T <: Num}
+    pt::PriorityTable
+    times::Vector{T}
+end
+
+# Construct the time table with the default optimal bin width. 
+
+function PriorityTimeTable(priortogid::Function, times::AbstractVector, mintime, maxtime, timestep)
+    # DEFAULT: numgroups = 20 * sqrt(length(priorities))
+    # DEFAULT: timestep = 16 / sum(propensities)
+    numgroups = Int(20 * sqrt(length(times)))
+    (numgroups * timestep > maxtime) && numgroups = Int(maxtime/timestep)
+
+    pidtype = typeof(numgroups)
+    ptype = eltype(priorities)
+    groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()
+    pidtogroup = Vector{Tuple{Int, Int}}(undef, length(priorities))
+    gsum = zero(ptype)
+    gsums = zeros(ptype, numgroups)
+
+    # create the groups, [t_min, t_min + τ), [t_min + τ, t_min + 2τ)...
+    push!(groups, PriorityGroup{pidtype}(zero(ptype)))
+    tmaxprior = mintime
+    for i in 1:numgroups
+        push!(groups, PriorityGroup{pidtype}(tmaxprior))
+        tmaxprior += timestep 
+    end
+    tmaxprior = groups[end].maxpriority
+
+    pt = PriorityTable(minpriority, tmaxprior, groups, gsums, gsum, pidtogroup, priortogid)
+    ptt = PriorityTimeTable(pt, times)
+
+    # Insert priority ids into the groups
+    for (pid, priority) in enumerate(priorities)
+        insert!(pt, pid, priority)
+    end
+
+    ptt
+end
+
+# Get the reaction with the earliest timestep.
+@inline function getfirst(ptt::PriorityTimeTable)
+    @unwrap pt, times = ptt
+    gid = 1
+    for i in 1:pt.numgroups
+        ids = pt.groups[i].pids
+        if !isempty(ids)
+            min_idx = argmin(times[ids])
+            min_time = minimum(times[ids])
+            return ids[min_idx], min_time 
+        end
+    end
+
+    nothing
+end
+
+function update!(ptt::PriorityTimeTable, pid, oldtime, newtime) 
+    @unwrap pt, times = ptt
+    update!(pt, pid, oldtime, newtime)
+    times[pid] = newtime
 end

@@ -1,7 +1,7 @@
 # Implementation the original Next Reaction Method
 # Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
 
-mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
+mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PT} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
@@ -15,7 +15,7 @@ mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR
-    pq::PQ
+    ptt::PT
 end
 
 function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -37,10 +37,10 @@ function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         add_self_dependencies!(dg)
     end
 
-    ptt = PriorityTimeTable() # TODO
+    ptt = PriorityTimeTable(zeros(T, length(crs)), 0., 1.) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(pq)}(nj, nj, njt, et,
+    CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(ptt)}(nj, nj, njt, et,
         crs, sr, maj,
         rs, affs!, sps,
         rng, dg, ptt)
@@ -62,7 +62,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::CCNRMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
-    rebuild_PTT!(p, u, params, t, init=true) # Initialize the PTT. 
+    initialize_rates_and_times!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -80,64 +80,66 @@ end
 # calculate the next jump / jump time
 # just the first reaction in the first non-empty bin in the priority table
 function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
-    next = getfirst(p.ptt)
-    if next === nothing
-        rebuild_PTT!(p.ptt, t)
-        next = getfirst(p.ptt)
+    next_jump, next_time = getfirst(p.ptt)
+
+    # Rebuild the table if no next jump is found. 
+    if next_jump === nothing
+        binwidth = 16 / sum(p.cur_rates)
+        min_time = minimum(p.ptt.times)
+        rebuild!(p.ptt, min_time, binwidth)
+        next_jump, next_time = getfirst(p.ptt)
     end
 
-    p.next_jump_time, p.next_jump = next
+    p.next_jump, p.next_jump_time = next_jump, next_time
     nothing
 end
 
 ######################## SSA specific helper routines ########################
 
-# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
+# Recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
 function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    @unpack cur_rates, rates, ma_jumps = p
+    @unpack ptt, cur_rates, rates, ma_jumps = p
     num_majumps = get_num_majumps(ma_jumps)
 
     @inbounds for rx in dep_rxs
         oldrate = cur_rates[rx]
-        times = p.ptt.times; oldtime = times[rx]
+        times = ptt.times; oldtime = times[rx]
 
         # update the jump rate
         @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u,
             params, t, rx)
 
-        # calculate new jump times for dependent jumps
+        # Calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)
             if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(p.ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (times[rx] - t))
+                update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (times[rx] - t))
             else
-                update!(p.ptt, rx, oldtime, typemax(t))
+                update!(ptt, rx, oldtime, typemax(t))
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(p.ptt, rx, oldtime, t + randexp(p.rng) / cur_rates[rx])
+                update!(ptt, rx, oldtime, t + randexp(p.rng) / cur_rates[rx])
             else
-                update!(p.ptt, rx, oldtime, typemax(t))
+                update!(ptt, rx, oldtime, typemax(t))
             end
         end
     end
     nothing
 end
 
-# reevaluate all rates, recalculate all jump times, and reinit the priority queue
-function rebuild_PTT!(p::CCNRMJumpAggregation, u, params, t, init = true)
-
-    # Mass action jumps
+# Evaluate all the rates and initialize the times in the priority table. 
+function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t)
+    # Initialize next-reaction times for the mass action jumps
     majumps = p.ma_jumps
     cur_rates = p.cur_rates
     pttdata = Vector{typeof(t)}(undef, length(cur_rates))
-
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps)
         pttdata[i] = t + randexp(p.rng) / cur_rates[i]
     end
 
-    # constant rates
+    # Initialize next-reaction times for the constant rates
     rates = p.rates
     idx = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
@@ -146,14 +148,9 @@ function rebuild_PTT!(p::CCNRMJumpAggregation, u, params, t, init = true)
         idx += 1
     end
 
-    timestep = 16 / sum(cur_rates)
-
-    # Depending on whether init is set, either initialize a new PTT with the times or rebuild the existing one. 
-    if init
-        p.ptt = PriorityTimeTable(priortogid, pttdata, t, p.end_time, timestep) #TODO
-    else
-        @unwrap pt, times = p.ptt
-        p.ptt = PriorityTimeTable(priortogid, times, t, p.end_time, timestep)
-    end
+    # Build the priority time table with the times and bin width. 
+    binwidth = 16 / sum(cur_rates)
+    p.ptt.times = pttdata
+    rebuild!(p.ptt, t, binwidth)
     nothing
 end

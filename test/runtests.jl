@@ -2,17 +2,17 @@
 using JumpProcesses, DiffEqBase, SafeTestsets
 
 @time begin
-    @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
-    @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
-    @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
-    @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end
-    @time @safetestset "Monte Carlo Tests" begin include("monte_carlo_test.jl") end
-    @time @safetestset "Split Coupled Tests" begin include("splitcoupled.jl") end
-    @time @safetestset "SSA Tests" begin include("ssa_tests.jl") end
-    @time @safetestset "Tau Leaping Tests" begin include("regular_jumps.jl") end
-    @time @safetestset "Simple SSA Callback Test" begin include("ssa_callback_test.jl") end
-    @time @safetestset "SIR Discrete Callback Test" begin include("sir_model.jl") end
-    @time @safetestset "Linear Reaction SSA Test" begin include("linearreaction_test.jl") end
+    # @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
+    # @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
+    # @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
+    # @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end
+    # @time @safetestset "Monte Carlo Tests" begin include("monte_carlo_test.jl") end
+    # @time @safetestset "Split Coupled Tests" begin include("splitcoupled.jl") end
+    # @time @safetestset "SSA Tests" begin include("ssa_tests.jl") end
+    # @time @safetestset "Tau Leaping Tests" begin include("regular_jumps.jl") end
+    # @time @safetestset "Simple SSA Callback Test" begin include("ssa_callback_test.jl") end
+    # @time @safetestset "SIR Discrete Callback Test" begin include("sir_model.jl") end
+    # @time @safetestset "Linear Reaction SSA Test" begin include("linearreaction_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end

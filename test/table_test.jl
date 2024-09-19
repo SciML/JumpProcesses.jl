@@ -61,3 +61,37 @@ for i in 1:Nsamps
     (pid == 8) && (cnt += 1)
 end
 @test abs(cnt // Nsamps - 0.008968535978248484) / 0.008968535978248484 < 0.05
+
+
+
+##### PRIORITY TIME TABLE TESTS FOR CCNRM
+mintime = 0.; maxtime = 100.; timestep = 1.5 
+times = [2., 8., 13., 15., 74.]
+
+ptt = DJ.PriorityTimeTable(times, mintime, timestep)
+@test DJ.getfirst(ptt) == (1, 2.)
+@test ptt.pt.pidtogroup[5] == (0, 0) # Should not store the last one, outside the window.
+
+# Test update
+DJ.update!(ptt, 1, times[1], 10*times[1]) # 2. -> 20., group 2 to group 14
+@test ptt.pt.groups[14].numpids == 1
+@test DJ.getfirst(ptt) == (2, 8.)
+# Updating beyond the time window should not change the max priority. 
+DJ.update!(ptt, 1, times[1], 70.) # 20. -> 70.
+@test ptt.pt.groups[14].numpids == 0
+@test ptt.pt.maxpriority == 66.
+@test ptt.pt.pidtogroup[1] == (0, 0)
+
+# Test rebuild
+for i in 1:4
+    DJ.update!(ptt, i, times[i], times[i] + 66.)
+end
+@test DJ.getfirst(ptt) === nothing # No more left.
+
+mintime = 66.; timestep = .75
+DJ.rebuild!(ptt, mintime, timestep)
+@test ptt.pt.groups[11].numpids == 2 # 73.5-74.25
+@test ptt.pt.groups[18].numpids == 1
+@test ptt.pt.groups[21].numpids == 1
+@test ptt.pt.pidtogroup[1] == (0, 0)
+

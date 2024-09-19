@@ -173,7 +173,7 @@ algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-    FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve())
+                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CCNRM())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -183,6 +183,7 @@ needs_depgraph(aggregator::AbstractAggregatorAlgorithm) = false
 needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
 needs_depgraph(aggregator::NRM) = true
+needs_depgraph(aggregator::CCNRM) = true
 needs_depgraph(aggregator::RDirect) = true
 needs_depgraph(aggregator::Coevolve) = true
 

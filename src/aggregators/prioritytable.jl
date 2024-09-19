@@ -336,11 +336,11 @@ mutable struct PriorityTimeTable{T <: Number, F <: Int}
     pt::PriorityTable
     # maxtime::T 
     # pidtogroup
-    # 
+    # groups 
     times::Vector{T}
     timegrouper::TimeGrouper
     minbin::F
-    steps::F
+    steps::F # TODO: For adaptive rebuilding. 
 end
 
 # Construct the time table with the default optimal bin width and number of bins. 

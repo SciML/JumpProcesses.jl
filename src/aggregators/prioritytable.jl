@@ -132,7 +132,6 @@ end
 ########################## ACCESSORS ##########################
 @inline function numgroups(pt::PriorityTable)
     length(pt.groups)
-    endpt.groups[gid]
 end
 
 @inline function numpriorities(pt::PriorityTable)

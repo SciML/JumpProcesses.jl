@@ -86,7 +86,7 @@ DJ.update!(ptt, 1, times[1], 70.) # 20. -> 70.
 for i in 1:4
     DJ.update!(ptt, i, times[i], times[i] + 66.)
 end
-@test DJ.getfirst(ptt) === nothing # No more left.
+@test DJ.getfirst(ptt) === (nothing, nothing) # No more left.
 
 mintime = 66.; timestep = .75
 DJ.rebuild!(ptt, mintime, timestep)

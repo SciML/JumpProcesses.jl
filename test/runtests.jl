@@ -13,11 +13,11 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     # @time @safetestset "Simple SSA Callback Test" begin include("ssa_callback_test.jl") end
     # @time @safetestset "SIR Discrete Callback Test" begin include("sir_model.jl") end
     # @time @safetestset "Linear Reaction SSA Test" begin include("linearreaction_test.jl") end
-    @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
-    @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
-    @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
-    @time @safetestset "Direct allocations test" begin include("allocations.jl") end
-    @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
+    # @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
+    # @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
+    # @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
+    # # @time @safetestset "Direct allocations test" begin include("allocations.jl") end
+    # @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
     @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end

@@ -99,7 +99,7 @@ end
 # Recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
 function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    @unpack ptt, cur_rates, rates, ma_jumps = p
+    @unpack ptt, cur_rates, rates, ma_jumps, end_time = p
     num_majumps = get_num_majumps(ma_jumps)
 
     @inbounds for rx in dep_rxs
@@ -115,13 +115,13 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (times[rx] - t))
             else
-                update!(ptt, rx, oldtime, typemax(t))
+                update!(ptt, rx, oldtime, 2*end_time)
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + randexp(p.rng) / cur_rates[rx])
             else
-                update!(ptt, rx, oldtime, typemax(t))
+                update!(ptt, rx, oldtime, 2*end_time)
             end
         end
     end

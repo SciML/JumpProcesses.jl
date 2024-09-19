@@ -139,7 +139,7 @@ evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
 struct Coevolve <: AbstractAggregatorAlgorithm end
 
 """
-A constant-complexity NRM method. Stores next reaction times in a table with a specified bin width. 
+A constant-complexity NRM method. Stores next reaction times in a table with a specified bin width.
 
 Kevin R. Sanft and Hans G. Othmer, Constant-complexity stochastic simulation
 algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
@@ -173,7 +173,7 @@ algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-                          FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CCNRM())
+    FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CCNRM())
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end

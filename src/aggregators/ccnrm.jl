@@ -37,10 +37,11 @@ function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         add_self_dependencies!(dg)
     end
 
-    ptt = PriorityTimeTable(zeros(T, length(crs)), 0., 1.) # We will re-initialize this in initialize!()
+    ptt = PriorityTimeTable(zeros(T, length(crs)), 0.0, 1.0) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(ptt)}(nj, nj, njt, et,
+    CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(ptt)}(
+        nj, nj, njt, et,
         crs, sr, maj,
         rs, affs!, sps,
         rng, dg, ptt)
@@ -104,7 +105,8 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
 
     @inbounds for rx in dep_rxs
         oldrate = cur_rates[rx]
-        times = ptt.times; oldtime = times[rx]
+        times = ptt.times
+        oldtime = times[rx]
 
         # update the jump rate
         @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u,
@@ -115,13 +117,13 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (times[rx] - t))
             else
-                update!(ptt, rx, oldtime, 2*end_time)
+                update!(ptt, rx, oldtime, 2 * end_time)
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + randexp(p.rng) / cur_rates[rx])
             else
-                update!(ptt, rx, oldtime, 2*end_time)
+                update!(ptt, rx, oldtime, 2 * end_time)
             end
         end
     end

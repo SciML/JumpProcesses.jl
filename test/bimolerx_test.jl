@@ -16,7 +16,7 @@ doprintmeans = false
 # SSAs to test
 SSAalgs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
-Nsims = 32000 
+Nsims = 32000
 tf = 0.01
 u0 = [200, 100, 150]
 expected_avg = 84.876015624999994

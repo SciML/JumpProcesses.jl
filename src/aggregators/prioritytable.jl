@@ -328,7 +328,7 @@ mutable struct TimeGrouper{T <: Number}
     timestep::T
 end
 
-@inline function (t::TimeGrouper{T})(time::T) where T
+@inline function (t::TimeGrouper{T})(time::T) where {T}
     return floor(Int, (time - t.mintime) / t.timestep) + 1
 end
 
@@ -364,7 +364,8 @@ function PriorityTimeTable(times::AbstractVector, mintime, timestep)
         push!(groups, PriorityGroup{pidtype}(mintime + i * timestep))
     end
 
-    ptt = PriorityTimeTable(groups, pidtogroup, times, ttgdata, zero(pidtype), zero(pidtype), maxtime)
+    ptt = PriorityTimeTable(
+        groups, pidtogroup, times, ttgdata, zero(pidtype), zero(pidtype), maxtime)
     # Insert priority ids into the groups
     for (pid, time) in enumerate(times)
         if time > maxtime
@@ -394,7 +395,7 @@ function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
     for group in groups
         group.numpids = zero(F)
         groupmaxtime += timestep
-        group.maxpriority = groupmaxtime 
+        group.maxpriority = groupmaxtime
     end
 
     # Reinsert the times into the groups. 
@@ -426,8 +427,8 @@ function getfirst(ptt::PriorityTimeTable)
     return pids[min_idx], min_time
 end
 
-function insert!(ptt::PriorityTimeTable, pid, time) 
-    @unpack timegrouper, pidtogroup, groups = ptt    
+function insert!(ptt::PriorityTimeTable, pid, time)
+    @unpack timegrouper, pidtogroup, groups = ptt
     gid = timegrouper(time)
     @inbounds pididx = insert!(groups[gid], pid)
     @inbounds pidtogroup[pid] = (gid, pididx)
@@ -436,7 +437,7 @@ end
 # Update the priority table when a reaction time gets updated. We only shift
 # between bins if the new time is within the current time window; otherwise
 # we remove the reaction and wait until rebuild. 
-function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T,F}
+function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, F}
     @unpack times, timegrouper, maxtime, pidtogroup, groups = ptt
 
     times[pid] = newtime
@@ -453,7 +454,8 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T,F
         end
     else
         # Move bins if the reaction was already inside. 
-        oldgid = timegrouper(oldtime); newgid = timegrouper(newtime)
+        oldgid = timegrouper(oldtime)
+        newgid = timegrouper(newtime)
         oldgid == newgid && return
         @inbounds begin
             pidx = pidtogroup[pid][2]

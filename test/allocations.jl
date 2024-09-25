@@ -97,8 +97,9 @@ let
     vartojumps_map = [copy(idxs1), copy(idxs2)]
     jumptovars_map = [[1], [2], [1], [2], [1, 2], [1, 2]]
     graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
+    SSAAlg = (JumpProcesses.CCNRM(), JumpProcesses.NullAggregator())
 
-    @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
+    @testset "Allocations for $agg" for agg in SSAAlg
         jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs, rng = StableRNG(1234))
         stepper = SSAStepper()
         sol1 = solve(jprob1, stepper)

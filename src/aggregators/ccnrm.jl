@@ -86,7 +86,7 @@ function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
     p.next_jump, p.next_jump_time = getfirst(p.ptt)
 
     # Rebuild the table if no next jump is found. 
-    if p.next_jump === nothing
+    if p.next_jump == 0
         binwidth = 16 / sum(p.cur_rates)
         min_time = minimum(p.ptt.times)
         rebuild!(p.ptt, min_time, binwidth)

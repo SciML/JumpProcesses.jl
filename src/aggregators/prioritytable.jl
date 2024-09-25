@@ -410,12 +410,12 @@ end
 # Get the reaction with the earliest timestep.
 function getfirst(ptt::PriorityTimeTable)
     @unpack groups, times, minbin = ptt
-    minbin == 0 && return (nothing, nothing)
+    minbin == 0 && return (0, 0)
 
     while groups[minbin].numpids == 0
         minbin += 1
         if minbin > length(groups)
-            return (nothing, nothing)
+            return (0, 0)
         end
     end
 

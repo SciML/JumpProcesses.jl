@@ -70,17 +70,17 @@ times = [2.0, 8.0, 13.0, 15.0, 74.0]
 
 ptt = DJ.PriorityTimeTable(times, mintime, timestep)
 @test DJ.getfirst(ptt) == (1, 2.0)
-@test ptt.pt.pidtogroup[5] == (0, 0) # Should not store the last one, outside the window.
+@test ptt.pidtogroup[5] == (0, 0) # Should not store the last one, outside the window.
 
 # Test update
 DJ.update!(ptt, 1, times[1], 10 * times[1]) # 2. -> 20., group 2 to group 14
-@test ptt.pt.groups[14].numpids == 1
+@test ptt.groups[14].numpids == 1
 @test DJ.getfirst(ptt) == (2, 8.0)
 # Updating beyond the time window should not change the max priority. 
 DJ.update!(ptt, 1, times[1], 70.0) # 20. -> 70.
-@test ptt.pt.groups[14].numpids == 0
-@test ptt.pt.maxpriority == 66.0
-@test ptt.pt.pidtogroup[1] == (0, 0)
+@test ptt.groups[14].numpids == 0
+@test ptt.maxtime == 66.0
+@test ptt.pidtogroup[1] == (0, 0)
 
 # Test rebuild
 for i in 1:4
@@ -91,7 +91,7 @@ end
 mintime = 66.0;
 timestep = 0.75;
 DJ.rebuild!(ptt, mintime, timestep)
-@test ptt.pt.groups[11].numpids == 2 # 73.5-74.25
-@test ptt.pt.groups[18].numpids == 1
-@test ptt.pt.groups[21].numpids == 1
-@test ptt.pt.pidtogroup[1] == (0, 0)
+@test ptt.groups[11].numpids == 2 # 73.5-74.25
+@test ptt.groups[18].numpids == 1
+@test ptt.groups[21].numpids == 1
+@test ptt.pidtogroup[1] == (0, 0)

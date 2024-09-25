@@ -1,5 +1,7 @@
-# Implementation the original Next Reaction Method
-# Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
+# Implementation of the constant-complexity Next Reaction Method
+# Kevin R. Sanft and Hans G. Othmer, Constant-complexity stochastic simulation
+# algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
+# (2015). doi: 10.1063/1.4928635.
 
 mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PT} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}

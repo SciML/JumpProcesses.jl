@@ -3,6 +3,8 @@
 # algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 # (2015). doi: 10.1063/1.4928635.
 
+const BINWIDTH_OVER_AVGTIME = 16
+
 mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PT} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
@@ -87,7 +89,7 @@ function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
 
     # Rebuild the table if no next jump is found. 
     if p.next_jump == 0
-        binwidth = 16 / sum(p.cur_rates)
+        binwidth = BINWIDTH_OVER_AVGTIME / sum(p.cur_rates)
         min_time = minimum(p.ptt.times)
         rebuild!(p.ptt, min_time, binwidth)
         p.next_jump, p.next_jump_time = getfirst(p.ptt)
@@ -152,7 +154,7 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t)
     end
 
     # Build the priority time table with the times and bin width. 
-    binwidth = 16 / sum(cur_rates)
+    binwidth = BINWIDTH_OVER_AVGTIME / sum(cur_rates)
     p.ptt.times = pttdata
     rebuild!(p.ptt, t, binwidth)
     nothing

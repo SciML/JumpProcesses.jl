@@ -333,10 +333,6 @@ end
 end
 
 mutable struct PriorityTimeTable{T, F <: Int}
-    # pt::PriorityTable
-    # maxtime::T 
-    # pidtogroup
-    # groups 
     groups::Vector{PriorityGroup{T, Vector{F}}}
     pidtogroup::Vector{Tuple{F, F}}
     times::Vector{T}
@@ -422,9 +418,16 @@ function getfirst(ptt::PriorityTimeTable)
 
     ptt.minbin = minbin
     ptt.steps += 1
-    pids = ids(groups[minbin])
-    min_time, min_idx = findmin(@view times[pids])
-    return pids[min_idx], min_time
+    min_time = typemax(eltype(times)); min_idx = 0 
+    for i in 1:groups[minbin].numpids
+        pid = groups[minbin].pids[i]
+        times[pid] < min_time && begin
+            min_time = times[pid]
+            min_idx = pid
+        end
+    end
+
+    return min_idx, min_time
 end
 
 function insert!(ptt::PriorityTimeTable, pid, time)

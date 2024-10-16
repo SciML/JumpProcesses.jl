@@ -121,13 +121,13 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (oldtime - t))
             else
-                update!(ptt, rx, oldtime, 2 * end_time)
+                update!(ptt, rx, oldtime, floatmax())
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + randexp(p.rng) / cur_rates[rx])
             else
-                update!(ptt, rx, oldtime, 2 * end_time)
+                update!(ptt, rx, oldtime, floatmax())
             end
         end
     end

@@ -340,6 +340,8 @@ mutable struct PriorityTimeTable{T, F <: Int}
     minbin::F
     steps::F # TODO: For adaptive rebuilding. 
     maxtime::T
+    binwidthconst::F
+    numbinsconst::F
 end
 
 # Construct the time table with the default optimal bin width and number of bins. 
@@ -356,14 +358,15 @@ function PriorityTimeTable(
     groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()
     pidtogroup = Vector{Tuple{Int, Int}}(undef, length(times))
 
-    ttgdata = TimeGrouper{ptype}(mintime, timestep)
+    ttgdata = TimeGrouper{ptype}(mintime, binwidth)
     # Create the groups, [t_min, t_min + τ), [t_min + τ, t_min + 2τ)...
     for i in 1:numbins
         push!(groups, PriorityGroup{pidtype}(mintime + i * timestep))
     end
 
     ptt = PriorityTimeTable(
-        groups, pidtogroup, times, ttgdata, zero(pidtype), zero(pidtype), maxtime)
+        groups, pidtogroup, times, ttgdata, zero(pidtype),
+        zero(pidtype), maxtime, binwidthconst, numbinsconst)
     # Insert priority ids into the groups
     for (pid, time) in enumerate(times)
         if time > maxtime
@@ -381,13 +384,13 @@ end
 # Rebuild the table when there are no more reaction times within the current
 # time window. 
 function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
-    @unpack pidtogroup, groups, times, timegrouper = ptt
+    @unpack pidtogroup, groups, times, timegrouper, binwidthconst, numbinsconst = ptt
     fill!(pidtogroup, (zero(F), zero(F)))
 
     numbins = length(groups)
-    ptt.maxtime = mintime + numbins * timestep
-    timegrouper.mintime = mintime
-    timegrouper.timestep = timestep
+    binwidth = binwidthconst * timestep
+    ptt.maxtime = mintime + numbins * binwidth
+    timegrouper = TimeGrouper(mintime, binwidth)
 
     groupmaxtime = mintime
     for group in groups
@@ -404,7 +407,7 @@ function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
     ptt.minbin = findfirst(g -> g.numpids > (0), groups)
     ptt.minbin === nothing && (ptt.minbin = 0)
     ptt.steps = 0
-    
+
     return nothing
 end
 
@@ -440,7 +443,7 @@ function insert!(ptt::PriorityTimeTable, pid, time)
     gid = timegrouper(time)
     @inbounds pididx = insert!(groups[gid], pid)
     @inbounds pidtogroup[pid] = (gid, pididx)
-    
+
     return nothing
 end
 

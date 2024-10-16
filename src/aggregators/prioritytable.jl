@@ -395,7 +395,7 @@ function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
     groupmaxtime = mintime
     for group in groups
         group.numpids = zero(F)
-        groupmaxtime += binwidth 
+        groupmaxtime += binwidth
         group.maxpriority = groupmaxtime
     end
 

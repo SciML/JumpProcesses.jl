@@ -90,7 +90,7 @@ function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
 
     # Rebuild the table if no next jump is found. 
     if p.next_jump == 0
-        timestep = sum(p.cur_rates)
+        timestep = 1 / sum(p.cur_rates)
         min_time = minimum(p.ptt.times)
         rebuild!(p.ptt, min_time, timestep)
         p.next_jump, p.next_jump_time = getfirst(p.ptt)
@@ -121,13 +121,13 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (oldtime - t))
             else
-                update!(ptt, rx, oldtime, floatmax())
+                update!(ptt, rx, oldtime, floatmax(typeof(t)))
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(ptt, rx, oldtime, t + randexp(p.rng) / cur_rates[rx])
             else
-                update!(ptt, rx, oldtime, floatmax())
+                update!(ptt, rx, oldtime, floatmax(typeof(t)))
             end
         end
     end
@@ -155,7 +155,7 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t)
     end
 
     # Build the priority time table with the times and bin width. 
-    timestep = sum(cur_rates)
+    timestep = 1 / sum(cur_rates)
     p.ptt.times = pttdata
     rebuild!(p.ptt, t, timestep)
     nothing

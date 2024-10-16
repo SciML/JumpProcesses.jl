@@ -325,11 +325,11 @@ end
 
 struct TimeGrouper{T <: Number}
     mintime::T
-    timestep::T
+    binwidth::T
 end
 
 @inline function (t::TimeGrouper{T})(time::T) where {T}
-    return floor(Int, (time - t.mintime) / t.timestep) + 1
+    return floor(Int, (time - t.mintime) / t.binwidth) + 1
 end
 
 mutable struct PriorityTimeTable{T, F <: Int}
@@ -361,7 +361,7 @@ function PriorityTimeTable(
     ttgdata = TimeGrouper{ptype}(mintime, binwidth)
     # Create the groups, [t_min, t_min + τ), [t_min + τ, t_min + 2τ)...
     for i in 1:numbins
-        push!(groups, PriorityGroup{pidtype}(mintime + i * timestep))
+        push!(groups, PriorityGroup{pidtype}(mintime + i * binwidth))
     end
 
     ptt = PriorityTimeTable(
@@ -384,18 +384,18 @@ end
 # Rebuild the table when there are no more reaction times within the current
 # time window. 
 function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
-    @unpack pidtogroup, groups, times, timegrouper, binwidthconst, numbinsconst = ptt
+    @unpack pidtogroup, groups, times, binwidthconst = ptt
     fill!(pidtogroup, (zero(F), zero(F)))
 
     numbins = length(groups)
     binwidth = binwidthconst * timestep
     ptt.maxtime = mintime + numbins * binwidth
-    timegrouper = TimeGrouper(mintime, binwidth)
+    ptt.timegrouper = TimeGrouper(mintime, binwidth)
 
     groupmaxtime = mintime
     for group in groups
         group.numpids = zero(F)
-        groupmaxtime += timestep
+        groupmaxtime += binwidth 
         group.maxpriority = groupmaxtime
     end
 

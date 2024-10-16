@@ -4,11 +4,11 @@ methods for stochastically modeled population processes. IMA J Numer Anal 2015;
 35 (4): 1757-1778. doi: 10.1093/imanum/dru044
 """
 function SplitCoupledJumpProblem(prob::DiffEqBase.AbstractJumpProblem,
-                                 prob_control::DiffEqBase.AbstractJumpProblem,
-                                 aggregator::AbstractAggregatorAlgorithm,
-                                 coupling_map::Vector{Tuple{Int, Int}}; kwargs...)
+        prob_control::DiffEqBase.AbstractJumpProblem,
+        aggregator::AbstractAggregatorAlgorithm,
+        coupling_map::Vector{Tuple{Int, Int}}; kwargs...)
     JumpProblem(cat_problems(prob.prob, prob_control.prob), aggregator,
-                build_split_jumps(prob, prob_control, coupling_map)...; kwargs...)
+        build_split_jumps(prob, prob_control, coupling_map)...; kwargs...)
 end
 
 # make new problem by joining initial_data
@@ -18,7 +18,7 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiscreteProblem)
 end
 
 function cat_problems(prob::DiffEqBase.AbstractODEProblem,
-                      prob_control::DiffEqBase.AbstractODEProblem)
+        prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
 
     _f = SciMLBase.unwrapped_f(prob.f)
@@ -50,7 +50,7 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractOD
 end
 
 function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
-                      prob_control::DiffEqBase.AbstractSDEProblem)
+        prob_control::DiffEqBase.AbstractSDEProblem)
     l = length(prob.u0)
     new_f = function (du, u, p, t)
         prob.f(@view(du[1:l]), u.u, p, t)
@@ -65,7 +65,7 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
 end
 
 function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
-                      prob_control::DiffEqBase.AbstractODEProblem)
+        prob_control::DiffEqBase.AbstractODEProblem)
     l = length(prob.u0)
 
     _f = SciMLBase.unwrapped_f(prob.f)
@@ -77,7 +77,7 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
     end
     new_g = function (du, u, p, t)
         prob.g(@view(du[1:l]), u.u, p, t)
-        for i in (l + 1):(2 * l)
+        for i in (l+1):(2*l)
             du[i] = 0.0
         end
     end
@@ -96,7 +96,7 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem, prob_control::Discret
     end
     new_g = function (du, u, p, t)
         prob.g(@view(du[1:l]), u.u, p, t)
-        for i in (l + 1):(2 * l)
+        for i in (l+1):(2*l)
             du[i] = 0.0
         end
     end
@@ -111,14 +111,14 @@ function cat_problems(prob_control::DiscreteProblem, prob::DiffEqBase.AbstractSD
     cat_problems(prob, prob_control)
 end
 function cat_problems(prob_control::DiffEqBase.AbstractODEProblem,
-                      prob::DiffEqBase.AbstractSDEProblem)
+        prob::DiffEqBase.AbstractSDEProblem)
     cat_problems(prob, prob_control)
 end
 
 # this only depends on the jumps in prob, not prob.prob
 function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
-                           prob_control::DiffEqBase.AbstractJumpProblem,
-                           coupling_map::Vector{Tuple{Int, Int}})
+        prob_control::DiffEqBase.AbstractJumpProblem,
+        coupling_map::Vector{Tuple{Int, Int}})
     num_jumps = length(prob.discrete_jump_aggregation.rates)
     num_jumps_control = length(prob_control.discrete_jump_aggregation.rates)
     jumps = []
@@ -159,8 +159,8 @@ function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
         # only prob
         new_affect! = affect!
         new_rate = (u, p,
-        t) -> rate(u.u, p, t) -
-              min(rate(u.u, p, t), rate_control(u.u_control, p, t))
+            t) -> rate(u.u, p, t) -
+                  min(rate(u.u, p, t), rate_control(u.u_control, p, t))
         push!(jumps, ConstantRateJump(new_rate, new_affect!))
         # only prob_control
         new_affect! = function (integrator)
@@ -169,9 +169,9 @@ function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
             flip_u!(integrator.u)
         end
         new_rate = (u,
-        p,
-        t) -> rate_control(u.u_control, p, t) -
-              min(rate(u.u, p, t), rate_control(u.u_control, p, t))
+            p,
+            t) -> rate_control(u.u_control, p, t) -
+                  min(rate(u.u, p, t), rate_control(u.u_control, p, t))
         push!(jumps, ConstantRateJump(new_rate, new_affect!))
     end
     jumps

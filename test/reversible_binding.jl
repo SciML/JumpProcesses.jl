@@ -8,11 +8,11 @@ Nsims = 1e4
 # ABC model A + B <--> C
 reactstoch = [
     [1 => 1, 2 => 1],
-    [3 => 1],
+    [3 => 1]
 ]
 netstoch = [
     [1 => -1, 2 => -1, 3 => 1],
-    [1 => 1, 2 => 1, 3 => -1],
+    [1 => 1, 2 => 1, 3 => -1]
 ]
 rates = [0.1, 1.0]
 u0 = [500, 500, 0]
@@ -34,7 +34,7 @@ function mastereqmean(u, rates)
     α = u[1]
     β = u[2]
     γ = u[3]
-    d₊ = [rates[1] * (a + 1) * (β - α + a + 1) for a in 0:(α - 1)]
+    d₊ = [rates[1] * (a + 1) * (β - α + a + 1) for a in 0:(α-1)]
     d₋ = [rates[2] * (γ + α - a + 1) for a in 1:α]
     d = [-rates[1] * a * (β - α + a) - rates[2] * (γ + α - a) for a in 0:α]
     L = diagm(-1 => d₋, 0 => d, 1 => d₊)
@@ -49,7 +49,7 @@ algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 relative_tolerance = 0.01
 for alg in algs
     local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-                              rng = rng)
+        rng = rng)
     local Amean = getmean(jprob, Nsims)
     @test abs(Amean - mastereq_mean) / mastereq_mean < relative_tolerance
 end

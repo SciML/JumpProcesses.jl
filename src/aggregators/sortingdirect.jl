@@ -21,9 +21,9 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
 end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-                                      maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-                                      rng::RNG; num_specs, dep_graph = nothing,
-                                      kwargs...) where {T, S, F1, F2, RNG}
+        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
+        rng::RNG; num_specs, dep_graph = nothing,
+        kwargs...) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -43,24 +43,24 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
     SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
-                                                                        crs, sr, maj, rs,
-                                                                        affs!, sps, rng,
-                                                                        dg, jtoidx,
-                                                                        zero(Int))
+        crs, sr, maj, rs,
+        affs!, sps, rng,
+        dg, jtoidx,
+        zero(Int))
 end
 
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
-                   ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
-                           rates, affects!, save_positions, rng; num_specs = length(u),
-                           kwargs...)
+        rates, affects!, save_positions, rng; num_specs = length(u),
+        kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time

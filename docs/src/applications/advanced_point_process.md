@@ -91,7 +91,7 @@ end
 
 function Base.show(io::IO, pp::SciMLPointProcess)
     println(io,
-            "SciMLPointProcess with $(length(pp.jumps)) processes on the interval [$(pp.tmin), $(pp.tmax)).")
+        "SciMLPointProcess with $(length(pp.jumps)) processes on the interval [$(pp.tmin), $(pp.tmax)).")
 end
 ```
 
@@ -294,12 +294,12 @@ function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}) where {M, J, G, D, T}
     tmax = pp.tmax
     h = History(; times = T[], marks = Tuple{Int, M}[], tmin = tmin, tmax = tmax)
     return (λ = 0.5,
-            α = 0.1,
-            β = 2.0,
-            ϕ = zeros(T, length(g)),
-            M = map(d -> tuple(mean(d)...), pp.mark_dist),
-            T = zeros(T, length(g)),
-            h = h)
+        α = 0.1,
+        β = 2.0,
+        ϕ = zeros(T, length(g)),
+        M = map(d -> tuple(mean(d)...), pp.mark_dist),
+        T = zeros(T, length(g)),
+        h = h)
 end
 
 function hawkes_p(pp::SciMLPointProcess{M, J, G, D, T}, p) where {M, J, G, D, T}
@@ -324,17 +324,17 @@ mark_dist = [MvNormal(rand(2), [0.2, 0.2]) for i in 1:nv(G)]
 jumps = [hawkes_jump(i, g, mark_dist) for i in 1:nv(G)]
 tspan = (0.0, 50.0)
 hawkes = SciMLPointProcess{
-                           Vector{Real},
-                           eltype(jumps),
-                           typeof(g),
-                           eltype(mark_dist),
-                           eltype(tspan)
-                           }(jumps,
-                             mark_dist,
-                             g,
-                             hawkes_p,
-                             tspan[1],
-                             tspan[2])
+    Vector{Real},
+    eltype(jumps),
+    typeof(g),
+    eltype(mark_dist),
+    eltype(tspan)
+}(jumps,
+    mark_dist,
+    g,
+    hawkes_p,
+    tspan[1],
+    tspan[2])
 ```
 
 ## [Sampling](@id tpp_sampling)
@@ -378,10 +378,10 @@ function Base.rand(pp::SciMLPointProcess, n::Int)
 end
 
 function Base.rand(rng::AbstractRNG,
-                   pp::SciMLPointProcess{M, J, G, D, T},
-                   tmin::T,
-                   tmax::T,
-                   n::Int) where {M, J, G, D, T <: Real}
+        pp::SciMLPointProcess{M, J, G, D, T},
+        tmin::T,
+        tmax::T,
+        n::Int) where {M, J, G, D, T <: Real}
     tspan = (tmin, tmax)
     save_positions = (false, false)
     out = Array{History, 1}(undef, n)
@@ -487,7 +487,7 @@ function intensity(pp::SciMLPointProcess, t, h; saveat = [], save_positions = (t
     end
     callback = DiscreteCallback(condition, affect!; save_positions)
     dprob = DiscreteProblem(rates, rates(nothing, p, tmin), (tmin, tmax), p; callback,
-                            tstops, saveat)
+        tstops, saveat)
     sol = solve(dprob, FunctionMap())
     return sol
 end
@@ -573,11 +573,11 @@ conditional intensity using an ODEProblem.
 
 ```@example tpp-advanced
 function integrated_intensity(pp::SciMLPointProcess,
-                              t,
-                              h;
-                              alg = nothing,
-                              saveat = [],
-                              save_positions = (true, true))
+        t,
+        h;
+        alg = nothing,
+        saveat = [],
+        save_positions = (true, true))
     p = params(pp)
     times = event_times(h)
     marks = event_marks(h)
@@ -593,12 +593,12 @@ function integrated_intensity(pp::SciMLPointProcess,
     end
     callback = DiscreteCallback(condition, affect!; save_positions)
     prob = ODEProblem(rates,
-                      zeros(eltype(times), length(pp.jumps)),
-                      tspan,
-                      p;
-                      tstops = times,
-                      callback,
-                      saveat)
+        zeros(eltype(times), length(pp.jumps)),
+        tspan,
+        p;
+        tstops = times,
+        callback,
+        saveat)
     sol = solve(prob, alg)
     return sol
 end
@@ -613,11 +613,11 @@ the next section when we compute the log-likelihood.
 ```@example tpp-advanced
 function integrated_ground_intensity(pp::SciMLPointProcess, h, a, b)
     Λ = integrated_intensity(pp,
-                             b,
-                             h;
-                             alg = Rodas4P(),
-                             saveat = [a, b],
-                             save_positions = (false, false))
+        b,
+        h;
+        alg = Rodas4P(),
+        saveat = [a, b],
+        save_positions = (false, false))
     return sum(Λ(b)) - sum(Λ(a))
 end
 
@@ -631,10 +631,10 @@ solver that can deal with stiff problems like `Rodas4P()`.
 
 ```@example tpp-advanced
 Λ = integrated_intensity(hawkes,
-                         max_time(hawkes),
-                         h;
-                         saveat = event_times(h),
-                         alg = Rodas4P())
+    max_time(hawkes),
+    h;
+    saveat = event_times(h),
+    alg = Rodas4P())
 plot(Λ)
 ```
 
@@ -662,7 +662,7 @@ function hawkes_integrated_intensity(pp::SciMLPointProcess, t, h; saveat = [])
         return u
     end
     dprob = DiscreteProblem(compensator, zeros(eltype(event_times(h)), length(pp.jumps)),
-                            (min_time(h), t), p; tstops, saveat)
+        (min_time(h), t), p; tstops, saveat)
     sol = solve(dprob, FunctionMap())
     return sol
 end
@@ -693,10 +693,10 @@ function Base.filter(f, h::History)
         end
     end
     return History(;
-                   times = filtered_times,
-                   marks = filtered_marks,
-                   tmin = min_time(h),
-                   tmax = max_time(h))
+        times = filtered_times,
+        marks = filtered_marks,
+        tmin = min_time(h),
+        tmax = max_time(h))
 end
 ```
 
@@ -744,10 +744,10 @@ itself to produce the QQ-plot for the ground process.
 for _ in 1:250
     _h = rand(hawkes)
     _Λ = integrated_intensity(hawkes,
-                              max_time(hawkes),
-                              _h;
-                              saveat = event_times(_h),
-                              alg = Rodas4P())
+        max_time(hawkes),
+        _h;
+        saveat = event_times(_h),
+        alg = Rodas4P())
     _h̃ = time_change(_h, (t) -> sum(_Λ(t)))
     append!(Δt̃, diff(event_times(_h̃)))
 end
@@ -763,10 +763,10 @@ Likewise, we can produce the QQ-plot for each sub-TPP.
 for _ in 1:250
     _h = rand(hawkes)
     _Λ = integrated_intensity(hawkes,
-                              max_time(hawkes),
-                              _h;
-                              saveat = event_times(_h),
-                              alg = Rodas4P())
+        max_time(hawkes),
+        _h;
+        saveat = event_times(_h),
+        alg = Rodas4P())
     for i in 1:nv(G)
         _h̃ = time_change(filter((t, mark) -> mark[1] == i, _h), (t) -> Λ(t; idxs = i))
         append!(Δt̃[i], diff(event_times(_h̃)))

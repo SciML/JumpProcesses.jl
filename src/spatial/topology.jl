@@ -15,7 +15,7 @@ const offsets_2D = [
     CartesianIndex(0, -1),
     CartesianIndex(-1, 0),
     CartesianIndex(1, 0),
-    CartesianIndex(0, 1),
+    CartesianIndex(0, 1)
 ]
 const offsets_3D = [
     CartesianIndex(0, 0, -1),
@@ -23,7 +23,7 @@ const offsets_3D = [
     CartesianIndex(-1, 0, 0),
     CartesianIndex(1, 0, 0),
     CartesianIndex(0, 1, 0),
-    CartesianIndex(0, 0, 1),
+    CartesianIndex(0, 0, 1)
 ]
 
 """
@@ -86,7 +86,7 @@ end
 given a vector of hopping constants of length num_neighbors(grid, site), form the vector of size 2*(dimension of grid) with zeros at indices where the neighbor is out of bounds. Store it in to_pad
 """
 function pad_hop_vec!(to_pad::AbstractVector{F}, grid, site,
-                      hop_vec::Vector{F}) where {F <: Number}
+        hop_vec::Vector{F}) where {F <: Number}
     CI = grid.CI
     I = CI[site]
     nbr_counter = 1
@@ -145,6 +145,6 @@ function rand_nbr(rng, grid::CartesianGridRej, site::Int)
 end
 
 function Base.show(io::IO, ::MIME"text/plain",
-                   grid::CartesianGridRej)
+        grid::CartesianGridRej)
     println(io, "A Cartesian grid with dimensions $(grid.dims)")
 end

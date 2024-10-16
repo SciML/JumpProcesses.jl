@@ -44,7 +44,7 @@ sol = solve(jprob, SSAStepper())
 
 using Plots
 plot(sol, title = "Sample path from a jump process with constant rate",
-     label = "N(t)", xlabel = "t", legend = :bottomright)
+    label = "N(t)", xlabel = "t", legend = :bottomright)
 ```
 
 ## Step 1: Defining a problem

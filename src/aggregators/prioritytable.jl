@@ -449,7 +449,7 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, 
     times[pid] = newtime
     if oldtime >= maxtime
         # If a reaction comes back into the time window, insert it. 
-        newtime < maxtime ? insert!(ptt, pid, newtime) : return
+        newtime < maxtime ? insert!(ptt, pid, newtime) : return nothing
     elseif newtime >= maxtime
         # If the new time lands outside of current window, remove it.
         @inbounds begin

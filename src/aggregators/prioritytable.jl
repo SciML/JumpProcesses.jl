@@ -462,7 +462,7 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, 
         # Move bins if the reaction was already inside. 
         oldgid = timegrouper(oldtime)
         newgid = timegrouper(newtime)
-        oldgid == newgid && return
+        oldgid == newgid && return nothing
         @inbounds begin
             pidx = pidtogroup[pid][2]
             movedpid = remove!(groups[oldgid], pidx)

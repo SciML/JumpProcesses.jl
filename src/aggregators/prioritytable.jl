@@ -402,6 +402,8 @@ function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
     ptt.minbin = findfirst(g -> g.numpids > (0), groups)
     ptt.minbin === nothing && (ptt.minbin = 0)
     ptt.steps = 0
+    
+    return nothing
 end
 
 # Get the reaction with the earliest timestep.

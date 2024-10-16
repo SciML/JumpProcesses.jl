@@ -323,7 +323,7 @@ end
 ### Routines for CCNRM ###
 ##########################
 
-struct TimeGrouper{T <: Number}
+mutable struct TimeGrouper{T <: Number}
     mintime::T
     binwidth::T
 end
@@ -347,11 +347,9 @@ end
 # Construct the time table with the default optimal bin width and number of bins. 
 # DEFAULT NUMBINS: 20 * √length(times)
 # DEFAULT BINWIDTH: 16 / sum(propensities)
-function PriorityTimeTable(
-        times::AbstractVector, mintime, timestep; binwidthconst = 16, numbinsconst = 20)
-    binwidth = binwidthconst * timestep
-    numbins = floor(Int64, numbinsconst * sqrt(length(times)))
-    maxtime = mintime + numbins * binwidth
+function PriorityTimeTable(times::AbstractVector, mintime, timestep)
+    numbins = floor(Int64, 20 * sqrt(length(times)))
+    maxtime = mintime + numbins * timestep
 
     pidtype = typeof(numbins)
     ptype = eltype(times)

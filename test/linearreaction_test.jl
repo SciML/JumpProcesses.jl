@@ -114,7 +114,7 @@ function A_to_B_hybrid(N, method)
 
     # jump reactions
     jumps = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -148,7 +148,7 @@ function A_to_B_hybrid_nojset(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -180,7 +180,7 @@ function A_to_B_hybrid_vecs(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -210,7 +210,7 @@ function A_to_B_hybrid_vecs_scalars(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -240,7 +240,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -271,7 +271,7 @@ function A_to_B_hybrid_tups(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1

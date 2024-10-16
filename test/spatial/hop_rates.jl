@@ -91,8 +91,7 @@ test_reset(hop_rates, num_nodes)
 
 # Tests for HopRatesGraphDsij
 hop_constants = Matrix{Vector{Float64}}(undef, num_species, num_nodes) # [species, site][target_site]
-hop_constants[1,
-    :] = [
+hop_constants[1, :] = [
     [2.0, 4.0],
     [1.0, 2.0, 4.0],
     [1.0, 2.0],
@@ -100,8 +99,7 @@ hop_constants[1,
     [1.0, 2.0, 4.0],
     [1.0, 2.0]
 ]
-hop_constants[2,
-    :] = [
+hop_constants[2, :] = [
     [3.0, 12.0],
     [3.0, 6.0, 12.0],
     [3.0, 6.0],

@@ -123,12 +123,10 @@ end
 
 prob = ODEProblem(f3, [1.0 2.0; 3.0 4.0], (0.0, 1.0))
 rate3(u, p, t) = u[1] + u[2]
-function affect3!(integrator)
-    (integrator.u[1] = 0.25;
-        integrator.u[2] = 0.5;
-        integrator.u[3] = 0.75;
-        integrator.u[4] = 1)
-end
+affect3!(integrator) = (integrator.u[1] = 0.25;
+integrator.u[2] = 0.5;
+integrator.u[3] = 0.75;
+integrator.u[4] = 1)
 jump = VariableRateJump(rate3, affect3!)
 jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
 sol = solve(jump_prob, Tsit5())

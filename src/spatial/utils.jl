@@ -33,8 +33,7 @@ function sample_jump_direct(p, site)
         rx = sample_rx_at_site(p.rx_rates, site, p.rng)
         return SpatialJump(site, rx + p.numspecies, site)
     else
-        species_to_diffuse,
-        target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
+        species_to_diffuse, target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
             p.spatial_system)
         return SpatialJump(site, species_to_diffuse, target_site)
     end

@@ -37,8 +37,7 @@ function hawkes_jump(i::Int, g, h; uselrate = true)
     urate = rate
     if uselrate
         lrate(u, p, t) = p[1]
-        rateinterval = (
-            u, p, t) -> begin
+        rateinterval = (u, p, t) -> begin
             _lrate = lrate(u, p, t)
             _urate = urate(u, p, t)
             return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)

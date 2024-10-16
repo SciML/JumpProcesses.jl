@@ -76,8 +76,7 @@ update rates of single species at site
 function update_hop_rate!(hop_rates::AbstractHopRates, species, u, site, spatial_system)
     rates = hop_rates.rates
     @inbounds old_rate = rates[species, site]
-    @inbounds rates[
-        species, site] = evalhoprate(hop_rates, u, species, site,
+    @inbounds rates[species, site] = evalhoprate(hop_rates, u, species, site,
         spatial_system)
     @inbounds hop_rates.sum_rates[site] += rates[species, site] - old_rate
     old_rate
@@ -316,8 +315,7 @@ struct HopRatesGraphDsLij{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsLij)
-    num_specs,
-    num_sites = length(hop_rates.species_hop_constants),
+    num_specs, num_sites = length(hop_rates.species_hop_constants),
     length(hop_rates.hop_const_cumulative_sums)
     println(io,
         "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
@@ -365,8 +363,7 @@ struct HopRatesGridDsLij{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsLij)
-    num_specs,
-    num_sites = length(hop_rates.species_hop_constants),
+    num_specs, num_sites = length(hop_rates.species_hop_constants),
     size(hop_rates.hop_const_cumulative_sums, 2)
     println(io,
         "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
@@ -462,8 +459,7 @@ struct HopRatesGridDsiLij{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsiLij)
-    num_specs,
-    num_sites = length(hop_rates.species_hop_constants),
+    num_specs, num_sites = length(hop_rates.species_hop_constants),
     size(hop_rates.hop_const_cumulative_sums, 2)
     println(io,
         "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.")

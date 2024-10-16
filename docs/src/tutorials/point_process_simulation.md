@@ -196,7 +196,7 @@ Now, we can declare the seasonal process as a `VariableRateJump`.
 
 ```@example tpp-tutorial
 seasonal_process = VariableRateJump(seasonal_rate, seasonal_affect!;
-    urate, rateinterval, lrate)
+                                    urate, rateinterval, lrate)
 ```
 
 We initialize a new base problem with a different simulation

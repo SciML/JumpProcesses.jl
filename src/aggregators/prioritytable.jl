@@ -101,7 +101,7 @@ Setup table from a vector of priorities. The id
 of a priority is its position within this vector.
 """
 function PriorityTable(priortogid::Function, priorities::AbstractVector, minpriority,
-        maxpriority)
+                       maxpriority)
     numgroups = priortogid(maxpriority)
     numgroups -= one(typeof(numgroups))
     pidtype = typeof(numgroups)
@@ -348,7 +348,7 @@ end
 # DEFAULT NUMBINS: 20 * √length(times)
 # DEFAULT BINWIDTH: 16 / sum(propensities)
 function PriorityTimeTable(times::AbstractVector, mintime, timestep; binwidthconst = 16,
-        numbinsconst = 20)
+                           numbinsconst = 20)
     binwidth = binwidthconst * timestep
     numbins = floor(Int64, numbinsconst * sqrt(length(times)))
     maxtime = mintime + numbins * binwidth
@@ -365,7 +365,7 @@ function PriorityTimeTable(times::AbstractVector, mintime, timestep; binwidthcon
     end
 
     ptt = PriorityTimeTable(groups, pidtogroup, times, ttgdata, zero(pidtype),
-        zero(pidtype), maxtime, binwidthconst, numbinsconst)
+                            zero(pidtype), maxtime, binwidthconst, numbinsconst)
     # Insert priority ids into the groups
     for (pid, time) in enumerate(times)
         if time > maxtime

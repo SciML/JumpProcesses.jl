@@ -53,7 +53,7 @@ end
 update rates of all reactions in rxs at site
 """
 function update_rx_rates!(rx_rates::RxRates, rxs, u::AbstractMatrix, integrator,
-        site)
+                          site)
     ma_jumps = rx_rates.ma_jumps
     @inbounds for rx in rxs
         rate = eval_massaction_rate(u, rx, ma_jumps, site)
@@ -62,7 +62,7 @@ function update_rx_rates!(rx_rates::RxRates, rxs, u::AbstractMatrix, integrator,
 end
 
 function update_rx_rates!(rx_rates::RxRates, rxs, integrator,
-        site)
+                          site)
     u = integrator.u
     update_rx_rates!(rx_rates, rxs, u, integrator, site)
 end
@@ -74,7 +74,7 @@ sample a reaction at site, return reaction index
 """
 function sample_rx_at_site(rx_rates::RxRates, site, rng)
     linear_search((@view rx_rates.rates[:, site]),
-        rand(rng) * total_site_rx_rate(rx_rates, site))
+                  rand(rng) * total_site_rx_rate(rx_rates, site))
 end
 
 # helper functions

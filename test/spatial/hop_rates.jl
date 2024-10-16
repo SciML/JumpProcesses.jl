@@ -27,7 +27,7 @@ end
 normalized(distribution) = distribution / sum(distribution)
 
 function statistical_test(hop_rates, spec_propensities, target_propensities::Dict,
-        num_species, u, site, g, rng, rel_tol)
+                          num_species, u, site, g, rng, rel_tol)
     spec_probs = normalized(spec_propensities)
     target_probs = normalized(target_propensities)
     JP.update_hop_rates!(hop_rates, 1:num_species, u, site, g)
@@ -69,7 +69,7 @@ for site in 1:num_nodes
         target_propensities[target] = 1.0
     end
     statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u,
-        site, g, rng, rel_tol)
+                     site, g, rng, rel_tol)
 end
 test_reset(hop_rates, num_nodes)
 
@@ -85,7 +85,7 @@ for site in 1:num_nodes
         target_propensities[target] = 1.0
     end
     statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u,
-        site, g, rng, rel_tol)
+                     site, g, rng, rel_tol)
 end
 test_reset(hop_rates, num_nodes)
 
@@ -98,7 +98,7 @@ hop_constants[1,
     [1.0, 2.0],
     [1.0, 2.0],
     [1.0, 2.0, 4.0],
-    [1.0, 2.0]
+    [1.0, 2.0],
 ]
 hop_constants[2,
 :] = [
@@ -107,11 +107,11 @@ hop_constants[2,
     [3.0, 6.0],
     [3.0, 6.0],
     [3.0, 6.0, 12.0],
-    [3.0, 6.0]
+    [3.0, 6.0],
 ]
 hop_rates_structs = [
     JP.HopRatesGraphDsij(hop_constants),
-    JP.HopRates(hop_constants, g)
+    JP.HopRates(hop_constants, g),
 ]
 @test hop_rates_structs[2] isa JP.HopRatesGridDsij
 for hop_rates in hop_rates_structs
@@ -124,7 +124,7 @@ for hop_rates in hop_rates_structs
                                                for species in 1:num_species])
         end
         statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u,
-            site, g, rng, rel_tol)
+                         site, g, rng, rel_tol)
     end
 end
 test_reset(hop_rates, num_nodes)
@@ -137,11 +137,11 @@ site_hop_constants = [
     [1.0, 2.0],
     [1.0, 2.0],
     [1.0, 2.0, 4.0],
-    [1.0, 2.0]
+    [1.0, 2.0],
 ] #[site][target_site]
 hop_rates_structs = [
     JP.HopRatesGraphDsLij(species_hop_constants, site_hop_constants),
-    JP.HopRates((species_hop_constants => site_hop_constants), g)
+    JP.HopRates((species_hop_constants => site_hop_constants), g),
 ]
 @test hop_rates_structs[2] isa JP.HopRatesGridDsLij
 for hop_rates in hop_rates_structs
@@ -156,7 +156,7 @@ for hop_rates in hop_rates_structs
                                                for species in 1:num_species])
         end
         statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u,
-            site, g, rng, rel_tol)
+                         site, g, rng, rel_tol)
     end
 end
 test_reset(hop_rates, num_nodes)
@@ -169,11 +169,11 @@ site_hop_constants = [
     [1.0, 2.0],
     [1.0, 2.0],
     [1.0, 2.0, 4.0],
-    [1.0, 2.0]
+    [1.0, 2.0],
 ] #[site][target_site]
 hop_rates_structs = [
     JP.HopRatesGraphDsiLij(species_hop_constants, site_hop_constants),
-    JP.HopRates((species_hop_constants => site_hop_constants), g)
+    JP.HopRates((species_hop_constants => site_hop_constants), g),
 ]
 @test hop_rates_structs[2] isa JP.HopRatesGridDsiLij
 for hop_rates in hop_rates_structs
@@ -188,7 +188,7 @@ for hop_rates in hop_rates_structs
                                                for species in 1:num_species])
         end
         statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u,
-            site, g, rng, rel_tol)
+                         site, g, rng, rel_tol)
     end
 end
 test_reset(hop_rates, num_nodes)

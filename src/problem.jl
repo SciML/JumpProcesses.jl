@@ -12,9 +12,10 @@ end
 $(TYPEDEF)
 
 Defines a collection of jump processes to associate with another problem type.
-- [Documentation Page](https://docs.sciml.ai/JumpProcesses/stable/jump_types/)
-- [Tutorial Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
-- [FAQ Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/#FAQ)
+
+  - [Documentation Page](https://docs.sciml.ai/JumpProcesses/stable/jump_types/)
+  - [Tutorial Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+  - [FAQ Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/#FAQ)
 
 ### Constructors
 
@@ -23,17 +24,20 @@ will be associated. For example, to  simulate a collection of jump processes for
 transition rates are constant *between* jumps (called [`ConstantRateJump`](@ref)s or
 [`MassActionJump`](@ref)s), we must first construct a
 [`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/)
+
 ```julia
 prob = DiscreteProblem(u0, p, tspan)
 ```
+
 where `u0` is the initial condition, `p` the parameters and `tspan` the time span. If we
 wanted to have the jumps coupled with a system of ODEs, or have transition rates with
 explicit time dependence, we would use an `ODEProblem` instead that defines the ODE portion
 of the dynamics.
 
 Given `prob` we define the jumps via
-- `JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet ; kwargs...)`
-- `JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps...; kwargs...)`
+
+  - `JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet ; kwargs...)`
+  - `JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps...; kwargs...)`
 
 Here `aggregator` specifies the underlying algorithm for calculating next jump times and
 types, for example [`Direct`](@ref). The collection of different `AbstractJump` types can
@@ -44,15 +48,16 @@ then be passed within a single [`JumpSet`](@ref) or as subsequent sequential arg
 $(FIELDS)
 
 ## Keyword Arguments
-- `rng`, the random number generator to use. On 1.7 and up defaults to Julia's built-in
-  generator, below 1.7 uses RandomNumbers.jl's `Xorshifts.Xoroshiro128Star(rand(UInt64))`.
-- `save_positions=(true,true)`, specifies whether to save the system's state (before, after)
-  the jump occurs.
-- `spatial_system`, for spatial problems the underlying spatial structure.
-- `hopping_constants`, for spatial problems the spatial transition rate coefficients.
-- `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s
-  with a supporting aggregator (such as `Coevolve`). They will then be handled via the
-  continuous integration interface, and treated like general `VariableRateJump`s.
+
+  - `rng`, the random number generator to use. On 1.7 and up defaults to Julia's built-in
+    generator, below 1.7 uses RandomNumbers.jl's `Xorshifts.Xoroshiro128Star(rand(UInt64))`.
+  - `save_positions=(true,true)`, specifies whether to save the system's state (before, after)
+    the jump occurs.
+  - `spatial_system`, for spatial problems the underlying spatial structure.
+  - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
+  - `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s
+    with a supporting aggregator (such as `Coevolve`). They will then be handled via the
+    continuous integration interface, and treated like general `VariableRateJump`s.
 
 Please see the [tutorial
 page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in the

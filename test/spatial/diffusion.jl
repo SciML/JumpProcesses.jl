@@ -7,7 +7,7 @@ rng = StableRNG(12345)
 
 function get_mean_sol(jump_prob, Nsims, saveat)
     sol = solve(jump_prob, SSAStepper(), saveat = saveat).u
-    for i in 1:(Nsims - 1)
+    for i in 1:(Nsims-1)
         sol += solve(jump_prob, SSAStepper(), saveat = saveat).u
     end
     sol / Nsims
@@ -59,7 +59,7 @@ analytic_solution(t) = B * diagm(ℯ .^ (t * evals)) * Bt * reshape(prob.u0, num
 num_time_points = 10
 Nsims = 10000
 rel_tol = 0.02
-times = 0.0:(tf / num_time_points):tf
+times = 0.0:(tf/num_time_points):tf
 
 algs = [NSM(), DirectCRDirect()]
 grids = [CartesianGridRej(dims), Graphs.grid(dims)]

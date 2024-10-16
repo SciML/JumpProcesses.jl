@@ -34,7 +34,7 @@ function mastereqmean(u, rates)
     α = u[1]
     β = u[2]
     γ = u[3]
-    d₊ = [rates[1] * (a + 1) * (β - α + a + 1) for a in 0:(α - 1)]
+    d₊ = [rates[1] * (a + 1) * (β - α + a + 1) for a in 0:(α-1)]
     d₋ = [rates[2] * (γ + α - a + 1) for a in 1:α]
     d = [-rates[1] * a * (β - α + a) - rates[2] * (γ + α - a) for a in 0:α]
     L = diagm(-1 => d₋, 0 => d, 1 => d₊)

@@ -471,4 +471,5 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, 
             pidtogroup[pid] = (newgid, newpidx)
         end
     end
+    return nothing
 end

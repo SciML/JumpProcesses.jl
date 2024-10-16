@@ -436,6 +436,8 @@ function insert!(ptt::PriorityTimeTable, pid, time)
     gid = timegrouper(time)
     @inbounds pididx = insert!(groups[gid], pid)
     @inbounds pidtogroup[pid] = (gid, pididx)
+    
+    return nothing
 end
 
 # Update the priority table when a reaction time gets updated. We only shift

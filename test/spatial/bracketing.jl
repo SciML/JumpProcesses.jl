@@ -17,7 +17,7 @@ majump_rates = [0.1] # death at rate 0.1
 reactstoch = [[1 => 1]]
 netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
-    netstoch)
+                        netstoch)
 rx_rates = JP.LowHigh(JP.RxRates(n, majump))
 
 # set up hop rates

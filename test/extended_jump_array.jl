@@ -5,7 +5,7 @@ rng = StableRNG(123)
 
 # Check that the new broadcast norm gives the same result as the old one
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}(rand(rng, 5),
-    rand(rng, 2))
+                                                                             rand(rng, 2))
 old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
                                    max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
@@ -13,8 +13,8 @@ new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 
 # Check for an ExtendedJumpArray where the types differ (Float64/Int64)
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Int64}}(rand(rng, 5),
-    rand(rng, 1:1000,
-        2))
+                                                                           rand(rng, 1:1000,
+                                                                                2))
 old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
                                    max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
@@ -43,7 +43,7 @@ bc_out .= 3.14 .* bc_eja_1 + 2.7 .* bc_eja_2
 # Test that mismatched arrays cannot be broadcasted
 bc_mismatch = ExtendedJumpArray(rand(rng, 8), rand(rng, 4))
 @test_throws DimensionMismatch bc_mismatch+bc_eja_1
-@test_throws DimensionMismatch bc_mismatch .+ bc_eja_1
+@test_throws DimensionMismatch bc_mismatch.+bc_eja_1
 
 # Test that datatype mixing persists through broadcasting
 bc_dtype_1 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))

@@ -61,7 +61,7 @@ reactstoch = [
     [2 => 1],
     [3 => 1],
     [1 => 1, 3 => 1],
-    [4 => 1]
+    [4 => 1],
 ]
 netstoch = [
     [2 => 1],
@@ -69,7 +69,7 @@ netstoch = [
     [2 => -1],
     [3 => -1],
     [1 => -1, 3 => -1, 4 => 1],
-    [1 => 1, 3 => 1, 4 => -1]
+    [1 => 1, 3 => 1, 4 => -1],
 ]
 spec_to_dep_jumps = [[1, 5], [2, 3], [4, 5], [6]]
 jump_to_dep_specs = [[2], [3], [2], [3], [1, 3, 4], [1, 3, 4]]
@@ -88,8 +88,8 @@ if doplot
     plothand = plot(reuse = false)
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
+                                      vartojumps_map = spec_to_dep_jumps,
+                                      jumptovars_map = jump_to_dep_specs, rng = rng)
         local sol = solve(jump_prob, SSAStepper())
         plot!(plothand, sol.t, sol[3, :], seriestype = :steppost)
     end
@@ -100,12 +100,12 @@ end
 if dotestmean
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
+                                      vartojumps_map = spec_to_dep_jumps,
+                                      jumptovars_map = jump_to_dep_specs, rng = rng)
         means = runSSAs(jump_prob)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
-            ", rel err = ", relerr)
+                ", rel err = ", relerr)
         @test abs(means - expected_avg) < reltol * expected_avg
 
         means = runSSAs(jump_prob; use_stepper = false)
@@ -113,19 +113,20 @@ if dotestmean
         @test abs(means - expected_avg) < reltol * expected_avg
 
         jump_probf = JumpProblem(probf, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
+                                 vartojumps_map = spec_to_dep_jumps,
+                                 jumptovars_map = jump_to_dep_specs, rng = rng)
         means = runSSAs(jump_probf)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
-            ", rel err = ", relerr)
+                ", rel err = ", relerr)
         @test abs(means - expected_avg) < reltol * expected_avg
     end
 end
 
 # no-aggregator tests
 jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
-    vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs, rng)
+                        vartojumps_map = spec_to_dep_jumps,
+                        jumptovars_map = jump_to_dep_specs, rng)
 @test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
 @test abs(runSSAs(jump_prob; use_stepper = false) - expected_avg) < reltol * expected_avg
 
@@ -165,14 +166,15 @@ let
         nothing
     end
     crjs = JumpSet(ConstantRateJump(r1, a1!), ConstantRateJump(r2, a2!),
-        ConstantRateJump(r3, a3!), ConstantRateJump(r4, a4!), ConstantRateJump(r5, a5!),
-        ConstantRateJump(r6, a6!))
+                   ConstantRateJump(r3, a3!), ConstantRateJump(r4, a4!),
+                   ConstantRateJump(r5, a5!),
+                   ConstantRateJump(r6, a6!))
     vrjs = JumpSet(VariableRateJump(r1, a1!; save_positions = (false, false)),
-        VariableRateJump(r2, a2!, save_positions = (false, false)),
-        VariableRateJump(r3, a3!, save_positions = (false, false)),
-        VariableRateJump(r4, a4!, save_positions = (false, false)),
-        VariableRateJump(r5, a5!, save_positions = (false, false)),
-        VariableRateJump(r6, a6!, save_positions = (false, false)))
+                   VariableRateJump(r2, a2!, save_positions = (false, false)),
+                   VariableRateJump(r3, a3!, save_positions = (false, false)),
+                   VariableRateJump(r4, a4!, save_positions = (false, false)),
+                   VariableRateJump(r5, a5!, save_positions = (false, false)),
+                   VariableRateJump(r6, a6!, save_positions = (false, false)))
 
     prob = DiscreteProblem(u0, (0.0, tf), rates)
     crjprob = JumpProblem(prob, crjs; save_positions = (false, false), rng)

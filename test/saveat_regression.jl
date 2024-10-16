@@ -15,7 +15,7 @@ ts = collect(0:0.002:tspan[2])
 NA = zeros(length(ts))
 Nsims = 10_000
 sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(), saveat = ts,
-    trajectories = Nsims)
+                          trajectories = Nsims)
 
 for i in 1:length(sol)
     NA .+= sol.u[i][1, :]

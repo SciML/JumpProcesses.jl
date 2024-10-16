@@ -34,9 +34,8 @@ function getindex(low_high::LowHigh, i)
 end
 
 function total_site_rate(rx_rates::LowHigh, hop_rates::LowHigh, site)
-    return LowHigh(
-        total_site_rate(rx_rates.low, hop_rates.low, site),
-        total_site_rate(rx_rates.high, hop_rates.high, site))
+    return LowHigh(total_site_rate(rx_rates.low, hop_rates.low, site),
+                   total_site_rate(rx_rates.high, hop_rates.high, site))
 end
 
 function update_rx_rates!(rx_rates::LowHigh, rxs, u_low_high, integrator, site)

@@ -53,7 +53,7 @@ function A_to_B_tuple(N, method)
     jset = JumpSet((), jumps, nothing, nothing)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -75,7 +75,7 @@ function A_to_B_vec(N, method)
     jset = JumpSet((), jumps, nothing, nothing)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -93,7 +93,7 @@ function A_to_B_ma(N, method)
     jset = JumpSet((), (), nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -114,7 +114,7 @@ function A_to_B_hybrid(N, method)
 
     # jump reactions
     jumps = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -127,7 +127,7 @@ function A_to_B_hybrid(N, method)
     jset = JumpSet((), jumps, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -148,7 +148,7 @@ function A_to_B_hybrid_nojset(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -161,7 +161,7 @@ function A_to_B_hybrid_nojset(N, method)
     jumps = (constjumps..., majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions = (false, false),
-        rng, namedpars...)
+                            rng, namedpars...)
 
     jump_prob
 end
@@ -180,7 +180,7 @@ function A_to_B_hybrid_vecs(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -191,7 +191,7 @@ function A_to_B_hybrid_vecs(N, method)
     jset = JumpSet((), jumpvec, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -210,7 +210,7 @@ function A_to_B_hybrid_vecs_scalars(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -221,7 +221,7 @@ function A_to_B_hybrid_vecs_scalars(N, method)
     jset = JumpSet((), jumpvec, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -240,7 +240,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -252,7 +252,7 @@ function A_to_B_hybrid_tups_scalars(N, method)
     jumps = ((maj for maj in majumpsv)..., (jump for jump in jumpvec)...)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jumps...; save_positions = (false, false),
-        rng, namedpars...)
+                            rng, namedpars...)
 
     jump_prob
 end
@@ -271,7 +271,7 @@ function A_to_B_hybrid_tups(N, method)
 
     # jump reactions
     jumpvec = Vector{ConstantRateJump}()
-    for i in (switchidx+1):N
+    for i in (switchidx + 1):N
         ratefunc = (u, p, t) -> rates[i] * u[1]
         affect! = function (integrator)
             integrator.u[1] -= 1
@@ -283,7 +283,7 @@ function A_to_B_hybrid_tups(N, method)
     jset = JumpSet((), jumps, nothing, majumps)
     prob = DiscreteProblem([A0, 0], (0.0, tf))
     jump_prob = JumpProblem(prob, method, jset; save_positions = (false, false), rng,
-        namedpars...)
+                            namedpars...)
 
     jump_prob
 end
@@ -303,7 +303,7 @@ for method in SSAalgs
         meanval = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
-                ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.0
     end
@@ -320,7 +320,7 @@ for method in SSAalgs
         meanval = runSSAs(jump_prob)
         if doprint
             println("Method: ", method, ", Jump input types: ", jump_prob_gen,
-                ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
+                    ", sample mean = ", meanval, ", actual mean = ", exactmeanval)
         end
         @test abs(meanval - exactmeanval) < 1.0
     end

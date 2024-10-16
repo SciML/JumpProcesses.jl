@@ -35,7 +35,7 @@ majump_rates = [0.1] # death at rate 0.1
 reactstoch = [[1 => 1]]
 netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
-    netstoch)
+                        netstoch)
 reaction_index = 1
 @test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] ==
       majump_rates[1] * ulow[1] # low

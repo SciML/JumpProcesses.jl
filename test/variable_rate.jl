@@ -125,9 +125,9 @@ prob = ODEProblem(f3, [1.0 2.0; 3.0 4.0], (0.0, 1.0))
 rate3(u, p, t) = u[1] + u[2]
 function affect3!(integrator)
     (integrator.u[1] = 0.25;
-        integrator.u[2] = 0.5;
-        integrator.u[3] = 0.75;
-        integrator.u[4] = 1)
+     integrator.u[2] = 0.5;
+     integrator.u[3] = 0.75;
+     integrator.u[4] = 1)
 end
 jump = VariableRateJump(rate3, affect3!)
 jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
@@ -173,7 +173,7 @@ let
     react_stoich_ = [Vector{Pair{Int, Int}}()]
     net_stoich_ = [[1 => 1]]
     mass_action_jump_ = MassActionJump(maj_rate, react_stoich_, net_stoich_;
-        scale_rates = false)
+                                       scale_rates = false)
 
     affect! = function (integrator)
         integrator.u[1] -= 1
@@ -187,12 +187,12 @@ let
         tspan = (0.0, 30.0)
         dprob_ = DiscreteProblem(u0, tspan)
         @test_throws ErrorException JumpProblem(dprob_, alg, jumpset_,
-            save_positions = (false, false))
+                                                save_positions = (false, false))
 
         vrj = VariableRateJump(cs_rate1, affect!; urate = ((u, p, t) -> 1.0),
-            rateinterval = ((u, p, t) -> 1.0))
+                               rateinterval = ((u, p, t) -> 1.0))
         @test_throws ErrorException JumpProblem(dprob_, alg, mass_action_jump_, vrj;
-            save_positions = (false, false))
+                                                save_positions = (false, false))
     end
 end
 
@@ -223,7 +223,7 @@ let
     end
 
     test_jump = VariableRateJump(test_rate, test_affect!; urate = test_urate,
-        rateinterval = (u, p, t) -> 1.0)
+                                 rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
     jprob = JumpProblem(dprob, Coevolve(), test_jump; dep_graph = [[1]])

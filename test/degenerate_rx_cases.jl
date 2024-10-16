@@ -93,12 +93,12 @@ end
 
 dep_graph = [
     [1, 2],
-    [1, 2]
+    [1, 2],
 ]
 spec_to_dep_jumps = [[2]]
 jump_to_dep_specs = [[1], [1]]
 namedpars = (dep_graph = dep_graph, vartojumps_map = spec_to_dep_jumps,
-    jumptovars_map = jump_to_dep_specs)
+             jumptovars_map = jump_to_dep_specs)
 
 for method in methods
     local jump_prob = JumpProblem(prob, method, jump, jump2; rng = rng, namedpars...)
@@ -110,7 +110,7 @@ for method in methods
 
     if doprint
         println("Mix of constant and mass action jumps, method = ", typeof(method),
-            ", sol[end] = ", sol[end, end])
+                ", sol[end] = ", sol[end, end])
     end
     @test sol[end, end] > 200
 end
@@ -131,11 +131,11 @@ maj2 = MassActionJump(rs2, ns2; param_idxs = 2)
 js = JumpSet(maj1, maj2)
 maj = MassActionJump([rs1, rs2], [ns1, ns2]; param_idxs = [1, 2])
 @test all(getfield(maj, fn) == getfield(js.massaction_jump, fn)
-for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
+          for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)
 maj1 = MassActionJump([rs1], [ns1]; param_idxs = [1])
 maj2 = MassActionJump([rs2], [ns2]; param_idxs = [2])
 js = JumpSet(maj1, maj2)
 @test all(getfield(maj, fn) == getfield(js.massaction_jump, fn)
-for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
+          for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)

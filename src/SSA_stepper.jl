@@ -135,7 +135,7 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
         # check callbacks one last time
         if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
             DiffEqBase.apply_discrete_callback!(integrator,
-                integrator.opts.callback.discrete_callbacks...)
+                                                integrator.opts.callback.discrete_callbacks...)
         end
 
         if integrator.saveat !== nothing && !isempty(integrator.saveat)
@@ -162,15 +162,15 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
 end
 
 function DiffEqBase.__init(jump_prob::JumpProblem,
-        alg::SSAStepper;
-        save_start = true,
-        save_end = true,
-        seed = nothing,
-        alias_jump = Threads.threadid() == 1,
-        saveat = nothing,
-        callback = nothing,
-        tstops = nothing,
-        numsteps_hint = 100)
+                           alg::SSAStepper;
+                           save_start = true,
+                           save_end = true,
+                           seed = nothing,
+                           alias_jump = Threads.threadid() == 1,
+                           saveat = nothing,
+                           callback = nothing,
+                           tstops = nothing,
+                           numsteps_hint = 100)
 
     # hack until alias system is in place
     alias_tstops = false
@@ -207,9 +207,9 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     save_everystep = any(cb.save_positions)
 
     sol = DiffEqBase.build_solution(prob, alg, t, u, dense = save_everystep,
-        calculate_error = false,
-        stats = DiffEqBase.Stats(0),
-        interp = DiffEqBase.ConstantInterpolation(t, u))
+                                    calculate_error = false,
+                                    stats = DiffEqBase.Stats(0),
+                                    interp = DiffEqBase.ConstantInterpolation(t, u))
 
     _saveat = (saveat isa Number) ? (prob.tspan[1]:saveat:prob.tspan[2]) : saveat
     if _saveat !== nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
@@ -241,8 +241,9 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     end
 
     integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
-        prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
-        save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false)
+                               prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
+                               save_end, cur_saveat, opts, _tstops, 1, false, true,
+                               alias_tstops, false)
     cb.initialize(cb, integrator.u, prob.tspan[1], integrator)
     DiffEqBase.initialize!(opts.callback, integrator.u, prob.tspan[1], integrator)
     integrator
@@ -284,7 +285,7 @@ end
 # The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator
 # such that we can achieve maximum performance
 @inline function register_next_jump_time!(integrator::SSAIntegrator,
-        p::AbstractSSAJumpAggregator, t)
+                                          p::AbstractSSAJumpAggregator, t)
     integrator.tstop = p.next_jump_time
     nothing
 end
@@ -329,7 +330,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
         discrete_modified,
         saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,
-            integrator.opts.callback.discrete_callbacks...)
+                                                          integrator.opts.callback.discrete_callbacks...)
     else
         saved_in_cb = false
     end
@@ -383,7 +384,10 @@ end
 export SSAStepper
 
 function SciMLBase.isdenseplot(sol::ODESolution{
-        T, N, uType, uType2, DType, tType, rateType, discType, P,
-        SSAStepper}) where {T, N, uType, uType2, DType, tType, rateType, discType, P}
+                                                T, N, uType, uType2, DType, tType, rateType,
+                                                discType, P,
+                                                SSAStepper}) where {T, N, uType, uType2,
+                                                                    DType, tType, rateType,
+                                                                    discType, P}
     sol.dense
 end

@@ -404,6 +404,8 @@ function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
     ptt.minbin = findfirst(g -> g.numpids > (0), groups)
     ptt.minbin === nothing && (ptt.minbin = 0)
     ptt.steps = 0
+    
+    return nothing
 end
 
 # Get the reaction with the earliest timestep.
@@ -438,6 +440,8 @@ function insert!(ptt::PriorityTimeTable, pid, time)
     gid = timegrouper(time)
     @inbounds pididx = insert!(groups[gid], pid)
     @inbounds pidtogroup[pid] = (gid, pididx)
+    
+    return nothing
 end
 
 # Update the priority table when a reaction time gets updated. We only shift
@@ -449,7 +453,7 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, 
     times[pid] = newtime
     if oldtime >= maxtime
         # If a reaction comes back into the time window, insert it. 
-        newtime < maxtime ? insert!(ptt, pid, newtime) : return
+        newtime < maxtime ? insert!(ptt, pid, newtime) : return nothing
     elseif newtime >= maxtime
         # If the new time lands outside of current window, remove it.
         @inbounds begin
@@ -462,7 +466,7 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, 
         # Move bins if the reaction was already inside. 
         oldgid = timegrouper(oldtime)
         newgid = timegrouper(newtime)
-        oldgid == newgid && return
+        oldgid == newgid && return nothing
         @inbounds begin
             pidx = pidtogroup[pid][2]
             movedpid = remove!(groups[oldgid], pidx)
@@ -471,4 +475,5 @@ function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, 
             pidtogroup[pid] = (newgid, newpidx)
         end
     end
+    return nothing
 end

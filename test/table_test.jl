@@ -89,7 +89,7 @@ end
 @test DJ.getfirst(ptt) === (0, 0) # No more left.
 
 mintime = 66.0;
-timestep = 0.75;
+timestep = 0.75/16;
 DJ.rebuild!(ptt, mintime, timestep)
 @test ptt.groups[11].numpids == 2 # 73.5-74.25
 @test ptt.groups[18].numpids == 1

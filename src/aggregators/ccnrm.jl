@@ -39,7 +39,10 @@ function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         add_self_dependencies!(dg)
     end
 
-    ptt = PriorityTimeTable(zeros(T, length(crs)), 0.0, 1.0) # We will re-initialize this in initialize!()
+    binwidthconst = haskey(kwargs, :binwidthconst) ? kwargs[:binwidthconst] : 16
+    numbinsconst = haskey(kwargs, :numbinsconst) ? kwargs[:numbinsconst] : 20
+    ptt = PriorityTimeTable(zeros(T, length(crs)), zero(T), one(T),
+        binwidthconst = binwidthconst, numbinsconst = numbinsconst) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
     CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(ptt)}(
@@ -116,7 +119,7 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
         # Calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)
             if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (times[rx] - t))
+                update!(ptt, rx, oldtime, t + oldrate / cur_rates[rx] * (oldtime - t))
             else
                 update!(ptt, rx, oldtime, floatmax(typeof(t)))
             end

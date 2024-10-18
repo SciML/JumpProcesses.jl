@@ -427,7 +427,7 @@ function getfirst(ptt::PriorityTimeTable)
     ptt.steps += 1
     min_time = typemax(eltype(times))
     min_idx = 0
-    for i in 1:(groups[minbin].numpids)
+    @inbounds for i in 1:(groups[minbin].numpids)
         pid = groups[minbin].pids[i]
         times[pid] < min_time && begin
             min_time = times[pid]

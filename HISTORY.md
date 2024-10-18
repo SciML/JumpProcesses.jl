@@ -2,6 +2,9 @@
 
 ## JumpProcesses unreleased (master branch)
 
+## 9.14
+  - Added the constant complexity next reaction method (CCNRM). 
+
 ## 9.13
 
   - Added a default aggregator selection algorithm based on the number of passed

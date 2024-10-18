@@ -27,14 +27,17 @@ end
 
 sample jump at site with direct method
 """
-function sample_jump_direct(p, site)
-    if rand(p.rng) * (total_site_rate(p.rx_rates, p.hop_rates, site)) <
-       total_site_rx_rate(p.rx_rates, site)
-        rx = sample_rx_at_site(p.rx_rates, site, p.rng)
-        return SpatialJump(site, rx + p.numspecies, site)
+sample_jump_direct(p, site) = sample_jump_direct(p.rx_rates, p.hop_rates, site, p.spatial_system, p.rng)
+
+function sample_jump_direct(rx_rates, hop_rates, site, spatial_system, rng)
+    numspecies = size(hop_rates.rates, 1)
+    if rand(rng) * (total_site_rate(rx_rates, hop_rates, site)) <
+       total_site_rx_rate(rx_rates, site)
+        rx = sample_rx_at_site(rx_rates, site, rng)
+        return SpatialJump(site, rx + numspecies, site)
     else
-        species_to_diffuse, target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
-            p.spatial_system)
+        species_to_diffuse, target_site = sample_hop_at_site(hop_rates, site, rng,
+                                                             spatial_system)
         return SpatialJump(site, species_to_diffuse, target_site)
     end
 end
@@ -52,10 +55,10 @@ end
 function update_rates_after_hop!(p, integrator, source_site, target_site, species)
     u = integrator.u
     update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, source_site)
-    update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
+    update_hop_rates!(p.hop_rates, species, u, source_site, p.spatial_system)
 
     update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, target_site)
-    update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
+    update_hop_rates!(p.hop_rates, species, u, target_site, p.spatial_system)
 end
 
 """
@@ -70,7 +73,7 @@ function update_state!(p, integrator)
     else
         rx_index = reaction_id_from_jump(p, jump)
         @inbounds executerx!((@view integrator.u[:, jump.src]), rx_index,
-            p.rx_rates.ma_jumps)
+                             get_majumps(p.rx_rates))
     end
     # save jump that was just executed
     p.prev_jump = jump

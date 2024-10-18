@@ -53,6 +53,7 @@ include("aggregators/directcr.jl")
 include("aggregators/rssacr.jl")
 include("aggregators/rdirect.jl")
 include("aggregators/coevolve.jl")
+include("aggregators/ccnrm.jl")
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -85,7 +86,7 @@ export SplitCoupledJumpProblem
 
 export Direct, DirectFW, SortingDirect, DirectCR
 export BracketData, RSSA
-export FRM, FRMFW, NRM
+export FRM, FRMFW, NRM, CCNRM
 export RSSACR, RDirect
 export Coevolve
 

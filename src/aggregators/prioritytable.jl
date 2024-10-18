@@ -11,7 +11,7 @@ The ranges are assumed to be powers of two:
    bin 1 = {0},
    bin 2 = (0,`minpriority`),
    bin 3 = [`minpriority`,`2*minpriority`)...
-   bin N = [`.5*maxpriority`,`maxpriority`)
+in N = [`.5*maxpriority`,`maxpriority`)
 *Assumes* the `priortogid` function that maps priorities to groups maps the upper end of
 the interval to the next group. i.e. maxpriority -> N+1
 """
@@ -57,17 +57,23 @@ end
     lastpid
 end
 
+@inline function ids(pg::PriorityGroup)
+    pg.pids[1:(pg.numpids)]
+end
+
 function Base.show(io::IO, pg::PriorityGroup)
     println(io, "  ", summary(pg))
     println(io, "  maxpriority = ", pg.maxpriority)
     println(io, "  numpids = ", pg.numpids)
-    println(io, "  pids = ", pg.pids[1:(pg.numpids)])
+    println(io, "  pids = ", ids(pg))
 end
 
 """
 Table to store the groups.
 """
-mutable struct PriorityTable{F, S, T, U <: Function}
+abstract type AbstractPriorityTable end
+
+mutable struct PriorityTable{F, S, T, U <: Function} <: AbstractPriorityTable
     "non-zero values below this are binned together, static"
     minpriority::F
 
@@ -250,9 +256,9 @@ function Base.show(io::IO, pt::PriorityTable)
     end
 end
 
-#######################################################
-# routines for DirectCR
-#######################################################
+#############################
+### routines for DirectCR ###
+#############################
 
 # map priority (i.e. jump rate) to integer
 # add two as 0. -> 1 and  priority < minpriority ==> pid -> 2
@@ -311,4 +317,166 @@ function sample(pt::PriorityTable, priorities, rng = DEFAULT_RNG)
 
     # sample element within the group
     @inbounds sample(groups[gid], priorities, rng)
+end
+
+##########################
+### Routines for CCNRM ###
+##########################
+
+struct TimeGrouper{T <: Number}
+    mintime::T
+    binwidth::T
+end
+
+@inline function (t::TimeGrouper{T})(time::T) where {T}
+    return floor(Int, (time - t.mintime) / t.binwidth) + 1
+end
+
+mutable struct PriorityTimeTable{T, F <: Int}
+    groups::Vector{PriorityGroup{T, Vector{F}}}
+    pidtogroup::Vector{Tuple{F, F}}
+    times::Vector{T}
+    timegrouper::TimeGrouper{T}
+    minbin::F
+    steps::F # TODO: For adaptive rebuilding. 
+    maxtime::T
+    binwidthconst::F
+    numbinsconst::F
+end
+
+# Construct the time table with the default optimal bin width and number of bins. 
+# DEFAULT NUMBINS: 20 * √length(times)
+# DEFAULT BINWIDTH: 16 / sum(propensities)
+function PriorityTimeTable(
+        times::AbstractVector, mintime, timestep; binwidthconst = 16, numbinsconst = 20)
+    binwidth = binwidthconst * timestep
+    numbins = floor(Int64, numbinsconst * sqrt(length(times)))
+    maxtime = mintime + numbins * binwidth
+
+    pidtype = typeof(numbins)
+    ptype = eltype(times)
+    groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()
+    pidtogroup = Vector{Tuple{Int, Int}}(undef, length(times))
+
+    ttgdata = TimeGrouper{ptype}(mintime, binwidth)
+    # Create the groups, [t_min, t_min + τ), [t_min + τ, t_min + 2τ)...
+    for i in 1:numbins
+        push!(groups, PriorityGroup{pidtype}(mintime + i * binwidth))
+    end
+
+    ptt = PriorityTimeTable(
+        groups, pidtogroup, times, ttgdata, zero(pidtype),
+        zero(pidtype), maxtime, binwidthconst, numbinsconst)
+    # Insert priority ids into the groups
+    for (pid, time) in enumerate(times)
+        if time > maxtime
+            pidtogroup[pid] = (0, 0)
+            continue
+        end
+        insert!(ptt, pid, time)
+    end
+
+    ptt.minbin = findfirst(g -> g.numpids > (0), groups)
+    ptt.minbin === nothing && (ptt.minbin = 0)
+    ptt
+end
+
+# Rebuild the table when there are no more reaction times within the current
+# time window. 
+function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
+    @unpack pidtogroup, groups, times, binwidthconst = ptt
+    fill!(pidtogroup, (zero(F), zero(F)))
+
+    numbins = length(groups)
+    binwidth = binwidthconst * timestep
+    ptt.maxtime = mintime + numbins * binwidth
+    ptt.timegrouper = TimeGrouper(mintime, binwidth)
+
+    groupmaxtime = mintime
+    for group in groups
+        group.numpids = zero(F)
+        groupmaxtime += binwidth
+        group.maxpriority = groupmaxtime
+    end
+
+    # Reinsert the times into the groups. 
+    for (id, time) in enumerate(times)
+        time > ptt.maxtime && continue
+        insert!(ptt, id, time)
+    end
+    ptt.minbin = findfirst(g -> g.numpids > (0), groups)
+    ptt.minbin === nothing && (ptt.minbin = 0)
+    ptt.steps = 0
+
+    return nothing
+end
+
+# Get the reaction with the earliest timestep.
+function getfirst(ptt::PriorityTimeTable)
+    @unpack groups, times, minbin = ptt
+    minbin == 0 && return (0, 0)
+
+    while groups[minbin].numpids == 0
+        minbin += 1
+        if minbin > length(groups)
+            return (0, 0)
+        end
+    end
+
+    ptt.minbin = minbin
+    ptt.steps += 1
+    min_time = typemax(eltype(times))
+    min_idx = 0
+    @inbounds for i in 1:(groups[minbin].numpids)
+        pid = groups[minbin].pids[i]
+        times[pid] < min_time && begin
+            min_time = times[pid]
+            min_idx = pid
+        end
+    end
+
+    return min_idx, min_time
+end
+
+function insert!(ptt::PriorityTimeTable, pid, time)
+    @unpack timegrouper, pidtogroup, groups = ptt
+    gid = timegrouper(time)
+    @inbounds pididx = insert!(groups[gid], pid)
+    @inbounds pidtogroup[pid] = (gid, pididx)
+
+    return nothing
+end
+
+# Update the priority table when a reaction time gets updated. We only shift
+# between bins if the new time is within the current time window; otherwise
+# we remove the reaction and wait until rebuild. 
+function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, F}
+    @unpack times, timegrouper, maxtime, pidtogroup, groups = ptt
+
+    times[pid] = newtime
+    if oldtime >= maxtime
+        # If a reaction comes back into the time window, insert it. 
+        newtime < maxtime ? insert!(ptt, pid, newtime) : return nothing
+    elseif newtime >= maxtime
+        # If the new time lands outside of current window, remove it.
+        @inbounds begin
+            gid, pidx = pidtogroup[pid]
+            movedpid = remove!(groups[gid], pidx)
+            pidtogroup[movedpid] = (gid, pidx)
+            pidtogroup[pid] = (zero(F), zero(F))
+        end
+    else
+        # Move bins if the reaction was already inside. 
+        oldgid = timegrouper(oldtime)
+        newgid = timegrouper(newtime)
+        oldgid == newgid && return nothing
+        @inbounds begin
+            pidx = pidtogroup[pid][2]
+            movedpid = remove!(groups[oldgid], pidx)
+            pidtogroup[movedpid] = (oldgid, pidx)
+            newpidx = insert!(groups[newgid], pid)
+            pidtogroup[pid] = (newgid, newpidx)
+        end
+    end
+    return nothing
 end

@@ -95,6 +95,9 @@ function Base.similar(A::ExtendedJumpArray, ::Type{S},
     ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
 end
 
+# plotting
+SciMLBase.plottable_indices(u::ExtendedJumpArray) = SciMLBase.plottable_indices(u.u)
+
 # ODE norm to prevent type-unstable fallback
 @inline function DiffEqBase.ODE_DEFAULT_NORM(u::ExtendedJumpArray, t)
     Base.FastMath.sqrt_fast(real(sum(abs2, u)) / max(length(u), 1))

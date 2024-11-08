@@ -1,4 +1,5 @@
-using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq
+using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase
+using FastBroadcast
 using StableRNGs
 
 rng = StableRNG(123)
@@ -56,7 +57,6 @@ out_result .= bc_dtype_1 .+ bc_dtype_2 .* 2
 @test out_result ≈ result
 
 # Test that fast broadcasting also gives the correct results
-using FastBroadcast
 @.. bc_out = 3.14 * bc_eja_1 + 2.7 * bc_eja_2
 @test bc_out ≈ 3.14 * bc_eja_1 + 2.7 * bc_eja_2
 
@@ -118,4 +118,5 @@ let
     jprob = JumpProblem(oprob, Direct(), vrj, deathvrj)
     sol = solve(jprob, Tsit5())
     @test eltype(sol.u) <: ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}
+    @test SciMLBase.plottable_indices(sol.u[1]) == 1:length(u₀)
 end

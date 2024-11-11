@@ -1,5 +1,5 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
-using Random
+using Random, LinearSolve
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -275,6 +275,16 @@ end
 # https://github.com/SciML/JumpProcesses.jl/issues/320
 # note that even with the seeded StableRNG this test is not 
 # deterministic for some reason.
+function getmean(Nsims, prob, alg, dt, tsave)
+    umean = zeros(length(tsave))
+    for i in 1:Nsims
+        sol = solve(prob, alg; saveat = dt)
+        umean .+= Array(sol(tsave; idxs = 1))
+    end
+    umean ./= Nsims
+    return umean
+end
+
 let
     rng = StableRNG(12345)
     b = 2.0
@@ -309,11 +319,8 @@ let
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
     dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
-    umean = zeros(length(tsave))
-    for i in 1:Nsims
-        sol = solve(sjm_prob, Tsit5(); saveat = dt)
-        umean .+= Array(sol(tsave; idxs = 1))
+    for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
+        umean = getmean(Nsims, sjm_prob, alg, dt, tsave)
+        @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
     end
-    umean ./= Nsims
-    @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
 end

@@ -3,7 +3,8 @@
 ## JumpProcesses unreleased (master branch)
 
 ## 9.14
-  - Added the constant complexity next reaction method (CCNRM). 
+
+  - Added the constant complexity next reaction method (CCNRM).
 
 ## 9.13
 

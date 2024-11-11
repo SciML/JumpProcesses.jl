@@ -430,14 +430,14 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
     remake(prob; f, u0)
 end
 
-function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
-    idx += 1
-    condition = function (u, t, integrator)
+function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
+    condition = function(u, t, integrator)
         u.jump_u[idx]
     end
-    affect! = function (integrator)
+    affect! = function(integrator)
         jump.affect!(integrator)
         integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
+        nothing
     end
     new_cb = ContinuousCallback(condition, affect!;
         idxs = jump.idxs,
@@ -446,26 +446,18 @@ function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
         save_positions = jump.save_positions,
         abstol = jump.abstol,
         reltol = jump.reltol)
+    return new_cb
+end
+
+function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
+    idx += 1
+    new_cb = wrap_jump_in_callback(idx, jump; rng)
     build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = DEFAULT_RNG)
 end
 
 function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
     idx += 1
-    condition = function (u, t, integrator)
-        u.jump_u[idx]
-    end
-    affect! = function (integrator)
-        jump.affect!(integrator)
-        integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
-    end
-    new_cb = ContinuousCallback(condition, affect!;
-        idxs = jump.idxs,
-        rootfind = jump.rootfind,
-        interp_points = jump.interp_points,
-        save_positions = jump.save_positions,
-        abstol = jump.abstol,
-        reltol = jump.reltol)
-    CallbackSet(cb, new_cb)
+    CallbackSet(cb, wrap_jump_in_callback(idx, jump; rng))
 end
 
 aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A

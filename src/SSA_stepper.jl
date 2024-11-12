@@ -184,10 +184,11 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         end
     else
         cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[end])
+        rng = cb.condition.rng
         if seed === nothing
-            Random.seed!(cb.condition.rng, rand(UInt64))
+            Random.seed!(rng, rand(UInt64))
         else
-            Random.seed!(cb.condition.rng, seed)
+            Random.seed!(rng, seed)
         end
     end
     opts = (callback = CallbackSet(callback),)

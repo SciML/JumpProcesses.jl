@@ -47,12 +47,12 @@ end
 
 function resetted_jump_problem(_jump_prob, seed)
     jump_prob = deepcopy(_jump_prob)
+    rng = jump_prob.jump_callback.discrete_callbacks[1].condition.rng
     if !isempty(jump_prob.jump_callback.discrete_callbacks)
         if seed === nothing
-            Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,
-                rand(UInt64))
+            Random.seed!(rng, rand(UInt64))
         else
-            Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
+            Random.seed!(rng, seed)
         end
     end
 

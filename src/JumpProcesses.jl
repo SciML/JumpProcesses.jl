@@ -66,6 +66,7 @@ include("spatial/bracketing.jl")
 
 include("spatial/nsm.jl")
 include("spatial/directcrdirect.jl")
+include("spatial/directcrrssa.jl")
 
 include("aggregators/aggregated_api.jl")
 
@@ -102,6 +103,6 @@ export ExtendedJumpArray
 export CartesianGrid, CartesianGridRej
 export SpatialMassActionJump
 export outdegree, num_sites, neighbors
-export NSM, DirectCRDirect
+export NSM, DirectCRDirect, DirectCRRSSA
 
 end # module

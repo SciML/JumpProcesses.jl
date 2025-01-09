@@ -150,22 +150,12 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
         jprob.kwargs)
 end
 
-# when setindex! is used.
-function Base.setindex!(prob::JumpProblem, args...; kwargs...)
-    SciMLBase.___internal_setindex!(prob.prob, args...; kwargs...)
-end
-
 # for updating parameters in JumpProblems to update MassActionJumps
 function SII.finalize_parameters_hook!(prob::JumpProblem, p)
     if using_params(prob.massaction_jump)
         update_parameters!(prob.massaction_jump, SII.parameter_values(prob))
     end
     nothing
-end
-
-# when getindex is used.
-function Base.getindex(prob::JumpProblem, args...; kwargs...)
-    Base.getindex(prob.prob, args...; kwargs...)
 end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip

@@ -61,7 +61,7 @@ Nsims = 10000
 rel_tol = 0.02
 times = 0.0:(tf / num_time_points):tf
 
-algs = [NSM(), DirectCRDirect()]
+algs = [NSM(), DirectCRDirect(), DirectCRRSSA()]
 grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, algs[2], majumps,
                                 hopping_constants = hopping_constants,

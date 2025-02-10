@@ -1,5 +1,5 @@
 using DiffEqBase
-using JumpProcesses, OrdinaryDiffEqTsit5 
+using JumpProcesses, OrdinaryDiffEq
 using StableRNGs
 rng = StableRNG(12345)
 

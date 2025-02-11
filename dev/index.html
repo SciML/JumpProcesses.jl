@@ -3,9 +3,9 @@
 Pkg.add(&quot;JumpProcesses&quot;)</code></pre><h2 id="Contributing-and-Getting-Help"><a class="docs-heading-anchor" href="#Contributing-and-Getting-Help">Contributing and Getting Help</a><a id="Contributing-and-Getting-Help-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing-and-Getting-Help" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums for getting help and asking questions:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>The <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also the <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/JumpProcesses.jl/JumpProcesses.jl/docs/Project.toml`
   [479239e8] Catalyst v14.4.1
   [b429d917] DensityInterface v0.4.0
-  [0c46a032] DifferentialEquations v7.15.0
+  [0c46a032] DifferentialEquations v7.16.0
   [31c24e10] Distributions v0.25.117
-  [e30172f5] Documenter v1.8.0
+  [e30172f5] Documenter v1.8.1
   [86223c79] Graphs v1.12.0
   [ccbc3e58] JumpProcesses v9.14.2 `~/work/JumpProcesses.jl/JumpProcesses.jl`
   [1dea7af3] OrdinaryDiffEq v6.91.0
@@ -51,7 +51,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [479239e8] Catalyst v14.4.1
   [d360d2e6] ChainRulesCore v1.25.1
   [fb6a15b2] CloseOpenIntervals v0.1.13
-  [944b1d66] CodecZlib v0.7.7
+  [944b1d66] CodecZlib v0.7.8
   [35d6a980] ColorSchemes v3.28.0
   [3da002f7] ColorTypes v0.12.0
   [c3611d14] ColorVectorSpace v0.11.0
@@ -81,13 +81,13 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [77a26b50] DiffEqNoiseProcess v5.24.1
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
-  [0c46a032] DifferentialEquations v7.15.0
+  [0c46a032] DifferentialEquations v7.16.0
   [a0c0ee7d] DifferentiationInterface v0.6.40
   [8d63f2c5] DispatchDoctor v0.4.19
   [b4f34e82] Distances v0.10.12
   [31c24e10] Distributions v0.25.117
   [ffbed154] DocStringExtensions v0.9.3
-  [e30172f5] Documenter v1.8.0
+  [e30172f5] Documenter v1.8.1
   [5b8099bc] DomainSets v0.7.15
   [7c1d4256] DynamicPolynomials v0.6.1
   [06fc5a27] DynamicQuantities v1.4.0
@@ -166,10 +166,10 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [d41bc354] NLSolversBase v7.8.3
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.1.2
-  [8913a72c] NonlinearSolve v4.3.0
-  [be0214bd] NonlinearSolveBase v1.4.0
-  [5959db7a] NonlinearSolveFirstOrder v1.2.0
-  [9a2c21bd] NonlinearSolveQuasiNewton v1.1.0
+  [8913a72c] NonlinearSolve v4.4.0
+  [be0214bd] NonlinearSolveBase v1.4.1
+  [5959db7a] NonlinearSolveFirstOrder v1.3.0
+  [9a2c21bd] NonlinearSolveQuasiNewton v1.2.0
   [26075421] NonlinearSolveSpectralMethods v1.1.0
   [6fe1bfb0] OffsetArrays v1.15.0
   [4d8831e6] OpenSSL v1.4.3
@@ -178,9 +178,9 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [1dea7af3] OrdinaryDiffEq v6.91.0
   [89bda076] OrdinaryDiffEqAdamsBashforthMoulton v1.1.0
   [6ad6398a] OrdinaryDiffEqBDF v1.2.0
-  [bbf590c4] OrdinaryDiffEqCore v1.16.0
+  [bbf590c4] OrdinaryDiffEqCore v1.17.0
   [50262376] OrdinaryDiffEqDefault v1.2.0
-  [4302a76b] OrdinaryDiffEqDifferentiation v1.3.0
+  [4302a76b] OrdinaryDiffEqDifferentiation v1.4.0
   [9286f039] OrdinaryDiffEqExplicitRK v1.1.0
   [e0540318] OrdinaryDiffEqExponentialRK v1.2.0
   [becaefa8] OrdinaryDiffEqExtrapolation v1.3.0
@@ -192,7 +192,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [521117fe] OrdinaryDiffEqLinear v1.1.0
   [1344f307] OrdinaryDiffEqLowOrderRK v1.2.0
   [b0944070] OrdinaryDiffEqLowStorageRK v1.2.1
-  [127b3ac7] OrdinaryDiffEqNonlinearSolve v1.3.0
+  [127b3ac7] OrdinaryDiffEqNonlinearSolve v1.4.0
   [c9986a66] OrdinaryDiffEqNordsieck v1.1.0
   [5dd0a6cf] OrdinaryDiffEqPDIRK v1.2.0
   [5b33eab2] OrdinaryDiffEqPRK v1.1.0
@@ -203,7 +203,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [669c94d9] OrdinaryDiffEqSSPRK v1.2.0
   [e3e12d00] OrdinaryDiffEqStabilizedIRK v1.2.0
   [358294b1] OrdinaryDiffEqStabilizedRK v1.1.0
-  [fa646aed] OrdinaryDiffEqSymplecticRK v1.1.0
+  [fa646aed] OrdinaryDiffEqSymplecticRK v1.2.0
   [b1df2697] OrdinaryDiffEqTsit5 v1.1.0
   [79d7bb75] OrdinaryDiffEqVerner v1.1.1
   [90014a1f] PDMats v0.11.32
@@ -260,7 +260,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [860ef19b] StableRNGs v1.0.2
   [aedffcd0] Static v1.1.1
   [0d7ed370] StaticArrayInterface v1.8.0
-  [90137ffa] StaticArrays v1.9.11
+  [90137ffa] StaticArrays v1.9.12
   [1e83bf80] StaticArraysCore v1.4.3
   [10745b16] Statistics v1.11.1
   [82ae8749] StatsAPI v1.7.0
@@ -328,7 +328,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [38a345b3] Libuuid_jll v2.40.3+0
   [856f044c] MKL_jll v2025.0.1+1
   [e7412a2a] Ogg_jll v1.3.5+1
-  [458c3c95] OpenSSL_jll v3.0.15+3
+  [458c3c95] OpenSSL_jll v3.0.16+0
   [efe28fd5] OpenSpecFun_jll v0.5.6+0
   [91d4177d] Opus_jll v1.3.3+0
   [36c8627f] Pango_jll v1.55.5+0
@@ -434,4 +434,4 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [8e850b90] libblastrampoline_jll v5.11.0+0
   [8e850ede] nghttp2_jll v1.59.0+0
   [3f19e933] p7zip_jll v17.4.0+2
-Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.14.2/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.14.2/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Monday 10 February 2025 17:48">Monday 10 February 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.14.2/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.14.2/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Tuesday 11 February 2025 22:04">Tuesday 11 February 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

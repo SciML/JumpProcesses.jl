@@ -1,3 +1,5 @@
+using DiffEqCallbacks
+
 function isinplace_jump(p, rj)
     if p isa DiscreteProblem && p.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT &&
        rj !== nothing
@@ -102,31 +104,15 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
     T = remaker_of(jprob)
 
     errmesg = """
-    JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem. Feel free to open an issue on JumpProcesses to discuss further.
+    JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem.
     """
+
     !issubset(keys(kwargs), (:u0, :p, :tspan, :prob)) && error(errmesg)
 
     if :prob ∉ keys(kwargs)
-        # Update u0 when we are wrapping via ExtendedJumpArrays. If the user passes an
-        # ExtendedJumpArray we assume they properly initialized it
         prob = jprob.prob
-        if (prob.u0 isa ExtendedJumpArray) && (:u0 in keys(kwargs))
-            newu0 = kwargs[:u0]
-            # if newu0 is of the wrapped type, initialize a new ExtendedJumpArray
-            if typeof(newu0) == typeof(prob.u0.u)
-                u0 = remake_extended_u0(prob, newu0, jprob.rng)
-                _kwargs = @set! kwargs[:u0] = u0
-            elseif typeof(newu0) != typeof(prob.u0)
-                error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
-            else
-                _kwargs = kwargs
-            end
-            newprob = DiffEqBase.remake(jprob.prob; _kwargs...)
-        else
-            newprob = DiffEqBase.remake(jprob.prob; kwargs...)
-        end
+        newprob = DiffEqBase.remake(prob; kwargs...)
 
-        # if the parameters were changed we must remake the MassActionJump too
         if (:p ∈ keys(kwargs)) && using_params(jprob.massaction_jump)
             update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
         end
@@ -135,11 +121,6 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
             error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
         newprob = kwargs[:prob]
 
-        # when passing a new wrapped problem directly we require u0 has the correct type
-        (typeof(newprob.u0) == typeof(jprob.prob.u0)) ||
-            error("The new u0 within the passed prob does not have the same type as the existing u0. Please pass a u0 of type $(typeof(jprob.prob.u0)).")
-
-        # we can't know if p was changed, so we must remake the MassActionJump
         if using_params(jprob.massaction_jump)
             update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
         end
@@ -310,25 +291,30 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
 
     if isinplace(prob)
         jump_f = let _f = _f
-            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
-                _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (du, u, p, t)
+                _f(du, u, p, t)
             end
         end
     else
         jump_f = let _f = _f
-            function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (u, p, t)
+                du = _f(u, p, t)
                 return du
             end
         end
     end
 
+    # Define an IntegratingCallback to track jumps
+    integrated = IntegrandValues(Float64, Vector{Float64})
+    jump_callback = IntegratingCallback(
+        (u, t, integrator) -> [1.0], 
+        integrated,
+        Float64[0.0])
+
     u0 = extend_u0(prob, length(jumps), rng)
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
-        observed = prob.f.observed)
-    remake(prob; f, u0)
+    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys, observed = prob.f.observed)
+    
+    remake(prob; f, u0, callback=jump_callback)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)

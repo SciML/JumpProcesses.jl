@@ -104,7 +104,7 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
     T = remaker_of(jprob)
 
     errmesg = """
-    JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem.
+    JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem. Feel free to open an issue on JumpProcesses to discuss further.
     """
 
     !issubset(keys(kwargs), (:u0, :p, :tspan, :prob)) && error(errmesg)

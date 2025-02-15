@@ -7,6 +7,7 @@ version = "9.14.2"
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
+DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 FunctionWrappers = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
@@ -30,6 +31,7 @@ FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 ArrayInterface = "7.9"
 DataStructures = "0.18"
 DiffEqBase = "6.154"
+DiffEqCallbacks = "4.2.2"
 DocStringExtensions = "0.9"
 FastBroadcast = "0.3"
 FunctionWrappers = "1.1"
@@ -58,5 +60,4 @@ StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["DiffEqCallbacks", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", 
-    "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test", "FastBroadcast"]
+test = ["DiffEqCallbacks", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test", "FastBroadcast"]

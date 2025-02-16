@@ -58,8 +58,8 @@ function resetted_jump_problem(_jump_prob, seed)
 
     if !isempty(jump_prob.variable_jumps)
         # @assert jump_prob.prob.u0 isa ExtendedJumpArray
-        randexp!(_jump_prob.rng, jump_prob.prob.u0.jump_u)
-        jump_prob.prob.u0.jump_u .*= -1
+        randexp!(_jump_prob.rng, jump_prob.prob.u0)
+        jump_prob.prob.u0 .*= -1
     end
     jump_prob
 end
@@ -71,7 +71,7 @@ function reset_jump_problem!(jump_prob, seed)
 
     if !isempty(jump_prob.variable_jumps)
         # @assert jump_prob.prob.u0 isa ExtendedJumpArray
-        randexp!(jump_prob.rng, jump_prob.prob.u0.jump_u)
-        jump_prob.prob.u0.jump_u .*= -1
+        randexp!(jump_prob.rng, jump_prob.prob.u0)
+        jump_prob.prob.u0 .*= -1
     end
 end

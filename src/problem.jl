@@ -91,9 +91,9 @@ end
 ######## remaking ######
 
 # for a problem where prob.u0 is an ExtendedJumpArray, create an ExtendedJumpArray that 
-# aliases and resets prob.u0.jump_u while having newu0 as the new u component.
+# aliases and resets prob.u0 while having newu0 as the new u component.
 function remake_extended_u0(prob, newu0, rng)
-    jump_u = prob.u0.jump_u
+    jump_u = prob.u0
     ttype = eltype(prob.tspan)
     @. jump_u = -randexp(rng, ttype)
     ExtendedJumpArray(newu0, jump_u)
@@ -104,10 +104,11 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
     T = remaker_of(jprob)
 
     errmesg = """
-    JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem. Feel free to open an issue on JumpProcesses to discuss further.
+    JumpProblems can currently only be remade with new u0, p, tspan, prob, or callback fields.
+    To change other fields, create a new JumpProblem. Feel free to open an issue on JumpProcesses to discuss further.
     """
 
-    !issubset(keys(kwargs), (:u0, :p, :tspan, :prob)) && error(errmesg)
+    !issubset(keys(kwargs), (:u0, :p, :tspan, :callback, :prob)) && error(errmesg)
 
     if :prob ∉ keys(kwargs)
         prob = jprob.prob
@@ -118,7 +119,8 @@ function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
         end
     else
         any(k -> k in keys(kwargs), (:u0, :p, :tspan)) &&
-            error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
+            error("If remaking a JumpProblem, you cannot pass both `prob` and any of `u0`, `p`, or `tspan`.")
+
         newprob = kwargs[:prob]
 
         if using_params(jprob.massaction_jump)
@@ -278,7 +280,7 @@ end
 # of type prob.tspan
 function extend_u0(prob, Njumps, rng)
     ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:Njumps])
+    u0 = vcat(prob.u0, [-randexp(rng, ttype) for _ in 1:Njumps])
     return u0
 end
 
@@ -295,6 +297,13 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
                 _f(du, u, p, t)
             end
         end
+    
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (out, u, t, integrator) -> out .= [1.0],
+            integrated,
+            Float64[0.0]
+        )
     else
         jump_f = let _f = _f
             function (u, p, t)
@@ -302,15 +311,17 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
                 return du
             end
         end
+    
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (u, t, integrator) -> [1.0],
+            integrated,
+            Float64[0.0]
+        )
     end
+    
 
-    # Define an IntegratingCallback to track jumps
-    integrated = IntegrandValues(Float64, Vector{Float64})
-    jump_callback = IntegratingCallback(
-        (u, t, integrator) -> [1.0], 
-        integrated,
-        Float64[0.0])
-
+    
     u0 = extend_u0(prob, length(jumps), rng)
     f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys, observed = prob.f.observed)
     
@@ -322,35 +333,48 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
 
     if isinplace(prob)
         jump_f = let _f = _f
-            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
-                _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (du, u, p, t)
+                _f(du, u, p, t)
             end
         end
+
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (out, u, t, integrator) -> out .= [1.0],
+            integrated,
+            Float64[0.0]
+        )
     else
         jump_f = let _f = _f
-            function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (u, p, t)
+                du = _f(u, p, t)
                 return du
             end
         end
+
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (u, t, integrator) -> [1.0],
+            integrated,
+            Float64[0.0]
+        )
     end
 
     if prob.noise_rate_prototype === nothing
         jump_g = function (du, u, p, t)
-            prob.g(du.u, u.u, p, t)
+            prob.g(du, u, p, t)
         end
     else
         jump_g = function (du, u, p, t)
-            prob.g(du, u.u, p, t)
+            prob.g(du, u, p, t)
         end
     end
 
+    
+
     u0 = extend_u0(prob, length(jumps), rng)
-    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
-        observed = prob.f.observed)
-    remake(prob; f, g = jump_g, u0)
+    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys, observed = prob.f.observed)
+    remake(prob; f, g = jump_g, u0, callback=jump_callback)
 end
 
 function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
@@ -366,7 +390,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, h, p, t)
-                du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
+                du = ExtendedJumpArray(_f(u.u, h, p, t), u)
                 update_jumps!(du, u, p, t, length(u.u), jumps...)
                 return du
             end
@@ -393,7 +417,7 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
     else
         jump_f = let _f = _f
             function (du, u::ExtendedJumpArray, h, p, t)
-                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
+                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u)
                 update_jumps!(du, u, p, t, length(u.u), jumps...)
                 return du
             end
@@ -408,11 +432,11 @@ end
 
 function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
     condition = function(u, t, integrator)
-        u.jump_u[idx]
+        u[idx]
     end
     affect! = function(integrator)
         jump.affect!(integrator)
-        integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
+        integrator.u[idx] = -randexp(rng, typeof(integrator.t))
         nothing
     end
     new_cb = ContinuousCallback(condition, affect!;

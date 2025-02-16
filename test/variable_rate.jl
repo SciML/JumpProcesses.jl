@@ -261,13 +261,13 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
-    @test allunique(sjm_prob.prob.u0.jump_u)
-    u0old = copy(sjm_prob.prob.u0.jump_u)
+    @test allunique(sjm_prob.prob.u0)
+    u0old = copy(sjm_prob.prob.u0)
     for i in 1:Nsims
         sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
-        @test allunique(sjm_prob.prob.u0.jump_u)
-        @test all(u0old != sjm_prob.prob.u0.jump_u)
-        u0old .= sjm_prob.prob.u0.jump_u
+        @test allunique(sjm_prob.prob.u0)
+        @test all(u0old != sjm_prob.prob.u0)
+        u0old .= sjm_prob.prob.u0
     end
 end
 

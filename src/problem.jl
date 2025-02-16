@@ -382,25 +382,38 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
 
     if isinplace(prob)
         jump_f = let _f = _f
-            function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
-                _f(du.u, u.u, h, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (du, u, p, t)
+                _f(du, u, p, t)
             end
         end
+    
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (out, u, t, integrator) -> out .= [1.0],
+            integrated,
+            Float64[0.0]
+        )
     else
         jump_f = let _f = _f
-            function (u::ExtendedJumpArray, h, p, t)
-                du = ExtendedJumpArray(_f(u.u, h, p, t), u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (u, p, t)
+                du = _f(u, p, t)
                 return du
             end
         end
+    
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (u, t, integrator) -> [1.0],
+            integrated,
+            Float64[0.0]
+        )
     end
+
 
     u0 = extend_u0(prob, length(jumps), rng)
     f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
-    remake(prob; f, u0)
+    remake(prob; f, u0, callback=jump_callback)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
@@ -409,25 +422,38 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
 
     if isinplace(prob)
         jump_f = let _f = _f
-            function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
-                _f(out, du.u, u.u, h, p, t)
-                update_jumps!(out, u, p, t, length(u.u), jumps...)
+            function (du, u, p, t)
+                _f(du, u, p, t)
             end
         end
+    
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (out, u, t, integrator) -> out .= [1.0],
+            integrated,
+            Float64[0.0]
+        )
     else
         jump_f = let _f = _f
-            function (du, u::ExtendedJumpArray, h, p, t)
-                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+            function (u, p, t)
+                du = _f(u, p, t)
                 return du
             end
         end
+    
+        integrated = IntegrandValues(Float64, Vector{Float64})
+        jump_callback = IntegratingCallback(
+            (u, t, integrator) -> [1.0],
+            integrated,
+            Float64[0.0]
+        )
     end
+
 
     u0 = extend_u0(prob, length(jumps), rng)
     f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
         observed = prob.f.observed)
-    remake(prob; f, u0)
+    remake(prob; f, u0, callback=jump_callback)
 end
 
 function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)

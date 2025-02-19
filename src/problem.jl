@@ -268,7 +268,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         constant_jump_callback = DiscreteCallback(disc_agg)
     end
 
-    # Handle any remaining vrjs using IntegratingCallbacks
+    # Handle any remaining vrjs using Callbacks
     if length(cvrjs) > 0
         new_prob = prob
         variable_jump_callback = CallbackSet()
@@ -316,7 +316,6 @@ function create_variable_callback(jump::VariableRateJump, rng = DEFAULT_RNG)
         abstol = jump.abstol,
         reltol = jump.reltol)
 end
-
 
 # extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
 # of type prob.tspan

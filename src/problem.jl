@@ -1,5 +1,3 @@
-using DiffEqCallbacks
-
 function isinplace_jump(p, rj)
     if p isa DiscreteProblem && p.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT &&
        rj !== nothing
@@ -275,7 +273,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         new_prob = prob
         variable_jump_callback = CallbackSet()
         for jump in cvrjs
-            cb = create_integrating_callback(jump, rng)
+            cb = create_variable_callback(jump, rng)
             variable_jump_callback = CallbackSet(variable_jump_callback, cb)
         end
         cont_agg = cvrjs
@@ -299,19 +297,26 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         solkwargs)
 end
 
-function create_integrating_callback(jump::VariableRateJump, rng = DEFAULT_RNG)
-    # Define the integrand function for the propensity
-    integrand_func = (u, t, integrator, _) -> begin
-        # @assert length(u) == length(integrator.u) "Mismatch in state vector lengths."
-        jump.rate(u, t, integrator)
+function create_variable_callback(jump::VariableRateJump, rng = DEFAULT_RNG)
+    # Define the condition function for the callback
+    condition = (u, t, integrator) -> begin
+        jump.rate(u, integrator.p, t)
     end
 
-    # Create storage for the integrated values
-    integrand_values = IntegrandValues(Float64, Vector{Float64})
+    # Define the affect! function for the callback
+    affect! = (integrator) -> begin
+        jump.affect!(integrator)
+    end
 
-    # Create the integrating callback
-    return IntegratingCallback(integrand_func, integrand_values, Float64[0.0])
+    # Create the ContinuousCallback
+    return ContinuousCallback(condition, affect!;
+        rootfind = jump.rootfind,
+        interp_points = jump.interp_points,
+        save_positions = jump.save_positions,
+        abstol = jump.abstol,
+        reltol = jump.reltol)
 end
+
 
 # extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
 # of type prob.tspan

@@ -1,4 +1,4 @@
-using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
+using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test, Plots
 using Random, LinearSolve
 using StableRNGs
 rng = StableRNG(12345)
@@ -35,6 +35,7 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
 integrator = init(jump_prob, Tsit5())
 
 sol = solve(jump_prob, Tsit5())
+plot(sol)
 sol = solve(jump_prob, Rosenbrock23(autodiff = false))
 sol = solve(jump_prob, Rosenbrock23())
 

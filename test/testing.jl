@@ -2,7 +2,6 @@ using Pkg
 
 
 using JumpProcesses, Plots
-default(; lw = 2)
 
 
 

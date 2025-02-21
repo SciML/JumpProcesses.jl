@@ -8,6 +8,26 @@ function isinplace_jump(p, rj)
     end
 end
 
+
+struct JumpIntegratorCache{R, T}
+    "The propensity functions (rates) of the jumps."
+    rates::R
+    "The integrated intensity values for the jumps."
+    integrated_intensities::T
+
+    function JumpIntegratorCache(rates::R, integrated_intensities::T) where {R, T}
+        new{R, T}(rates, integrated_intensities)
+    end
+
+    function (cache::JumpIntegratorCache)(u, p, t)
+        for i in eachindex(cache.rates)
+            cache.integrated_intensities[i] += cache.rates[i](u, p, t)
+        end
+        return cache.integrated_intensities
+    end
+end
+
+
 """
 $(TYPEDEF)
 
@@ -270,8 +290,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     # handle any remaining vrjs
     if length(cvrjs) > 0
-        new_prob = extend_problem(prob, cvrjs; rng)
-        variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
+        new_prob = prob
+        
+        # Create the JumpIntegratorCache
+        cache = JumpIntegratorCache([jump.rate for jump in cvrjs], zeros(length(cvrjs)))
+
+        # Build the variable callbacks using the cache
+        variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng = rng, cache = cache)
         cont_agg = cvrjs
     else
         new_prob = prob
@@ -420,15 +445,16 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
     remake(prob; f, u0)
 end
 
-function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
+function wrap_jump_in_callback(idx, jump, cache; rng = DEFAULT_RNG)
     condition = function(u, t, integrator)
-        u.jump_u[idx]
+        cache.integrated_intensities[idx]
     end
+
     affect! = function(integrator)
         jump.affect!(integrator)
-        integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
-        nothing
+        cache.integrated_intensities[idx] = -randexp(rng, typeof(integrator.t))
     end
+
     new_cb = ContinuousCallback(condition, affect!;
         idxs = jump.idxs,
         rootfind = jump.rootfind,
@@ -436,18 +462,19 @@ function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
         save_positions = jump.save_positions,
         abstol = jump.abstol,
         reltol = jump.reltol)
+
     return new_cb
 end
 
-function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
+function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG, cache)
     idx += 1
-    new_cb = wrap_jump_in_callback(idx, jump; rng)
-    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = DEFAULT_RNG)
+    new_cb = wrap_jump_in_callback(idx, jump, cache; rng)
+    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = rng, cache = cache)
 end
 
-function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
+function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG, cache)
     idx += 1
-    CallbackSet(cb, wrap_jump_in_callback(idx, jump; rng))
+    CallbackSet(cb, wrap_jump_in_callback(idx, jump, cache; rng))
 end
 
 aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A

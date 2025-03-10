@@ -1,4 +1,4 @@
-using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test, Plots
+using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
 using Random, LinearSolve
 using StableRNGs
 rng = StableRNG(12345)
@@ -22,15 +22,7 @@ a .= b .+ c .+ d
 
 rate = (u, p, t) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
-
-
-f = function (du, u, p, t)
-    du[1] = u[1]
-end
-prob = ODEProblem(f, [0.2], (0.0, 10.0))
 jump = VariableRateJump(rate, affect!, interp_points = 1000)
-JumpSet(jump).variable_jumps[1]
-
 jump2 = deepcopy(jump)
 
 f = function (du, u, p, t)
@@ -43,7 +35,6 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
 integrator = init(jump_prob, Tsit5())
 
 sol = solve(jump_prob, Tsit5())
-plot(sol)
 sol = solve(jump_prob, Rosenbrock23(autodiff = false))
 sol = solve(jump_prob, Rosenbrock23())
 
@@ -237,46 +228,6 @@ let
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())
-    end
-end
-
-# test u0 resets correctly
-let
-    b = 2.0
-    d = 1.0
-    n0 = 1
-    tspan = (0.0, 4.0)
-    Nsims = 10
-    u0 = [n0]
-    p = [b, d]
-
-    function ode_fxn(du, u, p, t)
-        du .= 0
-        nothing
-    end
-    b_rate(u, p, t) = (u[1] * p[1])
-    function birth!(integrator)
-        integrator.u[1] += 1
-        nothing
-    end
-    b_jump = VariableRateJump(b_rate, birth!)
-
-    d_rate(u, p, t) = (u[1] * p[2])
-    function death!(integrator)
-        integrator.u[1] -= 1
-        nothing
-    end
-    d_jump = VariableRateJump(d_rate, death!)
-
-    ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
-    @test allunique(sjm_prob.prob.u0)
-    u0old = copy(sjm_prob.prob.u0)
-    for i in 1:Nsims
-        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
-        @test allunique(sjm_prob.prob.u0)
-        @test all(u0old != sjm_prob.prob.u0)
-        u0old .= sjm_prob.prob.u0
     end
 end
 

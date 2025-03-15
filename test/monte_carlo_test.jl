@@ -8,7 +8,7 @@ prob = SDEProblem(f, g, [1.0], (0.0, 1.0))
 rate = (u, p, t) -> 200.0
 affect! = integrator -> (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate, affect!, save_positions = (false, true))
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
 monte_prob = EnsembleProblem(jump_prob)
 sol = solve(monte_prob, SRIW1(), EnsembleSerial(), trajectories = 3,
     save_everystep = false, dt = 0.001, adaptive = false)

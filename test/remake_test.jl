@@ -75,7 +75,7 @@ let
     rrate(u, p, t) = u[1]
     aaffect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rrate, aaffect!)
-    jprob = JumpProblem(prob, vrj; variablerate_aggregator=NextReactionODE(), rng)
+    jprob = JumpProblem(prob, vrj; variablerate_aggregator = NextReactionODE(), rng)
     sol = solve(jprob, Tsit5())
     @test all(==(0.0), sol[1, :])
     u0 = [4.0]
@@ -101,7 +101,7 @@ let
     rrate(u, p, t) = u[1]
     aaffect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rrate, aaffect!)
-    jprob = JumpProblem(prob, vrj; variablerate_aggregator=NextReactionODE(), rng)
+    jprob = JumpProblem(prob, vrj; variablerate_aggregator = NextReactionODE(), rng)
     sol = solve(jprob, Tsit5())
     @test all(==(0.0), sol[1, :])
     u0 = [4.0]

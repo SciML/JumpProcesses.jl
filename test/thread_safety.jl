@@ -24,7 +24,7 @@ let
     ode_prob = ODEProblem(f!, u_0, (0.0, 10))
     rate(u, p, t) = 1.0
     jump!(integrator) = nothing
-    jump_prob = JumpProblem(ode_prob, Direct(), VariableRateJump(rate, jump!); variablerate_aggregator=NextReactionODE())
+    jump_prob = JumpProblem(ode_prob, Direct(), VariableRateJump(rate, jump!); variablerate_aggregator = NextReactionODE())
     prob_func(prob, i, repeat) = deepcopy(prob)
     prob = EnsembleProblem(jump_prob,prob_func = prob_func)
     solve(prob, Tsit5(), EnsembleThreads(), trajectories=10)

@@ -184,7 +184,7 @@ let
     crjmean = runSSAs(crjprob)
     f(du, u, p, t) = (du .= 0; nothing)
     oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
-    vrjprob = JumpProblem(oprob, vrjs; variablerate_aggregator=NextReactionODE(), save_positions = (false, false), rng)
+    vrjprob = JumpProblem(oprob, vrjs; variablerate_aggregator = NextReactionODE(), save_positions = (false, false), rng)
     vrjmean = runSSAs_ode(vrjprob)
     @test abs(vrjmean - crjmean) < reltol * crjmean
 end

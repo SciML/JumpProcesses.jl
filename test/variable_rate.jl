@@ -30,7 +30,7 @@ f = function (du, u, p, t)
 end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 
 integrator = init(jump_prob, Tsit5())
 
@@ -49,7 +49,7 @@ g = function (du, u, p, t)
 end
 
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 
 sol = solve(jump_prob, SRIW1())
 
@@ -80,7 +80,7 @@ end
 jump_switch = VariableRateJump(rate_switch, affect_switch!)
 
 prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2, 2))
-jump_prob = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = NextReactionODE(), rng = rng)
 solve(jump_prob, SRA1(), dt = 1.0)
 
 ## Some integration tests
@@ -93,7 +93,7 @@ prob = ODEProblem(f2, [0.2], (0.0, 10.0))
 rate2(u, p, t) = 2
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = ConstantRateJump(rate2, affect2!)
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
 sol = solve(jump_prob, Tsit5())
 sol(4.0)
 sol.u[4]
@@ -102,7 +102,7 @@ rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate2b, affect2!)
 jump2 = deepcopy(jump)
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 sol = solve(jump_prob, Tsit5())
 sol(4.0)
 sol.u[4]
@@ -112,7 +112,7 @@ function g2(du, u, p, t)
 end
 
 prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 sol = solve(jump_prob, SRIW1())
 sol(4.0)
 sol.u[4]
@@ -128,7 +128,7 @@ integrator.u[2] = 0.5;
 integrator.u[3] = 0.75;
 integrator.u[4] = 1)
 jump = VariableRateJump(rate3, affect3!)
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator=NextReactionODE(), rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
 sol = solve(jump_prob, Tsit5())
 
 # test for https://discourse.julialang.org/t/differentialequations-jl-package-variable-rate-jumps-with-complex-variables/80366/2
@@ -143,7 +143,7 @@ jump = VariableRateJump(rate4, affect4!)
 x₀ = 1.0 + 0.0im
 Δt = (0.0, 6.0)
 prob = ODEProblem(f4, [x₀], Δt)
-jumpProblem = JumpProblem(prob, Direct(), jump; variablerate_aggregator=NextReactionODE())
+jumpProblem = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
 sol = solve(jumpProblem, Tsit5())
 
 # Out of place test
@@ -162,7 +162,7 @@ end
 x0 = rand(2)
 prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
 jump = VariableRateJump(rate2c, affect!2)
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator=NextReactionODE())
+jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
 
 # test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
 # jumps
@@ -190,7 +190,7 @@ let
         vrj = VariableRateJump(cs_rate1, affect!; urate = ((u, p, t) -> 1.0),
             rateinterval = ((u, p, t) -> 1.0))
         @test_throws ErrorException JumpProblem(dprob_, alg, mass_action_jump_, vrj;
-            variablerate_aggregator=NextReactionODE(),
+            variablerate_aggregator = NextReactionODE(),
             save_positions = (false, false))
     end
 end
@@ -225,7 +225,7 @@ let
         rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
-    jprob = JumpProblem(dprob, Coevolve(), test_jump; variablerate_aggregator=NextReactionODE(), dep_graph = [[1]])
+    jprob = JumpProblem(dprob, Coevolve(), test_jump; variablerate_aggregator = NextReactionODE(), dep_graph = [[1]])
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())
@@ -261,7 +261,7 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator=NextReactionODE(), rng)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = NextReactionODE(), rng)
     @test allunique(sjm_prob.prob.u0.jump_u)
     u0old = copy(sjm_prob.prob.u0.jump_u)
     for i in 1:Nsims
@@ -319,7 +319,7 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator=NextReactionODE(), rng)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = NextReactionODE(), rng)
     dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
     for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))

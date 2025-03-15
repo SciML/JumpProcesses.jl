@@ -12,22 +12,21 @@ function total_variable_rate(jumps::JumpSet, u, p, t)
 end
 
 
-mutable struct VariableJumpsEventCache
+mutable struct GillespieIntegCallbackEventCache
     prev_time::Float64
     prev_threshold::Float64
     current_time::Float64
     current_threshold::Float64  
     cumulative_rate::Float64
-    event_count::Int
     jumps::JumpSet
-    function VariableJumpsEventCache(jumps::JumpSet)
+    function GillespieIntegCallbackEventCache(jumps::JumpSet)
         initial_threshold = -log(rand())
-        new(0.0, initial_threshold, 0.0, initial_threshold, 0.0, 0, jumps)
+        new(0.0, initial_threshold, 0.0, initial_threshold, 0.0, jumps)
     end
 end
 
 # Condition function using 4-point Gaussian quadrature to determine event times
-function variable_jumps_condition(cache::VariableJumpsEventCache, u, t, integrator)
+function gillespie_integcallback_jumps_condition(cache::GillespieIntegCallbackEventCache, u, t, integrator)
     if integrator.t != cache.current_time
         cache.prev_threshold = cache.current_threshold
     end
@@ -55,7 +54,7 @@ function variable_jumps_condition(cache::VariableJumpsEventCache, u, t, integrat
 end
 
 # Affect function to apply stochastic jumps
-function variable_jumps_affect!(cache::VariableJumpsEventCache, integrator)
+function gillespie_integcallback_jumps_affect!(cache::GillespieIntegCallbackEventCache, integrator)
     t = integrator.t
     u = integrator.u
     p = integrator.p
@@ -93,6 +92,4 @@ function variable_jumps_affect!(cache::VariableJumpsEventCache, integrator)
     cache.current_threshold = -log(rand())
     cache.current_time = t
     cache.cumulative_rate = 0.0
-    
-    cache.event_count += 1
 end

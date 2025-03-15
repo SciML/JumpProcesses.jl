@@ -56,11 +56,22 @@ function resetted_jump_problem(_jump_prob, seed)
         end
     end
     
+    if !isempty(jump_prob.variable_jumps) && hasproperty(jump_prob, :variablerate_aggregator) && jump_prob.variablerate_aggregator isa NextReactionODE
+        @assert jump_prob.prob.u0 isa ExtendedJumpArray
+        randexp!(_jump_prob.rng, jump_prob.prob.u0.jump_u)
+        jump_prob.prob.u0.jump_u .*= -1
+    end
     jump_prob
 end
 
 function reset_jump_problem!(jump_prob, seed)
     if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
         Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
+    end
+
+    if !isempty(jump_prob.variable_jumps) && hasproperty(jump_prob, :variablerate_aggregator) && jump_prob.variablerate_aggregator isa NextReactionODE
+        @assert jump_prob.prob.u0 isa ExtendedJumpArray
+        randexp!(jump_prob.rng, jump_prob.prob.u0.jump_u)
+        jump_prob.prob.u0.jump_u .*= -1
     end
 end

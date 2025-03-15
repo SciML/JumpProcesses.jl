@@ -100,6 +100,9 @@ export reset_aggregated_jumps!
 
 export ExtendedJumpArray
 
+# Export VariableRateAggregator types
+export VariableRateAggregator, NextReactionODE, GillespieIntegCallback
+
 # spatial structs and functions
 export CartesianGrid, CartesianGridRej
 export SpatialMassActionJump

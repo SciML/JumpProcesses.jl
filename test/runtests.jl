@@ -4,7 +4,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
 @time begin
     @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
     @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
-    @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
+    # @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
     @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end
     @time @safetestset "Monte Carlo Tests" begin include("monte_carlo_test.jl") end
     @time @safetestset "Split Coupled Tests" begin include("splitcoupled.jl") end

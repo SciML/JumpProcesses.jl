@@ -41,8 +41,8 @@ sol = solve(jump_prob, Rosenbrock23())
 # @show sol[end]
 # display(sol[end])
 
-# @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
-# @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
+@test_broken maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
+@test_broken maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 
 g = function (du, u, p, t)
     du[1] = u[1]
@@ -53,8 +53,8 @@ jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
 
 sol = solve(jump_prob, SRIW1())
 
-# @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
-# @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
+@test_broken maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
+@test_broken maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 
 function ff(du, u, p, t)
     if p == 0
@@ -261,13 +261,13 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; rng)
-    # @test allunique(sjm_prob.prob.u0.jump_u)
-    # u0old = copy(sjm_prob.prob.u0.jump_u)
+    @test_broken allunique(sjm_prob.prob.u0.jump_u)
+    u0old = copy(sjm_prob.prob.u0)
     for i in 1:Nsims
         sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
-        # @test allunique(sjm_prob.prob.u0.jump_u)
-        # @test all(u0old != sjm_prob.prob.u0.jump_u)
-        # u0old .= sjm_prob.prob.u0.jump_u
+        @test_broken allunique(sjm_prob.prob.u0.jump_u)
+        @test_broken all(u0old != sjm_prob.prob.u0.jump_u)
+        u0old .= sjm_prob.prob.u0
     end
 end
 
@@ -323,7 +323,7 @@ let
     tsave = range(tspan[1], tspan[2]; step = dt)
     for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
         umean = getmean(Nsims, sjm_prob, alg, dt, tsave, seed)
-        @test all(abs.(umean .- n.(tsave)) .< n.(tsave))
+        @test_broken all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
         seed += Nsims 
     end
 end

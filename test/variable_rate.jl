@@ -30,12 +30,28 @@ f = function (du, u, p, t)
 end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
+
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
 integrator = init(jump_prob, Tsit5())
+integrator = init(jump_prob_gill, Tsit5())
 
-sol = solve(jump_prob, Tsit5())
-sol = solve(jump_prob, Rosenbrock23(autodiff = false))
+time_next = @elapsed solve(jump_prob, Tsit5())
+time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+
+@test time_gill < time_next
+
+time_next = @elapsed solve(jump_prob,  Rosenbrock23(autodiff = false))
+time_gill = @elapsed solve(jump_prob_gill,  Rosenbrock23(autodiff = false))
+
+@test time_gill < time_next
+
+time_next = @elapsed solve(jump_prob,  Rosenbrock23())
+time_gill = @elapsed solve(jump_prob_gill,  Rosenbrock23())
+
+@test time_gill < time_next
+
 sol = solve(jump_prob, Rosenbrock23())
 
 # @show sol[end]
@@ -49,7 +65,14 @@ g = function (du, u, p, t)
 end
 
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
+
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+
+time_next = @elapsed solve(jump_prob,  SRIW1())
+time_gill = @elapsed solve(jump_prob_gill,  SRIW1())
+
+@test time_gill < time_next
 
 sol = solve(jump_prob, SRIW1())
 
@@ -80,7 +103,15 @@ end
 jump_switch = VariableRateJump(rate_switch, affect_switch!)
 
 prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2, 2))
+
 jump_prob = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+
+time_next = @elapsed solve(jump_prob, SRA1(), dt = 1.0)
+time_gill = @elapsed solve(jump_prob_gill, SRA1(), dt = 1.0)
+
+@test time_gill < time_next
+
 solve(jump_prob, SRA1(), dt = 1.0)
 
 ## Some integration tests
@@ -93,7 +124,15 @@ prob = ODEProblem(f2, [0.2], (0.0, 10.0))
 rate2(u, p, t) = 2
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = ConstantRateJump(rate2, affect2!)
+
 jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+
+time_next = @elapsed solve(jump_prob, Tsit5())
+time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+
+@test time_gill < time_next
+
 sol = solve(jump_prob, Tsit5())
 sol(4.0)
 sol.u[4]
@@ -102,7 +141,15 @@ rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate2b, affect2!)
 jump2 = deepcopy(jump)
+
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+
+time_next = @elapsed solve(jump_prob, Tsit5())
+time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+
+@test time_gill < time_next
+
 sol = solve(jump_prob, Tsit5())
 sol(4.0)
 sol.u[4]
@@ -112,7 +159,15 @@ function g2(du, u, p, t)
 end
 
 prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
+
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+
+time_next = @elapsed solve(jump_prob, SRIW1())
+time_gill = @elapsed solve(jump_prob_gill, SRIW1())
+
+@test time_gill < time_next
+
 sol = solve(jump_prob, SRIW1())
 sol(4.0)
 sol.u[4]
@@ -128,7 +183,15 @@ integrator.u[2] = 0.5;
 integrator.u[3] = 0.75;
 integrator.u[4] = 1)
 jump = VariableRateJump(rate3, affect3!)
+
 jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+
+time_next = @elapsed solve(jump_prob, Tsit5())
+time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+
+@test time_gill < time_next
+
 sol = solve(jump_prob, Tsit5())
 
 # test for https://discourse.julialang.org/t/differentialequations-jl-package-variable-rate-jumps-with-complex-variables/80366/2
@@ -143,8 +206,16 @@ jump = VariableRateJump(rate4, affect4!)
 x₀ = 1.0 + 0.0im
 Δt = (0.0, 6.0)
 prob = ODEProblem(f4, [x₀], Δt)
-jumpProblem = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
-sol = solve(jumpProblem, Tsit5())
+
+jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
+jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback())
+
+time_next = @elapsed solve(jump_prob, Tsit5())
+time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+
+@test time_gill < time_next
+
+sol = solve(jump_prob, Tsit5())
 
 # Out of place test
 

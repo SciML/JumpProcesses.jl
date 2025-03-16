@@ -26,7 +26,13 @@ mutable struct GillespieIntegCallbackEventCache
 end
 
 # Condition function using 4-point Gaussian quadrature to determine event times
-function gillespie_integcallback_jumps_condition(cache::GillespieIntegCallbackEventCache, u, t, integrator)
+struct GillespieIntegCallbackCondition <: Function
+    cache::GillespieIntegCallbackEventCache
+end
+
+function (cond::GillespieIntegCallbackCondition)(u, t, integrator)
+    cache = cond.cache
+
     if integrator.t != cache.current_time
         cache.prev_threshold = cache.current_threshold
     end
@@ -54,7 +60,13 @@ function gillespie_integcallback_jumps_condition(cache::GillespieIntegCallbackEv
 end
 
 # Affect function to apply stochastic jumps
-function gillespie_integcallback_jumps_affect!(cache::GillespieIntegCallbackEventCache, integrator)
+struct GillespieIntegCallbackAffect <: Function
+    cache::GillespieIntegCallbackEventCache
+end
+
+function (aff::GillespieIntegCallbackAffect)(integrator)
+    cache = aff.cache
+
     t = integrator.t
     u = integrator.u
     p = integrator.p

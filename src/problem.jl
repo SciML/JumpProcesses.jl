@@ -510,12 +510,10 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
 end
 
 function wrap_jump_gillespie_integcallback(gillespie_integcallback_event_cache, jump)
-    condition = function(u, t, integrator)
-        gillespie_integcallback_jumps_condition(gillespie_integcallback_event_cache, u, t, integrator)
-    end
-    affect! = function(integrator)
-        gillespie_integcallback_jumps_affect!(gillespie_integcallback_event_cache, integrator)
-    end
+    condition = GillespieIntegCallbackCondition(gillespie_integcallback_event_cache)
+    
+    affect! = GillespieIntegCallbackAffect(gillespie_integcallback_event_cache)
+
     new_cb = ContinuousCallback(condition, affect!;
         idxs = jump.idxs,
         rootfind = jump.rootfind,

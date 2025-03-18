@@ -1,3 +1,5 @@
+# This file is not directly included in a test case, but is used to
+# benchmark and compare GillespieIntegCallback and NextReactionODE
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
 using Random, LinearSolve
 using StableRNGs

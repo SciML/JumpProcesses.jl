@@ -127,8 +127,8 @@ jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = Gil
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
-# sol_next(4.0)
-# sol_next.u[4]
+sol_next(4.0)
+sol_next.u[4]
 
 rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
@@ -141,8 +141,8 @@ jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregato
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
-# sol_next(4.0)
-# sol_next.u[4]
+sol_next(4.0)
+sol_next.u[4]
 
 function g2(du, u, p, t)
     du[1] = u[1]
@@ -156,8 +156,8 @@ jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregato
 sol_next = solve(jump_prob, SRIW1())
 sol_gill = solve(jump_prob_gill, SRIW1())
 
-# sol_next(4.0)
-# sol_next.u[4]
+sol_next(4.0)
+sol_next.u[4]
 
 function f3(du, u, p, t)
     du .= u

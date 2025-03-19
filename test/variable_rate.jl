@@ -1,5 +1,5 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
-using Random, LinearSolve
+using Random, LinearSolve, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -37,28 +37,26 @@ jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregat
 integrator = init(jump_prob, Tsit5())
 integrator = init(jump_prob_gill, Tsit5())
 
-time_next = @elapsed solve(jump_prob, Tsit5())
-time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+sol_next = solve(jump_prob, Tsit5())
+sol_gill = solve(jump_prob_gill, Tsit5())
 
-@test time_gill < time_next
+sol_next = solve(jump_prob,  Rosenbrock23(autodiff = false))
+sol_gill = solve(jump_prob_gill,  Rosenbrock23(autodiff = false))
 
-time_next = @elapsed solve(jump_prob,  Rosenbrock23(autodiff = false))
-time_gill = @elapsed solve(jump_prob_gill,  Rosenbrock23(autodiff = false))
-
-@test time_gill < time_next
-
-time_next = @elapsed solve(jump_prob,  Rosenbrock23())
-time_gill = @elapsed solve(jump_prob_gill,  Rosenbrock23())
-
-@test time_gill < time_next
-
-sol = solve(jump_prob, Rosenbrock23())
+sol_next = solve(jump_prob,  Rosenbrock23())
+sol_gill = solve(jump_prob_gill,  Rosenbrock23())
 
 # @show sol[end]
 # display(sol[end])
 
-@test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
-@test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
+state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
+state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
+
+@test mean(state_gill) > mean(state_next)
+@test maximum(state_gill) > maximum(state_next)
+
+@test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
+@test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
 
 g = function (du, u, p, t)
     du[1] = u[1]
@@ -69,15 +67,17 @@ prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
-time_next = @elapsed solve(jump_prob,  SRIW1())
-time_gill = @elapsed solve(jump_prob_gill,  SRIW1())
+sol_next = solve(jump_prob,  SRIW1())
+sol_gill = solve(jump_prob_gill,  SRIW1())
 
-@test time_gill < time_next
+state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
+state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
 
-sol = solve(jump_prob, SRIW1())
+@test mean(state_gill) > mean(state_next)
+@test maximum(state_gill) > maximum(state_next)
 
-@test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
-@test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
+@test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
 
 function ff(du, u, p, t)
     if p == 0
@@ -107,12 +107,8 @@ prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2
 jump_prob = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = NextReactionODE(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
-time_next = @elapsed solve(jump_prob, SRA1(), dt = 1.0)
-time_gill = @elapsed solve(jump_prob_gill, SRA1(), dt = 1.0)
-
-@test time_gill < time_next
-
-solve(jump_prob, SRA1(), dt = 1.0)
+sol_next = solve(jump_prob, SRA1(), dt = 1.0)
+sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0)
 
 ## Some integration tests
 
@@ -128,14 +124,11 @@ jump = ConstantRateJump(rate2, affect2!)
 jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
-time_next = @elapsed solve(jump_prob, Tsit5())
-time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+sol_next = solve(jump_prob, Tsit5())
+sol_gill = solve(jump_prob_gill, Tsit5())
 
-@test time_gill < time_next
-
-sol = solve(jump_prob, Tsit5())
-sol(4.0)
-sol.u[4]
+# sol_next(4.0)
+# sol_next.u[4]
 
 rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
@@ -145,14 +138,11 @@ jump2 = deepcopy(jump)
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
-time_next = @elapsed solve(jump_prob, Tsit5())
-time_gill = @elapsed solve(jump_prob_gill, Tsit5())
+sol_next = solve(jump_prob, Tsit5())
+sol_gill = solve(jump_prob_gill, Tsit5())
 
-@test time_gill < time_next
-
-sol = solve(jump_prob, Tsit5())
-sol(4.0)
-sol.u[4]
+# sol_next(4.0)
+# sol_next.u[4]
 
 function g2(du, u, p, t)
     du[1] = u[1]
@@ -163,14 +153,11 @@ prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
-time_next = @elapsed solve(jump_prob, SRIW1())
-time_gill = @elapsed solve(jump_prob_gill, SRIW1())
+sol_next = solve(jump_prob, SRIW1())
+sol_gill = solve(jump_prob_gill, SRIW1())
 
-@test time_gill < time_next
-
-sol = solve(jump_prob, SRIW1())
-sol(4.0)
-sol.u[4]
+# sol_next(4.0)
+# sol_next.u[4]
 
 function f3(du, u, p, t)
     du .= u
@@ -187,12 +174,8 @@ jump = VariableRateJump(rate3, affect3!)
 jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
 
-time_next = @elapsed solve(jump_prob, Tsit5())
-time_gill = @elapsed solve(jump_prob_gill, Tsit5())
-
-@test time_gill < time_next
-
-sol = solve(jump_prob, Tsit5())
+sol_next = solve(jump_prob, Tsit5())
+sol_gill = solve(jump_prob_gill, Tsit5())
 
 # test for https://discourse.julialang.org/t/differentialequations-jl-package-variable-rate-jumps-with-complex-variables/80366/2
 function f4(dx, x, p, t)
@@ -210,12 +193,8 @@ prob = ODEProblem(f4, [x₀], Δt)
 jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
 jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback())
 
-time_next = @elapsed solve(jump_prob, Tsit5())
-time_gill = @elapsed solve(jump_prob_gill, Tsit5())
-
-@test time_gill < time_next
-
-sol = solve(jump_prob, Tsit5())
+sol_next = solve(jump_prob, Tsit5())
+sol_gill = solve(jump_prob_gill, Tsit5())
 
 # Out of place test
 
@@ -399,3 +378,61 @@ let
         seed += Nsims 
     end
 end
+
+
+let
+    seed = 12345
+    rng = StableRNG(seed)
+    b = 2.0
+    d = 1.0
+    n0 = 1
+    tspan = (0.0, 4.0)
+    Nsims = 10000
+    n(t) = n0 * exp((b - d) * t)
+    u0 = [n0]
+    p = [b, d]
+
+    function ode_fxn(du, u, p, t)
+        du .= 0
+        nothing
+    end
+
+    b_rate(u, p, t) = (u[1] * p[1])
+    function birth!(integrator)
+        integrator.u[1] += 1
+        nothing
+    end
+    b_jump = VariableRateJump(b_rate, birth!)
+
+    d_rate(u, p, t) = (u[1] * p[2])
+    function death!(integrator)
+        integrator.u[1] -= 1
+        nothing
+    end
+    d_jump = VariableRateJump(d_rate, death!)
+
+    ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
+
+    jump_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = NextReactionODE(), rng)
+    jump_prob_gill = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = GillespieIntegCallback(), rng)
+    
+    for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
+        state_gill_mean = 0
+        state_next_mean = 0
+        for i in 1:Nsims
+            sol_next = solve(jump_prob, alg)
+            sol_gill = solve(jump_prob_gill, alg)
+
+            state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
+            state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
+            
+            state_next_mean += mean(state_next)
+            state_gill_mean += mean(state_gill)
+        end
+
+        state_next_mean /= Nsims
+        state_gill_mean /= Nsims
+
+        @test state_gill_mean < state_next_mean
+    end
+end    

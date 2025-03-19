@@ -187,4 +187,8 @@ let
     vrjprob = JumpProblem(oprob, vrjs; variablerate_aggregator = NextReactionODE(), save_positions = (false, false), rng)
     vrjmean = runSSAs_ode(vrjprob)
     @test abs(vrjmean - crjmean) < reltol * crjmean
+
+    vrjprob = JumpProblem(oprob, vrjs; variablerate_aggregator = GillespieIntegCallback(), save_positions = (false, false), rng)
+    vrjmean = runSSAs_ode(vrjprob)
+    @test vrjmean < reltol * crjmean
 end

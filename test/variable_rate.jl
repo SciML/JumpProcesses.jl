@@ -370,7 +370,7 @@ let
     end
 end
 
-# preformance test based on 
+# performance test based on 
 # VRDirectCB and VRFRMODE
 let
     seed = 12345

@@ -47,7 +47,6 @@ UnPack = "1.0.2"
 julia = "1.10"
 
 [extras]
-DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
@@ -59,5 +58,4 @@ StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["DiffEqCallbacks", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", 
-    "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test", "FastBroadcast"]
+test = ["LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test", "FastBroadcast"]

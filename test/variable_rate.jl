@@ -31,23 +31,14 @@ end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 integrator = init(jump_prob, Tsit5())
 integrator = init(jump_prob_gill, Tsit5())
 
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
-
-sol_next = solve(jump_prob,  Rosenbrock23(autodiff = false))
-sol_gill = solve(jump_prob_gill,  Rosenbrock23(autodiff = false))
-
-sol_next = solve(jump_prob,  Rosenbrock23())
-sol_gill = solve(jump_prob_gill,  Rosenbrock23())
-
-# @show sol[end]
-# display(sol[end])
 
 state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
 state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
@@ -64,8 +55,8 @@ end
 
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 sol_next = solve(jump_prob,  SRIW1())
 sol_gill = solve(jump_prob_gill,  SRIW1())
@@ -104,8 +95,8 @@ jump_switch = VariableRateJump(rate_switch, affect_switch!)
 
 prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2, 2))
 
-jump_prob = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VRDirectCB(), rng=rng)
 
 sol_next = solve(jump_prob, SRA1(), dt = 1.0)
 sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0)
@@ -121,8 +112,8 @@ rate2(u, p, t) = 2
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = ConstantRateJump(rate2, affect2!)
 
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VRDirectCB(), rng=rng)
 
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
@@ -135,8 +126,8 @@ affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate2b, affect2!)
 jump2 = deepcopy(jump)
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
@@ -150,8 +141,8 @@ end
 
 prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 sol_next = solve(jump_prob, SRIW1())
 sol_gill = solve(jump_prob_gill, SRIW1())
@@ -171,8 +162,8 @@ integrator.u[3] = 0.75;
 integrator.u[4] = 1)
 jump = VariableRateJump(rate3, affect3!)
 
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VRDirectCB(), rng=rng)
 
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
@@ -190,8 +181,8 @@ x₀ = 1.0 + 0.0im
 Δt = (0.0, 6.0)
 prob = ODEProblem(f4, [x₀], Δt)
 
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
-jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback())
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE())
+jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VRDirectCB())
 
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
@@ -212,7 +203,7 @@ end
 x0 = rand(2)
 prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
 jump = VariableRateJump(rate2c, affect!2)
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE())
 
 # test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
 # jumps
@@ -240,7 +231,7 @@ let
         vrj = VariableRateJump(cs_rate1, affect!; urate = ((u, p, t) -> 1.0),
             rateinterval = ((u, p, t) -> 1.0))
         @test_throws ErrorException JumpProblem(dprob_, alg, mass_action_jump_, vrj;
-            variablerate_aggregator = NextReactionODE(),
+            vr_aggregator = VRFRMODE(),
             save_positions = (false, false))
     end
 end
@@ -275,7 +266,7 @@ let
         rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
-    jprob = JumpProblem(dprob, Coevolve(), test_jump; variablerate_aggregator = NextReactionODE(), dep_graph = [[1]])
+    jprob = JumpProblem(dprob, Coevolve(), test_jump; vr_aggregator = VRFRMODE(), dep_graph = [[1]])
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())
@@ -311,7 +302,7 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = NextReactionODE(), rng)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VRFRMODE(), rng)
     @test allunique(sjm_prob.prob.u0.jump_u)
     u0old = copy(sjm_prob.prob.u0.jump_u)
     for i in 1:Nsims
@@ -369,7 +360,7 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = NextReactionODE(), rng)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VRFRMODE(), rng)
     dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
     for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
@@ -380,7 +371,7 @@ let
 end
 
 # preformance test based on 
-# GillespieIntegCallback and NextReactionODE
+# VRDirectCB and VRFRMODE
 let
     seed = 12345
     rng = StableRNG(seed)
@@ -414,8 +405,8 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
 
-    jump_prob = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = NextReactionODE(), rng)
-    jump_prob_gill = JumpProblem(ode_prob, b_jump, d_jump; variablerate_aggregator = GillespieIntegCallback(), rng)
+    jump_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VRFRMODE(), rng)
+    jump_prob_gill = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VRDirectCB(), rng)
     
     for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
         state_gill_mean = 0

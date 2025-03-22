@@ -1,5 +1,5 @@
 # This file is not directly included in a test case, but is used to
-# benchmark and compare GillespieIntegCallback and NextReactionODE
+# benchmark and compare VRDirectCB and VRFRMODE
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
 using Random, LinearSolve
 using StableRNGs
@@ -16,8 +16,8 @@ end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 integrator = init(jump_prob, Tsit5())
 integrator = init(jump_prob_gill, Tsit5())
@@ -25,21 +25,21 @@ integrator = init(jump_prob_gill, Tsit5())
 time_next = @elapsed solve(jump_prob, Tsit5())
 time_gill = @elapsed solve(jump_prob_gill, Tsit5())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 time_next = @elapsed solve(jump_prob,  Rosenbrock23(autodiff = false))
 time_gill = @elapsed solve(jump_prob_gill,  Rosenbrock23(autodiff = false))
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 time_next = @elapsed solve(jump_prob,  Rosenbrock23())
 time_gill = @elapsed solve(jump_prob_gill,  Rosenbrock23())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 
@@ -49,14 +49,14 @@ end
 
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 time_next = @elapsed solve(jump_prob,  SRIW1())
 time_gill = @elapsed solve(jump_prob_gill,  SRIW1())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 function ff(du, u, p, t)
     if p == 0
@@ -83,14 +83,14 @@ jump_switch = VariableRateJump(rate_switch, affect_switch!)
 
 prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2, 2))
 
-jump_prob = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VRDirectCB(), rng=rng)
 
 time_next = @elapsed solve(jump_prob, SRA1(), dt = 1.0)
 time_gill = @elapsed solve(jump_prob_gill, SRA1(), dt = 1.0)
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 
@@ -103,14 +103,14 @@ rate2(u, p, t) = 2
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = ConstantRateJump(rate2, affect2!)
 
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VRDirectCB(), rng=rng)
 
 time_next = @elapsed solve(jump_prob, Tsit5())
 time_gill = @elapsed solve(jump_prob_gill, Tsit5())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 rate2b(u, p, t) = u[1]
@@ -118,14 +118,14 @@ affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate2b, affect2!)
 jump2 = deepcopy(jump)
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 time_next = @elapsed solve(jump_prob, Tsit5())
 time_gill = @elapsed solve(jump_prob_gill, Tsit5())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 
@@ -136,14 +136,14 @@ end
 
 prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
 
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
 
 time_next = @elapsed solve(jump_prob, SRIW1())
 time_gill = @elapsed solve(jump_prob_gill, SRIW1())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 
@@ -160,14 +160,14 @@ integrator.u[3] = 0.75;
 integrator.u[4] = 1)
 jump = VariableRateJump(rate3, affect3!)
 
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback(), rng=rng)
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE(), rng = rng)
+jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VRDirectCB(), rng=rng)
 
 time_next = @elapsed solve(jump_prob, Tsit5())
 time_gill = @elapsed solve(jump_prob_gill, Tsit5())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")
 
 
 
@@ -185,11 +185,11 @@ x₀ = 1.0 + 0.0im
 Δt = (0.0, 6.0)
 prob = ODEProblem(f4, [x₀], Δt)
 
-jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
-jump_prob_gill = JumpProblem(prob, Direct(), jump; variablerate_aggregator = GillespieIntegCallback())
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE())
+jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VRDirectCB())
 
 time_next = @elapsed solve(jump_prob, Tsit5())
 time_gill = @elapsed solve(jump_prob_gill, Tsit5())
 
-println("Time taken for GillespieIntegCallback $time_gill")
-println("Time taken for NextReactionODE $time_next")
+println("Time taken for VRDirectCB $time_gill")
+println("Time taken for VRFRMODE $time_next")

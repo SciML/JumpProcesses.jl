@@ -66,7 +66,7 @@ function hawkes_problem(p, agg::Coevolve; u = [0.0],
         g = [[1]], h = [[]], uselrate = true)
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
-    jprob = JumpProblem(dprob, agg, jumps...; variablerate_aggregator = NextReactionODE(), dep_graph = g, save_positions, rng)
+    jprob = JumpProblem(dprob, agg, jumps...; vr_aggregator = VRFRMODE(), dep_graph = g, save_positions, rng)
     return jprob
 end
 
@@ -80,7 +80,7 @@ function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
         g = [[1]], h = [[]], kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
-    jprob = JumpProblem(oprob, agg, jumps...; variablerate_aggregator = NextReactionODE(), save_positions, rng)
+    jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator = VRFRMODE(), save_positions, rng)
     return jprob
 end
 
@@ -137,7 +137,7 @@ end
 let alg = Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, alg, jumps...; variablerate_aggregator = NextReactionODE(), dep_graph = g, rng)
+    jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = VRFRMODE(), dep_graph = g, rng)
     @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
     sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims
@@ -153,7 +153,7 @@ end
 let alg = Coevolve()
     oprob = ODEProblem(f!, u0, tspan, p)
     jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, alg, jumps...; variablerate_aggregator = NextReactionODE(), dep_graph = g, rng,
+    jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = VRFRMODE(), dep_graph = g, rng,
         use_vrj_bounds = false)
     @test length(jprob.variable_jumps) == 1
     sols = Vector{ODESolution}(undef, Nsims)

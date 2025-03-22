@@ -72,7 +72,7 @@ oop_test_jump = VariableRateJump(oop_test_rate, oop_test_affect!)
 # Test in-place
 u₀ = [0.0]
 inplace_prob = ODEProblem((du, u, p, t) -> (du .= 0), u₀, (0.0, 2.0), nothing)
-jump_prob = JumpProblem(inplace_prob, Direct(), oop_test_jump; variablerate_aggregator = NextReactionODE())
+jump_prob = JumpProblem(inplace_prob, Direct(), oop_test_jump; vr_aggregator = VRFRMODE())
 sol = solve(jump_prob, Tsit5())
 @test sol.retcode == ReturnCode.Success
 sol.u
@@ -91,7 +91,7 @@ let
     rate(u, p, t) = u[1]
     affect!(integrator) = (integrator.u.u[1] = integrator.u.u[1] / 2; nothing)
     jump = VariableRateJump(rate, affect!)
-    jump_prob = JumpProblem(prob, Direct(), jump; variablerate_aggregator = NextReactionODE())
+    jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VRFRMODE())
     sol = solve(jump_prob, Tsit5(); saveat = 0.5)
     times = range(0.0, 10.0; step = 0.5)
     @test issubset(times, sol.t)
@@ -115,7 +115,7 @@ let
     end
     u₀ = [0, 0]
     oprob = ODEProblem(f!, u₀, (0.0, 10.0), p)
-    jprob = JumpProblem(oprob, Direct(), vrj, deathvrj; variablerate_aggregator = NextReactionODE())
+    jprob = JumpProblem(oprob, Direct(), vrj, deathvrj; vr_aggregator = VRFRMODE())
     sol = solve(jprob, Tsit5())
     @test eltype(sol.u) <: ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}
     @test SciMLBase.plottable_indices(sol.u[1]) == 1:length(u₀)

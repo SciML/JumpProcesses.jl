@@ -22,6 +22,8 @@ import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
 import SymbolicIndexingInterface as SII
 
+import Random: AbstractRNG
+
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
@@ -101,7 +103,7 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # Export VariableRateAggregator types
-export VariableRateAggregator, NextReactionODE, GillespieIntegCallback
+export VariableRateAggregator, VRFRMODE, VRDirectCB
 
 # spatial structs and functions
 export CartesianGrid, CartesianGridRej

@@ -8,11 +8,6 @@ function isinplace_jump(p, rj)
     end
 end
 
-# Define VariableRateAggregator types
-abstract type VariableRateAggregator end
-struct NextReactionODE <: VariableRateAggregator end
-struct GillespieIntegCallback <: VariableRateAggregator end
-
 """
 $(TYPEDEF)
 
@@ -218,7 +213,7 @@ end
 make_kwarg(; kwargs...) = kwargs
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
-        variablerate_aggregator::VariableRateAggregator = GillespieIntegCallback(),
+        vr_aggregator::VariableRateAggregator = VRDirectCB(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
@@ -276,17 +271,8 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     # handle any remaining vrjs
     if length(cvrjs) > 0
-        # Handle variable rate jumps based on variablerate_aggregator
-        if variablerate_aggregator isa GillespieIntegCallback
-            new_prob = prob
-            gillespie_integcallback_event_cache = GillespieIntegCallbackEventCache(jumps);
-            variable_jump_callback = build_gillespie_integcallback(CallbackSet(), gillespie_integcallback_event_cache, cvrjs...)
-            cont_agg = cvrjs
-        elseif variablerate_aggregator isa NextReactionODE
-            new_prob = extend_problem(prob, cvrjs; rng)
-            variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
-            cont_agg = cvrjs
-        end
+        # Handle variable rate jumps based on vr_aggregator
+        new_prob, variable_jump_callback, cont_agg = configure_jump_problem(prob, vr_aggregator, jumps, cvrjs...; rng=rng)
     else
         new_prob = prob
         variable_jump_callback = CallbackSet()
@@ -307,180 +293,12 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         solkwargs)
 end
 
-# extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
-# of type prob.tspan
-function extend_u0(prob, Njumps, rng)
-    ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:Njumps])
-    return u0
-end
-
-function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
-    error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
-end
-
-function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
-    _f = SciMLBase.unwrapped_f(prob.f)
-
-    if isinplace(prob)
-        jump_f = let _f = _f
-            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
-                _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-            end
-        end
-    else
-        jump_f = let _f = _f
-            function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-                return du
-            end
-        end
-    end
-
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
-        observed = prob.f.observed)
-    remake(prob; f, u0)
-end
-
-function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
-    _f = SciMLBase.unwrapped_f(prob.f)
-
-    if isinplace(prob)
-        jump_f = let _f = _f
-            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
-                _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-            end
-        end
-    else
-        jump_f = let _f = _f
-            function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-                return du
-            end
-        end
-    end
-
-    if prob.noise_rate_prototype === nothing
-        jump_g = function (du, u, p, t)
-            prob.g(du.u, u.u, p, t)
-        end
-    else
-        jump_g = function (du, u, p, t)
-            prob.g(du, u.u, p, t)
-        end
-    end
-
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
-        observed = prob.f.observed)
-    remake(prob; f, g = jump_g, u0)
-end
-
-function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
-    _f = SciMLBase.unwrapped_f(prob.f)
-
-    if isinplace(prob)
-        jump_f = let _f = _f
-            function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
-                _f(du.u, u.u, h, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-            end
-        end
-    else
-        jump_f = let _f = _f
-            function (u::ExtendedJumpArray, h, p, t)
-                du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-                return du
-            end
-        end
-    end
-
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
-        observed = prob.f.observed)
-    remake(prob; f, u0)
-end
-
-# Not sure if the DAE one is correct: Should be a residual of sorts
-function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
-    _f = SciMLBase.unwrapped_f(prob.f)
-
-    if isinplace(prob)
-        jump_f = let _f = _f
-            function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
-                _f(out, du.u, u.u, h, p, t)
-                update_jumps!(out, u, p, t, length(u.u), jumps...)
-            end
-        end
-    else
-        jump_f = let _f = _f
-            function (du, u::ExtendedJumpArray, h, p, t)
-                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-                return du
-            end
-        end
-    end
-
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
-        observed = prob.f.observed)
-    remake(prob; f, u0)
-end
-
-function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
-    condition = function(u, t, integrator)
-        u.jump_u[idx]
-    end
-    affect! = function(integrator)
-        jump.affect!(integrator)
-        integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
-        nothing
-    end
-    new_cb = ContinuousCallback(condition, affect!;
-        idxs = jump.idxs,
-        rootfind = jump.rootfind,
-        interp_points = jump.interp_points,
-        save_positions = jump.save_positions,
-        abstol = jump.abstol,
-        reltol = jump.reltol)
-    return new_cb
-end
-
-function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
-    idx += 1
-    new_cb = wrap_jump_in_callback(idx, jump; rng)
-    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = DEFAULT_RNG)
-end
-
-function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
-    idx += 1
-    CallbackSet(cb, wrap_jump_in_callback(idx, jump; rng))
-end
-
 aggregator(jp::JumpProblem{iip, P, A, C, J}) where {iip, P, A, C, J} = A
 
 @inline function extend_tstops!(tstops,
         jp::JumpProblem{P, A, C, J, J2}) where {P, A, C, J, J2}
     !(jp.jump_callback.discrete_callbacks isa Tuple{}) &&
         push!(tstops, jp.jump_callback.discrete_callbacks[1].condition.next_jump_time)
-end
-
-@inline function update_jumps!(du, u, p, t, idx, jump)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
-end
-
-@inline function update_jumps!(du, u, p, t, idx, jump, jumps...)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
-    update_jumps!(du, u, p, t, idx, jumps...)
 end
 
 ### Displays
@@ -507,29 +325,4 @@ function Base.show(io::IO, mime::MIME"text/plain", A::JumpProblem)
     if A.regular_jump !== nothing
         println(io, "Have a regular jump")
     end
-end
-
-function wrap_jump_gillespie_integcallback(gillespie_integcallback_event_cache, jump)
-    condition = GillespieIntegCallbackCondition(gillespie_integcallback_event_cache)
-    
-    affect! = GillespieIntegCallbackAffect(gillespie_integcallback_event_cache)
-
-    new_cb = ContinuousCallback(condition, affect!;
-        idxs = jump.idxs,
-        rootfind = jump.rootfind,
-        interp_points = jump.interp_points,
-        save_positions = jump.save_positions,
-        abstol = jump.abstol,
-        reltol = jump.reltol)
-    return new_cb
-end
-
-function build_gillespie_integcallback(cb, gillespie_integcallback_event_cache, jump, jumps...)
-    new_cb = wrap_jump_gillespie_integcallback(gillespie_integcallback_event_cache, jump)
-    build_gillespie_integcallback(CallbackSet(cb, new_cb), gillespie_integcallback_event_cache, jumps...)
-end
-
-function build_gillespie_integcallback(cb, gillespie_integcallback_event_cache, jump)
-    new_cb = wrap_jump_gillespie_integcallback(gillespie_integcallback_event_cache, jump)
-    CallbackSet(cb, new_cb)
 end

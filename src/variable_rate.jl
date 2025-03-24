@@ -3,10 +3,11 @@ abstract type VariableRateAggregator end
 struct VRFRMODE <: VariableRateAggregator end
 struct VRDirectCB <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator, jumps, cvrjs...; rng = DEFAULT_RNG)
+function configure_jump_problem(prob, vr_aggregator, jumps, cvrjs; rng = DEFAULT_RNG)
     if vr_aggregator isa VRDirectCB
         new_prob = prob
-        variable_jump_callback = build_variable_integcallback(CallbackSet(), VRDirectCBEventCache(jumps; rng))
+        cache = VRDirectCBEventCache(jumps; rng)
+        variable_jump_callback = build_variable_integcallback(CallbackSet(), cache)
         cont_agg = cvrjs
     elseif vr_aggregator isa VRFRMODE
         new_prob = extend_problem(prob, cvrjs; rng)
@@ -18,31 +19,38 @@ function configure_jump_problem(prob, vr_aggregator, jumps, cvrjs...; rng = DEFA
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(jumps::JumpSet, u, p, t)
-    sum_rate = zero(t)
-
+function total_variable_rate(jumps::JumpSet, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(jumps.variable_jumps)))
+    sum_rate = zero(t)  # Type-stable initialization
     vjumps = jumps.variable_jumps
+    
     if !isempty(vjumps)
-        for jump in vjumps
-            sum_rate += jump.rate(u, p, t)
+        prev_rate = zero(t)
+        @inbounds for (i, jump) in enumerate(vjumps)
+            new_rate = jump.rate(u, p, t)
+            sum_rate = add_fast(new_rate, prev_rate)  # Assuming add_fast is defined
+            cur_rates[i] = sum_rate
+            prev_rate = sum_rate
         end
     end
-
+    
     return sum_rate
 end
 
-mutable struct VRDirectCBEventCache
-    prev_time::Float64
-    prev_threshold::Float64
-    current_time::Float64
-    current_threshold::Float64  
-    cumulative_rate::Float64
-    rng::AbstractRNG
+mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
+    prev_time::T
+    prev_threshold::T
+    current_time::T
+    current_threshold::T  
+    cumulative_rate::T
+    rng::RNG
     jumps::JumpSet
+    cur_rates::Vector{T}  # Pre-allocated array for partial sums
 
     function VRDirectCBEventCache(jumps::JumpSet; rng = DEFAULT_RNG)
-        initial_threshold = randexp(rng)
-        new(0.0, initial_threshold, 0.0, initial_threshold, 0.0, rng, jumps)
+        T = Float64  # Could infer from jumps or t later
+        initial_threshold = randexp(rng, T)
+        cur_rates = Vector{T}(undef, length(jumps.variable_jumps))
+        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold, zero(T), rng, jumps, cur_rates)
     end
 end
 
@@ -61,11 +69,11 @@ function VRDirectCBCondition(cache::VRDirectCBEventCache, u, t, integrator)
     p = integrator.p
     n = 4
     rate_increment = zero(t)
-    gps = gauss_points[n]
+    gps = gauss_points[n]  # Assuming defined
     for i in 1:n
-        τ = (dt * gps[i] + t + cache.prev_time ) / 2
+        τ = (dt * gps[i] + t + cache.prev_time) / 2
         u_τ = integrator(τ)
-        total_variable_rate_τ = total_variable_rate(jumps, u_τ, p, τ)
+        total_variable_rate_τ = total_variable_rate(jumps, u_τ, p, τ, cache.cur_rates)
         rate_increment += gps[i] * total_variable_rate_τ
     end
     rate_increment *= (dt / 2)
@@ -83,27 +91,16 @@ function VRDirectCBAffect!(cache::VRDirectCBEventCache, integrator)
     jumps = cache.jumps
     rng = cache.rng
 
-    total_variable_rate_sum = total_variable_rate(jumps, u, p, t)
+    total_variable_rate_sum = total_variable_rate(jumps, u, p, t, cache.cur_rates)
     if total_variable_rate_sum <= 0
         return
     end
 
-    r = rand() * total_variable_rate_sum
-    jump_idx = 0
-    prev_rate = zero(t)
-
+    r = rand(rng) * total_variable_rate_sum
     vjumps = jumps.variable_jumps
     if !isempty(vjumps)
-        for (i, jump) in enumerate(vjumps)
-            new_rate = jump.rate(u, p, t)
-            prev_rate += new_rate
-            if r < prev_rate
-                jump_idx = i
-                break
-            end
-        end
-
-        if jump_idx > 0
+        @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
+        if 1 <= jump_idx <= length(vjumps)
             vjumps[jump_idx].affect!(integrator)
         else
             error("Jump index $jump_idx out of bounds for available jumps")

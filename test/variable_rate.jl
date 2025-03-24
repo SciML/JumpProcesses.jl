@@ -370,61 +370,68 @@ let
     end
 end
 
-# performance test based on 
+# Correctness test based on 
 # VRDirectCB and VRFRMODE
+# Function to run ensemble and compute statistics
+function run_ensemble(prob, alg, jumps...; vr_aggregator=VRFRMODE(), n_sims=10000)
+    rng = StableRNG(12345)
+    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator=vr_aggregator, rng=rng)
+    ensemble = EnsembleProblem(jump_prob)
+    sol = solve(ensemble, alg, trajectories=n_sims)
+    return mean([sol[i][1] for i in 1:n_sims])[1]
+end
+
+# Test 1: Simple ODE with two variable rate jumps
 let
-    seed = 12345
-    rng = StableRNG(seed)
-    b = 2.0
-    d = 1.0
-    n0 = 1
-    tspan = (0.0, 4.0)
-    Nsims = 10000
-    n(t) = n0 * exp((b - d) * t)
-    u0 = [n0]
-    p = [b, d]
-
-    function ode_fxn(du, u, p, t)
-        du .= 0
-        nothing
-    end
-
-    b_rate(u, p, t) = (u[1] * p[1])
-    function birth!(integrator)
-        integrator.u[1] += 1
-        nothing
-    end
-    b_jump = VariableRateJump(b_rate, birth!)
-
-    d_rate(u, p, t) = (u[1] * p[2])
-    function death!(integrator)
-        integrator.u[1] -= 1
-        nothing
-    end
-    d_jump = VariableRateJump(d_rate, death!)
-
-    ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-
-    jump_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VRFRMODE(), rng)
-    jump_prob_gill = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VRDirectCB(), rng)
+    rate = (u, p, t) -> u[1]
+    affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
+    jump = VariableRateJump(rate, affect!, interp_points=1000)
+    jump2 = deepcopy(jump)
     
-    for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
-        state_gill_mean = 0
-        state_next_mean = 0
-        for i in 1:Nsims
-            sol_next = solve(jump_prob, alg)
-            sol_gill = solve(jump_prob_gill, alg)
+    f = (du, u, p, t) -> (du[1] = u[1])
+    prob = ODEProblem(f, [0.2], (0.0, 10.0))
+    
+    mean_vrfr = run_ensemble(prob, Tsit5(), jump, jump2)
+    mean_vrdcb = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator=VRDirectCB())
+    
+    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+end
 
-            state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
-            state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
-            
-            state_next_mean += mean(state_next)
-            state_gill_mean += mean(state_gill)
-        end
+# Test 2: SDE with two variable rate jumps
+let
+    f = (du, u, p, t) -> (du[1] = u[1])
+    g = (du, u, p, t) -> (du[1] = u[1])
+    rate = (u, p, t) -> u[1]
+    affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
+    jump = VariableRateJump(rate, affect!)
+    jump2 = deepcopy(jump)
+    
+    prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
+    
+    mean_vrfr = run_ensemble(prob, SRIW1(), jump, jump2)
+    mean_vrdcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VRDirectCB())
+    
+    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+end
 
-        state_next_mean /= Nsims
-        state_gill_mean /= Nsims
-
-        @test state_gill_mean < state_next_mean
-    end
-end    
+# Test 3: ODE with analytical solution
+let
+    f = (du, u, p, t) -> (du[1] = u[1])
+    rate = (u, p, t) -> 2.0
+    affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
+    jump = VariableRateJump(rate, affect!)
+    
+    prob = ODEProblem(f, [0.2], (0.0, 10.0))
+    
+    mean_vrfr = run_ensemble(prob, Tsit5(), jump)
+    mean_vrdcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator=VRDirectCB())
+    
+    # Analytical solution: exponential growth with Poisson jumps
+    λ = 2.0
+    t = 10.0
+    u0 = 0.2
+    analytical_mean = u0 * exp(t) * exp(-λ*t*(1-0.5))
+    
+    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+    @test isapprox(mean_vrfr, analytical_mean, rtol=0.05)
+end

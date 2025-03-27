@@ -58,8 +58,8 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     end
 end
 
-# Condition function defined directly on the cache
-function VRDirectCBCondition(cache::VRDirectCBEventCache, u, t, integrator)
+# Condition functor defined directly on the cache
+function (cache::VRDirectCBEventCache)(u, t, integrator)
     if integrator.t != cache.current_time
         cache.prev_threshold = cache.current_threshold
     end
@@ -87,8 +87,8 @@ function VRDirectCBCondition(cache::VRDirectCBEventCache, u, t, integrator)
     return cache.prev_threshold - rate_increment
 end
 
-# Affect function defined directly on the cache
-function VRDirectCBAffect!(cache::VRDirectCBEventCache, integrator)
+# Affect functor defined directly on the cache
+function (cache::VRDirectCBEventCache)(integrator)
     t = integrator.t
     u = integrator.u
     p = integrator.p
@@ -117,10 +117,9 @@ function VRDirectCBAffect!(cache::VRDirectCBEventCache, integrator)
     cache.cumulative_rate = zero(t)
 end
 
-function build_variable_integcallback(cb, cache)
-    new_cb = ContinuousCallback((u, t, integrator) -> VRDirectCBCondition(cache, u, t, integrator),
-                    integrator -> VRDirectCBAffect!(cache, integrator))
-    
+function build_variable_integcallback(cb, cache::VRDirectCBEventCache)
+    new_cb = ContinuousCallback((u, t, integrator) -> cache(u, t, integrator),
+                                integrator -> cache(integrator))
     return CallbackSet(cb, new_cb)
 end
 

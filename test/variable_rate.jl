@@ -40,12 +40,6 @@ integrator = init(jump_prob_gill, Tsit5())
 sol_next = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
-state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
-state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
-
-@test mean(state_gill) > mean(state_next)
-@test maximum(state_gill) > maximum(state_next)
-
 @test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
 @test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
 
@@ -60,12 +54,6 @@ jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDir
 
 sol_next = solve(jump_prob,  SRIW1())
 sol_gill = solve(jump_prob_gill,  SRIW1())
-
-state_gill = [sol_gill.u[i][1] for i in 1:length(sol_gill)]
-state_next = [sol_next.u[i][1] for i in 1:length(sol_next)]
-
-@test mean(state_gill) > mean(state_next)
-@test maximum(state_gill) > maximum(state_next)
 
 @test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
 @test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12

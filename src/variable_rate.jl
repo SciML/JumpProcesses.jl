@@ -19,10 +19,8 @@ function configure_jump_problem(prob, vr_aggregator, jumps, cvrjs; rng = DEFAULT
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(jumps::JumpSet, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(jumps.variable_jumps)))
-    sum_rate = zero(t)  # Type-stable initialization
-    vjumps = jumps.variable_jumps
-    
+function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(vjumps)))
+    sum_rate = zero(t)
     if !isempty(vjumps)
         prev_rate = zero(t)
         @inbounds for (i, jump) in enumerate(vjumps)
@@ -32,7 +30,6 @@ function total_variable_rate(jumps::JumpSet, u, p, t, cur_rates::AbstractVector=
             prev_rate = sum_rate
         end
     end
-    
     return sum_rate
 end
 
@@ -42,15 +39,22 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     current_time::T
     current_threshold::T  
     cumulative_rate::T
+    total_rate_cache::T                  # Added to cache total rate
     rng::RNG
-    jumps::JumpSet
-    cur_rates::Vector{T}  # Pre-allocated array for partial sums
+    variable_jumps::Tuple{Vararg{VariableRateJump}}  # Only variable jumps
+    rate_funcs::Vector{Function}         # Separate array for rate functions
+    affect_funcs::Vector{Function}       # Separate array for affect! functions
+    cur_rates::Vector{T}                 # Pre-allocated array for partial sums
 
     function VRDirectCBEventCache(jumps::JumpSet; rng = DEFAULT_RNG)
         T = Float64  # Could infer from jumps or t later
         initial_threshold = randexp(rng, T)
-        cur_rates = Vector{T}(undef, length(jumps.variable_jumps))
-        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold, zero(T), rng, jumps, cur_rates)
+        vjumps = jumps.variable_jumps
+        rate_funcs = [jump.rate for jump in vjumps]
+        affect_funcs = [jump.affect! for jump in vjumps]
+        cur_rates = Vector{T}(undef, length(vjumps))
+        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold, zero(T), 
+                           zero(T), rng, vjumps, rate_funcs, affect_funcs, cur_rates)
     end
 end
 
@@ -65,20 +69,20 @@ function VRDirectCBCondition(cache::VRDirectCBEventCache, u, t, integrator)
         return cache.prev_threshold
     end
 
-    jumps = cache.jumps
+    vjumps = cache.variable_jumps
     p = integrator.p
     n = 4
     rate_increment = zero(t)
-    gps = gauss_points[n]  # Assuming defined
     for i in 1:n
-        τ = (dt * gps[i] + t + cache.prev_time) / 2
+        τ = ((dt / 2) * gauss_points[n][i]) + ((t + cache.prev_time) / 2)
         u_τ = integrator(τ)
-        total_variable_rate_τ = total_variable_rate(jumps, u_τ, p, τ, cache.cur_rates)
-        rate_increment += gps[i] * total_variable_rate_τ
+        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ)
+        rate_increment += gauss_weights[n][i] * total_variable_rate_τ
     end
     rate_increment *= (dt / 2)
     
     cache.cumulative_rate += rate_increment
+    cache.total_rate_cache = total_variable_rate(vjumps, u, p, t, cache.cur_rates)  # Cache total rate at t
     
     return cache.prev_threshold - rate_increment
 end
@@ -88,20 +92,19 @@ function VRDirectCBAffect!(cache::VRDirectCBEventCache, integrator)
     t = integrator.t
     u = integrator.u
     p = integrator.p
-    jumps = cache.jumps
     rng = cache.rng
 
-    total_variable_rate_sum = total_variable_rate(jumps, u, p, t, cache.cur_rates)
+    total_variable_rate_sum = cache.total_rate_cache  # Reuse cached value
     if total_variable_rate_sum <= 0
         return
     end
 
     r = rand(rng) * total_variable_rate_sum
-    vjumps = jumps.variable_jumps
+    vjumps = cache.variable_jumps
     if !isempty(vjumps)
         @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
         if 1 <= jump_idx <= length(vjumps)
-            vjumps[jump_idx].affect!(integrator)
+            cache.affect_funcs[jump_idx](integrator)  # Use cached affect! function
         else
             error("Jump index $jump_idx out of bounds for available jumps")
         end

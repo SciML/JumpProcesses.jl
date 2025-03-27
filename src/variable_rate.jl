@@ -82,7 +82,7 @@ function VRDirectCBCondition(cache::VRDirectCBEventCache, u, t, integrator)
     rate_increment *= (dt / 2)
     
     cache.cumulative_rate += rate_increment
-    cache.total_rate_cache = total_variable_rate(vjumps, u, p, t, cache.cur_rates)  # Cache total rate at t
+    cache.total_rate_cache = total_variable_rate(vjumps, u, p, t, cache.cur_rates)
     
     return cache.prev_threshold - rate_increment
 end
@@ -94,7 +94,7 @@ function VRDirectCBAffect!(cache::VRDirectCBEventCache, integrator)
     p = integrator.p
     rng = cache.rng
 
-    total_variable_rate_sum = cache.total_rate_cache  # Reuse cached value
+    total_variable_rate_sum = cache.total_rate_cache
     if total_variable_rate_sum <= 0
         return
     end
@@ -104,7 +104,7 @@ function VRDirectCBAffect!(cache::VRDirectCBEventCache, integrator)
     if !isempty(vjumps)
         @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
         if 1 <= jump_idx <= length(vjumps)
-            cache.affect_funcs[jump_idx](integrator)  # Use cached affect! function
+            cache.affect_funcs[jump_idx](integrator)
         else
             error("Jump index $jump_idx out of bounds for available jumps")
         end

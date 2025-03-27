@@ -25,7 +25,7 @@ function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, c
         prev_rate = zero(t)
         @inbounds for (i, jump) in enumerate(vjumps)
             new_rate = jump.rate(u, p, t)
-            sum_rate = add_fast(new_rate, prev_rate)  # Assuming add_fast is defined
+            sum_rate = add_fast(new_rate, prev_rate)
             cur_rates[i] = sum_rate
             prev_rate = sum_rate
         end

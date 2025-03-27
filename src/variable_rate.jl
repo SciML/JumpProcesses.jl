@@ -39,12 +39,12 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     current_time::T
     current_threshold::T  
     cumulative_rate::T
-    total_rate_cache::T                  # Added to cache total rate
+    total_rate_cache::T
     rng::RNG
-    variable_jumps::Tuple{Vararg{VariableRateJump}}  # Only variable jumps
-    rate_funcs::Vector{Function}         # Separate array for rate functions
-    affect_funcs::Vector{Function}       # Separate array for affect! functions
-    cur_rates::Vector{T}                 # Pre-allocated array for partial sums
+    variable_jumps::Tuple{Vararg{VariableRateJump}}
+    rate_funcs::Vector{Function}
+    affect_funcs::Vector{Function}
+    cur_rates::Vector{T}
 
     function VRDirectCBEventCache(jumps::JumpSet; rng = DEFAULT_RNG)
         T = Float64  # Could infer from jumps or t later

@@ -32,12 +32,11 @@ end
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
 
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VRFRMODE(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
-
 integrator = init(jump_prob, Tsit5())
-integrator = init(jump_prob_gill, Tsit5())
-
 sol_next = solve(jump_prob, Tsit5())
+
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VRDirectCB(), rng=rng)
+integrator = init(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
 @test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12

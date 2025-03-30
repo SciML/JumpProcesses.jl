@@ -7,7 +7,7 @@ function configure_jump_problem(prob, vr_aggregator, jumps, cvrjs; rng = DEFAULT
     if vr_aggregator isa VRDirectCB
         new_prob = prob
         cache = VRDirectCBEventCache(jumps; rng)
-        variable_jump_callback = build_variable_integcallback(CallbackSet(), cache)
+        variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
         cont_agg = cvrjs
     elseif vr_aggregator isa VRFRMODE
         new_prob = extend_problem(prob, cvrjs; rng)
@@ -117,10 +117,31 @@ function (cache::VRDirectCBEventCache)(integrator)
     cache.cumulative_rate = zero(t)
 end
 
-function build_variable_integcallback(cb, cache::VRDirectCBEventCache)
-    new_cb = ContinuousCallback((u, t, integrator) -> cache(u, t, integrator),
-                                integrator -> cache(integrator))
-    return CallbackSet(cb, new_cb)
+function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+    condition = function(u, t, integrator)
+        cache(u, t, integrator)
+    end
+    affect! = function(integrator)
+        cache(integrator)
+        nothing
+    end
+    new_cb = ContinuousCallback(condition, affect!;
+        idxs = jump.idxs,
+        rootfind = jump.rootfind,
+        interp_points = jump.interp_points,
+        save_positions = jump.save_positions,
+        abstol = jump.abstol,
+        reltol = jump.reltol)
+    return new_cb
+end
+
+function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump, jumps...)
+    new_cb = wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+    build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
+end
+
+function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump)
+    CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
 end
 
 # extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,

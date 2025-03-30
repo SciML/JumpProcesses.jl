@@ -360,7 +360,7 @@ end
 # Correctness test based on 
 # VRDirectCB and VRFRMODE
 # Function to run ensemble and compute statistics
-function run_ensemble(prob, alg, jumps...; vr_aggregator=VRFRMODE(), n_sims=1000)
+function run_ensemble(prob, alg, jumps...; vr_aggregator=VRFRMODE(), n_sims=8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator=vr_aggregator, rng=rng)
     ensemble = EnsembleProblem(jump_prob)

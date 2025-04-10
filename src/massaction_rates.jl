@@ -3,9 +3,8 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
-        majump::MassActionJump{U, V, W, X})::R where
-        {T, S, R, U <: AbstractVector{R}, V, W, X}
+@inline function num_substrate_combos(speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump) where {T}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -15,9 +14,22 @@
             val *= specpop
         end
     end
+    
+    return val
+end
 
+@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
+    val = num_substrate_combos(speciesvec, rxidx, majump)
     @inbounds return val * majump.scaled_rates[rxidx]
 end
+
+@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U})::R where {T <: Real, R, U <: AbstractVector{R}}
+    val = num_substrate_combos(speciesvec, rxidx, majump)
+    @inbounds return abs(val) * majump.scaled_rates[rxidx]
+end
+
 
 @inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
         majump::M) where {T, S, M <: AbstractMassActionJump}

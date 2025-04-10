@@ -3,8 +3,8 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@inline function num_substrate_combos(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump) where {T}
+@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -14,20 +14,26 @@
             val *= specpop
         end
     end
-    
-    return val
-end
 
-@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
-    val = num_substrate_combos(speciesvec, rxidx, majump)
     @inbounds return val * majump.scaled_rates[rxidx]
 end
 
 @inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
         majump::MassActionJump{U})::R where {T <: Real, R, U <: AbstractVector{R}}
-    val = num_substrate_combos(speciesvec, rxidx, majump)
-    @inbounds return abs(val) * majump.scaled_rates[rxidx]
+    val = one(T)
+    @inbounds for specstoch in majump.reactant_stoch[rxidx]
+        specpop = speciesvec[specstoch[1]]
+        val *= specpop
+        @inbounds for k in 2:specstoch[2]
+            specpop -= one(specpop)
+            val *= specpop
+        end
+        # we need to check the smallest rate law term is positive
+        # i.e. for an order k reaction: x - k + 1 > 0 
+        (specpop <= 0) && return zero(R)
+    end
+
+    @inbounds return val * majump.scaled_rates[rxidx]
 end
 
 

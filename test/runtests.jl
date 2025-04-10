@@ -16,6 +16,7 @@ using JumpProcesses, DiffEqBase, SafeTestsets
     @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end
     @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
+    @time @safetestset "Mass Action Jump Tests; Floating Point Inputs" begin include("fp_unknowns.jl") end
     @time @safetestset "Direct allocations test" begin include("allocations.jl") end
     @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
     @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end

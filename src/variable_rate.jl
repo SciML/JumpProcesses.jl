@@ -3,19 +3,18 @@ abstract type VariableRateAggregator end
 struct VRFRMODE <: VariableRateAggregator end
 struct VRDirectCB <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator, jumps, cvrjs; rng = DEFAULT_RNG)
-    if vr_aggregator isa VRDirectCB
-        new_prob = prob
-        cache = VRDirectCBEventCache(jumps; rng)
-        variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
-        cont_agg = cvrjs
-    elseif vr_aggregator isa VRFRMODE
-        new_prob = extend_problem(prob, cvrjs; rng)
-        variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
-        cont_agg = cvrjs
-    else
-        error("Unsupported vr_aggregator type: $(typeof(vr_aggregator))")
-    end
+function configure_jump_problem(prob, vr_aggregator::VRDirectCB, jumps, cvrjs; rng = DEFAULT_RNG)
+    new_prob = prob
+    cache = VRDirectCBEventCache(jumps; rng)
+    variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
+    cont_agg = cvrjs
+    return new_prob, variable_jump_callback, cont_agg
+end
+
+function configure_jump_problem(prob, vr_aggregator::VRFRMODE, jumps, cvrjs; rng = DEFAULT_RNG)
+    new_prob = extend_problem(prob, cvrjs; rng)
+    variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
+    cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
 end
 

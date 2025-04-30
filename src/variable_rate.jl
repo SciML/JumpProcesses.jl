@@ -110,8 +110,8 @@ function (cache::VRDirectCBEventCache)(integrator)
     end
 
     cache.prev_time = t
-    cache.prev_threshold = cache.current_threshold
     cache.current_threshold = randexp(rng)
+    cache.prev_threshold = cache.current_threshold
     cache.current_time = t
     cache.cumulative_rate = zero(t)
 end

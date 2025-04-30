@@ -82,8 +82,9 @@ function (cache::VRDirectCBEventCache)(u, t, integrator)
     
     cache.cumulative_rate += rate_increment
     cache.total_rate_cache = total_variable_rate(vjumps, u, p, t, cache.cur_rates)
+    cache.current_threshold = cache.prev_threshold - rate_increment # cache increment if not zeroed in this round
     
-    return cache.prev_threshold - rate_increment
+    return cache.current_threshold
 end
 
 # Affect functor defined directly on the cache

@@ -5,7 +5,7 @@ struct VRDirectCB <: VariableRateAggregator end
 
 function configure_jump_problem(prob, vr_aggregator::VRDirectCB, jumps, cvrjs; rng = DEFAULT_RNG)
     new_prob = prob
-    cache = VRDirectCBEventCache(jumps; rng)
+    cache = VRDirectCBEventCache(jumps, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
     cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
@@ -37,7 +37,6 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     prev_threshold::T
     current_time::T
     current_threshold::T  
-    cumulative_rate::T
     total_rate_cache::T
     rng::RNG
     variable_jumps::Tuple{Vararg{VariableRateJump}}
@@ -45,14 +44,13 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     affect_funcs::Vector{Function}
     cur_rates::Vector{T}
 
-    function VRDirectCBEventCache(jumps::JumpSet; rng = DEFAULT_RNG)
-        T = Float64  # Could infer from jumps or t later
+    function VRDirectCBEventCache(jumps::JumpSet, T::Type; rng = DEFAULT_RNG)
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
         rate_funcs = [jump.rate for jump in vjumps]
         affect_funcs = [jump.affect! for jump in vjumps]
         cur_rates = Vector{T}(undef, length(vjumps))
-        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold, zero(T), 
+        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
                            zero(T), rng, vjumps, rate_funcs, affect_funcs, cur_rates)
     end
 end
@@ -60,7 +58,9 @@ end
 # Condition functor defined directly on the cache
 function (cache::VRDirectCBEventCache)(u, t, integrator)
     if integrator.t != cache.current_time
+        cache.prev_time = cache.current_time
         cache.prev_threshold = cache.current_threshold
+        cache.current_time = integrator.t
     end
     
     dt = t - cache.prev_time
@@ -80,9 +80,7 @@ function (cache::VRDirectCBEventCache)(u, t, integrator)
     end
     rate_increment *= (dt / 2)
     
-    cache.cumulative_rate += rate_increment
-    cache.total_rate_cache = total_variable_rate(vjumps, u, p, t, cache.cur_rates)
-    cache.current_threshold = cache.prev_threshold - rate_increment # cache increment if not zeroed in this round
+    cache.current_threshold = cache.prev_threshold - rate_increment
     
     return cache.current_threshold
 end
@@ -94,6 +92,7 @@ function (cache::VRDirectCBEventCache)(integrator)
     p = integrator.p
     rng = cache.rng
 
+    cache.total_rate_cache = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
     total_variable_rate_sum = cache.total_rate_cache
     if total_variable_rate_sum <= 0
         return
@@ -114,7 +113,6 @@ function (cache::VRDirectCBEventCache)(integrator)
     cache.current_threshold = randexp(rng)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
-    cache.cumulative_rate = zero(t)
 end
 
 function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)

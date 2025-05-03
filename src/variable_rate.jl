@@ -44,7 +44,7 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     affect_funcs::Vector{Function}
     cur_rates::Vector{T}
 
-    function VRDirectCBEventCache(jumps::JumpSet, T::Type; rng = DEFAULT_RNG)
+    function VRDirectCBEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
         rate_funcs = [jump.rate for jump in vjumps]

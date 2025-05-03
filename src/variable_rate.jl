@@ -18,10 +18,10 @@ function configure_jump_problem(prob, vr_aggregator::VRFRMODE, jumps, cvrjs; rng
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(vjumps)))
-    sum_rate = zero(t)
+function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t::T, cur_rates::AbstractVector{T}=Vector{T}(undef, length(vjumps))) where {T}
+    sum_rate = zero(T)
     if !isempty(vjumps)
-        prev_rate = zero(t)
+        prev_rate = zero(T)
         @inbounds for (i, jump) in enumerate(vjumps)
             new_rate = jump.rate(u, p, t)
             sum_rate = add_fast(new_rate, prev_rate)
@@ -36,19 +36,19 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     prev_time::T
     prev_threshold::T
     current_time::T
-    current_threshold::T  
-    total_rate_cache::T
+    current_threshold::T
+    total_rate::T
     rng::RNG
     variable_jumps::Tuple{Vararg{VariableRateJump}}
-    rate_funcs::Vector{Function}
-    affect_funcs::Vector{Function}
+    rate_funcs::Vector{FunctionWrappers.FunctionWrapper{T, Tuple{T, T, Any, T}}}
+    affect_funcs::Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}}
     cur_rates::Vector{T}
 
     function VRDirectCBEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
-        rate_funcs = [jump.rate for jump in vjumps]
-        affect_funcs = [jump.affect! for jump in vjumps]
+        rate_funcs = [FunctionWrappers.FunctionWrapper{T, Tuple{T, T, Any, T}}(jump.rate) for jump in vjumps]
+        affect_funcs = [FunctionWrappers.FunctionWrapper{Nothing, Tuple{Any}}(jump.affect!) for jump in vjumps]
         cur_rates = Vector{T}(undef, length(vjumps))
         new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
                            zero(T), rng, vjumps, rate_funcs, affect_funcs, cur_rates)
@@ -92,13 +92,12 @@ function (cache::VRDirectCBEventCache)(integrator)
     p = integrator.p
     rng = cache.rng
 
-    cache.total_rate_cache = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
-    total_variable_rate_sum = cache.total_rate_cache
-    if total_variable_rate_sum <= 0
+    cache.total_rate = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
+    if cache.total_rate <= 0
         return
     end
 
-    r = rand(rng) * total_variable_rate_sum
+    r = rand(rng) * cache.total_rate
     vjumps = cache.variable_jumps
     if !isempty(vjumps)
         @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)

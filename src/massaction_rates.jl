@@ -3,9 +3,8 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx::S,
-        majump::MassActionJump{U, V, W, X})::R where
-        {T, S, R, U <: AbstractVector{R}, V, W, X}
+@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -18,6 +17,25 @@
 
     @inbounds return val * majump.scaled_rates[rxidx]
 end
+
+@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U})::R where {T <: Real, R, U <: AbstractVector{R}}
+    val = one(T)
+    @inbounds for specstoch in majump.reactant_stoch[rxidx]
+        specpop = speciesvec[specstoch[1]]
+        val *= specpop
+        @inbounds for k in 2:specstoch[2]
+            specpop -= one(specpop)
+            val *= specpop
+        end
+        # we need to check the smallest rate law term is positive
+        # i.e. for an order k reaction: x - k + 1 > 0 
+        (specpop <= 0) && return zero(R)
+    end
+
+    @inbounds return val * majump.scaled_rates[rxidx]
+end
+
 
 @inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
         majump::M) where {T, S, M <: AbstractMassActionJump}

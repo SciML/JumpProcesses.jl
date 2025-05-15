@@ -422,3 +422,54 @@ let
     @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
     @test isapprox(mean_vrfr, analytical_mean, rtol=0.05)
 end
+
+# Test 3: No. of Jumps
+let
+    rng = StableRNG(12345)
+    
+    function f(du, u, p, t)
+        du[1] = 0.0
+    end
+    
+    # Define birth jump: ∅ → X
+    birth_rate(u, p, t) = 10.0
+    function birth_affect!(integrator)
+        integrator.u[1] += 1
+        integrator.p[3] += 1
+    end
+    birth_jump = VariableRateJump(birth_rate, birth_affect!)
+    
+    # Define death jump: X → ∅
+    death_rate(u, p, t) = 0.5 * u[1]
+    function death_affect!(integrator)
+        integrator.u[1] -= 1
+        integrator.p[3] += 1
+    end
+    death_jump = VariableRateJump(death_rate, death_affect!)
+
+    
+    n_sims = 1000
+    results = Dict()
+    
+    for vr_aggregator in (VRFRMODE(), VRDirectCB())    
+        jump_counts = zeros(Int, n_sims)
+        for i in 1:n_sims
+            u0 = [1.0]
+            tspan = (0.0, 10.0)
+            p = [0.0, 0.0, 0]
+            prob = ODEProblem(f, u0, tspan, p)
+            jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator=vr_aggregator, rng=rng)
+
+            sol = solve(jump_prob, Tsit5(), dtmax=0.0001)
+            jump_counts[i] = jump_prob.prob.p[3]
+        end
+        
+        results[vr_aggregator] = (mean_jumps=mean(jump_counts), jump_counts=jump_counts)
+
+        @test sum(jump_counts) > 10000
+    end
+
+    mean_jumps_vrfr = results[VRFRMODE()].mean_jumps
+    mean_jumps_vrdcb = results[VRDirectCB()].mean_jumps
+    @test isapprox(mean_jumps_vrfr, mean_jumps_vrdcb, rtol=0.1)
+end

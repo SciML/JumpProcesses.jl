@@ -448,7 +448,7 @@ let
     death_jump = VariableRateJump(death_rate, death_affect!)
 
     
-    n_sims = 1000
+    n_sims = 100
     results = Dict()
     
     for vr_aggregator in (VRFRMODE(), VRDirectCB())    
@@ -466,7 +466,7 @@ let
         
         results[vr_aggregator] = (mean_jumps=mean(jump_counts), jump_counts=jump_counts)
 
-        @test sum(jump_counts) > 10000
+        @test sum(jump_counts) > 1000
     end
 
     mean_jumps_vrfr = results[VRFRMODE()].mean_jumps

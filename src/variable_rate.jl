@@ -166,18 +166,20 @@ function configure_jump_problem(prob, vr_aggregator::VRFRMODE, jumps, cvrjs; rng
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(vjumps)))
-    sum_rate = zero(t)
-    if !isempty(vjumps)
-        prev_rate = zero(t)
-        @inbounds for (i, jump) in enumerate(vjumps)
-            new_rate = jump.rate(u, p, t)
-            sum_rate = add_fast(new_rate, prev_rate)
-            cur_rates[i] = sum_rate
-            prev_rate = sum_rate
-        end
+function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector, idx=1, prev_rate=zero(t))
+    if idx > length(cur_rates)
+        return prev_rate
     end
-    return sum_rate
+    @inbounds begin
+        new_rate = vjumps[idx].rate(u, p, t)
+        sum_rate = add_fast(new_rate, prev_rate)
+        cur_rates[idx] = sum_rate
+        return total_variable_rate(vjumps, u, p, t, cur_rates, idx + 1, sum_rate)
+    end
+end
+
+function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(vjumps)))
+    total_variable_rate(vjumps, u, p, t, cur_rates, 1, zero(t))
 end
 
 mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
@@ -219,7 +221,7 @@ function (cache::VRDirectCBEventCache)(u, t, integrator)
     for i in 1:n
         τ = ((dt / 2) * gauss_points[n][i]) + ((t + cache.prev_time) / 2)
         u_τ = integrator(τ)
-        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ)
+        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cache.cur_rates)
         rate_increment += gauss_weights[n][i] * total_variable_rate_τ
     end
     rate_increment *= (dt / 2)
@@ -246,11 +248,7 @@ function (cache::VRDirectCBEventCache)(integrator)
     vjumps = cache.variable_jumps
     if !isempty(vjumps)
         @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
-        if 1 <= jump_idx <= length(vjumps)
-            vjumps[jump_idx].affect!(integrator)
-        else
-            error("Jump index $jump_idx out of bounds for available jumps")
-        end
+        execute_affect!(vjumps, integrator, jump_idx)
     end
 
     cache.prev_time = t
@@ -258,6 +256,13 @@ function (cache::VRDirectCBEventCache)(integrator)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
     return nothing
+end
+
+function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, idx)
+    if !(1 <= idx <= length(vjumps))
+        error("Jump index $idx out of bounds for $(length(vjumps)) jumps")
+    end
+    @inbounds vjumps[idx].affect!(integrator)
 end
 
 function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)

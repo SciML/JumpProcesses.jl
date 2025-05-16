@@ -184,22 +184,18 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     prev_time::T
     prev_threshold::T
     current_time::T
-    current_threshold::T  
+    current_threshold::T
     total_rate_cache::T
     rng::RNG
     variable_jumps::Tuple{Vararg{VariableRateJump}}
-    rate_funcs::Vector{Function}
-    affect_funcs::Vector{Function}
     cur_rates::Vector{T}
 
     function VRDirectCBEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
-        rate_funcs = [jump.rate for jump in vjumps]
-        affect_funcs = [jump.affect! for jump in vjumps]
         cur_rates = Vector{T}(undef, length(vjumps))
         new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
-                           zero(T), rng, vjumps, rate_funcs, affect_funcs, cur_rates)
+                           zero(T), rng, vjumps, cur_rates)
     end
 end
 
@@ -251,7 +247,7 @@ function (cache::VRDirectCBEventCache)(integrator)
     if !isempty(vjumps)
         @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
         if 1 <= jump_idx <= length(vjumps)
-            cache.affect_funcs[jump_idx](integrator)
+            vjumps[jump_idx].affect!(integrator)
         else
             error("Jump index $jump_idx out of bounds for available jumps")
         end
@@ -264,7 +260,7 @@ function (cache::VRDirectCBEventCache)(integrator)
     return nothing
 end
 
-function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)d
+function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
     new_cb = ContinuousCallback(cache, cache;
         idxs = jump.idxs,
         rootfind = jump.rootfind,

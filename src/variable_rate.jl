@@ -261,6 +261,7 @@ function (cache::VRDirectCBEventCache)(integrator)
     cache.current_threshold = randexp(rng)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
+    return nothing
 end
 
 function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)

@@ -264,15 +264,8 @@ function (cache::VRDirectCBEventCache)(integrator)
     return nothing
 end
 
-function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
-    condition = function(u, t, integrator)
-        cache(u, t, integrator)
-    end
-    affect! = function(integrator)
-        cache(integrator)
-        nothing
-    end
-    new_cb = ContinuousCallback(condition, affect!;
+function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)d
+    new_cb = ContinuousCallback(cache, cache;
         idxs = jump.idxs,
         rootfind = jump.rootfind,
         interp_points = jump.interp_points,

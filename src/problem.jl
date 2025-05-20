@@ -213,7 +213,7 @@ end
 make_kwarg(; kwargs...) = kwargs
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
-        vr_aggregator::VariableRateAggregator = VRDirectCB(),
+        vr_aggregator::VariableRateAggregator = VRFRMODE(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,

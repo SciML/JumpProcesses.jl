@@ -418,10 +418,9 @@ function (cache::VR_DirectEventCache)(integrator)
 
     r = rand(rng) * total_variable_rate_sum
     vjumps = cache.variable_jumps
-    if !isempty(vjumps)
-        @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
-        execute_affect!(vjumps, integrator, jump_idx)
-    end
+    
+    @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
+    execute_affect!(vjumps, integrator, jump_idx)
 
     cache.prev_time = t
     cache.current_threshold = randexp(rng)

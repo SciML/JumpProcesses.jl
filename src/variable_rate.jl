@@ -290,6 +290,26 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     end
 end
 
+function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+    new_cb = ContinuousCallback(cache, cache;
+        idxs = jump.idxs,
+        rootfind = jump.rootfind,
+        interp_points = jump.interp_points,
+        save_positions = jump.save_positions,
+        abstol = jump.abstol,
+        reltol = jump.reltol)
+    return new_cb
+end
+
+function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump, jumps...)
+    new_cb = wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+    build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
+end
+
+function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump)
+    CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
+end
+
 function configure_jump_problem(prob, vr_aggregator::VRDirectCB, jumps, cvrjs; 
         rng = DEFAULT_RNG)
     new_prob = prob
@@ -342,6 +362,13 @@ function (cache::VRDirectCBEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
+function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, idx)
+    if !(1 <= idx <= length(vjumps))
+        error("Jump index $idx out of bounds for $(length(vjumps)) jumps")
+    end
+    @inbounds vjumps[idx].affect!(integrator)
+end
+
 # Affect functor defined directly on the cache
 function (cache::VRDirectCBEventCache)(integrator)
     t = integrator.t
@@ -367,31 +394,4 @@ function (cache::VRDirectCBEventCache)(integrator)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
     return nothing
-end
-
-function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, idx)
-    if !(1 <= idx <= length(vjumps))
-        error("Jump index $idx out of bounds for $(length(vjumps)) jumps")
-    end
-    @inbounds vjumps[idx].affect!(integrator)
-end
-
-function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
-    new_cb = ContinuousCallback(cache, cache;
-        idxs = jump.idxs,
-        rootfind = jump.rootfind,
-        interp_points = jump.interp_points,
-        save_positions = jump.save_positions,
-        abstol = jump.abstol,
-        reltol = jump.reltol)
-    return new_cb
-end
-
-function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump, jumps...)
-    new_cb = wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
-    build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
-end
-
-function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump)
-    CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
 end

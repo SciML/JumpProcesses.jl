@@ -77,7 +77,7 @@ function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
         save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VR_FRM(), kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
-    jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator; save_positions, rng)
+    jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator, save_positions, rng)
     return jprob
 end
 

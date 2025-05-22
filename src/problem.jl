@@ -13,8 +13,10 @@ $(TYPEDEF)
 
 Defines a collection of jump processes to associate with another problem type.
 - [Documentation Page](https://docs.sciml.ai/JumpProcesses/stable/jump_types/)
-- [Tutorial Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
-- [FAQ Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/#FAQ)
+- [Tutorial
+  Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+- [FAQ
+  Page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/#FAQ)
 
 ### Constructors
 
@@ -44,20 +46,21 @@ then be passed within a single [`JumpSet`](@ref) or as subsequent sequential arg
 $(FIELDS)
 
 ## Keyword Arguments
-- `rng`, the random number generator to use. Defaults to Julia's built-in
-  generator.
+- `rng`, the random number generator to use. Defaults to Julia's built-in generator.
 - `save_positions=(true,true)`, specifies whether to save the system's state (before, after)
   the jump occurs.
 - `spatial_system`, for spatial problems the underlying spatial structure.
 - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
-- `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s
-  with a supporting aggregator (such as `Coevolve`). They will then be handled via the
-  continuous integration interface, and treated like general `VariableRateJump`s.
+- `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s with
+  a supporting aggregator (such as `Coevolve`). They will then be handled via the continuous
+  integration interface, and treated like general `VariableRateJump`s.
+- `vr_aggregator`, indicates the aggregator to use for sampling variable rate jumps. Current
+  default is `VRFRMODE`.
 
 Please see the [tutorial
-page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in the
-DifferentialEquations.jl [docs](https://docs.sciml.ai/JumpProcesses/stable/) for usage examples and
-commonly asked questions.
+page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in
+the DifferentialEquations.jl [docs](https://docs.sciml.ai/JumpProcesses/stable/) for usage
+examples and commonly asked questions.
 """
 mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J2,
     J3, J4, R, K} <: DiffEqBase.AbstractJumpProblem{P, J}
@@ -272,7 +275,8 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     # handle any remaining vrjs
     if length(cvrjs) > 0
         # Handle variable rate jumps based on vr_aggregator
-        new_prob, variable_jump_callback, cont_agg = configure_jump_problem(prob, vr_aggregator, jumps, cvrjs; rng=rng)
+        new_prob, variable_jump_callback, cont_agg = configure_jump_problem(prob, 
+            vr_aggregator, jumps, cvrjs; rng)  
     else
         new_prob = prob
         variable_jump_callback = CallbackSet()

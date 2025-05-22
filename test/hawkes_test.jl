@@ -64,7 +64,7 @@ function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
         save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VR_FRM())
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
-    jprob = JumpProblem(dprob, agg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, save_positions, rng)
+    jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
     return jprob
 end
 

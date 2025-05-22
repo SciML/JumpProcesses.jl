@@ -379,7 +379,7 @@ function (cache::VR_DirectEventCache)(integrator)
     cache.total_rate_cache = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
     total_variable_rate_sum = cache.total_rate_cache
     if total_variable_rate_sum <= 0
-        return
+        return nothing
     end
 
     r = rand(rng) * total_variable_rate_sum

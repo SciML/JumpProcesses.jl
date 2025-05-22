@@ -2,152 +2,91 @@
 $(TYPEDEF)
 
 An abstract type for aggregators that manage the simulation of `VariableRateJump`s in jump processes. 
-`VariableRateJump`s have rates (i.e., hazards, intensities, or propensities) that may explicitly 
-depend on time or state, as seen in processes like the birth-death process where rates depend on 
-the current population. `VariableRateAggregator`s determine how jumps are sampled and executed 
-within a `JumpProblem`, supporting pure-jump `DiscreteProblem`s or hybrid systems coupled with 
-`ODEProblem`s or `SDEProblem`s. If no `vr_aggregator` is specified in a `JumpProblem`, `VRDirectCB` 
-is used by default. For detailed usage, see the 
-[Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/).
-
-Two concrete implementations are currently supported:
-- `VRFRMODE`: A first-reaction method variant, reliable for ODE/SDE-coupled simulations.
-- `VRDirectCB`: A direct callback method, optimized for efficiency, default choice, and introduced 
-  to address performance issues with small time steps.
-
-## Usage
-Specify a `VariableRateAggregator` in a `JumpProblem` via the `vr_aggregator` keyword argument, or 
-omit it to use `VRDirectCB` by default. Aggregators are typically used with the `Coevolve` method 
-for pure-jump simulations (e.g., with `SSAStepper`) or with ODE/SDE integrators (e.g., `Tsit5`) 
-for hybrid systems. The choice of aggregator impacts performance and accuracy, especially for 
-small time steps (e.g., `dtmax = 0.0001`).
-
-## Examples
-To simulate a birth-death process with the default `VRDirectCB` aggregator:
-```julia
-using JumpProcesses, OrdinaryDiffEq, StableRNGs
-rng = StableRNG(12345)
-u0 = [1.0]  # Initial population
-p = [10.0, 0.5]  # [birth rate, death rate coefficient]
-tspan = (0.0, 10.0)
-# Birth jump: ∅ → X
-birth_rate(u, p, t) = p[1]  # Constant rate = 10
-birth_affect!(integrator) = integrator.u[1] += 1
-birth_jump = VariableRateJump(birth_rate, birth_affect!)
-# Death jump: X → ∅
-death_rate(u, p, t) = p[2] * u[1]  # Rate = 0.5 * population
-death_affect!(integrator) = integrator.u[1] -= 1
-death_jump = VariableRateJump(death_rate, death_affect!)
-# Problem setup
-oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)
-jprob = JumpProblem(oprob, Coevolve(), birth_jump, death_jump; dep_graph=[[1,2], [1,2]], rng)
-sol = solve(jprob, Tsit5(), dtmax=0.0001)  # Defaults to VRDirectCB
-```
 
 ## Notes
-- `VariableRateAggregator`s ensure accurate handling of `VariableRateJump`s, with both `VRFRMODE` 
-  and `VRDirectCB` supporting small time steps (e.g., `dtmax = 0.0001`) following recent performance 
-  improvements.
-- Bounded `VariableRateJump`s (with `urate`, `rateinterval`, and optionally `lrate`) enable 
-  efficient pure-jump simulations with `Coevolve` and `SSAStepper`.
 - In hybrid ODE/SDE systems with general `VariableRateJump`s, `integrator.u` may be an 
-  `ExtendedJumpArray`.
-- `VRDirectCB` is the default due to its superior performance in most scenarios.
+  `ExtendedJumpArray` for some aggregators.
 """
 abstract type VariableRateAggregator end
 
 """
 $(TYPEDEF)
 
-A concrete `VariableRateAggregator` implementing a first-reaction method variant for simulating 
-`VariableRateJump`s. `VRFRMODE` (Variable Rate First Reaction Method with Ordinary Differential 
-Equation) evaluates jump rates to select the earliest jump time, making it reliable for simulations 
-coupled with ODE or SDE integrators (e.g., `Tsit5`). It is well-suited for processes like the 
-birth-death process, where rates depend on the current state.
-
-## Usage
-Specify `VRFRMODE` in a `JumpProblem` via the `vr_aggregator` keyword argument, used with the 
-`Coevolve` aggregator. It supports pure-jump `DiscreteProblem`s (with `SSAStepper`) and hybrid 
-ODE/SDE systems. While robust, it may be less performant than the default `VRDirectCB` due to its 
-conservative rate evaluation approach.
+A concrete `VariableRateAggregator` implementing a first-reaction method variant for
+simulating `VariableRateJump`s. `VRFRMODE` (Variable Rate First Reaction Method with
+Ordinary Differential Equation) uses a user-selected ODE solver to handle integrating each
+jump's intensity / propensity. A callback is also used for each jump to determine when its
+integrated intensity reaches a level corresponding to a firing time, and to then execute the
+affect associated with the jump at that time.  
 
 ## Examples
 Simulating a birth-death process with `VRFRMODE`:
 ```julia
-using JumpProcesses, OrdinaryDiffEq, StableRNGs
-rng = StableRNG(12345)
-u0 = [1.0]  # Initial population
-p = [10.0, 0.5]  # [birth rate, death rate coefficient]
-tspan = (0.0, 10.0)
-# Birth jump: ∅ → X
-birth_rate(u, p, t) = p[1]  # Constant rate = 10
-birth_affect!(integrator) = integrator.u[1] += 1
-birth_jump = VariableRateJump(birth_rate, birth_affect!)
-# Death jump: X → ∅
-death_rate(u, p, t) = p[2] * u[1]  # Rate = 0.5 * population
-death_affect!(integrator) = integrator.u[1] -= 1
-death_jump = VariableRateJump(death_rate, death_affect!)
-# Problem setup
-oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)
-jprob = JumpProblem(oprob, Coevolve(), birth_jump, death_jump; vr_aggregator=VRFRMODE(), 
-                    dep_graph=[[1,2], [1,2]], rng)
-sol = solve(jprob, Tsit5(), dtmax=0.0001)
+using JumpProcesses, OrdinaryDiffEq  
+u0 = [1.0]           # Initial population  
+p = [10.0, 0.5]      # [birth rate, death rate]  
+tspan = (0.0, 10.0)  
+
+# Birth jump: ∅ → X  
+birth_rate(u, p, t) = p[1]
+birth_affect!(integrator) = (integrator.u[1] += 1; nothing)  
+birth_jump = VariableRateJump(birth_rate, birth_affect!)  
+
+# Death jump: X → ∅  
+death_rate(u, p, t) = p[2] * u[1]  
+death_affect!(integrator) = (integrator.u[1] -= 1; nothing)  
+death_jump = VariableRateJump(death_rate, death_affect!)  
+
+# Problem setup  
+oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRFRMODE())  
+sol = solve(jprob, Tsit5())  
 ```
 
 ## Notes
-- `VRFRMODE` ensures accurate jump triggering with small time steps (e.g., `dtmax = 0.0001`) 
-  following recent performance improvements.
-- It supports bounded `VariableRateJump`s in `Coevolve` for efficient pure-jump simulations when 
-  `urate` and `rateinterval` are provided.
-- For improved performance, consider using the default `VRDirectCB`, especially in large or 
-  complex jump processes.
+- Specify `VRFRMODE` in a `JumpProblem` via the `vr_aggregator` keyword argument to select
+  its use for handling `VariableRateJump`s. 
+- While robust, it may be less performant than `VRDirectCB` due to its integration of each
+  individual jump's intensity, and use of one continuous callback per jump to handle
+  detection of jump times and implementation of state changes from that jump.  
 """
 struct VRFRMODE <: VariableRateAggregator end
 
 """
 $(TYPEDEF)
 
-A concrete `VariableRateAggregator` implementing a direct callback method for simulating 
-`VariableRateJump`s. `VRDirectCB` (Variable Rate Direct Callback) efficiently samples jump times 
-using callbacks, optimized for performance in systems like the birth-death process. It is the 
-default aggregator when `vr_aggregator` is not specified in a `JumpProblem`, introduced to address 
-performance issues with small time steps and improve efficiency over `VRFRMODE`.
-
-## Usage
-`VRDirectCB` is automatically used in a `JumpProblem` if `vr_aggregator` is not specified, or can 
-be explicitly set via the `vr_aggregator` keyword argument. It works with the `Coevolve` aggregator 
-for pure-jump `DiscreteProblem`s (with `SSAStepper`) or hybrid ODE/SDE systems (with `Tsit5`). Its 
-direct approach makes it ideal for simulations requiring small time steps (e.g., `dtmax = 0.0001`).
+A concrete `VariableRateAggregator` implementing a direct method-based approach for
+simulating `VariableRateJump`s. `VRDirectCB` (Variable Rate Direct Callback) efficiently
+samples jump times using one continuous callback to integrate the total intensity /
+propensity for all `VariableRateJump`s, sample when the next jump occurs, and then sample
+which jump occurs at this time. 
 
 ## Examples
 Simulating a birth-death process with `VRDirectCB` (default):
 ```julia
-using JumpProcesses, OrdinaryDiffEq, StableRNGs
-rng = StableRNG(12345)
-u0 = [1.0]  # Initial population
-p = [10.0, 0.5]  # [birth rate, death rate coefficient]
-tspan = (0.0, 10.0)
-# Birth jump: ∅ → X
-birth_rate(u, p, t) = p[1]  # Constant rate = 10
-birth_affect!(integrator) = integrator.u[1] += 1
-birth_jump = VariableRateJump(birth_rate, birth_affect!)
-# Death jump: X → ∅
-death_rate(u, p, t) = p[2] * u[1]  # Rate = 0.5 * population
-death_affect!(integrator) = integrator.u[1] -= 1
-death_jump = VariableRateJump(death_rate, death_affect!)
-# Problem setup
-oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)
-jprob = JumpProblem(oprob, Coevolve(), birth_jump, death_jump; dep_graph=[[1,2], [1,2]], rng)
-sol = solve(jprob, Tsit5(), dtmax=0.0001)  # Defaults to VRDirectCB
+using JumpProcesses, OrdinaryDiffEq  
+u0 = [1.0]           # Initial population  
+p = [10.0, 0.5]      # [birth rate, death rate coefficient]  
+tspan = (0.0, 10.0)  
+
+# Birth jump: ∅ → X  
+birth_rate(u, p, t) = p[1] 
+birth_affect!(integrator) = (integrator.u[1] += 1; nothing)  
+birth_jump = VariableRateJump(birth_rate, birth_affect!)  
+
+# Death jump: X → ∅  
+death_rate(u, p, t) = p[2] * u[1]
+death_affect!(integrator) = (integrator.u[1] -= 1; nothing)  
+death_jump = VariableRateJump(death_rate, death_affect!)  
+
+# Problem setup  
+oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRDirectCB)  
+sol = solve(jprob, Tsit5()) 
 ```
 
-## Notes
-- `VRDirectCB` is the default `vr_aggregator` due to its superior performance and reliability with 
-  small time steps (e.g., `dtmax = 0.0001`), following recent performance improvements.
-- It supports bounded `VariableRateJump`s in `Coevolve` for efficient pure-jump simulations when 
-  `urate` and `rateinterval` are provided.
-- Compared to `VRFRMODE`, `VRDirectCB` offers better performance, making it the preferred choice 
-  for most jump processes.
+## Notes  
+- `VRDirectCB` is expected to generally be more performant than `VRFRMODE`.
 """
 struct VRDirectCB <: VariableRateAggregator end
 

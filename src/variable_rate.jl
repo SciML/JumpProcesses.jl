@@ -262,7 +262,7 @@ death_jump = VariableRateJump(death_rate, death_affect!)
 
 # Problem setup  
 oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
-jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRDirectCB)  
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRDirectCB())  
 sol = solve(jprob, Tsit5()) 
 ```
 

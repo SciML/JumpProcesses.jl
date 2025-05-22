@@ -47,8 +47,8 @@ $(FIELDS)
 
 ## Keyword Arguments
 - `rng`, the random number generator to use. Defaults to Julia's built-in generator.
-- `save_positions=(true,true)`, specifies whether to save the system's state (before, after)
-  the jump occurs.
+- `save_positions=(true,true)` when including variable rates and `(false,true)` for constant
+  rates, specifies whether to save the system's state (before, after) the jump occurs.
 - `spatial_system`, for spatial problems the underlying spatial structure.
 - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
 - `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s with

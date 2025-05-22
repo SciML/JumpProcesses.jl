@@ -9,6 +9,9 @@ An abstract type for aggregators that manage the simulation of `VariableRateJump
 """
 abstract type VariableRateAggregator end
 
+
+################################### VRFRMODE ####################################
+
 """
 $(TYPEDEF)
 
@@ -52,176 +55,12 @@ sol = solve(jprob, Tsit5())
 """
 struct VRFRMODE <: VariableRateAggregator end
 
-"""
-$(TYPEDEF)
-
-A concrete `VariableRateAggregator` implementing a direct method-based approach for
-simulating `VariableRateJump`s. `VRDirectCB` (Variable Rate Direct Callback) efficiently
-samples jump times using one continuous callback to integrate the total intensity /
-propensity for all `VariableRateJump`s, sample when the next jump occurs, and then sample
-which jump occurs at this time. 
-
-## Examples
-Simulating a birth-death process with `VRDirectCB` (default):
-```julia
-using JumpProcesses, OrdinaryDiffEq  
-u0 = [1.0]           # Initial population  
-p = [10.0, 0.5]      # [birth rate, death rate coefficient]  
-tspan = (0.0, 10.0)  
-
-# Birth jump: ∅ → X  
-birth_rate(u, p, t) = p[1] 
-birth_affect!(integrator) = (integrator.u[1] += 1; nothing)  
-birth_jump = VariableRateJump(birth_rate, birth_affect!)  
-
-# Death jump: X → ∅  
-death_rate(u, p, t) = p[2] * u[1]
-death_affect!(integrator) = (integrator.u[1] -= 1; nothing)  
-death_jump = VariableRateJump(death_rate, death_affect!)  
-
-# Problem setup  
-oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
-jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRDirectCB)  
-sol = solve(jprob, Tsit5()) 
-```
-
-## Notes  
-- `VRDirectCB` is expected to generally be more performant than `VRFRMODE`.
-"""
-struct VRDirectCB <: VariableRateAggregator end
-
-function configure_jump_problem(prob, vr_aggregator::VRDirectCB, jumps, cvrjs; rng = DEFAULT_RNG)
-    new_prob = prob
-    cache = VRDirectCBEventCache(jumps, eltype(prob.tspan); rng)
-    variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
-    cont_agg = cvrjs
-    return new_prob, variable_jump_callback, cont_agg
-end
-
-function configure_jump_problem(prob, vr_aggregator::VRFRMODE, jumps, cvrjs; rng = DEFAULT_RNG)
+function configure_jump_problem(prob, vr_aggregator::VRFRMODE, jumps, cvrjs; 
+        rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
     cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
-end
-
-function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector, idx=1, prev_rate=zero(t))
-    if idx > length(cur_rates)
-        return prev_rate
-    end
-    @inbounds begin
-        new_rate = vjumps[idx].rate(u, p, t)
-        sum_rate = add_fast(new_rate, prev_rate)
-        cur_rates[idx] = sum_rate
-        return total_variable_rate(vjumps, u, p, t, cur_rates, idx + 1, sum_rate)
-    end
-end
-
-function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, cur_rates::AbstractVector=Vector{typeof(t)}(undef, length(vjumps)))
-    total_variable_rate(vjumps, u, p, t, cur_rates, 1, zero(t))
-end
-
-mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
-    prev_time::T
-    prev_threshold::T
-    current_time::T
-    current_threshold::T
-    total_rate_cache::T
-    rng::RNG
-    variable_jumps::Tuple{Vararg{VariableRateJump}}
-    cur_rates::Vector{T}
-
-    function VRDirectCBEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
-        initial_threshold = randexp(rng, T)
-        vjumps = jumps.variable_jumps
-        cur_rates = Vector{T}(undef, length(vjumps))
-        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
-                           zero(T), rng, vjumps, cur_rates)
-    end
-end
-
-# Condition functor defined directly on the cache
-function (cache::VRDirectCBEventCache)(u, t, integrator)
-    if integrator.t != cache.current_time
-        cache.prev_time = cache.current_time
-        cache.prev_threshold = cache.current_threshold
-        cache.current_time = integrator.t
-    end
-    
-    dt = t - cache.prev_time
-    if dt == 0
-        return cache.prev_threshold
-    end
-
-    vjumps = cache.variable_jumps
-    p = integrator.p
-    n = 4
-    rate_increment = zero(t)
-    for i in 1:n
-        τ = ((dt / 2) * gauss_points[n][i]) + ((t + cache.prev_time) / 2)
-        u_τ = integrator(τ)
-        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cache.cur_rates)
-        rate_increment += gauss_weights[n][i] * total_variable_rate_τ
-    end
-    rate_increment *= (dt / 2)
-    
-    cache.current_threshold = cache.prev_threshold - rate_increment
-    
-    return cache.current_threshold
-end
-
-# Affect functor defined directly on the cache
-function (cache::VRDirectCBEventCache)(integrator)
-    t = integrator.t
-    u = integrator.u
-    p = integrator.p
-    rng = cache.rng
-
-    cache.total_rate_cache = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
-    total_variable_rate_sum = cache.total_rate_cache
-    if total_variable_rate_sum <= 0
-        return
-    end
-
-    r = rand(rng) * total_variable_rate_sum
-    vjumps = cache.variable_jumps
-    if !isempty(vjumps)
-        @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
-        execute_affect!(vjumps, integrator, jump_idx)
-    end
-
-    cache.prev_time = t
-    cache.current_threshold = randexp(rng)
-    cache.prev_threshold = cache.current_threshold
-    cache.current_time = t
-    return nothing
-end
-
-function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, idx)
-    if !(1 <= idx <= length(vjumps))
-        error("Jump index $idx out of bounds for $(length(vjumps)) jumps")
-    end
-    @inbounds vjumps[idx].affect!(integrator)
-end
-
-function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
-    new_cb = ContinuousCallback(cache, cache;
-        idxs = jump.idxs,
-        rootfind = jump.rootfind,
-        interp_points = jump.interp_points,
-        save_positions = jump.save_positions,
-        abstol = jump.abstol,
-        reltol = jump.reltol)
-    return new_cb
-end
-
-function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump, jumps...)
-    new_cb = wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
-    build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
-end
-
-function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump)
-    CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
 end
 
 # extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
@@ -390,4 +229,169 @@ end
     idx += 1
     du[idx] = jump.rate(u.u, p, t)
     update_jumps!(du, u, p, t, idx, jumps...)
+end
+
+################################### VRDirectCB ####################################
+
+"""
+$(TYPEDEF)
+
+A concrete `VariableRateAggregator` implementing a direct method-based approach for
+simulating `VariableRateJump`s. `VRDirectCB` (Variable Rate Direct Callback) efficiently
+samples jump times using one continuous callback to integrate the total intensity /
+propensity for all `VariableRateJump`s, sample when the next jump occurs, and then sample
+which jump occurs at this time. 
+
+## Examples
+Simulating a birth-death process with `VRDirectCB` (default):
+```julia
+using JumpProcesses, OrdinaryDiffEq  
+u0 = [1.0]           # Initial population  
+p = [10.0, 0.5]      # [birth rate, death rate coefficient]  
+tspan = (0.0, 10.0)  
+
+# Birth jump: ∅ → X  
+birth_rate(u, p, t) = p[1] 
+birth_affect!(integrator) = (integrator.u[1] += 1; nothing)  
+birth_jump = VariableRateJump(birth_rate, birth_affect!)  
+
+# Death jump: X → ∅  
+death_rate(u, p, t) = p[2] * u[1]
+death_affect!(integrator) = (integrator.u[1] -= 1; nothing)  
+death_jump = VariableRateJump(death_rate, death_affect!)  
+
+# Problem setup  
+oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRDirectCB)  
+sol = solve(jprob, Tsit5()) 
+```
+
+## Notes  
+- `VRDirectCB` is expected to generally be more performant than `VRFRMODE`.
+"""
+struct VRDirectCB <: VariableRateAggregator end
+
+mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
+    prev_time::T
+    prev_threshold::T
+    current_time::T
+    current_threshold::T
+    total_rate_cache::T
+    rng::RNG
+    variable_jumps::Tuple{Vararg{VariableRateJump}}
+    cur_rates::Vector{T}
+
+    function VRDirectCBEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
+        initial_threshold = randexp(rng, T)
+        vjumps = jumps.variable_jumps
+        cur_rates = Vector{T}(undef, length(vjumps))
+        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
+                           zero(T), rng, vjumps, cur_rates)
+    end
+end
+
+function configure_jump_problem(prob, vr_aggregator::VRDirectCB, jumps, cvrjs; 
+        rng = DEFAULT_RNG)
+    new_prob = prob
+    cache = VRDirectCBEventCache(jumps, eltype(prob.tspan); rng)
+    variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
+    cont_agg = cvrjs
+    return new_prob, variable_jump_callback, cont_agg
+end
+
+function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, 
+        cur_rates::AbstractVector, idx=1, prev_rate=zero(t))
+    if idx > length(cur_rates)
+        return prev_rate
+    end
+    @inbounds begin
+        new_rate = vjumps[idx].rate(u, p, t)
+        sum_rate = add_fast(new_rate, prev_rate)
+        cur_rates[idx] = sum_rate
+        return total_variable_rate(vjumps, u, p, t, cur_rates, idx + 1, sum_rate)
+    end
+end
+
+# Condition functor defined directly on the cache
+function (cache::VRDirectCBEventCache)(u, t, integrator)
+    if integrator.t != cache.current_time
+        cache.prev_time = cache.current_time
+        cache.prev_threshold = cache.current_threshold
+        cache.current_time = integrator.t
+    end
+    
+    dt = t - cache.prev_time
+    if dt == 0
+        return cache.prev_threshold
+    end
+
+    vjumps = cache.variable_jumps
+    p = integrator.p
+    n = 4
+    rate_increment = zero(t)
+    for i in 1:n
+        τ = ((dt / 2) * gauss_points[n][i]) + ((t + cache.prev_time) / 2)
+        u_τ = integrator(τ)
+        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cache.cur_rates)
+        rate_increment += gauss_weights[n][i] * total_variable_rate_τ
+    end
+    rate_increment *= (dt / 2)
+    
+    cache.current_threshold = cache.prev_threshold - rate_increment
+    
+    return cache.current_threshold
+end
+
+# Affect functor defined directly on the cache
+function (cache::VRDirectCBEventCache)(integrator)
+    t = integrator.t
+    u = integrator.u
+    p = integrator.p
+    rng = cache.rng
+
+    cache.total_rate_cache = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
+    total_variable_rate_sum = cache.total_rate_cache
+    if total_variable_rate_sum <= 0
+        return
+    end
+
+    r = rand(rng) * total_variable_rate_sum
+    vjumps = cache.variable_jumps
+    if !isempty(vjumps)
+        @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
+        execute_affect!(vjumps, integrator, jump_idx)
+    end
+
+    cache.prev_time = t
+    cache.current_threshold = randexp(rng)
+    cache.prev_threshold = cache.current_threshold
+    cache.current_time = t
+    return nothing
+end
+
+function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, idx)
+    if !(1 <= idx <= length(vjumps))
+        error("Jump index $idx out of bounds for $(length(vjumps)) jumps")
+    end
+    @inbounds vjumps[idx].affect!(integrator)
+end
+
+function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+    new_cb = ContinuousCallback(cache, cache;
+        idxs = jump.idxs,
+        rootfind = jump.rootfind,
+        interp_points = jump.interp_points,
+        save_positions = jump.save_positions,
+        abstol = jump.abstol,
+        reltol = jump.reltol)
+    return new_cb
+end
+
+function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump, jumps...)
+    new_cb = wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+    build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
+end
+
+function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump)
+    CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
 end

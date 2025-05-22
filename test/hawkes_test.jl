@@ -61,7 +61,7 @@ function hawkes_jump(u, g, h; uselrate = true)
 end
 
 function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VR_FRM())
+        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, kwargs...)
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
     jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
@@ -74,7 +74,7 @@ function f!(du, u, p, t)
 end
 
 function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VR_FRM(), kwargs...)
+        save_positions = (false, true), g = [[1]], h = [[]], vr_aggregator = VR_FRM(), kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
     jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator, save_positions, rng)

@@ -12,7 +12,7 @@ let
         rateinterval = (u, p, t) -> 0.1)
 
     prob = DiscreteProblem([0.0], (0.0, 2.0), [1.0])
-    jprob = JumpProblem(prob, Coevolve(), jump; vr_aggregator = VR_FRM(), dep_graph = [[1]], rng)
+    jprob = JumpProblem(prob, Coevolve(), jump; dep_graph = [[1]], rng)
     agg = jprob.discrete_jump_aggregation
     @test agg.affects! isa Vector{Any}
 

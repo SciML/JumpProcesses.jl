@@ -10,20 +10,20 @@ An abstract type for aggregators that manage the simulation of `VariableRateJump
 abstract type VariableRateAggregator end
 
 
-################################### VRFRMODE ####################################
+################################### VR_FRM ####################################
 
 """
 $(TYPEDEF)
 
 A concrete `VariableRateAggregator` implementing a first-reaction method variant for
-simulating `VariableRateJump`s. `VRFRMODE` (Variable Rate First Reaction Method with
+simulating `VariableRateJump`s. `VR_FRM` (Variable Rate First Reaction Method with
 Ordinary Differential Equation) uses a user-selected ODE solver to handle integrating each
 jump's intensity / propensity. A callback is also used for each jump to determine when its
 integrated intensity reaches a level corresponding to a firing time, and to then execute the
 affect associated with the jump at that time.  
 
 ## Examples
-Simulating a birth-death process with `VRFRMODE`:
+Simulating a birth-death process with `VR_FRM`:
 ```julia
 using JumpProcesses, OrdinaryDiffEq  
 u0 = [1.0]           # Initial population  
@@ -42,20 +42,20 @@ death_jump = VariableRateJump(death_rate, death_affect!)
 
 # Problem setup  
 oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
-jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRFRMODE())  
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_FRM())  
 sol = solve(jprob, Tsit5())  
 ```
 
 ## Notes
-- Specify `VRFRMODE` in a `JumpProblem` via the `vr_aggregator` keyword argument to select
+- Specify `VR_FRM` in a `JumpProblem` via the `vr_aggregator` keyword argument to select
   its use for handling `VariableRateJump`s. 
-- While robust, it may be less performant than `VRDirectCB` due to its integration of each
+- While robust, it may be less performant than `VR_Direct` due to its integration of each
   individual jump's intensity, and use of one continuous callback per jump to handle
   detection of jump times and implementation of state changes from that jump.  
 """
-struct VRFRMODE <: VariableRateAggregator end
+struct VR_FRM <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator::VRFRMODE, jumps, cvrjs; 
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs; 
         rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
@@ -231,19 +231,19 @@ end
     update_jumps!(du, u, p, t, idx, jumps...)
 end
 
-################################### VRDirectCB ####################################
+################################### VR_Direct ####################################
 
 """
 $(TYPEDEF)
 
 A concrete `VariableRateAggregator` implementing a direct method-based approach for
-simulating `VariableRateJump`s. `VRDirectCB` (Variable Rate Direct Callback) efficiently
+simulating `VariableRateJump`s. `VR_Direct` (Variable Rate Direct Callback) efficiently
 samples jump times using one continuous callback to integrate the total intensity /
 propensity for all `VariableRateJump`s, sample when the next jump occurs, and then sample
 which jump occurs at this time. 
 
 ## Examples
-Simulating a birth-death process with `VRDirectCB` (default):
+Simulating a birth-death process with `VR_Direct` (default):
 ```julia
 using JumpProcesses, OrdinaryDiffEq  
 u0 = [1.0]           # Initial population  
@@ -262,16 +262,16 @@ death_jump = VariableRateJump(death_rate, death_affect!)
 
 # Problem setup  
 oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
-jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VRDirectCB())  
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_Direct())  
 sol = solve(jprob, Tsit5()) 
 ```
 
 ## Notes  
-- `VRDirectCB` is expected to generally be more performant than `VRFRMODE`.
+- `VR_Direct` is expected to generally be more performant than `VR_FRM`.
 """
-struct VRDirectCB <: VariableRateAggregator end
+struct VR_Direct <: VariableRateAggregator end
 
-mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
+mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG}
     prev_time::T
     prev_threshold::T
     current_time::T
@@ -281,7 +281,7 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     variable_jumps::Tuple{Vararg{VariableRateJump}}
     cur_rates::Vector{T}
 
-    function VRDirectCBEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
+    function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
         cur_rates = Vector{T}(undef, length(vjumps))
@@ -290,7 +290,7 @@ mutable struct VRDirectCBEventCache{T, RNG <: AbstractRNG}
     end
 end
 
-function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+function wrap_jump_in_integcallback(cache::VR_DirectEventCache, jump)
     new_cb = ContinuousCallback(cache, cache;
         idxs = jump.idxs,
         rootfind = jump.rootfind,
@@ -301,19 +301,19 @@ function wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
     return new_cb
 end
 
-function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump, jumps...)
-    new_cb = wrap_jump_in_integcallback(cache::VRDirectCBEventCache, jump)
+function build_variable_integcallback(cache::VR_DirectEventCache, cb, jump, jumps...)
+    new_cb = wrap_jump_in_integcallback(cache::VR_DirectEventCache, jump)
     build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
 end
 
-function build_variable_integcallback(cache::VRDirectCBEventCache, cb, jump)
+function build_variable_integcallback(cache::VR_DirectEventCache, cb, jump)
     CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
 end
 
-function configure_jump_problem(prob, vr_aggregator::VRDirectCB, jumps, cvrjs; 
+function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs; 
         rng = DEFAULT_RNG)
     new_prob = prob
-    cache = VRDirectCBEventCache(jumps, eltype(prob.tspan); rng)
+    cache = VR_DirectEventCache(jumps, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
     cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
@@ -333,7 +333,7 @@ function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t,
 end
 
 # Condition functor defined directly on the cache
-function (cache::VRDirectCBEventCache)(u, t, integrator)
+function (cache::VR_DirectEventCache)(u, t, integrator)
     if integrator.t != cache.current_time
         cache.prev_time = cache.current_time
         cache.prev_threshold = cache.current_threshold
@@ -370,7 +370,7 @@ function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, id
 end
 
 # Affect functor defined directly on the cache
-function (cache::VRDirectCBEventCache)(integrator)
+function (cache::VR_DirectEventCache)(integrator)
     t = integrator.t
     u = integrator.u
     p = integrator.p

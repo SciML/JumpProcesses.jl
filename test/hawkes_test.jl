@@ -61,7 +61,7 @@ function hawkes_jump(u, g, h; uselrate = true)
 end
 
 function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VRFRMODE())
+        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VR_FRM())
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
     jprob = JumpProblem(dprob, agg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, save_positions, rng)
@@ -74,7 +74,7 @@ function f!(du, u, p, t)
 end
 
 function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VRFRMODE(), kwargs...)
+        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, vr_aggregator = VR_FRM(), kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
     jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator = vr_aggregator, save_positions, rng, kwargs...)
@@ -109,7 +109,7 @@ uselrate[3] = true
 Nsims = 250
 
 for (i, alg) in enumerate(algs)
-    for vr_aggregator in (VRFRMODE(), VRDirectCB())
+    for vr_aggregator in (VR_FRM(), VR_Direct())
         if alg isa Coevolve
             stepper = SSAStepper()
         else
@@ -130,7 +130,7 @@ for (i, alg) in enumerate(algs)
         if alg isa Coevolve
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
         else
-            if vr_aggregator isa VRFRMODE
+            if vr_aggregator isa VR_FRM
                 cols = length(sols[1].u[1].u)
 
                 λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
@@ -151,7 +151,7 @@ end
 
 # test stepping Coevolve with continuous integrator and bounded jumps
 let alg = Coevolve()
-    for vr_aggregator in (VRFRMODE(), VRDirectCB())
+    for vr_aggregator in (VR_FRM(), VR_Direct())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
         jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, rng)
@@ -171,7 +171,7 @@ end
 
 # test disabling bounded jumps and using continuous integrator
 let alg = Coevolve()
-    for vr_aggregator in (VRFRMODE(), VRDirectCB())
+    for vr_aggregator in (VR_FRM(), VR_Direct())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
         jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, rng,
@@ -186,7 +186,7 @@ let alg = Coevolve()
             sols[n] = solve(jprob, Tsit5())
         end
         
-        if vr_aggregator isa VRFRMODE
+        if vr_aggregator isa VR_FRM
             cols = length(sols[1].u[1].u)
 
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]

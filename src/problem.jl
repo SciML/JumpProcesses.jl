@@ -55,7 +55,7 @@ $(FIELDS)
   a supporting aggregator (such as `Coevolve`). They will then be handled via the continuous
   integration interface, and treated like general `VariableRateJump`s.
 - `vr_aggregator`, indicates the aggregator to use for sampling variable rate jumps. Current
-  default is `VRFRMODE`.
+  default is `VR_FRM`.
 
 Please see the [tutorial
 page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in
@@ -216,7 +216,7 @@ end
 make_kwarg(; kwargs...) = kwargs
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
-        vr_aggregator::VariableRateAggregator = VRFRMODE(),
+        vr_aggregator::VariableRateAggregator = VR_FRM(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,

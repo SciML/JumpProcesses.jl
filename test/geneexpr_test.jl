@@ -37,9 +37,9 @@ function runSSAs_ode(oprob, vrjs, vr_agg)
         vrjprob = JumpProblem(oprob, vrjs; vr_aggregator = vr_agg, save_positions = (false, false), rng)
         sol = solve(vrjprob, Tsit5(); saveat=vrjprob.prob.tspan[2])
         if sol.u[1] isa ExtendedJumpArray
-            Psamp[i] = sol.u[end].u[3]  # VRFRMODE
+            Psamp[i] = sol.u[end].u[3]  # VR_FRM
         else
-            Psamp[i] = sol.u[end][3]    # VRDirectCB
+            Psamp[i] = sol.u[end][3]    # VR_Direct
         end
     end
     return mean(Psamp)
@@ -190,9 +190,9 @@ let
     crjmean = runSSAs(crjprob)
     f(du, u, p, t) = (du .= 0; nothing)
     oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
-    vrjmean = runSSAs_ode(oprob, vrjs, VRFRMODE())
+    vrjmean = runSSAs_ode(oprob, vrjs, VR_FRM())
     @test abs(vrjmean - crjmean) < reltol * crjmean
 
-    vrjmean = runSSAs_ode(oprob, vrjs, VRDirectCB())
+    vrjmean = runSSAs_ode(oprob, vrjs, VR_Direct())
     @test abs(vrjmean - crjmean) < reltol * crjmean
 end

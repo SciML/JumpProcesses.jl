@@ -1,4 +1,4 @@
-using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
+using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test, Plots
 using Random, LinearSolve, Statistics
 using StableRNGs
 rng = StableRNG(12345)
@@ -38,6 +38,7 @@ sol_next = solve(jump_prob, Tsit5())
 jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 integrator = init(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
+plot(sol_gill)
 
 @test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
 @test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
@@ -423,7 +424,7 @@ let
     @test isapprox(mean_vrfr, analytical_mean, rtol=0.05)
 end
 
-# Test 3: No. of Jumps
+# Test 4: No. of Jumps
 let
     rng = StableRNG(12345)
     
@@ -448,18 +449,19 @@ let
     death_jump = VariableRateJump(death_rate, death_affect!)
 
     
-    n_sims = 100
+    Nsims = 100
     results = Dict()
     
     for vr_aggregator in (VR_FRM(), VR_Direct())    
         jump_counts = zeros(Int, n_sims)
-        for i in 1:n_sims
-            u0 = [1.0]
-            tspan = (0.0, 10.0)
-            p = [0.0, 0.0, 0]
-            prob = ODEProblem(f, u0, tspan, p)
-            jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator=vr_aggregator, rng=rng)
 
+        u0 = [1.0]
+        tspan = (0.0, 10.0)
+        p = [0.0, 0.0, 0]
+        prob = ODEProblem(f, u0, tspan, p)
+        jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator=vr_aggregator, rng=rng)
+        
+        for i in 1:Nsims
             sol = solve(jump_prob, Tsit5(), dtmax=0.0001)
             jump_counts[i] = jump_prob.prob.p[3]
         end

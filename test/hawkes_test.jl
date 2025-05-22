@@ -116,9 +116,8 @@ for (i, alg) in enumerate(algs)
             stepper = Tsit5()
         end
         sols = Vector{ODESolution}(undef, Nsims)
+        jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[1], vr_aggregator = vr_aggregator)
         for n in 1:Nsims
-            jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[1], vr_aggregator = vr_aggregator)
-
             reset_history!(h)
             if stepper == Tsit5()
                 sols[n] = solve(jump_prob, stepper)
@@ -158,8 +157,6 @@ let alg = Coevolve()
         @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims
-            jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, rng)
-
             reset_history!(h)
             sols[n] = solve(jprob, Tsit5())
         end
@@ -179,9 +176,6 @@ let alg = Coevolve()
         @test length(jprob.variable_jumps) == 1
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims
-            jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, rng,
-                use_vrj_bounds = false)
-            
             reset_history!(h)
             sols[n] = solve(jprob, Tsit5())
         end

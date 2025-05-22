@@ -290,31 +290,65 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG}
     end
 end
 
-function wrap_jump_in_integcallback(cache::VR_DirectEventCache, jump)
-    new_cb = ContinuousCallback(cache, cache;
-        idxs = jump.idxs,
-        rootfind = jump.rootfind,
-        interp_points = jump.interp_points,
-        save_positions = jump.save_positions,
-        abstol = jump.abstol,
-        reltol = jump.reltol)
-    return new_cb
+# Initialization function for VR_DirectEventCache
+function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrator)
+    cache.prev_time = zero(eltype(integrator.t))
+    cache.current_time = zero(eltype(integrator.t))
+    cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
+    cache.current_threshold = cache.prev_threshold
+    cache.total_rate_cache = zero(eltype(integrator.t))
+    fill!(cache.cur_rates, zero(eltype(integrator.t)))
+    nothing
 end
 
-function build_variable_integcallback(cache::VR_DirectEventCache, cb, jump, jumps...)
-    new_cb = wrap_jump_in_integcallback(cache::VR_DirectEventCache, jump)
-    build_variable_integcallback(cache, CallbackSet(cb, new_cb), jumps...)
-end
+# Merge callback parameters across all jumps for VR_Direct
+function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple{Vararg{VariableRateJump}})
+    save_positions = (false, false)
+    abstol = Inf
+    reltol = Inf
+    rootfind = jumps[1].rootfind
+    interp_points = jumps[1].interp_points
+    idxs = jumps[1].idxs
 
-function build_variable_integcallback(cache::VR_DirectEventCache, cb, jump)
-    CallbackSet(cb, wrap_jump_in_integcallback(cache, jump))
+    for jump in jumps
+        save_positions = (
+            save_positions[1] || jump.save_positions[1],
+            save_positions[2] || jump.save_positions[2]
+        )
+        abstol = min(abstol, jump.abstol)
+        reltol = min(reltol, jump.reltol)
+    end
+
+    if abstol == Inf
+        abstol = jumps[1].abstol
+    end
+
+    if reltol == Inf
+        reltol = jumps[1].reltol
+    end
+
+    # Wrapper for initialize to match ContinuousCallback signature
+    function initialize_wrapper(cb::ContinuousCallback, u, t, integrator)
+        initialize_vr_direct_cache!(cb.condition, u, t, integrator)
+    end
+
+    return ContinuousCallback(
+        cache, cache;
+        initialize = initialize_wrapper,
+        idxs = idxs,
+        rootfind = rootfind,
+        interp_points = interp_points,
+        save_positions = save_positions,
+        abstol = abstol,
+        reltol = reltol
+    )
 end
 
 function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs; 
         rng = DEFAULT_RNG)
     new_prob = prob
     cache = VR_DirectEventCache(jumps, eltype(prob.tspan); rng)
-    variable_jump_callback = build_variable_integcallback(cache, CallbackSet(), cvrjs...)
+    variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
 end

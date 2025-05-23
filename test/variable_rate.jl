@@ -30,12 +30,11 @@ f = function (du, u, p, t)
 end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
-
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
 integrator = init(jump_prob, Tsit5())
-sol_next = solve(jump_prob, Tsit5())
-sol_next = solve(jump_prob, Rosenbrock23(autodiff = false))
-sol_next = solve(jump_prob, Rosenbrock23())
+sol = solve(jump_prob, Tsit5())
+sol = solve(jump_prob, Rosenbrock23(autodiff = false))
+sol = solve(jump_prob, Rosenbrock23())
 
 jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 integrator = init(jump_prob_gill, Tsit5())
@@ -43,10 +42,10 @@ sol_gill = solve(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob, Rosenbrock23(autodiff = false))
 sol_gill = solve(jump_prob, Rosenbrock23())
 
-@test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
-@test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
-@test maximum([sol_gill.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
-@test maximum([sol_gill.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
+@test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol_gill.u[i][2] for i in 1:length(sol_gill)]) <= 1e-12
+@test maximum([sol_gill.u[i][3] for i in 1:length(sol_gill)]) <= 1e-12
 
 g = function (du, u, p, t)
     du[1] = u[1]
@@ -57,11 +56,11 @@ prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 
-sol_next = solve(jump_prob,  SRIW1())
+sol = solve(jump_prob,  SRIW1())
 sol_gill = solve(jump_prob_gill,  SRIW1())
 
-@test maximum([sol_next.u[i][2] for i in 1:length(sol_next)]) <= 1e-12
-@test maximum([sol_next.u[i][3] for i in 1:length(sol_next)]) <= 1e-12
+@test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 
 function ff(du, u, p, t)
     if p == 0
@@ -91,7 +90,7 @@ prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2
 jump_prob = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VR_FRM(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VR_Direct(), rng=rng)
 
-sol_next = solve(jump_prob, SRA1(), dt = 1.0)
+sol = solve(jump_prob, SRA1(), dt = 1.0)
 sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0)
 
 ## Some integration tests
@@ -108,11 +107,11 @@ jump = ConstantRateJump(rate2, affect2!)
 jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct(), rng=rng)
 
-sol_next = solve(jump_prob, Tsit5())
+sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
-sol_next(4.0)
-sol_next.u[4]
+sol(4.0)
+sol.u[4]
 
 rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
@@ -122,11 +121,11 @@ jump2 = deepcopy(jump)
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 
-sol_next = solve(jump_prob, Tsit5())
+sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
-sol_next(4.0)
-sol_next.u[4]
+sol(4.0)
+sol.u[4]
 
 function g2(du, u, p, t)
     du[1] = u[1]
@@ -137,11 +136,11 @@ prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 
-sol_next = solve(jump_prob, SRIW1())
+sol = solve(jump_prob, SRIW1())
 sol_gill = solve(jump_prob_gill, SRIW1())
 
-sol_next(4.0)
-sol_next.u[4]
+sol(4.0)
+sol.u[4]
 
 function f3(du, u, p, t)
     du .= u
@@ -158,7 +157,7 @@ jump = VariableRateJump(rate3, affect3!)
 jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(), rng = rng)
 jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct(), rng=rng)
 
-sol_next = solve(jump_prob, Tsit5())
+sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
 # test for https://discourse.julialang.org/t/differentialequations-jl-package-variable-rate-jumps-with-complex-variables/80366/2
@@ -177,7 +176,7 @@ prob = ODEProblem(f4, [x₀], Δt)
 jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
 jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct())
 
-sol_next = solve(jump_prob, Tsit5())
+sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
 # Out of place test

@@ -30,7 +30,7 @@ let
         prob = EnsembleProblem(jump_prob,prob_func = prob_func)
         sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories=400, 
             save_everystep = false)
-        init_props = [sol.u[i].t[2] for i = 1:length(sol)]
-        @test allunique(init_props)
+        firstrx_time = [sol.u[i].t[2] for i = 1:length(sol)]
+        @test allunique(firstrx_time) 
     end
 end

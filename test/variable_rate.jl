@@ -360,12 +360,12 @@ end
 # Correctness test based on 
 # VR_Direct and VR_FRM
 # Function to run ensemble and compute statistics
-function run_ensemble(prob, alg, jumps...; vr_aggregator=VR_FRM(), n_sims=8000)
+function run_ensemble(prob, alg, jumps...; vr_aggregator=VR_FRM(), Nsims=8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator=vr_aggregator, rng=rng)
     ensemble = EnsembleProblem(jump_prob)
-    sol = solve(ensemble, alg, trajectories=n_sims)
-    return mean([sol[i][1] for i in 1:n_sims])[1]
+    sol = solve(ensemble, alg, trajectories=Nsims)
+    return mean([sol[i][1] for i in 1:Nsims])[1]
 end
 
 # Test 1: Simple ODE with two variable rate jumps
@@ -452,7 +452,7 @@ let
     results = Dict()
     
     for vr_aggregator in (VR_FRM(), VR_Direct())    
-        jump_counts = zeros(Int, n_sims)
+        jump_counts = zeros(Int, Nsims)
 
         u0 = [1.0]
         tspan = (0.0, 10.0)

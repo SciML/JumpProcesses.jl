@@ -304,8 +304,8 @@ end
 # Merge callback parameters across all jumps for VR_Direct
 function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple{Vararg{VariableRateJump}})
     save_positions = (false, false)
-    abstol = Inf
-    reltol = Inf
+    abstol = jumps[1].abstol
+    reltol = jumps[1].reltol
     rootfind = jumps[1].rootfind
     interp_points = jumps[1].interp_points
     idxs = jumps[1].idxs
@@ -317,14 +317,6 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple{V
         )
         abstol = min(abstol, jump.abstol)
         reltol = min(reltol, jump.reltol)
-    end
-
-    if abstol == Inf
-        abstol = jumps[1].abstol
-    end
-
-    if reltol == Inf
-        reltol = jumps[1].reltol
     end
 
     # Wrapper for initialize to match ContinuousCallback signature

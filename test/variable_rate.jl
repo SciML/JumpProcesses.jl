@@ -52,15 +52,15 @@ g = function (du, u, p, t)
 end
 
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
-
 jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
-
 sol = solve(jump_prob,  SRIW1())
+jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 sol_gill = solve(jump_prob_gill,  SRIW1())
 
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
+@test maximum([sol_gill.u[i][2] for i in 1:length(sol_gill)]) <= 1e-12
+@test maximum([sol_gill.u[i][3] for i in 1:length(sol_gill)]) <= 1e-12
 
 function ff(du, u, p, t)
     if p == 0

@@ -109,43 +109,26 @@ uselrate[3] = true
 Nsims = 250
 
 for (i, alg) in enumerate(algs)
-    for vr_aggregator in (VR_FRM(), VR_Direct())
-        if alg isa Coevolve
-            stepper = SSAStepper()
-        else
-            stepper = Tsit5()
-        end
-        sols = Vector{ODESolution}(undef, Nsims)
-        jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[1], vr_aggregator = vr_aggregator)
-        for n in 1:Nsims
-            reset_history!(h)
-            if stepper == Tsit5()
-                sols[n] = solve(jump_prob, stepper)
-            else
-                sols[n] = solve(jump_prob, stepper)
-            end
-        end
-
-        if alg isa Coevolve
-            λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-        else
-            if vr_aggregator isa VR_FRM
-                cols = length(sols[1].u[1].u)
-
-                λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
-
-                @test isapprox(mean(λs), Eλ; atol = 0.01)
-                @test isapprox(var(λs), Varλ; atol = 0.001)
-            else
-                cols = length(sols[1].u[1])
-
-                λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-
-                @test isapprox(mean(λs), Eλ; atol = 0.01)
-                @test isapprox(var(λs), Varλ; atol = 0.001)
-            end
-        end
+    jump_prob = hawkes_problem(p, alg; u = u0, tspan, g, h, uselrate = uselrate[i])
+    if alg isa Coevolve
+        stepper = SSAStepper()
+    else
+        stepper = Tsit5()
     end
+    sols = Vector{ODESolution}(undef, Nsims)        
+    for n in 1:Nsims
+        reset_history!(h)
+        sols[n] = solve(jump_prob, stepper)
+    end
+
+    if alg isa Coevolve
+        λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
+    else        
+        cols = length(u0)
+        λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
+    end
+    @test isapprox(mean(λs), Eλ; atol = 0.01)
+    @test isapprox(var(λs), Varλ; atol = 0.001)
 end
 
 # test stepping Coevolve with continuous integrator and bounded jumps
@@ -153,7 +136,7 @@ let alg = Coevolve()
     for vr_aggregator in (VR_FRM(), VR_Direct())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
-        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, rng)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng)
         @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims
@@ -167,11 +150,12 @@ let alg = Coevolve()
 end
 
 # test disabling bounded jumps and using continuous integrator
+Nsims = 500
 let alg = Coevolve()
     for vr_aggregator in (VR_FRM(), VR_Direct())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
-        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator = vr_aggregator, dep_graph = g, rng,
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng,
             use_vrj_bounds = false)
         @test length(jprob.variable_jumps) == 1
         sols = Vector{ODESolution}(undef, Nsims)
@@ -180,20 +164,13 @@ let alg = Coevolve()
             sols[n] = solve(jprob, Tsit5())
         end
         
-        if vr_aggregator isa VR_FRM
-            cols = length(sols[1].u[1].u)
-
+        cols = length(u0)
+        if vr_aggregator isa VR_FRM            
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
-
-            @test isapprox(mean(λs), Eλ; atol = 0.01)
-            @test isapprox(var(λs), Varλ; atol = 0.001)
         else
-            cols = length(sols[1].u[1])
-
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-
-            @test isapprox(mean(λs), Eλ; atol = 0.01)
-            @test isapprox(var(λs), Varλ; atol = 0.001)
         end
+        @test isapprox(mean(λs), Eλ; atol = 0.01)
+        @test isapprox(var(λs), Varλ; atol = 0.001)
     end
 end

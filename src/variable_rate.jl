@@ -366,8 +366,8 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     rate_increment = zero(t)
     gps = gauss_points[NUM_GAUSS_QUAD_NODES]
     weights = gauss_weights[NUM_GAUSS_QUAD_NODES]
-    tmid = .5 * (t + cache.prev_time)
-    halfdt = .5 * dt
+    tmid = (t + cache.prev_time) / 2
+    halfdt = dt / 2
     for (i,τᵢ) in enumerate(gps)
         τ = halfdt * τᵢ + tmid
         u_τ = integrator(τ)

@@ -301,39 +301,26 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     nothing
 end
 
+# Wrapper for initialize to match ContinuousCallback signature
+function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
+    initialize_vr_direct_cache!(cb.condition, u, t, integrator)
+end
+
+
 # Merge callback parameters across all jumps for VR_Direct
-function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple{Vararg{VariableRateJump}})
+function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple)
     save_positions = (false, false)
     abstol = jumps[1].abstol
     reltol = jumps[1].reltol
-    rootfind = jumps[1].rootfind
-    interp_points = jumps[1].interp_points
-    idxs = jumps[1].idxs
 
     for jump in jumps
-        save_positions = (
-            save_positions[1] || jump.save_positions[1],
-            save_positions[2] || jump.save_positions[2]
-        )
+        save_positions = save_positions .|| jump.save_positions
         abstol = min(abstol, jump.abstol)
         reltol = min(reltol, jump.reltol)
     end
 
-    # Wrapper for initialize to match ContinuousCallback signature
-    function initialize_wrapper(cb::ContinuousCallback, u, t, integrator)
-        initialize_vr_direct_cache!(cb.condition, u, t, integrator)
-    end
-
-    return ContinuousCallback(
-        cache, cache;
-        initialize = initialize_wrapper,
-        idxs = idxs,
-        rootfind = rootfind,
-        interp_points = interp_points,
-        save_positions = save_positions,
-        abstol = abstol,
-        reltol = reltol
-    )
+    return ContinuousCallback(cache, cache; initialize = initialize_vr_direct_wrapper,
+        save_positions, abstol, reltol)
 end
 
 function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs; 
@@ -345,8 +332,7 @@ function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs;
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t, 
-        cur_rates::AbstractVector, idx=1, prev_rate=zero(t))
+function total_variable_rate(vjumps, u, p, t, cur_rates, idx=1, prev_rate = zero(t))
     if idx > length(cur_rates)
         return prev_rate
     end
@@ -357,6 +343,8 @@ function total_variable_rate(vjumps::Tuple{Vararg{VariableRateJump}}, u, p, t,
         return total_variable_rate(vjumps, u, p, t, cur_rates, idx + 1, sum_rate)
     end
 end
+
+const NUM_GAUSS_QUAD_NODES = 4
 
 # Condition functor defined directly on the cache
 function (cache::VR_DirectEventCache)(u, t, integrator)
@@ -373,25 +361,25 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
 
     vjumps = cache.variable_jumps
     p = integrator.p
-    n = 4
     rate_increment = zero(t)
-    for i in 1:n
-        τ = ((dt / 2) * gauss_points[n][i]) + ((t + cache.prev_time) / 2)
+    gps = gauss_points[NUM_GAUSS_QUAD_NODES]
+    weights = gauss_weights[NUM_GAUSS_QUAD_NODES]
+    tmid = .5 * (t + cache.prev_time)
+    halfdt = .5 * dt
+    for (i,τᵢ) in enumerate(gps)
+        τ = halfdt * τᵢ + tmid
         u_τ = integrator(τ)
         total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cache.cur_rates)
-        rate_increment += gauss_weights[n][i] * total_variable_rate_τ
+        rate_increment += weights[i] * total_variable_rate_τ
     end
-    rate_increment *= (dt / 2)
+    rate_increment *= halfdt
     
     cache.current_threshold = cache.prev_threshold - rate_increment
     
     return cache.current_threshold
 end
 
-function execute_affect!(vjumps::Tuple{Vararg{VariableRateJump}}, integrator, idx)
-    if !(1 <= idx <= length(vjumps))
-        error("Jump index $idx out of bounds for $(length(vjumps)) jumps")
-    end
+function execute_affect!(vjumps, integrator, idx)
     @inbounds vjumps[idx].affect!(integrator)
 end
 

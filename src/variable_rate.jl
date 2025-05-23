@@ -351,6 +351,10 @@ const NUM_GAUSS_QUAD_NODES = 4
 
 # Condition functor defined directly on the cache
 function (cache::VR_DirectEventCache)(u, t, integrator)
+    if integrator.t < cache.current_time
+       error("integrator.t < cache.current_time. $(integrator.t) < $(cache.current_time). This is not supported in the `VR_Direct` handling")
+    end
+
     if integrator.t != cache.current_time
         cache.prev_time = cache.current_time
         cache.prev_threshold = cache.current_threshold

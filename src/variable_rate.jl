@@ -292,12 +292,12 @@ end
 
 # Initialization function for VR_DirectEventCache
 function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrator)
-    cache.prev_time = zero(eltype(integrator.t))
-    cache.current_time = zero(eltype(integrator.t))
+    cache.prev_time = zero(integrator.t)
+    cache.current_time = zero(integrator.t)
     cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
-    cache.total_rate_cache = zero(eltype(integrator.t))
-    fill!(cache.cur_rates, zero(eltype(integrator.t)))
+    cache.total_rate_cache = zero(integrator.t)
+    fill!(cache.cur_rates, zero(integrator.t))
     nothing
 end
 
@@ -344,6 +344,7 @@ function total_variable_rate(vjumps, u, p, t, cur_rates, idx=1, prev_rate = zero
     end
 end
 
+# how many quadrature points to use (i.e. determines the degree of the quadrature rule)
 const NUM_GAUSS_QUAD_NODES = 4
 
 # Condition functor defined directly on the cache
@@ -360,6 +361,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     end
 
     vjumps = cache.variable_jumps
+    cur_rates = cache.cur_rates
     p = integrator.p
     rate_increment = zero(t)
     gps = gauss_points[NUM_GAUSS_QUAD_NODES]
@@ -369,7 +371,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     for (i,τᵢ) in enumerate(gps)
         τ = halfdt * τᵢ + tmid
         u_τ = integrator(τ)
-        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cache.cur_rates)
+        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cur_rates)
         rate_increment += weights[i] * total_variable_rate_τ
     end
     rate_increment *= halfdt

@@ -304,6 +304,8 @@ end
 # Wrapper for initialize to match ContinuousCallback signature
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
+    u_modified!(integrator, false)
+    nothing
 end
 
 

@@ -34,7 +34,7 @@ end
 function runSSAs_ode(vrjprob)
     Psamp = zeros(Float64, Nsims)
     for i in 1:Nsims
-        sol = solve(vrjprob, Tsit5(); saveat=vrjprob.prob.tspan[2])
+        sol = solve(vrjprob, Tsit5(); saveat = vrjprob.prob.tspan[2])
         Psamp[i] = sol.u[3, end]
     end
     return mean(Psamp)

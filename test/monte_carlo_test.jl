@@ -21,7 +21,7 @@ sol = solve(monte_prob, SRIW1(), EnsembleSerial(), trajectories = 3,
 @test allunique(sol.u[1].t)
 
 jump = ConstantRateJump(rate, affect!)
-jump_prob = JumpProblem(prob, Direct(), jump, save_positions = (true, false), rng)
+jump_prob = JumpProblem(prob, Direct(), jump; save_positions = (true, false), rng)
 monte_prob = EnsembleProblem(jump_prob)
 sol = solve(monte_prob, SRIW1(), EnsembleSerial(), trajectories = 3,
     save_everystep = false, dt = 0.001, adaptive = false)

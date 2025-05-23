@@ -30,18 +30,17 @@ f = function (du, u, p, t)
 end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
 integrator = init(jump_prob, Tsit5())
 sol = solve(jump_prob, Tsit5())
 sol = solve(jump_prob, Rosenbrock23(autodiff = false))
 sol = solve(jump_prob, Rosenbrock23())
 
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
 integrator = init(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob, Rosenbrock23(autodiff = false))
 sol_gill = solve(jump_prob, Rosenbrock23())
-
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol_gill.u[i][2] for i in 1:length(sol_gill)]) <= 1e-12
@@ -50,13 +49,11 @@ sol_gill = solve(jump_prob, Rosenbrock23())
 g = function (du, u, p, t)
     du[1] = u[1]
 end
-
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
 sol = solve(jump_prob,  SRIW1())
-jump_prob_gill = JumpProblem(prob, Direct(),  jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
 sol_gill = solve(jump_prob_gill,  SRIW1())
-
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol_gill.u[i][2] for i in 1:length(sol_gill)]) <= 1e-12
@@ -69,27 +66,20 @@ function ff(du, u, p, t)
         du .= 2.01u
     end
 end
-
 function gg(du, u, p, t)
     du[1, 1] = 0.3u[1]
     du[1, 2] = 0.6u[1]
     du[2, 1] = 1.2u[1]
     du[2, 2] = 0.2u[2]
 end
-
 rate_switch(u, p, t) = u[1] * 1.0
-
 function affect_switch!(integrator)
     integrator.p = 1
 end
-
 jump_switch = VariableRateJump(rate_switch, affect_switch!)
-
 prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2, 2))
-
-jump_prob = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VR_FRM(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump_switch; vr_aggregator = VR_Direct(), rng=rng)
-
+jump_prob = JumpProblem(prob, jump_switch; vr_aggregator = VR_FRM(), rng)
+jump_prob_gill = JumpProblem(prob, jump_switch; vr_aggregator = VR_Direct(), rng)
 sol = solve(jump_prob, SRA1(), dt = 1.0)
 sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0)
 
@@ -98,18 +88,14 @@ sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0)
 function f2(du, u, p, t)
     du[1] = u[1]
 end
-
 prob = ODEProblem(f2, [0.2], (0.0, 10.0))
 rate2(u, p, t) = 2
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = ConstantRateJump(rate2, affect2!)
-
-jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct(), rng=rng)
-
+jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
+jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
 sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
-
 sol(4.0)
 sol.u[4]
 
@@ -117,35 +103,27 @@ rate2b(u, p, t) = u[1]
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate2b, affect2!)
 jump2 = deepcopy(jump)
-
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
-
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
 sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
-
 sol(4.0)
 sol.u[4]
 
 function g2(du, u, p, t)
     du[1] = u[1]
 end
-
 prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
-
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
-
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
 sol = solve(jump_prob, SRIW1())
 sol_gill = solve(jump_prob_gill, SRIW1())
-
 sol(4.0)
 sol.u[4]
 
 function f3(du, u, p, t)
     du .= u
 end
-
 prob = ODEProblem(f3, [1.0 2.0; 3.0 4.0], (0.0, 1.0))
 rate3(u, p, t) = u[1] + u[2]
 affect3!(integrator) = (integrator.u[1] = 0.25;
@@ -153,10 +131,8 @@ integrator.u[2] = 0.5;
 integrator.u[3] = 0.75;
 integrator.u[4] = 1)
 jump = VariableRateJump(rate3, affect3!)
-
-jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(), rng = rng)
-jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct(), rng=rng)
-
+jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
+jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
 sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
@@ -172,30 +148,19 @@ jump = VariableRateJump(rate4, affect4!)
 x₀ = 1.0 + 0.0im
 Δt = (0.0, 6.0)
 prob = ODEProblem(f4, [x₀], Δt)
-
-jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
-jump_prob_gill = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct())
-
+jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
+jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
 sol = solve(jump_prob, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
 
 # Out of place test
-
-function drift(x, p, t)
-    return p * x
-end
-
-function rate2c(x, p, t)
-    return 3 * max(0.0, x[1])
-end
-
-function affect!2(integrator)
-    integrator.u ./= 2
-end
+drift(x, p, t) = p * x
+rate2c(x, p, t) = 3 * max(0.0, x[1])
+affect!2(integrator) = (integrator.u ./= 2; nothing)
 x0 = rand(2)
 prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
 jump = VariableRateJump(rate2c, affect!2)
-jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(), rng)
 
 # test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
 # jumps
@@ -223,7 +188,6 @@ let
         vrj = VariableRateJump(cs_rate1, affect!; urate = ((u, p, t) -> 1.0),
             rateinterval = ((u, p, t) -> 1.0))
         @test_throws ErrorException JumpProblem(dprob_, alg, mass_action_jump_, vrj;
-            vr_aggregator = VR_FRM(),
             save_positions = (false, false))
     end
 end
@@ -258,7 +222,7 @@ let
         rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
-    jprob = JumpProblem(dprob, Coevolve(), test_jump; vr_aggregator = VR_FRM(), dep_graph = [[1]])
+    jprob = JumpProblem(dprob, Coevolve(), test_jump; dep_graph = [[1]])
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())
@@ -352,13 +316,16 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VR_FRM(), rng)
     dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
-    for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
-        umean = getmean(Nsims, sjm_prob, alg, dt, tsave, seed)
-        @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
-        seed += Nsims 
+    for vr_aggregator in (VR_FRM(), VR_Direct())
+        sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
+
+        for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
+            umean = getmean(Nsims, sjm_prob, alg, dt, tsave, seed)
+            @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
+            seed += Nsims 
+        end
     end
 end
 
@@ -367,7 +334,7 @@ end
 # Function to run ensemble and compute statistics
 function run_ensemble(prob, alg, jumps...; vr_aggregator=VR_FRM(), Nsims=8000)
     rng = StableRNG(12345)
-    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator=vr_aggregator, rng)
+    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator, rng)
     ensemble = EnsembleProblem(jump_prob)
     sol = solve(ensemble, alg, trajectories=Nsims, save_everystep=false)
     return mean(sol.u[i][1,end] for i in 1:Nsims)

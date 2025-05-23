@@ -362,10 +362,10 @@ end
 # Function to run ensemble and compute statistics
 function run_ensemble(prob, alg, jumps...; vr_aggregator=VR_FRM(), Nsims=8000)
     rng = StableRNG(12345)
-    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator=vr_aggregator, rng=rng)
+    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator=vr_aggregator, rng)
     ensemble = EnsembleProblem(jump_prob)
-    sol = solve(ensemble, alg, trajectories=Nsims)
-    return mean([sol[i][1] for i in 1:Nsims])[1]
+    sol = solve(ensemble, alg, trajectories=Nsims, save_everystep=false)
+    return mean(sol.u[i][1,end] for i in 1:Nsims)
 end
 
 # Test 1: Simple ODE with two variable rate jumps
@@ -386,14 +386,14 @@ end
 
 # Test 2: SDE with two variable rate jumps
 let
-    f = (du, u, p, t) -> (du[1] = u[1])
-    g = (du, u, p, t) -> (du[1] = u[1])
-    rate = (u, p, t) -> u[1]
-    affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
+    f = (du, u, p, t) -> (du[1] = -u[1] / 10.0)
+    g = (du, u, p, t) -> (du[1] = -u[1] / 10.0)
+    rate = (u, p, t) -> u[1] / 10.0
+    affect! = (integrator) -> (integrator.u[1] = integrator.u[1] + 1)
     jump = VariableRateJump(rate, affect!)
     jump2 = deepcopy(jump)
     
-    prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
+    prob = SDEProblem(f, g, [10.0], (0.0, 10.0))
     
     mean_vrfr = run_ensemble(prob, SRIW1(), jump, jump2)
     mean_vrdcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VR_Direct())
@@ -403,39 +403,35 @@ end
 
 # Test 3: ODE with analytical solution
 let
-    f = (du, u, p, t) -> (du[1] = u[1])
-    rate = (u, p, t) -> 2.0
-    affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
+    λ = 2.0
+    f = (du, u, p, t) -> (du[1] = -u[1]; nothing)
+    rate = (u, p, t) -> λ
+    affect! = (integrator) -> (integrator.u[1] += 1; nothing)
     jump = VariableRateJump(rate, affect!)
     
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
     
     mean_vrfr = run_ensemble(prob, Tsit5(), jump)
-    mean_vrdcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator=VR_Direct())
+    mean_vrdcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_Direct())
     
-    # Analytical solution: exponential growth with Poisson jumps
-    λ = 2.0
     t = 10.0
     u0 = 0.2
-    analytical_mean = u0 * exp(t) * exp(-λ*t*(1-0.5))
-    
-    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+    analytical_mean = u0 * exp(-t) + λ*(1 - exp(-t))
+
     @test isapprox(mean_vrfr, analytical_mean, rtol=0.05)
+    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
 end
 
 # Test 4: No. of Jumps
-let
-    rng = StableRNG(12345)
-    
-    function f(du, u, p, t)
-        du[1] = 0.0
-    end
+let   
+    f(du, u, p, t) = (du[1] = 0.0; nothing)
     
     # Define birth jump: ∅ → X
     birth_rate(u, p, t) = 10.0
     function birth_affect!(integrator)
         integrator.u[1] += 1
         integrator.p[3] += 1
+        nothing
     end
     birth_jump = VariableRateJump(birth_rate, birth_affect!)
     
@@ -444,29 +440,27 @@ let
     function death_affect!(integrator)
         integrator.u[1] -= 1
         integrator.p[3] += 1
+        nothing 
     end
     death_jump = VariableRateJump(death_rate, death_affect!)
 
-    
     Nsims = 100
     results = Dict()
-    
+    u0 = [1.0]
+    tspan = (0.0, 10.0)
     for vr_aggregator in (VR_FRM(), VR_Direct())    
         jump_counts = zeros(Int, Nsims)
-
-        u0 = [1.0]
-        tspan = (0.0, 10.0)
         p = [0.0, 0.0, 0]
         prob = ODEProblem(f, u0, tspan, p)
-        jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator=vr_aggregator, rng=rng)
+        jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator, rng)
         
         for i in 1:Nsims
-            sol = solve(jump_prob, Tsit5(), dtmax=0.0001)
+            sol = solve(jump_prob, Tsit5())
             jump_counts[i] = jump_prob.prob.p[3]
+            jump_prob.prob.p[3] = 0 
         end
         
         results[vr_aggregator] = (mean_jumps=mean(jump_counts), jump_counts=jump_counts)
-
         @test sum(jump_counts) > 1000
     end
 

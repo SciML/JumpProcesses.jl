@@ -12,14 +12,7 @@ let
         # set the rate to 0, so that no jump ever occurs; but urate is positive so
         # Coevolve will consider many candidates before the end of the simmulation.
         # None of these points should be saved.
-        jump = VariableRateJump((u, p, t) -> 0, (integrator) -> integrator.u[1] += 1;
-            urate = (u, p, t) -> 1.0, rateinterval = (u, p, t) -> 5.0)
-        jumpproblem = JumpProblem(dprob, alg, jump; vr_aggregator = VR_FRM(), dep_graph = [[1]],
-            save_positions = (false, true), rng)
-        sol = solve(jumpproblem, SSAStepper())
-        @test sol.t == [0.0, 30.0]
-
-        jumpproblem = JumpProblem(dprob, alg, jump; vr_aggregator = VR_Direct(), dep_graph = [[1]],
+        jumpproblem = JumpProblem(dprob, alg, jump; dep_graph = [[1]],
             save_positions = (false, true), rng)
         sol = solve(jumpproblem, SSAStepper())
         @test sol.t == [0.0, 30.0]

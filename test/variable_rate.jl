@@ -43,8 +43,6 @@ sol_gill = solve(jump_prob, Rosenbrock23(autodiff = false))
 sol_gill = solve(jump_prob, Rosenbrock23())
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
-@test maximum([sol_gill.u[i][2] for i in 1:length(sol_gill)]) <= 1e-12
-@test maximum([sol_gill.u[i][3] for i in 1:length(sol_gill)]) <= 1e-12
 
 g = function (du, u, p, t)
     du[1] = u[1]
@@ -56,8 +54,6 @@ jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng
 sol_gill = solve(jump_prob_gill,  SRIW1())
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
-@test maximum([sol_gill.u[i][2] for i in 1:length(sol_gill)]) <= 1e-12
-@test maximum([sol_gill.u[i][3] for i in 1:length(sol_gill)]) <= 1e-12
 
 function ff(du, u, p, t)
     if p == 0

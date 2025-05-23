@@ -35,11 +35,7 @@ function runSSAs_ode(vrjprob)
     Psamp = zeros(Float64, Nsims)
     for i in 1:Nsims
         sol = solve(vrjprob, Tsit5(); saveat=vrjprob.prob.tspan[2])
-        if sol.u[1] isa ExtendedJumpArray
-            Psamp[i] = sol.u[end].u[3]  # VR_FRM
-        else
-            Psamp[i] = sol.u[end][3]    # VR_Direct
-        end
+        Psamp[i] = sol.u[3, end]
     end
     return mean(Psamp)
 end

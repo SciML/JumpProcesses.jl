@@ -60,10 +60,8 @@ function hawkes_jump(u, g, h; uselrate = true)
     return [hawkes_jump(i, g, h; uselrate) for i in 1:length(u)]
 end
 
-function hawkes_problem(p, agg::Coevolve; u = [0.0],
-        tspan = (0.0, 50.0),
-        save_positions = (false, true),
-        g = [[1]], h = [[]], uselrate = true)
+function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
+        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, kwargs...)
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
     jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
@@ -76,11 +74,10 @@ function f!(du, u, p, t)
 end
 
 function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true),
-        g = [[1]], h = [[]], kwargs...)
+        save_positions = (false, true), g = [[1]], h = [[]], vr_aggregator = VR_FRM(), kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
-    jprob = JumpProblem(oprob, agg, jumps...; save_positions, rng)
+    jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator, save_positions, rng)
     return jprob
 end
 
@@ -118,15 +115,16 @@ for (i, alg) in enumerate(algs)
     else
         stepper = Tsit5()
     end
-    sols = Vector{ODESolution}(undef, Nsims)
+    sols = Vector{ODESolution}(undef, Nsims)        
     for n in 1:Nsims
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
     end
+
     if alg isa Coevolve
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-    else
-        cols = length(sols[1].u[1].u)
+    else        
+        cols = length(u0)
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
     end
     @test isapprox(mean(λs), Eλ; atol = 0.01)
@@ -135,34 +133,44 @@ end
 
 # test stepping Coevolve with continuous integrator and bounded jumps
 let alg = Coevolve()
-    oprob = ODEProblem(f!, u0, tspan, p)
-    jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng)
-    @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
-    sols = Vector{ODESolution}(undef, Nsims)
-    for n in 1:Nsims
-        reset_history!(h)
-        sols[n] = solve(jprob, Tsit5())
+    for vr_aggregator in (VR_FRM(), VR_Direct())
+        oprob = ODEProblem(f!, u0, tspan, p)
+        jumps = hawkes_jump(u0, g, h)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng)
+        @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
+        sols = Vector{ODESolution}(undef, Nsims)
+        for n in 1:Nsims
+            reset_history!(h)
+            sols[n] = solve(jprob, Tsit5())
+        end
+        λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
+        @test isapprox(mean(λs), Eλ; atol = 0.01)
+        @test isapprox(var(λs), Varλ; atol = 0.001)
     end
-    λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-    @test isapprox(mean(λs), Eλ; atol = 0.01)
-    @test isapprox(var(λs), Varλ; atol = 0.001)
 end
 
 # test disabling bounded jumps and using continuous integrator
+Nsims = 500
 let alg = Coevolve()
-    oprob = ODEProblem(f!, u0, tspan, p)
-    jumps = hawkes_jump(u0, g, h)
-    jprob = JumpProblem(oprob, alg, jumps...; dep_graph = g, rng,
-        use_vrj_bounds = false)
-    @test length(jprob.variable_jumps) == 1
-    sols = Vector{ODESolution}(undef, Nsims)
-    for n in 1:Nsims
-        reset_history!(h)
-        sols[n] = solve(jprob, Tsit5())
+    for vr_aggregator in (VR_FRM(), VR_Direct())
+        oprob = ODEProblem(f!, u0, tspan, p)
+        jumps = hawkes_jump(u0, g, h)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng,
+            use_vrj_bounds = false)
+        @test length(jprob.variable_jumps) == 1
+        sols = Vector{ODESolution}(undef, Nsims)
+        for n in 1:Nsims
+            reset_history!(h)
+            sols[n] = solve(jprob, Tsit5())
+        end
+        
+        cols = length(u0)
+        if vr_aggregator isa VR_FRM            
+            λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
+        else
+            λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
+        end
+        @test isapprox(mean(λs), Eλ; atol = 0.01)
+        @test isapprox(var(λs), Varλ; atol = 0.001)
     end
-    cols = length(sols[1].u[1].u)
-    λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
-    @test isapprox(mean(λs), Eλ; atol = 0.01)
-    @test isapprox(var(λs), Varλ; atol = 0.001)
 end

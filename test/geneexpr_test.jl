@@ -31,14 +31,15 @@ function runSSAs(jump_prob; use_stepper = true)
     mean(Psamp)
 end
 
-function runSSAs_ode(jump_prob)
-    Psamp = zeros(Int, Nsims)
+function runSSAs_ode(vrjprob)
+    Psamp = zeros(Float64, Nsims)
     for i in 1:Nsims
-        sol = solve(jump_prob, Tsit5(); saveat = jump_prob.prob.tspan[2])
+        sol = solve(vrjprob, Tsit5(); saveat = vrjprob.prob.tspan[2])
         Psamp[i] = sol[3, end]
     end
-    mean(Psamp)
+    return mean(Psamp)
 end
+
 
 # MODEL SETUP
 
@@ -184,7 +185,10 @@ let
     crjmean = runSSAs(crjprob)
     f(du, u, p, t) = (du .= 0; nothing)
     oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
-    vrjprob = JumpProblem(oprob, vrjs; save_positions = (false, false), rng)
-    vrjmean = runSSAs_ode(vrjprob)
-    @test abs(vrjmean - crjmean) < reltol * crjmean
+    
+    for vr_agg in (VR_FRM(), VR_Direct())
+        vrjprob = JumpProblem(oprob, vrjs; vr_aggregator = vr_agg, save_positions = (false, false), rng)
+        vrjmean = runSSAs_ode(vrjprob)
+        @test abs(vrjmean - crjmean) < reltol * crjmean
+    end
 end

@@ -22,14 +22,15 @@ let
     end
     u_0 = [1.0]
     ode_prob = ODEProblem(f!, u_0, (0.0, 10))
-    rate(u, p, t) = 1.0
-    jump!(integrator) = nothing
-    jump_prob = JumpProblem(ode_prob, Direct(), VariableRateJump(rate, jump!))
-    prob_func(prob, i, repeat) = deepcopy(prob)
-    prob = EnsembleProblem(jump_prob,prob_func = prob_func)
-    solve(prob, Tsit5(), EnsembleThreads(), trajectories=10)
+    vrj = VariableRateJump((u,p,t) -> 1.0, integrator -> nothing)
 
-    sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories=400)
-    init_props = [sol[i].u[1][2] for i = 1:length(sol)]    
-    @test allunique(init_props)
+    for agg in (VR_FRM(), VR_Direct())
+        jump_prob = JumpProblem(ode_prob, Direct(), vrj; vr_aggregator = agg)
+        prob_func(prob, i, repeat) = deepcopy(prob)
+        prob = EnsembleProblem(jump_prob,prob_func = prob_func)
+        sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories=400, 
+            save_everystep = false)
+        firstrx_time = [sol.u[i].t[2] for i = 1:length(sol)]
+        @test allunique(firstrx_time) 
+    end
 end

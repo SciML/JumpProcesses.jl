@@ -11,6 +11,7 @@ using SciMLBase: SciMLBase, isdenseplot
 using Base.FastMath: add_fast
 using Setfield: @set, @set!
 
+import DiffEqCallbacks: gauss_points, gauss_weights
 import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!,
                    get_tstops, get_tstops_array, get_tstops_max
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
@@ -20,6 +21,8 @@ import Graphs: neighbors, outdegree
 import RecursiveArrayTools: recursivecopy!
 using StaticArrays, Base.Threads
 import SymbolicIndexingInterface as SII
+
+import Random: AbstractRNG
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
@@ -70,6 +73,7 @@ include("spatial/directcrdirect.jl")
 include("aggregators/aggregated_api.jl")
 
 include("extended_jump_array.jl")
+include("variable_rate.jl")
 include("problem.jl")
 include("solve.jl")
 include("coupled_array.jl")
@@ -97,6 +101,9 @@ export init, solve, solve!
 export reset_aggregated_jumps!
 
 export ExtendedJumpArray
+
+# Export VariableRateAggregator types
+export VariableRateAggregator, VR_FRM, VR_Direct
 
 # spatial structs and functions
 export CartesianGrid, CartesianGridRej

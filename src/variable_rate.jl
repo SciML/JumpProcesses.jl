@@ -55,7 +55,7 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_FRM <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs, 
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs;
         rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)

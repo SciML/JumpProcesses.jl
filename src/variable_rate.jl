@@ -271,24 +271,27 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_Direct <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG}
+mutable struct VR_DirectEventCache{T, RNG, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
     current_threshold::T
     total_rate_cache::T
     rng::RNG
-    rate_funcs::Vector{Function}
-    affect_funcs::Vector{Function}
+    rate_funcs::F1
+    affect_funcs::F2
     curr_rates::Vector{T}
 
     function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
-        rate_funcs = [jump.rate for jump in vjumps]
-        affect_funcs = [jump.affect! for jump in vjumps]
+
+        # handle constant jumps using tuples
+        rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
+        
         curr_rates = Vector{T}(undef, length(vjumps))
-        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
+        
+        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), initial_threshold, zero(T), initial_threshold,
                            zero(T), rng, rate_funcs, affect_funcs, curr_rates)
     end
 end

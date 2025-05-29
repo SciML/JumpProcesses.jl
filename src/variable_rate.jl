@@ -271,22 +271,28 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_Direct <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG}
+mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
     current_threshold::T
     total_rate_cache::T
     rng::RNG
-    variable_jumps::Tuple{Vararg{VariableRateJump}}
-    cur_rates::Vector{T}
+    rate_funcs::F1
+    affect_funcs::F2
+    cum_rate_sum::Vector{T}
 
     function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
-        cur_rates = Vector{T}(undef, length(vjumps))
-        new{T, typeof(rng)}(zero(T), initial_threshold, zero(T), initial_threshold,
-                           zero(T), rng, vjumps, cur_rates)
+
+        # handle vjumps using tuples
+        rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
+        
+        cum_rate_sum = Vector{T}(undef, length(vjumps))
+        
+        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), initial_threshold, zero(T), initial_threshold,
+                           zero(T), rng, rate_funcs, affect_funcs, cum_rate_sum)
     end
 end
 
@@ -297,7 +303,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
     cache.total_rate_cache = zero(integrator.t)
-    fill!(cache.cur_rates, zero(integrator.t))
+    cache.cum_rate_sum .= 0
     nothing
 end
 
@@ -334,16 +340,28 @@ function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs;
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(vjumps, u, p, t, cur_rates, idx=1, prev_rate = zero(t))
-    if idx > length(cur_rates)
-        return prev_rate
-    end
-    @inbounds begin
-        new_rate = vjumps[idx].rate(u, p, t)
-        sum_rate = add_fast(new_rate, prev_rate)
-        cur_rates[idx] = sum_rate
-        return total_variable_rate(vjumps, u, p, t, cur_rates, idx + 1, sum_rate)
-    end
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates)
+    cur_sum = zero(eltype(cum_rate_sum))
+    cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
+end
+
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate, rates...)
+    new_sum = cur_sum + rate(u, p, t)
+    @inbounds cum_rate_sum[idx] = new_sum
+    idx += 1
+    cumsum_rates!(cum_rate_sum, u, p, t, idx, new_sum, rates...)
+end
+
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate)
+    @inbounds cum_rate_sum[idx] = cur_sum + rate(u, p, t)
+end
+
+function total_variable_rate(cache::VR_DirectEventCache{T, RNG, F1, F2}, u, p, t) where {T, RNG,F1, F2}
+    cum_rate_sum = cache.cum_rate_sum
+    rate_funcs = cache.rate_funcs
+
+    sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
+    return sum_rate
 end
 
 # how many quadrature points to use (i.e. determines the degree of the quadrature rule)
@@ -366,8 +384,6 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
         return cache.prev_threshold
     end
 
-    vjumps = cache.variable_jumps
-    cur_rates = cache.cur_rates
     p = integrator.p
     rate_increment = zero(t)
     gps = gauss_points[NUM_GAUSS_QUAD_NODES]
@@ -377,7 +393,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     for (i,τᵢ) in enumerate(gps)
         τ = halfdt * τᵢ + tmid
         u_τ = integrator(τ)
-        total_variable_rate_τ = total_variable_rate(vjumps, u_τ, p, τ, cur_rates)
+        total_variable_rate_τ = total_variable_rate(cache, u_τ, p, τ)
         rate_increment += weights[i] * total_variable_rate_τ
     end
     rate_increment *= halfdt
@@ -387,8 +403,10 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
-function execute_affect!(vjumps, integrator, idx)
-    @inbounds vjumps[idx].affect!(integrator)
+@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2 <: Tuple}
+    quote
+        Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds cache.affect_funcs[i](integrator)) i -> (@inbounds cache.affect_funcs[fieldcount(F2)](integrator))
+    end
 end
 
 # Affect functor defined directly on the cache
@@ -398,17 +416,16 @@ function (cache::VR_DirectEventCache)(integrator)
     p = integrator.p
     rng = cache.rng
 
-    cache.total_rate_cache = total_variable_rate(cache.variable_jumps, u, p, t, cache.cur_rates)
+    cache.total_rate_cache = total_variable_rate(cache, u, p, t)
     total_variable_rate_sum = cache.total_rate_cache
     if total_variable_rate_sum <= 0
         return nothing
     end
 
     r = rand(rng) * total_variable_rate_sum
-    vjumps = cache.variable_jumps
     
-    @inbounds jump_idx = searchsortedfirst(cache.cur_rates, r)
-    execute_affect!(vjumps, integrator, jump_idx)
+    @inbounds jump_idx = searchsortedfirst(cache.cum_rate_sum, r)
+    execute_affect!(cache, integrator, jump_idx)
 
     cache.prev_time = t
     cache.current_threshold = randexp(rng)

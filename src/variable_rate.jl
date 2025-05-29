@@ -280,7 +280,7 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     rng::RNG
     rate_funcs::F1
     affect_funcs::F2
-    curr_rates::Vector{T}
+    cum_rate_sum::Vector{T}
 
     function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
@@ -289,10 +289,10 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
         # handle vjumps using tuples
         rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
         
-        curr_rates = Vector{T}(undef, length(vjumps))
+        cum_rate_sum = Vector{T}(undef, length(vjumps))
         
         new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), initial_threshold, zero(T), initial_threshold,
-                           zero(T), rng, rate_funcs, affect_funcs, curr_rates)
+                           zero(T), rng, rate_funcs, affect_funcs, cum_rate_sum)
     end
 end
 
@@ -303,7 +303,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
     cache.total_rate_cache = zero(integrator.t)
-    cache.curr_rates .= 0
+    cache.cum_rate_sum .= 0
     nothing
 end
 
@@ -340,30 +340,30 @@ function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs;
     return new_prob, variable_jump_callback, cont_agg
 end
 
-@inline function cumsum_rates!(curr_rates, u, p, t, rates)
-    cur_sum = zero(eltype(curr_rates))
-    cumsum_rates!(curr_rates, u, p, t, 1, cur_sum, rates...)
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates)
+    cur_sum = zero(eltype(cum_rate_sum))
+    cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
 end
 
-@inline function cumsum_rates!(curr_rates, u, p, t, idx, cur_sum, rate, rates...)
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate, rates...)
     new_sum = cur_sum + rate(u, p, t)
-    @inbounds curr_rates[idx] = new_sum
-    idx += 1        
-    cumsum_rates!(curr_rates, u, p, t, idx, new_sum, rates...)
+    @inbounds cum_rate_sum[idx] = new_sum
+    idx += 1
+    cumsum_rates!(cum_rate_sum, u, p, t, idx, new_sum, rates...)
 end
 
-@inline function cumsum_rates!(curr_rates, u, p, t, idx, cur_sum, rate)
-    @inbounds curr_rates[idx] = cur_sum + rate(u, p, t)
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate)
+    @inbounds cum_rate_sum[idx] = cur_sum + rate(u, p, t)
     nothing
 end
 
 function total_variable_rate(cache::VR_DirectEventCache{T, RNG, F1, F2}, u, p, t) where {T, RNG,F1, F2}
-    curr_rates = cache.curr_rates
+    cum_rate_sum = cache.cum_rate_sum
     rate_funcs = cache.rate_funcs
 
-    cumsum_rates!(curr_rates, u, p, t, rate_funcs)
+    cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
 
-    @inbounds sum_rate = curr_rates[end]
+    @inbounds sum_rate = cum_rate_sum[end]
     return sum_rate
 end
 
@@ -427,7 +427,7 @@ function (cache::VR_DirectEventCache)(integrator)
 
     r = rand(rng) * total_variable_rate_sum
     
-    @inbounds jump_idx = searchsortedfirst(cache.curr_rates, r)
+    @inbounds jump_idx = searchsortedfirst(cache.cum_rate_sum, r)
     execute_affect!(cache, integrator, jump_idx)
 
     cache.prev_time = t

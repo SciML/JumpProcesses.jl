@@ -271,7 +271,7 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_Direct <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG, F1, F2}
+mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
@@ -303,7 +303,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
     cache.total_rate_cache = zero(integrator.t)
-    fill!(cache.curr_rates, zero(integrator.t))
+    cache.curr_rates .= 0
     nothing
 end
 

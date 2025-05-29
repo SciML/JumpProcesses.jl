@@ -286,7 +286,7 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
 
-        # handle constant jumps using tuples
+        # handle vjumps using tuples
         rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
         
         curr_rates = Vector{T}(undef, length(vjumps))

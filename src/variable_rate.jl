@@ -354,7 +354,6 @@ end
 
 @inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate)
     @inbounds cum_rate_sum[idx] = cur_sum + rate(u, p, t)
-    nothing
 end
 
 function total_variable_rate(cache::VR_DirectEventCache{T, RNG, F1, F2}, u, p, t) where {T, RNG,F1, F2}

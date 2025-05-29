@@ -55,7 +55,7 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_FRM <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs, u0; 
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs, 
         rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
@@ -271,7 +271,7 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_Direct <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2, U}
+mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
@@ -281,11 +281,8 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2, U}
     rate_funcs::F1
     affect_funcs::F2
     cum_rate_sum::Vector{T}
-    """state cache vector"""
-    u::U
 
-    function VR_DirectEventCache(jumps::JumpSet, ::Type{T}, u0::U; 
-            rng = DEFAULT_RNG) where {T, U}
+    function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where {T, U}
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
 
@@ -294,9 +291,9 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2, U}
         
         cum_rate_sum = Vector{T}(undef, length(vjumps))
         
-        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs), U}(zero(T), 
+        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), 
             initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs, 
-            affect_funcs, cum_rate_sum, similar(u0))
+            affect_funcs, cum_rate_sum)
     end
 end
 
@@ -335,9 +332,9 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple)
         save_positions, abstol, reltol)
 end
 
-function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs, u0; rng = DEFAULT_RNG)
+function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs; rng = DEFAULT_RNG)
     new_prob = prob
-    cache = VR_DirectEventCache(jumps, eltype(prob.tspan), u0; rng)
+    cache = VR_DirectEventCache(jumps, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
@@ -392,7 +389,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     weights = gauss_weights[NUM_GAUSS_QUAD_NODES]
     tmid = (t + cache.prev_time) / 2
     halfdt = dt / 2
-    u_τ = cache.u
+    u_τ = first(SciMLBase.get_tmp_cache(integrator))
     for (i,τᵢ) in enumerate(gps)
         τ = halfdt * τᵢ + tmid
         integrator(u_τ, τ)

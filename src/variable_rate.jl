@@ -394,8 +394,10 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
-function execute_affect!(cache::VR_DirectEventCache, integrator, idx)
-    @inbounds cache.affect_funcs[idx](integrator)
+@generated function execute_affect!(cache::VR_DirectEventCache{T,F1,F2,RNG}, integrator, idx) where {T,F1,F2,RNG}
+    quote
+        @inbounds Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (cache.affect_funcs[i](integrator)) i -> (cache.affect_funcs[fieldcount(F2)](integrator))
+    end
 end
 
 # Affect functor defined directly on the cache

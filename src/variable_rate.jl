@@ -355,7 +355,6 @@ function total_variable_rate(cache::VR_DirectEventCache{T, F1, F2, RNG}, u, p, t
     curr_rates = cache.curr_rates
     rate_funcs = cache.rate_funcs
     prev_rate = zero(t)
-
     if !isempty(rate_funcs)
         idx = 1
         fill_curr_rates(u, p, t, curr_rates, idx, rate_funcs...)

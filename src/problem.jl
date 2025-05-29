@@ -276,7 +276,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     if length(cvrjs) > 0
         # Handle variable rate jumps based on vr_aggregator
         new_prob, variable_jump_callback, cont_agg = configure_jump_problem(prob, 
-            vr_aggregator, jumps, cvrjs, prob.u0; rng)  
+            vr_aggregator, jumps, cvrjs; rng)  
     else
         new_prob = prob
         variable_jump_callback = CallbackSet()

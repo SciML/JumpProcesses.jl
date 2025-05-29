@@ -357,7 +357,7 @@ end
     nothing
 end
 
-function total_variable_rate(cache::VR_DirectEventCache{T, F1, F2, RNG}, u, p, t) where {T, F1, F2, RNG}
+function total_variable_rate(cache::VR_DirectEventCache{T, RNG, F1, F2}, u, p, t) where {T, RNG,F1, F2}
     curr_rates = cache.curr_rates
     rate_funcs = cache.rate_funcs
     prev_rate = zero(t)

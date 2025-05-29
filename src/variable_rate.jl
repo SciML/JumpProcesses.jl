@@ -360,9 +360,7 @@ function total_variable_rate(cache::VR_DirectEventCache{T, RNG, F1, F2}, u, p, t
     cum_rate_sum = cache.cum_rate_sum
     rate_funcs = cache.rate_funcs
 
-    cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
-
-    @inbounds sum_rate = cum_rate_sum[end]
+    sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
     return sum_rate
 end
 

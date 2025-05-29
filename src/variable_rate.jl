@@ -282,7 +282,7 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     affect_funcs::F2
     cum_rate_sum::Vector{T}
 
-    function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where {T, U}
+    function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
         initial_threshold = randexp(rng, T)
         vjumps = jumps.variable_jumps
 

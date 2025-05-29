@@ -340,19 +340,33 @@ function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs;
     return new_prob, variable_jump_callback, cont_agg
 end
 
-function total_variable_rate(cache::VR_DirectEventCache, u, p, t, idx=1, prev_rate = zero(t))
+@inline function fill_curr_rates(u, p, t, curr_rates, idx, rate, rates...)
+    @inbounds curr_rates[idx] = rate(u, p, t)
+    idx += 1
+    fill_curr_rates(u, p, t, curr_rates, idx, rates...)
+end
+
+@inline function fill_curr_rates(u, p, t, curr_rates, idx, rate)
+    @inbounds curr_rates[idx] = rate(u, p, t)
+    nothing
+end
+
+function total_variable_rate(cache::VR_DirectEventCache{T, F1, F2, RNG}, u, p, t) where {T, F1, F2, RNG}
     curr_rates = cache.curr_rates
     rate_funcs = cache.rate_funcs
+    prev_rate = zero(t)
 
-    if idx > length(curr_rates)
-        return prev_rate
+    if !isempty(rate_funcs)
+        idx = 1
+        fill_curr_rates(u, p, t, curr_rates, idx, rate_funcs...)
+        @inbounds for i in 1:length(curr_rates)
+            curr_rates[i] = add_fast(curr_rates[i], prev_rate)
+            prev_rate = curr_rates[i]
+        end
     end
-    @inbounds begin
-        new_rate = rate_funcs[idx](u, p, t)
-        sum_rate = add_fast(new_rate, prev_rate)
-        curr_rates[idx] = sum_rate
-        return total_variable_rate(cache, u, p, t, idx + 1, sum_rate)
-    end
+
+    @inbounds sum_rate = curr_rates[end]
+    return sum_rate
 end
 
 # how many quadrature points to use (i.e. determines the degree of the quadrature rule)
@@ -394,7 +408,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
-@generated function execute_affect!(cache::VR_DirectEventCache{T,F1,F2,RNG}, integrator, idx) where {T,F1,F2,RNG}
+@generated function execute_affect!(cache::VR_DirectEventCache{T, F1, F2, RNG}, integrator, idx) where {T, F1, F2, RNG}
     quote
         @inbounds Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (cache.affect_funcs[i](integrator)) i -> (cache.affect_funcs[fieldcount(F2)](integrator))
     end

@@ -340,14 +340,20 @@ function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs;
     return new_prob, variable_jump_callback, cont_agg
 end
 
-@inline function fill_curr_rates(u, p, t, curr_rates, idx, rate, rates...)
-    @inbounds curr_rates[idx] = rate(u, p, t)
-    idx += 1
-    fill_curr_rates(u, p, t, curr_rates, idx, rates...)
+@inline function cumsum_rates!(curr_rates, u, p, t, rates)
+    cur_sum = zero(eltype(curr_rates))
+    cumsum_rates!(curr_rates, u, p, t, 1, cur_sum, rates...)
 end
 
-@inline function fill_curr_rates(u, p, t, curr_rates, idx, rate)
-    @inbounds curr_rates[idx] = rate(u, p, t)
+@inline function cumsum_rates!(curr_rates, u, p, t, idx, cur_sum, rate, rates...)
+    new_sum = cur_sum + rate(u, p, t)
+    @inbounds curr_rates[idx] = new_sum
+    idx += 1        
+    cumsum_rates!(curr_rates, u, p, t, idx, new_sum, rates...)
+end
+
+@inline function cumsum_rates!(curr_rates, u, p, t, idx, cur_sum, rate)
+    @inbounds curr_rates[idx] = cur_sum + rate(u, p, t)
     nothing
 end
 

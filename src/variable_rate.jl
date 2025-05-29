@@ -408,7 +408,7 @@ end
 
 @generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2 <: Tuple}
     quote
-        @inbounds Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (cache.affect_funcs[i](integrator)) i -> (cache.affect_funcs[fieldcount(F2)](integrator))
+        Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds cache.affect_funcs[i](integrator)) i -> (@inbounds cache.affect_funcs[fieldcount(F2)](integrator))
     end
 end
 

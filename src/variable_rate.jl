@@ -55,7 +55,7 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_FRM <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs; 
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs;
         rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
@@ -276,7 +276,7 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     prev_threshold::T
     current_time::T
     current_threshold::T
-    total_rate_cache::T
+    total_rate::T
     rng::RNG
     rate_funcs::F1
     affect_funcs::F2
@@ -291,8 +291,9 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
         
         cum_rate_sum = Vector{T}(undef, length(vjumps))
         
-        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), initial_threshold, zero(T), initial_threshold,
-                           zero(T), rng, rate_funcs, affect_funcs, cum_rate_sum)
+        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), 
+            initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs, 
+            affect_funcs, cum_rate_sum)
     end
 end
 
@@ -302,7 +303,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     cache.current_time = zero(integrator.t)
     cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
-    cache.total_rate_cache = zero(integrator.t)
+    cache.total_rate = zero(integrator.t)
     cache.cum_rate_sum .= 0
     nothing
 end
@@ -331,8 +332,7 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple)
         save_positions, abstol, reltol)
 end
 
-function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs; 
-        rng = DEFAULT_RNG)
+function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs; rng = DEFAULT_RNG)
     new_prob = prob
     cache = VR_DirectEventCache(jumps, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
@@ -340,6 +340,7 @@ function configure_jump_problem(prob, vr_aggregator::VR_Direct, jumps, cvrjs;
     return new_prob, variable_jump_callback, cont_agg
 end
 
+# recursively evaluate the cumulative sum of the rates for type stability 
 @inline function cumsum_rates!(cum_rate_sum, u, p, t, rates)
     cur_sum = zero(eltype(cum_rate_sum))
     cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
@@ -357,9 +358,7 @@ end
 end
 
 function total_variable_rate(cache::VR_DirectEventCache{T, RNG, F1, F2}, u, p, t) where {T, RNG,F1, F2}
-    cum_rate_sum = cache.cum_rate_sum
-    rate_funcs = cache.rate_funcs
-
+    @unpack cum_rate_sum, rate_funcs = cache
     sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
     return sum_rate
 end
@@ -390,16 +389,16 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     weights = gauss_weights[NUM_GAUSS_QUAD_NODES]
     tmid = (t + cache.prev_time) / 2
     halfdt = dt / 2
+    u_τ = first(SciMLBase.get_tmp_cache(integrator))
     for (i,τᵢ) in enumerate(gps)
         τ = halfdt * τᵢ + tmid
-        u_τ = integrator(τ)
+        integrator(u_τ, τ)
         total_variable_rate_τ = total_variable_rate(cache, u_τ, p, τ)
         rate_increment += weights[i] * total_variable_rate_τ
     end
-    rate_increment *= halfdt
-    
+    rate_increment *= halfdt    
+
     cache.current_threshold = cache.prev_threshold - rate_increment
-    
     return cache.current_threshold
 end
 
@@ -411,19 +410,16 @@ end
 
 # Affect functor defined directly on the cache
 function (cache::VR_DirectEventCache)(integrator)
-    t = integrator.t
-    u = integrator.u
-    p = integrator.p
-    rng = cache.rng
-
-    cache.total_rate_cache = total_variable_rate(cache, u, p, t)
-    total_variable_rate_sum = cache.total_rate_cache
+    @unpack t, u, p = integrator
+    total_variable_rate_sum = total_variable_rate(cache, u, p, t)
     if total_variable_rate_sum <= 0
+        cache.total_rate = 0
         return nothing
     end
+    cache.total_rate = total_variable_rate_sum
 
+    rng = cache.rng
     r = rand(rng) * total_variable_rate_sum
-    
     @inbounds jump_idx = searchsortedfirst(cache.cum_rate_sum, r)
     execute_affect!(cache, integrator, jump_idx)
 

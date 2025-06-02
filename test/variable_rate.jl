@@ -440,8 +440,8 @@ let
 
     mean_jumps_vrfr = results[VR_FRM()].mean_jumps
     mean_jumps_vrcb = results[VR_Direct()].mean_jumps
-    mean_jumps_vrdcbfw = results[VR_DirectFW()].mean_jumps
+    mean_jumps_vrdbfw = results[VR_DirectFW()].mean_jumps
 
-    @test isapprox(mean_jumps_vrfr, mean_jumps_vrdcb, rtol=0.1)
-    @test isapprox(mean_jumps_vrcb, mean_jumps_vrdcbfw, rtol=0.1)
+    @test isapprox(mean_jumps_vrfr, mean_jumps_vrcb, rtol=0.1)
+    @test isapprox(mean_jumps_vrcb, mean_jumps_vrdbfw, rtol=0.1)
 end

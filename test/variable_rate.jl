@@ -314,7 +314,7 @@ let
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
-    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
@@ -439,7 +439,7 @@ let
     end
 
     mean_jumps_vrfr = results[VR_FRM()].mean_jumps
-    mean_jumps_vrdcb = results[VR_Direct()].mean_jumps
+    mean_jumps_vrcb = results[VR_Direct()].mean_jumps
     mean_jumps_vrdcbfw = results[VR_DirectFW()].mean_jumps
 
     @test isapprox(mean_jumps_vrfr, mean_jumps_vrdcb, rtol=0.1)

@@ -285,7 +285,7 @@ let
     rng = StableRNG(seed)
     b = 2.0
     d = 1.0
-    n0 = 1
+    n0 = 1.0
     tspan = (0.0, 4.0)
     Nsims = 10000
     n(t) = n0 * exp((b - d) * t)

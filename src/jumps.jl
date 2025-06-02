@@ -743,8 +743,9 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
 end
 
 function get_jump_info_vr_fwrappers(vjumps, prob)
-    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(prob.tspan[1]),
-        Tuple{typeof(prob.u0), typeof(prob.p), typeof(prob.tspan[1])}}
+    t, u = prob.tspan[1], prob.u0
+    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
+        Tuple{typeof(u), typeof(prob.p), typeof(t)}}
 
     if (vjumps !== nothing) && !isempty(vjumps)
         rates = [RateWrapper(c.rate) for c in vjumps]

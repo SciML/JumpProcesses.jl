@@ -22,15 +22,13 @@ let
         oprob = ODEProblem((du, u, p, t) -> 0, u0, tspan)
         jump = VariableRateJump((u, p, t) -> 0, (integrator) -> integrator.u[1] += 1;
             urate = (u, p, t) -> 1.0, rateinterval = (u, p, t) -> 5.0)
-        jumpproblem = JumpProblem(oprob, alg, jump; vr_aggregator = VR_Direct(), dep_graph = [[1]],
-            save_positions = (false, true), rng)
-        sol = solve(jumpproblem, Tsit5(); save_everystep = false)
-        @test sol.t == [0.0, 30.0]
-
-        jumpproblem = JumpProblem(oprob, alg, jump; vr_aggregator = VR_FRM(), dep_graph = [[1]],
-            save_positions = (false, true), rng)
-        sol = solve(jumpproblem, Tsit5(); save_everystep = false)
-        @test sol.t == [0.0, 30.0]
+        
+        for vr_agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+            jumpproblem = JumpProblem(oprob, alg, jump; vr_aggregator = vr_agg, dep_graph = [[1]],
+                save_positions = (false, true), rng)
+            sol = solve(jumpproblem, Tsit5(); save_everystep = false)
+            @test sol.t == [0.0, 30.0]
+        end
     end
 end
 

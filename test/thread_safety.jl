@@ -24,7 +24,7 @@ let
     ode_prob = ODEProblem(f!, u_0, (0.0, 10))
     vrj = VariableRateJump((u,p,t) -> 1.0, integrator -> nothing)
 
-    for agg in (VR_FRM(), VR_Direct())
+    for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jump_prob = JumpProblem(ode_prob, Direct(), vrj; vr_aggregator = agg)
         prob_func(prob, i, repeat) = deepcopy(prob)
         prob = EnsembleProblem(jump_prob,prob_func = prob_func)

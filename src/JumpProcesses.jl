@@ -103,7 +103,7 @@ export reset_aggregated_jumps!
 export ExtendedJumpArray
 
 # Export VariableRateAggregator types
-export VariableRateAggregator, VR_FRM, VR_Direct
+export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
 # spatial structs and functions
 export CartesianGrid, CartesianGridRej

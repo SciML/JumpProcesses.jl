@@ -741,3 +741,18 @@ function get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     rates, affects!
 end
+
+function get_jump_info_vr_fwrappers(vjumps, prob)
+    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(prob.tspan[1]),
+        Tuple{typeof(prob.u0), typeof(prob.p), typeof(prob.tspan[1])}}
+
+    if (vjumps !== nothing) && !isempty(vjumps)
+        rates = [RateWrapper(c.rate) for c in vjumps]
+        affects! = Any[(x -> (c.affect!(x); nothing)) for c in vjumps]
+    else
+        rates = Vector{RateWrapper}()
+        affects! = Any[]
+    end
+
+    rates, affects!
+end

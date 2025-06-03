@@ -329,8 +329,24 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     nothing
 end
 
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
+        ::I) where {T, RNG, F1, F2, I <: DiffEqBase.DEIntegrator}
+    if (cache.affect_funcs isa Vector) &&
+       !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
+        cache.affect_funcs = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in cache.affect_funcs]
+    end
+    nothing
+end
+
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
+        ::I) where {T, RNG, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+    nothing
+end
+
 # Wrapper for initialize to match ContinuousCallback signature
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
+    concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
     u_modified!(integrator, false)
     nothing

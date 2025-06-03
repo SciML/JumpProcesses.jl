@@ -306,12 +306,14 @@ function VR_DirectEventCache(jumps::JumpSet, ::VR_DirectFW, prob, ::Type{T}; rng
     initial_threshold = randexp(rng, T)
     vjumps = jumps.variable_jumps
 
+    t, u = prob.tspan[1], prob.u0
+
     # handle vjumps using tuples
-    rate_funcs, affect_funcs = get_jump_info_vr_fwrappers(vjumps, prob)
+    rate_funcs, affect_funcs = get_jump_info_fwrappers(u, prob.p, t, vjumps)
         
     cum_rate_sum = Vector{T}(undef, length(vjumps))
         
-    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), 
+    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), Any}(zero(T), 
         initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs, 
         affect_funcs, cum_rate_sum)
 end
@@ -429,10 +431,14 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
-@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2}
+@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2 <: Tuple}
     quote
         Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds cache.affect_funcs[i](integrator)) i -> (@inbounds cache.affect_funcs[fieldcount(F2)](integrator))
     end
+end
+
+@inline function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2}
+    @inbounds cache.affect_funcs[idx](integrator)
 end
 
 # Affect functor defined directly on the cache

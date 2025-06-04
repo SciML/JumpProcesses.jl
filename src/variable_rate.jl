@@ -453,8 +453,13 @@ end
     end
 end
 
-@inline function execute_affect!(cache::VR_DirectEventCache, integrator, idx) 
-    @inbounds cache.affect_funcs[idx](integrator)
+@inline function execute_affect!(cache::VR_DirectEventCache, integrator::I, idx) where {I <: DiffEqBase.DEIntegrator}
+    @unpack affect_funcs = cache
+    if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}} 
+        @inbounds affect_funcs[idx](integrator) 
+    else 
+        error("Error, invalid affect_funcs type. Expected a vector of function wrappers and got $(typeof(affect_funcs))") 
+    end
 end
 
 # Affect functor defined directly on the cache

@@ -329,8 +329,8 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     nothing
 end
 
-@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
-        ::I) where {T, RNG, F1, F2, I <: DiffEqBase.DEIntegrator}
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache, 
+        ::I) where {I <: DiffEqBase.DEIntegrator}
     if (cache.affect_funcs isa Vector) &&
        !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}

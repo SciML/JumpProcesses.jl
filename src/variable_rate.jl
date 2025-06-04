@@ -453,7 +453,7 @@ end
     end
 end
 
-@inline function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2}
+@inline function execute_affect!(cache::VR_DirectEventCache, integrator, idx) 
     @inbounds cache.affect_funcs[idx](integrator)
 end
 

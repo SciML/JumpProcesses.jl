@@ -276,7 +276,7 @@ sol = solve(jprob, Tsit5())
 struct VR_Direct <: VariableRateAggregator end
 struct VR_DirectFW <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
+mutable struct VR_DirectEventCache{T, RNG, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
@@ -329,8 +329,8 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     nothing
 end
 
-@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
-        ::I) where {T, RNG, F1, F2, I <: DiffEqBase.DEIntegrator}
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache, 
+        ::I) where {I <: DiffEqBase.DEIntegrator}
     if (cache.affect_funcs isa Vector) &&
        !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
@@ -455,8 +455,8 @@ end
     end
 end
 
-@inline function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
-        integrator::I, idx) where {T, RNG, F1, F2, I <: DiffEqBase.DEIntegrator}
+@inline function execute_affect!(cache::VR_DirectEventCache, 
+        integrator::I, idx) where {I <: DiffEqBase.DEIntegrator}
     @unpack affect_funcs = cache
     if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}} 
         @inbounds affect_funcs[idx](integrator) 

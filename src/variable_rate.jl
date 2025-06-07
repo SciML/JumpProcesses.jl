@@ -231,7 +231,7 @@ end
     update_jumps!(du, u, p, t, idx, jumps...)
 end
 
-################################### VR_Direct ####################################
+################################### VR_Direct and VR_DirectFW ####################################
 
 """
 $(TYPEDEF)
@@ -240,10 +240,11 @@ A concrete `VariableRateAggregator` implementing a direct method-based approach 
 simulating `VariableRateJump`s. `VR_Direct` (Variable Rate Direct Callback) efficiently
 samples jump times using one continuous callback to integrate the total intensity /
 propensity for all `VariableRateJump`s, sample when the next jump occurs, and then sample
-which jump occurs at this time. 
+which jump occurs at this time.  `VR_DirectFW` a separate FunctionWrapper mode, which 
+wraps things in FunctionWrappers in cases with large numbers of jumps
 
 ## Examples
-Simulating a birth-death process with `VR_Direct` (default):
+Simulating a birth-death process with `VR_Direct` (default) and VR_DirectFW:
 ```julia
 using JumpProcesses, OrdinaryDiffEq  
 u0 = [1.0]           # Initial population  
@@ -264,14 +265,18 @@ death_jump = VariableRateJump(death_rate, death_affect!)
 oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)  
 jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_Direct())  
 sol = solve(jprob, Tsit5()) 
+
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_DirectFW())  
+sol = solve(jprob, Tsit5()) 
 ```
 
 ## Notes  
-- `VR_Direct` is expected to generally be more performant than `VR_FRM`.
+- `VR_Direct` and `VR_DirectFW` are expected to generally be more performant than `VR_FRM`.
 """
 struct VR_Direct <: VariableRateAggregator end
+struct VR_DirectFW <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
+mutable struct VR_DirectEventCache{T, RNG, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
@@ -281,20 +286,36 @@ mutable struct VR_DirectEventCache{T, RNG <: AbstractRNG, F1, F2}
     rate_funcs::F1
     affect_funcs::F2
     cum_rate_sum::Vector{T}
+end
 
-    function VR_DirectEventCache(jumps::JumpSet, ::Type{T}; rng = DEFAULT_RNG) where T
-        initial_threshold = randexp(rng, T)
-        vjumps = jumps.variable_jumps
+function VR_DirectEventCache(jumps::JumpSet, ::VR_Direct, prob, ::Type{T}; rng = DEFAULT_RNG) where T
+    initial_threshold = randexp(rng, T)
+    vjumps = jumps.variable_jumps
 
-        # handle vjumps using tuples
-        rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
+    # handle vjumps using tuples
+    rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
         
-        cum_rate_sum = Vector{T}(undef, length(vjumps))
+    cum_rate_sum = Vector{T}(undef, length(vjumps))
         
-        new{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), 
-            initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs, 
-            affect_funcs, cum_rate_sum)
-    end
+    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T), 
+        initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs, 
+        affect_funcs, cum_rate_sum)
+end
+
+function VR_DirectEventCache(jumps::JumpSet, ::VR_DirectFW, prob, ::Type{T}; rng = DEFAULT_RNG) where T
+    initial_threshold = randexp(rng, T)
+    vjumps = jumps.variable_jumps
+
+    t, u = prob.tspan[1], prob.u0
+
+    # handle vjumps using tuples
+    rate_funcs, affect_funcs = get_jump_info_fwrappers(u, prob.p, t, vjumps)
+        
+    cum_rate_sum = Vector{T}(undef, length(vjumps))
+        
+    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), Any}(zero(T), 
+        initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs, 
+        affect_funcs, cum_rate_sum)
 end
 
 # Initialization function for VR_DirectEventCache
@@ -308,8 +329,24 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     nothing
 end
 
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache, 
+        ::I) where {I <: DiffEqBase.DEIntegrator}
+    if (cache.affect_funcs isa Vector) &&
+       !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+        AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
+        cache.affect_funcs = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in cache.affect_funcs]
+    end
+    nothing
+end
+
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
+        ::I) where {T, RNG, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+    nothing
+end
+
 # Wrapper for initialize to match ContinuousCallback signature
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
+    concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
     u_modified!(integrator, false)
     nothing
@@ -334,7 +371,15 @@ end
 
 function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs; rng = DEFAULT_RNG)
     new_prob = prob
-    cache = VR_DirectEventCache(jumps, eltype(prob.tspan); rng)
+    cache = VR_DirectEventCache(jumps, VR_Direct(), prob, eltype(prob.tspan); rng)
+    variable_jump_callback = build_variable_integcallback(cache, cvrjs)
+    cont_agg = cvrjs
+    return new_prob, variable_jump_callback, cont_agg
+end
+
+function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs; rng = DEFAULT_RNG)
+    new_prob = prob
+    cache = VR_DirectEventCache(jumps, VR_DirectFW(), prob, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     cont_agg = cvrjs
     return new_prob, variable_jump_callback, cont_agg
@@ -402,9 +447,21 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
-@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, integrator, idx) where {T, RNG, F1, F2 <: Tuple}
+@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2}, 
+        integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
     quote
-        Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds cache.affect_funcs[i](integrator)) i -> (@inbounds cache.affect_funcs[fieldcount(F2)](integrator))
+        @unpack affect_funcs = cache
+        Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds affect_funcs[i](integrator)) i -> (@inbounds affect_funcs[fieldcount(F2)](integrator))
+    end
+end
+
+@inline function execute_affect!(cache::VR_DirectEventCache, 
+        integrator::I, idx) where {I <: DiffEqBase.DEIntegrator}
+    @unpack affect_funcs = cache
+    if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}} 
+        @inbounds affect_funcs[idx](integrator) 
+    else 
+        error("Error, invalid affect_funcs type. Expected a vector of function wrappers and got $(typeof(affect_funcs))") 
     end
 end
 

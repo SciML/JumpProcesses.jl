@@ -285,7 +285,7 @@ let
     rng = StableRNG(seed)
     b = 2.0
     d = 1.0
-    n0 = 1
+    n0 = 1.0
     tspan = (0.0, 4.0)
     Nsims = 10000
     n(t) = n0 * exp((b - d) * t)
@@ -314,7 +314,7 @@ let
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     dt = 0.1
     tsave = range(tspan[1], tspan[2]; step = dt)
-    for vr_aggregator in (VR_FRM(), VR_Direct())
+    for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
@@ -347,9 +347,11 @@ let
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
     
     mean_vrfr = run_ensemble(prob, Tsit5(), jump, jump2)
-    mean_vrdcb = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator=VR_Direct())
+    mean_vrcb = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator=VR_Direct())
+    mean_vrcbfw = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator=VR_DirectFW())
     
-    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+    @test isapprox(mean_vrfr, mean_vrcb, rtol=0.05)
+    @test isapprox(mean_vrcb, mean_vrcbfw, rtol=0.05)
 end
 
 # Test 2: SDE with two variable rate jumps
@@ -364,9 +366,11 @@ let
     prob = SDEProblem(f, g, [10.0], (0.0, 10.0))
     
     mean_vrfr = run_ensemble(prob, SRIW1(), jump, jump2)
-    mean_vrdcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VR_Direct())
+    mean_vrcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VR_Direct())
+    mean_vrcbfw = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VR_DirectFW())
     
-    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+    @test isapprox(mean_vrfr, mean_vrcb, rtol=0.05)
+    @test isapprox(mean_vrcb, mean_vrcbfw, rtol=0.05)
 end
 
 # Test 3: ODE with analytical solution
@@ -380,14 +384,16 @@ let
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
     
     mean_vrfr = run_ensemble(prob, Tsit5(), jump)
-    mean_vrdcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_Direct())
+    mean_vrcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_Direct())
+    mean_vrcbfw = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_DirectFW())
     
     t = 10.0
     u0 = 0.2
     analytical_mean = u0 * exp(-t) + λ*(1 - exp(-t))
 
     @test isapprox(mean_vrfr, analytical_mean, rtol=0.05)
-    @test isapprox(mean_vrfr, mean_vrdcb, rtol=0.05)
+    @test isapprox(mean_vrfr, mean_vrcb, rtol=0.05)
+    @test isapprox(mean_vrcb, mean_vrcbfw, rtol=0.05)
 end
 
 # Test 4: No. of Jumps
@@ -416,7 +422,7 @@ let
     results = Dict()
     u0 = [1.0]
     tspan = (0.0, 10.0)
-    for vr_aggregator in (VR_FRM(), VR_Direct())    
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())    
         jump_counts = zeros(Int, Nsims)
         p = [0.0, 0.0, 0]
         prob = ODEProblem(f, u0, tspan, p)
@@ -433,6 +439,9 @@ let
     end
 
     mean_jumps_vrfr = results[VR_FRM()].mean_jumps
-    mean_jumps_vrdcb = results[VR_Direct()].mean_jumps
-    @test isapprox(mean_jumps_vrfr, mean_jumps_vrdcb, rtol=0.1)
+    mean_jumps_vrcb = results[VR_Direct()].mean_jumps
+    mean_jumps_vrcbfw = results[VR_DirectFW()].mean_jumps
+
+    @test isapprox(mean_jumps_vrfr, mean_jumps_vrcb, rtol=0.1)
+    @test isapprox(mean_jumps_vrcb, mean_jumps_vrcbfw, rtol=0.1)
 end

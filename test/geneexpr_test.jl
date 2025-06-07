@@ -186,7 +186,7 @@ let
     f(du, u, p, t) = (du .= 0; nothing)
     oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
     
-    for vr_agg in (VR_FRM(), VR_Direct())
+    for vr_agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         vrjprob = JumpProblem(oprob, vrjs; vr_aggregator = vr_agg, save_positions = (false, false), rng)
         vrjmean = runSSAs_ode(vrjprob)
         @test abs(vrjmean - crjmean) < reltol * crjmean

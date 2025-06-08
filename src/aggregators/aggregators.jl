@@ -172,6 +172,8 @@ algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
+struct DirectCRRSSA <: AbstractAggregatorAlgorithm end
+
 const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
     FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CCNRM())
 
@@ -202,6 +204,7 @@ supports_variablerates(aggregator::Coevolve) = true
 is_spatial(aggregator::AbstractAggregatorAlgorithm) = false
 is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
+is_spatial(aggregator::DirectCRRSSA) = true
 
 # return the fastest aggregator out of the available ones
 function select_aggregator(jumps::JumpSet; vartojumps_map = nothing,

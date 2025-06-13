@@ -354,7 +354,7 @@ end
 
 
 # Merge callback parameters across all jumps for VR_Direct
-function build_variable_integcallback(cache::VR_DirectEventCache, jumps::Tuple)
+function build_variable_integcallback(cache::VR_DirectEventCache, jumps)
     save_positions = (false, false)
     abstol = jumps[1].abstol
     reltol = jumps[1].reltol

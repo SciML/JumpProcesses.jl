@@ -6,6 +6,7 @@ using Reexport
 using RandomNumbers, LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
+using KernelAbstractions, Adapt
 using Graphs
 using SciMLBase: SciMLBase, isdenseplot
 using Base.FastMath: add_fast

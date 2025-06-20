@@ -4,6 +4,7 @@ authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 version = "9.16.0"
 
 [deps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
@@ -11,6 +12,7 @@ DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 FunctionWrappers = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 PoissonRandom = "e409e4f3-bfea-5376-8464-e040bb5c01ab"

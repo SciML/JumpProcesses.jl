@@ -53,4 +53,8 @@ end
     if GROUP == "CUDA"
         activate_gpu_env()
     end
+
+    if GROUP == "Correctness"
+        activate_gpu_env()
+    end
 end

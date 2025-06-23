@@ -1,28 +1,17 @@
 steps:
-  - label: ":julia: [CUDA] Run tests on Julia v{{matrix.version}}"
-    matrix:
-      setup:
-        version:
-          - "1"
-          - "1.10"
-    env:
-      GROUP: CUDA
+  - label: "GPU"
     plugins:
       - JuliaCI/julia#v1:
-          version: "{{matrix.version}}"
-    commands:
-      - |
-        julia --project=test -e '
-          import Pkg
-          Pkg.add(; name = "CUDA")'
-        rm test/Manifest.toml
-        julia --project -e'
-          import Pkg
-          println("+++ :julia: Running tests")
-          Pkg.test(; coverage=false)'
+          version: "1"
+      - JuliaCI/julia-test#v1:
+           coverage: false # 1000x slowdown
     agents:
       queue: "juliagpu"
       cuda: "*"
-    timeout_in_minutes: 120
+    env:
+      GROUP: 'GPU'
+      JULIA_PKG_SERVER: "" # it often struggles with our large artifacts
+      # SECRET_CODECOV_TOKEN: "..."
+    timeout_in_minutes: 60
     # Don't run Buildkite if the commit message includes the text [skip tests]
     if: build.message !~ /\[skip tests\]/

@@ -1,5 +1,5 @@
 #! format: off
-using JumpProcesses, DiffEqBase, SafeTestsets
+using JumpProcesses, SafeTestsets
 
 const GROUP = get(ENV, "GROUP", "All")
 

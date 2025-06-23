@@ -23,6 +23,35 @@ steps:
     agents:
       queue: "juliagpu"
       cuda: "*"
-    timeout_in_minutes: 120
+
+  - label: "GPU"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1"
+      - JuliaCI/julia-test#v1:
+           coverage: false # 1000x slowdown
+    agents:
+      queue: "juliagpu"
+      cuda: "*"
+    env:
+      GROUP: 'GPU'
+      JULIA_PKG_SERVER: "" # it often struggles with our large artifacts
+      # SECRET_CODECOV_TOKEN: "..."
+    timeout_in_minutes: 60
     # Don't run Buildkite if the commit message includes the text [skip tests]
     if: build.message !~ /\[skip tests\]/
+
+  - label: "Correctness"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1.10"
+      - JuliaCI/julia-test#v1:
+          coverage: true
+          julia_args: "--threads=auto"
+    agents:
+      os: "linux"
+      queue: "juliaecosystem"
+      arch: "x86_64"
+      exclusive: true
+    env:
+      GROUP: 'Correctness'

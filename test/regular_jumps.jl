@@ -29,6 +29,7 @@ prob_disc = DiscreteProblem(u0, tspan, p)
 rj = RegularJump(regular_rate, regular_c, 3)
 jump_prob = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
+sol = solve(jump_prob, SimpleTauLeaping(); backend=CPU(), trajectories = 100, dt = 1.0)
 
 # SEIR model with exposed compartment
 β = 0.3 / 1000.0
@@ -59,3 +60,4 @@ prob_disc = DiscreteProblem(u0, tspan, p)
 rj = RegularJump(regular_rate, regular_c, 3)
 jump_prob = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
+sol = solve(jump_prob, SimpleTauLeaping(); backend=CPU(), trajectories = 100, dt = 1.0)

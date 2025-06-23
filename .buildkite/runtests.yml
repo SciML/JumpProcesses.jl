@@ -30,3 +30,6 @@ steps:
       exclusive: true
     env:
       GROUP: 'Correctness'
+      timeout_in_minutes: 120
+      # Don't run Buildkite if the commit message includes the text [skip tests]
+      if: build.message !~ /\[skip tests\]/

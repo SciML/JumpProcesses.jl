@@ -1,4 +1,4 @@
-module JumpProcessesExt
+module JumpProcessesKernelAbstractionsExt
 
 using JumpProcesses
 using KernelAbstractions, Adapt

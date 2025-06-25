@@ -1,31 +1,66 @@
 module JumpProcessesKernelAbstractionsExt
 
-using JumpProcesses
+using JumpProcesses, SciMLBase
 using KernelAbstractions, Adapt
-using PoissonRandom, RandomNumbers
 using StaticArrays
+using StableRNGs
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
-        backend = CPU(),
-        trajectories = 1,
+function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem, 
+        alg::SimpleTauLeaping,
+        ensemblealg::EnsembleGPUKernel;
+        trajectories,
         seed = nothing,
-        dt = error("dt is required for SimpleTauLeaping."))
+        dt = error("dt is required for SimpleTauLeaping."),
+        kwargs...)
+
+    if trajectories == 1
+        return SciMLBase.__solve(ensembleprob, alg, EnsembleSerial(); trajectories = 1,
+            seed, dt, kwargs...)
+    end
+
+    ensemblealg.backend === nothing ?  backend = CPU() : 
+    backend = ensemblealg.backend
+
+    jump_prob = ensembleprob.prob
 
     # boilerplate from SimpleTauLeaping method
     @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
     prob = jump_prob.prob
     
+    probs = [remake(jump_prob) for _ in 1:trajectories]
+
     # Run vectorized solve
-    ts, us = vectorized_solve(jump_prob, SimpleTauLeaping(); backend, trajectories, seed, dt)
+    ts, us = vectorized_solve(probs, jump_prob, SimpleTauLeaping(); backend, trajectories, seed, dt)
 
     # Convert to CPU for inspection
-    ts = Array(ts)
-    us = Array(us)
+    _ts = Array(ts)
+    _us = Array(us)
 
-    sol = DiffEqBase.build_solution(prob, alg, ts, us,
-        calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(ts, us))
+    time = @elapsed sol = [begin
+                                ts = @view _ts[:, i]
+                                us = @view _us[:, :, i]
+                                sol_idx = findlast(x -> x != probs[i].prob.tspan[1], ts)
+                                if sol_idx === nothing
+                                    @error "No solution found" tspan=probs[i].tspan[1] ts
+                                    error("Batch solve failed")
+                                end
+                                @views ensembleprob.output_func(
+                                    SciMLBase.build_solution(probs[i].prob,
+                                        alg,
+                                        ts[1:sol_idx],
+                                        [us[j, :] for j in 1:sol_idx],
+                                        k = nothing,
+                                        stats = nothing,
+                                        calculate_error = false,
+                                        retcode = sol_idx !=
+                                                length(ts) ?
+                                                ReturnCode.Terminated :
+                                                ReturnCode.Success),
+                                    i)[1]
+                            end
+                            for i in eachindex(probs)]
+    return SciMLBase.EnsembleSolution(sol, time, true)                      
 end
 
 # Define an immutable struct to hold trajectory-specific data
@@ -40,6 +75,18 @@ struct JumpData{R, C}
     rate::R
     c::C
     numjumps::Int
+end
+
+# GPU-compatible Poisson sampling with StableRNG (LehmerRNG)
+@inline function poisson_rand(rng::StableRNGs.LehmerRNG, lambda::Float64)
+    L = exp(-lambda)
+    k = 0
+    p = 1.0
+    while p > L
+        k += 1
+        p *= rand(rng, Float64)
+    end
+    return k - 1
 end
 
 # SimpleTauLeaping kernel
@@ -86,7 +133,7 @@ end
     end
 
     # Initialize RNG once per trajectory
-    rng = Xorshifts.Xoroshiro128Plus(seed + i)
+    rng = StableRNG(seed + i)
 
     # Main loop
     for j in 2:n
@@ -98,7 +145,7 @@ end
 
         # Poisson sampling
         @inbounds for k in 1:num_jumps
-            counts[k] = pois_rand(rng, rate_cache[k])
+            counts[k] = poisson_rand(rng, rate_cache[k])
         end
 
         # Apply changes
@@ -114,9 +161,7 @@ end
 end
 
 # Vectorized solve function
-function vectorized_solve(prob::JumpProblem, alg::SimpleTauLeaping; backend, trajectories, seed, dt, kwargs...)
-    probs = [remake(prob) for _ in 1:trajectories]
-
+function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backend, trajectories, seed, dt, kwargs...)
     # Extract common jump data
     rj = prob.regular_jump
     rj_data = JumpData(rj.rate, rj.c, rj.numjumps)

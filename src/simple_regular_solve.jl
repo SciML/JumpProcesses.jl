@@ -50,4 +50,17 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
-export SimpleTauLeaping
+struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm
+    backend::Backend
+    cpu_offload::Float64
+end
+
+function EnsembleGPUKernel(backend)
+    EnsembleGPUKernel(backend, 0.0)
+end
+
+function EnsembleGPUKernel()
+    EnsembleGPUKernel(nothing, 0.0)
+end
+
+export SimpleTauLeaping, EnsembleGPUKernel

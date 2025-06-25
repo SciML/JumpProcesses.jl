@@ -2,8 +2,8 @@ module JumpProcessesKernelAbstractionsExt
 
 using JumpProcesses
 using KernelAbstractions, Adapt
+using PoissonRandom, RandomNumbers
 using StaticArrays
-using StableRNGs
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         backend = CPU(),
@@ -40,18 +40,6 @@ struct JumpData{R, C}
     rate::R
     c::C
     numjumps::Int
-end
-
-# GPU-compatible Poisson sampling with StableRNG (LehmerRNG)
-@inline function poisson_rand(rng::StableRNGs.LehmerRNG, lambda::Float64)
-    L = exp(-lambda)
-    k = 0
-    p = 1.0
-    while p > L
-        k += 1
-        p *= rand(rng, Float64)
-    end
-    return k - 1
 end
 
 # SimpleTauLeaping kernel
@@ -98,7 +86,7 @@ end
     end
 
     # Initialize RNG once per trajectory
-    rng = StableRNG(seed + i)
+    rng = Xorshifts.Xoroshiro128Plus(seed + i)
 
     # Main loop
     for j in 2:n
@@ -110,7 +98,7 @@ end
 
         # Poisson sampling
         @inbounds for k in 1:num_jumps
-            counts[k] = Float64(poisson_rand(rng, rate_cache[k]))
+            counts[k] = pois_rand(rng, rate_cache[k])
         end
 
         # Apply changes

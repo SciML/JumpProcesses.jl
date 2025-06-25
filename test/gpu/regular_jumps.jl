@@ -1,6 +1,6 @@
 using JumpProcesses, DiffEqBase
 using Test, LinearAlgebra
-using KernelAbstractions, Adapt, CUDA
+using KernelAbstractions, Adapt
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -28,8 +28,8 @@ tspan = (0.0, 250.0)
 
 prob_disc = DiscreteProblem(u0, tspan, p)
 rj = RegularJump(regular_rate, regular_c, 3)
-jump_prob = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
-sol = solve(jump_prob, SimpleTauLeaping(); backend = CUDABackend(), trajectories = 10, dt = 1.0)
+jump_prob = JumpProblem(prob_disc, Direct(), rj)
+sol = solve(jump_prob, SimpleTauLeaping(); trajectories = 10, dt = 1.0)
 
 # SEIR model with exposed compartment
 β = 0.3 / 1000.0

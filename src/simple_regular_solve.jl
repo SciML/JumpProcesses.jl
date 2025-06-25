@@ -8,8 +8,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
     prob = jump_prob.prob
-    seed === nothing ? rng = Xorshifts.Xoroshiro128Plus() :
-    rng = Xorshifts.Xoroshiro128Plus(seed)
+    rng = DEFAULT_RNG
+    (seed !== nothing) && seed!(rng, rand(seed))
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)

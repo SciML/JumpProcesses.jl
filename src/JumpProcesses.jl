@@ -3,7 +3,7 @@ module JumpProcesses
 using Reexport
 @reexport using DiffEqBase
 
-using RandomNumbers, LinearAlgebra, Markdown, DocStringExtensions
+using LinearAlgebra, Markdown, DocStringExtensions
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs

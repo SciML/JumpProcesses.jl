@@ -9,7 +9,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
     prob = jump_prob.prob
     rng = DEFAULT_RNG
-    (seed !== nothing) && seed!(rng, rand(seed))
+    (seed !== nothing) && seed!(rng, seed)
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)

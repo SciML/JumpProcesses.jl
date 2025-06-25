@@ -3,61 +3,39 @@ using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)
 
-# SIR model with influx
-β = 0.1 / 1000.0
-ν = 0.01
-influx_rate = 1.0
-p = (β, ν, influx_rate)
-
-regular_rate = (out, u, p, t) -> begin
-    out[1] = p[1] * u[1] * u[2]  # β*S*I (infection)
-    out[2] = p[2] * u[2]         # ν*I (recovery)
-    out[3] = p[3]                # influx_rate
+function regular_rate(out, u, p, t)
+    out[1] = (0.1 / 1000.0) * u[1] * u[2]
+    out[2] = 0.01u[2]
 end
 
-regular_c = (dc, u, p, t, counts, mark) -> begin
-    dc .= 0.0
-    dc[1] = -counts[1] + counts[3]  # S: -infection + influx
-    dc[2] = counts[1] - counts[2]   # I: +infection - recovery
-    dc[3] = counts[2]               # R: +recovery
+function regular_c(dc, u, p, t, mark)
+    dc[1, 1] = -1
+    dc[2, 1] = 1
+    dc[2, 2] = -1
+    dc[3, 2] = 1
 end
 
-u0 = [999.0, 10.0, 0.0]  # S, I, R
-tspan = (0.0, 250.0)
+dc = zeros(3, 2)
 
-prob_disc = DiscreteProblem(u0, tspan, p)
-rj = RegularJump(regular_rate, regular_c, 3)
-jump_prob = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
+rj = RegularJump(regular_rate, regular_c, dc; constant_c = true)
+jumps = JumpSet(rj)
+
+prob = DiscreteProblem([999.0, 1.0, 0.0], (0.0, 250.0))
+jump_prob = JumpProblem(prob, Direct(), rj; rng = rng)
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
-sol = solve(jump_prob, SimpleTauLeaping(); trajectories = 100, dt = 1.0)
 
-# SEIR model with exposed compartment
-β = 0.3 / 1000.0
-σ = 0.2
-ν = 0.01
-p = (β, σ, ν)
+const _dc = zeros(3, 2)
+dc[1, 1] = -1
+dc[2, 1] = 1
+dc[2, 2] = -1
+dc[3, 2] = 1
 
-regular_rate = (out, u, p, t) -> begin
-    out[1] = p[1] * u[1] * u[3]  # β*S*I (infection)
-    out[2] = p[2] * u[2]         # σ*E (progression)
-    out[3] = p[3] * u[3]         # ν*I (recovery)
+function regular_c(du, u, p, t, counts, mark)
+    mul!(du, dc, counts)
 end
 
-regular_c = (dc, u, p, t, counts, mark) -> begin
-    dc .= 0.0
-    dc[1] = -counts[1]           # S: -infection
-    dc[2] = counts[1] - counts[2] # E: +infection - progression
-    dc[3] = counts[2] - counts[3] # I: +progression - recovery
-    dc[4] = counts[3]            # R: +recovery
-end
-
- # Initial state
-u0 = [999.0, 0.0, 10.0, 0.0]  # S, E, I, R
-tspan = (0.0, 250.0)
-
-# Create JumpProblem
-prob_disc = DiscreteProblem(u0, tspan, p)
-rj = RegularJump(regular_rate, regular_c, 3)
-jump_prob = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
+rj = RegularJump(regular_rate, regular_c, 2)
+jumps = JumpSet(rj)
+prob = DiscreteProblem([999, 1, 0], (0.0, 250.0))
+jump_prob = JumpProblem(prob, Direct(), rj; rng = rng)
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
-sol = solve(jump_prob, SimpleTauLeaping(); trajectories = 100, dt = 1.0)

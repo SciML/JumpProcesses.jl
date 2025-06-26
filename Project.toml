@@ -24,7 +24,12 @@ SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [weakdeps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+
+[extensions]
+JumpProcessesKernelAbstractionsExt = ["Adapt", "KernelAbstractions"]
 
 [compat]
 ArrayInterface = "7.9"

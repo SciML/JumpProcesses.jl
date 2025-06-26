@@ -137,7 +137,7 @@ of points that we expect to see in the next marginal interval ``E[dNt(dt \times 
 Daley and Vere-Jones[^1].
 
 PointProcesses provides a convenient interface for keeping track of the history
-of a marked TPP called `History`.
+of a marked TPP called `History` (*note* this is just the definition in PointProcesses and not code that should be run as part of this tutorial):
 
 ```@example julia
 mutable struct History{M, T <: Real}
@@ -148,7 +148,7 @@ mutable struct History{M, T <: Real}
 end
 ```
 
-We define a method for resetting the history, which can be useful during simulation.
+We next define a method for resetting the history, which can be useful during simulation.
 
 ```@example tpp-advanced
 function reset!(h::History)

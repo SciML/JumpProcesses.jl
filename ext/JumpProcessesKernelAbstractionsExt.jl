@@ -3,7 +3,6 @@ module JumpProcessesKernelAbstractionsExt
 using JumpProcesses, SciMLBase
 using KernelAbstractions, Adapt
 using StaticArrays
-using StableRNGs
 
 function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem, 
         alg::SimpleTauLeaping,
@@ -78,13 +77,13 @@ struct JumpData{R, C}
 end
 
 # GPU-compatible Poisson sampling with StableRNG (LehmerRNG)
-@inline function poisson_rand(rng::StableRNGs.LehmerRNG, lambda::Float64)
+@inline function poisson_rand(lambda::Float64)
     L = exp(-lambda)
     k = 0
     p = 1.0
     while p > L
         k += 1
-        p *= rand(rng, Float64)
+        p *= rand(Float64)
     end
     return k - 1
 end
@@ -132,9 +131,6 @@ end
         us_view[1, k] = current_u[k]
     end
 
-    # Initialize RNG once per trajectory
-    rng = StableRNG(seed + i)
-
     # Main loop
     for j in 2:n
         tprev = tspan[1] + (j-2) * dt
@@ -145,7 +141,7 @@ end
 
         # Poisson sampling
         @inbounds for k in 1:num_jumps
-            counts[k] = poisson_rand(rng, rate_cache[k])
+            counts[k] = poisson_rand(rate_cache[k])
         end
 
         # Apply changes

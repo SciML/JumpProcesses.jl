@@ -76,18 +76,6 @@ struct JumpData{R, C}
     numjumps::Int
 end
 
-# GPU-compatible Poisson sampling with StableRNG (LehmerRNG)
-@inline function poisson_rand(lambda::Float64)
-    L = exp(-lambda)
-    k = 0
-    p = 1.0
-    while p > L
-        k += 1
-        p *= rand(Float64)
-    end
-    return k - 1
-end
-
 # SimpleTauLeaping kernel
 @kernel function simple_tau_leaping_kernel(@Const(probs_data), _us, _ts, dt, @Const(rj_data),
                                           current_u_buf, rate_cache_buf, counts_buf, local_dc_buf,
@@ -163,7 +151,7 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backe
     rj_data = JumpData(rj.rate, rj.c, rj.numjumps)
 
     # Extract trajectory-specific data without static typing
-    probs_data = [TrajectoryData(SA{Float64}[p.prob.u0...], p.prob.p, p.prob.tspan) for p in probs]
+    probs_data = [TrajectoryData(SA{eltype(p.prob.u0)}[p.prob.u0...], p.prob.p, p.prob.tspan) for p in probs]
 
     # Adapt to GPU
     probs_data_gpu = adapt(backend, probs_data)
@@ -183,13 +171,13 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backe
 
     # Allocate time and state arrays
     ts = allocate(backend, eltype(prob.prob.tspan), (n_steps, n_trajectories))
-    us = allocate(backend, eltype(first(probs_data).u0), (n_steps, state_dim, n_trajectories))
+    us = allocate(backend, eltype(prob.prob.u0), (n_steps, state_dim, n_trajectories))
 
     # Pre-allocate thread-local buffers
-    current_u_buf = allocate(backend, Float64, (state_dim, n_trajectories))
-    rate_cache_buf = allocate(backend, Float64, (num_jumps, n_trajectories))
-    counts_buf = allocate(backend, Float64, (num_jumps, n_trajectories))
-    local_dc_buf = allocate(backend, Float64, (state_dim, n_trajectories))
+    current_u_buf = allocate(backend, eltype(prob.prob.u0), (state_dim, n_trajectories))
+    rate_cache_buf = allocate(backend, eltype(prob.prob.u0), (num_jumps, n_trajectories))
+    counts_buf = allocate(backend, eltype(prob.prob.u0), (num_jumps, n_trajectories))
+    local_dc_buf = allocate(backend, eltype(prob.prob.u0), (state_dim, n_trajectories))
 
     # Initialize current_u_buf with u0 values
     @kernel function init_buffers_kernel(@Const(probs_data), current_u_buf)
@@ -214,6 +202,18 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backe
     KernelAbstractions.synchronize(backend)
 
     return ts, us
+end
+
+# GPU-compatible Poisson sampling
+@inline function poisson_rand(lambda::T) where T
+    L = exp(-lambda)
+    k = 0
+    p = 1.0
+    while p > L
+        k += 1
+        p *= rand(T)
+    end
+    return k - 1
 end
 
 end

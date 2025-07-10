@@ -52,6 +52,7 @@ end
 
     if GROUP == "CUDA"
         activate_gpu_env()
+        @time @safetestset "GPU Tau Leaping test" begin include("gpu/regular_jumps.jl") end
     end
 
     if GROUP == "Correctness"

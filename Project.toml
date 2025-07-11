@@ -32,6 +32,7 @@ KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 JumpProcessesKernelAbstractionsExt = ["Adapt", "KernelAbstractions"]
 
 [compat]
+Adapt = "4"
 ArrayInterface = "7.9"
 DataStructures = "0.18"
 DiffEqBase = "6.154"

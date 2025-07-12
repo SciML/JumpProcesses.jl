@@ -1,8 +1,11 @@
 module JumpProcessesKernelAbstractionsExt
 
-using JumpProcesses, SciMLBase
+using JumpProcesses, SciMLBase, DiffEqBase
 using KernelAbstractions, Adapt
 using StaticArrays
+using Random
+
+include("ssa_stepper.jl")
 
 function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem, 
         alg::SimpleTauLeaping,

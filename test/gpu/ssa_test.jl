@@ -24,6 +24,6 @@ integrator.u[1]
 
 # test different saving behaviors
 
-sol = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleGPUKernel(), 
+sol = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleGPUKernel(CUDABackend()), 
             trajectories=100, saveat=1.0)
 plot(sol)

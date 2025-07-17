@@ -1,15 +1,57 @@
-# Define a GPU-compatible jump data structure
-struct GPUJumpData{RF, AF}
-    num_jumps::Int
-    rates::RF
-    affects::AF
-end
-
-# Helper to convert DirectJumpAggregation into GPUJumpData
-function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation)
+function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::JumpProblem, backend)
+    num_jumps = length(agg.rates)
+    state_dim = length(prob.prob.u0)  # Get state dimension from DiscreteProblem
+    p = prob.prob.p
+    t = prob.prob.tspan[1]
     rates = agg.rates
     affects = agg.affects!
-    return GPUJumpData(length(rates), rates, affects)
+
+    # Initialize arrays
+    rate_coeffs = zeros(Float64, num_jumps)
+    affect_increments = zeros(Int64, num_jumps, state_dim)
+    depend_idx = zeros(Int64, num_jumps)
+
+    # Test point for evaluating rate functions
+    u_test = ones(Float64, state_dim)
+
+    # Extract rate coefficients and dependency indices
+    for k in 1:num_jumps
+        rate_base = rates[k](u_test, p, t)
+        found_dep = false
+        for i in 1:state_dim
+            u_perturbed = copy(u_test)
+            u_perturbed[i] = 2.0
+            rate_perturbed = rates[k](u_perturbed, p, t)
+            delta_rate = rate_perturbed - rate_base
+            if abs(delta_rate) > 1e-10  # Detect significant dependence
+                rate_coeffs[k] = delta_rate / (u_perturbed[i] - u_test[i])
+                depend_idx[k] = i
+                found_dep = true
+                break
+            end
+        end
+        if !found_dep
+            rate_coeffs[k] = rate_base  # Constant rate (no state dependency)
+            depend_idx[k] = 1  # Default to first state
+        end
+    end
+
+    # Extract affect increments
+    for k in 1:num_jumps
+        u = copy(u_test)
+        mock_integrator = (u=u, p=p, t=t)
+        affects[k](mock_integrator)
+        for i in 1:state_dim
+            affect_increments[k, i] = Int64(u[i] - u_test[i])
+        end
+    end
+
+    # Adapt to GPU
+    num_jumps = adapt(backend, num_jumps)
+    rate_coeffs_gpu = adapt(backend, rate_coeffs)
+    affect_increments_gpu = adapt(backend, affect_increments)
+    depend_idx_gpu = adapt(backend, depend_idx)
+    return (num_jumps, rate_coeffs_gpu, affect_increments_gpu, depend_idx_gpu)
 end
 
 # Entry point for solving ensembles on GPU
@@ -28,7 +70,7 @@ function SciMLBase.__solve(
 )
     if trajectories == 1
         return SciMLBase.__solve(ensembleprob, alg, EnsembleSerial();
-                                 trajectories=1, seed, saveat, save_everystep, save_start, save_end, kwargs...)
+                                 trajectories=1, seed, max_steps, kwargs...)
     end
 
     prob = ensembleprob.prob
@@ -50,15 +92,13 @@ function SciMLBase.__solve(
     p = prob.prob.p
     t0 = prob.prob.tspan[1]
     total_rate = sum(rate_func(u0, p, t0) for rate_func in rate_funcs)
-    max_steps = max_steps === nothing ? Int(ceil(max(1000, prob.prob.tspan[2] * total_rate * 2) + length(saveat isa Number ? collect(prob.prob.tspan[1]:saveat:prob.prob.tspan[2]) : saveat))) : max_steps
+    max_steps = max_steps === nothing ? Int(ceil(max(1000, prob.prob.tspan[2] * total_rate * 2))) : max_steps
     @assert max_steps > 0 "max_steps must be positive"
 
-    # Build GPU jump data
-    rj_data = make_gpu_jump_data(agg)
-    rj_data_gpu = adapt(backend, GPUJumpData(rj_data.num_jumps, rj_data.rates, rj_data.affects))
+    rj_data = make_gpu_jump_data(agg, prob, backend)
+    rj_data_gpu = adapt(backend, rj_data)
 
-    # Run vectorized Gillespie Direct SSA
-    ts, us = vectorized_gillespie_direct(probs, prob, alg; backend, trajectories, seed, saveat, save_everystep, save_start, save_end, max_steps, rj_data=rj_data_gpu)
+    ts, us = vectorized_gillespie_direct(probs, prob, alg; backend, trajectories, seed, max_steps, rj_data=rj_data_gpu)
 
     # Bring results back to CPU
     _ts = Array(ts)
@@ -95,7 +135,6 @@ struct TrajectoryDataSSA{U <: StaticArray, P, T}
     p::P
     t_start::T
     t_end::T
-    saveat::Vector{T}
 end
 
 # GPU-compatible random number generation
@@ -112,33 +151,21 @@ end
 
 # Main vectorized solver
 function vectorized_gillespie_direct(probs, prob::JumpProblem, alg::SSAStepper;
-                                    backend, trajectories, seed, saveat, save_everystep, save_start, save_end, max_steps, rj_data)
-    # Prepare saveat
-    _saveat = saveat isa Number ? collect(prob.prob.tspan[1]:saveat:prob.prob.tspan[2]) : saveat
-    _saveat = save_start && _saveat !== nothing && !isempty(_saveat) && _saveat[1] != prob.prob.tspan[1] ?
-              vcat(prob.prob.tspan[1], _saveat) : _saveat
-    _saveat = save_end && _saveat !== nothing && !isempty(_saveat) && _saveat[end] != prob.prob.tspan[2] ?
-              vcat(_saveat, prob.prob.tspan[2]) : _saveat
-    _saveat = _saveat === nothing ? Float64[] : _saveat
-
-    # Convert to static arrays
+                                    backend, trajectories, seed, max_steps, rj_data)
+    num_jumps, rate_coeffs, affect_increments, depend_idx = rj_data  # Unpack the tuple
     probs_data = [TrajectoryDataSSA(SA{eltype(p.prob.u0)}[p.prob.u0...], 
         p.prob.p, 
-        p.prob.tspan[1],  # t_start
-        p.prob.tspan[2],  # t_end
-        _saveat) for p in probs]
+        p.prob.tspan[1], 
+        p.prob.tspan[2]) for p in probs]
     probs_data_gpu = adapt(backend, probs_data)
 
     state_dim = length(first(probs_data).u0)
-    num_jumps = rj_data.num_jumps
 
-    # Allocate buffers
     ts = allocate(backend, Float64, (max_steps, trajectories))
     us = allocate(backend, Float64, (max_steps, state_dim, trajectories))
     current_u_buf = allocate(backend, Float64, (state_dim, trajectories))
     rate_cache_buf = allocate(backend, Float64, (num_jumps, trajectories))
 
-    # Initialize current_u_buf with u0
     @kernel function init_buffers_kernel(@Const(probs_data), current_u_buf)
         i = @index(Global, Linear)
         if i <= size(current_u_buf, 2)
@@ -154,7 +181,7 @@ function vectorized_gillespie_direct(probs, prob::JumpProblem, alg::SSAStepper;
 
     seed_val = seed === nothing ? UInt64(12345) : UInt64(seed)
     kernel = gillespie_direct_kernel(backend)
-    kernel_event = kernel(probs_data_gpu, rj_data, us, ts, current_u_buf, rate_cache_buf, seed_val, max_steps;
+    kernel_event = kernel(probs_data_gpu, num_jumps, rate_coeffs, affect_increments, depend_idx, us, ts, current_u_buf, rate_cache_buf, seed_val, max_steps;
                          ndrange=trajectories)
     synchronize(backend)
 
@@ -162,8 +189,9 @@ function vectorized_gillespie_direct(probs, prob::JumpProblem, alg::SSAStepper;
 end
 
 # Main Gillespie Direct kernel
-@kernel function gillespie_direct_kernel(@Const(prob_data), @Const(rj_data),
-                                         us_out, ts_out, current_u_buf, rate_cache_buf, seed::UInt64, max_steps)
+@kernel function gillespie_direct_kernel(@Const(prob_data), @Const(num_jumps),
+                                        @Const(rate_coeffs), @Const(affect_increments),
+                                        @Const(depend_idx), us_out, ts_out, current_u_buf, rate_cache_buf, seed::UInt64, max_steps)
     i = @index(Global, Linear)
     if i <= size(current_u_buf, 2)
         current_u = view(current_u_buf, :, i)
@@ -174,7 +202,6 @@ end
         p = prob_i.p
         t_start = prob_i.t_start
         t_end = prob_i.t_end
-        saveat = prob_i.saveat
 
         state_dim = length(u0)
         @inbounds for k in 1:state_dim
@@ -183,7 +210,6 @@ end
 
         t = t_start
         step_idx = 1
-        saveat_idx = 1
         ts_view = view(ts_out, :, i)
         us_view = view(us_out, :, :, i)
 
@@ -201,44 +227,23 @@ end
 
         while t < t_end && step_idx < max_steps
             total_rate = 0.0
-            @inbounds for k in 1:rj_data.num_jumps
-                rate = rj_data.rates[k](current_u, p, t)
+            @inbounds for k in 1:num_jumps
+                rate = rate_coeffs[k] * current_u[depend_idx[k]]
                 rate_cache[k] = max(0.0, rate)
                 total_rate += rate_cache[k]
             end
 
             if total_rate <= 0.0
-                if !isempty(saveat)
-                    while saveat_idx <= length(saveat) && step_idx < max_steps && saveat[saveat_idx] <= t_end
-                        step_idx += 1
-                        ts_view[step_idx] = saveat[saveat_idx]
-                        @inbounds for k in 1:state_dim
-                            us_view[step_idx, k] = current_u[k]
-                        end
-                        saveat_idx += 1
-                    end
-                end
                 break
             end
 
             delta_t = exponential_rand(total_rate, seed + UInt64(i * max_steps + step_idx), i)
             next_t = t + delta_t
 
-            if !isempty(saveat)
-                while saveat_idx <= length(saveat) && saveat[saveat_idx] <= next_t && step_idx < max_steps
-                    step_idx += 1
-                    ts_view[step_idx] = saveat[saveat_idx]
-                    @inbounds for k in 1:state_dim
-                        us_view[step_idx, k] = current_u[k]
-                    end
-                    saveat_idx += 1
-                end
-            end
-
             r = total_rate * uniform_rand(seed + UInt64(i * max_steps + step_idx + 1), i)
             cum_rate = 0.0
             jump_idx = 0
-            @inbounds for k in 1:rj_data.num_jumps
+            @inbounds for k in 1:num_jumps
                 cum_rate += rate_cache[k]
                 if r <= cum_rate
                     jump_idx = k
@@ -248,8 +253,9 @@ end
 
             if next_t <= t_end && jump_idx > 0 && step_idx < max_steps
                 t = next_t
-                mock_integrator = (u=current_u, p=p, t=t)
-                rj_data.affects[jump_idx](mock_integrator)
+                @inbounds for j in 1:state_dim
+                    current_u[j] += affect_increments[jump_idx, j]
+                end
                 step_idx += 1
                 ts_view[step_idx] = t
                 @inbounds for k in 1:state_dim
@@ -258,15 +264,6 @@ end
             else
                 t = t_end
             end
-        end
-
-        while saveat_idx <= length(saveat) && step_idx < max_steps
-            step_idx += 1
-            ts_view[step_idx] = saveat[saveat_idx]
-            @inbounds for k in 1:state_dim
-                us_view[step_idx, k] = current_u[k]
-            end
-            saveat_idx += 1
         end
     end
 end

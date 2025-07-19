@@ -1,5 +1,5 @@
 # Modified make_gpu_jump_data to handle arbitrary dependencies
-function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::JumpProblem, backend)
+function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::JumpProblem, backend; user_rate_indices=nothing)
     num_jumps = length(agg.rates)
     state_dim = length(prob.prob.u0)
     p = prob.prob.p
@@ -9,7 +9,7 @@ function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::Jump
 
     # Initialize arrays for affect increments
     affect_increments = zeros(Int64, num_jumps, state_dim)
-    u_test = ones(Float64, state_dim)
+    u_test = copy(prob.prob.u0)  # Use initial state for realistic affect testing
 
     # Extract affect increments
     for k in 1:num_jumps
@@ -17,7 +17,7 @@ function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::Jump
         mock_integrator = (u=u, p=p, t=t)
         affects[k](mock_integrator)
         for i in 1:state_dim
-            affect_increments[k, i] = Int64(u[i] - u_test[i])
+            affect_increments[k, i] = Int64(round(u[i] - u_test[i]))
         end
     end
 
@@ -27,16 +27,25 @@ function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::Jump
     depend_starts = zeros(Int64, num_jumps)  # Start index for each jump
     depend_counts = zeros(Int64, num_jumps)  # Number of dependencies per jump
 
+    # Test points: ones, initial state, and perturbed state
+    test_points = [ones(Float64, state_dim), prob.prob.u0, 2.0 * ones(Float64, state_dim)]
     for k in 1:num_jumps
-        rate_base = rates[k](u_test, p, t)
         deps = Int64[]
-        for i in 1:state_dim
-            u_perturbed = copy(u_test)
-            u_perturbed[i] = 2.0
-            rate_perturbed = rates[k](u_perturbed, p, t)
-            delta_rate = rate_perturbed - rate_base
-            if abs(delta_rate) > 1e-10
-                push!(deps, i)
+        rate_base = rates[k](test_points[1], p, t)
+        is_constant = true
+
+        # Check dependencies across multiple test points
+        for u_test in test_points
+            rate_base = rates[k](u_test, p, t)
+            for i in 1:state_dim
+                u_perturbed = copy(u_test)
+                u_perturbed[i] = u_test[i] * 1.5 + 1e-6  # Small perturbation
+                rate_perturbed = rates[k](u_perturbed, p, t)
+                delta_rate = rate_perturbed - rate_base
+                if abs(delta_rate) > 1e-6 * max(abs(rate_base), 1e-6) && !(i in deps)
+                    push!(deps, i)
+                    is_constant = false
+                end
             end
         end
 
@@ -44,13 +53,32 @@ function make_gpu_jump_data(agg::JumpProcesses.DirectJumpAggregation, prob::Jump
         depend_counts[k] = length(deps)
         append!(depend_indices, deps)
 
-        if isempty(deps)
-            # Constant rate
+        if is_constant
             rate_coeffs[k] = rate_base
         else
-            # Assume polynomial rate: k * prod(u[i] for i in deps)
-            u_prod = prod(u_test[i] for i in deps)
-            rate_coeffs[k] = rate_base / u_prod
+            # Compute coefficient assuming rate = k * prod(u[i] for i in deps)
+            u_test = test_points[2]  # Use initial state
+            rate_base = rates[k](u_test, p, t)
+            u_prod = prod(u_test[i] for i in deps; init=1.0)
+            rate_coeffs[k] = u_prod != 0.0 ? rate_base / u_prod : 0.0
+        end
+    end
+
+    # Override with user-provided rate indices if available
+    if user_rate_indices !== nothing
+        @assert length(user_rate_indices) == num_jumps "user_rate_indices must match number of jumps"
+        depend_indices = Int64[]
+        depend_starts = zeros(Int64, num_jumps)
+        depend_counts = zeros(Int64, num_jumps)
+        for k in 1:num_jumps
+            deps = user_rate_indices[k]
+            depend_starts[k] = length(depend_indices) + 1
+            depend_counts[k] = length(deps)
+            append!(depend_indices, deps)
+            u_test = test_points[2]
+            rate_base = rates[k](u_test, p, t)
+            u_prod = prod(u_test[i] for i in deps; init=1.0)
+            rate_coeffs[k] = u_prod != 0.0 ? rate_base / u_prod : 0.0
         end
     end
 

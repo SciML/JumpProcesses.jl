@@ -1,8 +1,11 @@
 module JumpProcessesKernelAbstractionsExt
 
-using JumpProcesses, SciMLBase
+using JumpProcesses, SciMLBase, DiffEqBase
 using KernelAbstractions, Adapt
-using StaticArrays
+using StaticArrays, LinearAlgebra
+using Random
+
+include("./implicit_tau.jl")
 
 function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem, 
         alg::SimpleTauLeaping,

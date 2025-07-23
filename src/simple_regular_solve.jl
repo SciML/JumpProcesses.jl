@@ -73,3 +73,15 @@ end
 function EnsembleGPUKernel()
     EnsembleGPUKernel(nothing, 0.0)
 end
+
+# Define ImplicitTauLeaping algorithm
+struct ImplicitTauLeaping <: DiffEqBase.DEAlgorithm
+    epsilon::Float64  # Error control parameter
+    nc::Int          # Critical reaction threshold
+    nstiff::Int      # Stiffness threshold multiplier
+    delta::Float64   # Partial equilibrium threshold
+end
+
+ImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100, delta=0.05) = ImplicitTauLeaping(epsilon, nc, nstiff, delta)
+
+export SimpleTauLeaping, EnsembleGPUKernel, ImplicitTauLeaping

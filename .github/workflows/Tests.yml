@@ -31,6 +31,6 @@ jobs:
           - InterfaceII
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
-      julia-version: '1'
+      julia-version: "${{ matrix.version }}"
       group: ${{ matrix.group }}
     secrets: "inherit"

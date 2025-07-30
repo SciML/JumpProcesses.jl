@@ -68,6 +68,8 @@ function update_hop_rates!(hop_rates::AbstractHopRates, species::AbstractArray, 
     end
 end
 
+hop_rate(hop_rates, species, site) = @inbounds hop_rates.rates[species, site]
+
 """
     update_hop_rate!(hop_rates::HopRatesGraphDsi, species, u, site, spatial_system)
 

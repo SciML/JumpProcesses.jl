@@ -26,6 +26,7 @@ function RxRates(num_sites::Int, ma_jumps::M) where {M}
 end
 
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
+get_majumps(rx_rates::RxRates) = rx_rates.ma_jumps
 
 """
     reset!(rx_rates::RxRates)
@@ -37,6 +38,9 @@ function reset!(rx_rates::RxRates)
     fill!(rx_rates.sum_rates, zero(eltype(rx_rates.sum_rates)))
     nothing
 end
+
+rx_rate(rx_rates, rx, site) = rx_rates.rates[rx, site]
+evalrxrate(rx_rates, u, rx, site) = eval_massaction_rate(u, rx, rx_rates.ma_jumps, site)
 
 """
     total_site_rx_rate(rx_rates::RxRates, site)

@@ -2,7 +2,6 @@
 
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
-#NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
 mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, JVMAP,
     PQ, SS} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
@@ -96,12 +95,12 @@ end
 function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, integrator, t)
-    generate_jumps!(p, integrator, params, u, t)
+    generate_jumps!(p, integrator, u, params, t)
     nothing
 end
 
 # calculate the next jump / jump time
-function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
+function generate_jumps!(p::NSMJumpAggregation, integrator, u, params, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     p.next_jump_time >= p.end_time && return nothing
     p.next_jump = sample_jump_direct(p, site)

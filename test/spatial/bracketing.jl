@@ -10,7 +10,6 @@ n = 3 # number of sites
 
 # set up spatial system
 spatial_system = CartesianGrid((n,)) # n sites
-site_rates = JP.LowHigh(zeros(n), zeros(n))
 
 # set up reaction rates
 majump_rates = [0.1] # death at rate 0.1
@@ -36,7 +35,6 @@ integrator = Nothing # only needed for constant rate jumps
 for site in 1:num_sites(spatial_system)
     JP.update_rx_rates!(rx_rates, rxs, u_low_high, integrator, site)
     JP.update_hop_rates!(hop_rates, species_vec, u_low_high, site, spatial_system)
-    site_rates[site] = JP.total_site_rate(rx_rates, hop_rates, site)
 end
 
 # test species brackets

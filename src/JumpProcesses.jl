@@ -8,6 +8,7 @@ using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs
 using SciMLBase: SciMLBase, isdenseplot
+using NonlinearSolve
 using Base.FastMath: add_fast
 using Setfield: @set, @set!
 

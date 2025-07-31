@@ -36,7 +36,6 @@ end
     @inbounds return val * majump.scaled_rates[rxidx]
 end
 
-
 @inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
         majump::M) where {T, S, M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]

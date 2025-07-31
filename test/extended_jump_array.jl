@@ -44,7 +44,7 @@ bc_out .= 3.14 .* bc_eja_1 + 2.7 .* bc_eja_2
 # Test that mismatched arrays cannot be broadcasted
 bc_mismatch = ExtendedJumpArray(rand(rng, 8), rand(rng, 4))
 @test_throws DimensionMismatch bc_mismatch+bc_eja_1
-@test_throws DimensionMismatch bc_mismatch.+bc_eja_1
+@test_throws DimensionMismatch bc_mismatch .+ bc_eja_1
 
 # Test that datatype mixing persists through broadcasting
 bc_dtype_1 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))

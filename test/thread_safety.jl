@@ -18,19 +18,19 @@ solve(EnsembleProblem(jprob; safetycopy = true), SSAStepper(), EnsembleThreads()
 let
     function f!(du, u, p, t)
         du[1] = -u[1]
-        nothing 
+        nothing
     end
     u_0 = [1.0]
     ode_prob = ODEProblem(f!, u_0, (0.0, 10))
-    vrj = VariableRateJump((u,p,t) -> 1.0, integrator -> nothing)
+    vrj = VariableRateJump((u, p, t) -> 1.0, integrator -> nothing)
 
     for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jump_prob = JumpProblem(ode_prob, Direct(), vrj; vr_aggregator = agg)
         prob_func(prob, i, repeat) = deepcopy(prob)
-        prob = EnsembleProblem(jump_prob,prob_func = prob_func)
-        sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories=400, 
+        prob = EnsembleProblem(jump_prob, prob_func = prob_func)
+        sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories = 400,
             save_everystep = false)
-        firstrx_time = [sol.u[i].t[2] for i = 1:length(sol)]
-        @test allunique(firstrx_time) 
+        firstrx_time = [sol.u[i].t[2] for i in 1:length(sol)]
+        @test allunique(firstrx_time)
     end
 end

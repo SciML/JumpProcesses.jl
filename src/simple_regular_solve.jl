@@ -139,7 +139,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
                 rate(rate_cache, u, p, t[end])
                 if rate_cache[j] > 0
                     order = 1.0
-                    # Heuristic: if reaction involves multiple species, assume higher order
                     if sum(abs.(nu[:, j])) > abs(nu[i, j])
                         order = 2.0
                     end
@@ -167,7 +166,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
             tau = min(tau, mu_term, sigma_term)
         end
-        return tau
+        return max(tau, 1e-10)  # Prevent zero or negative tau
     end
     
     # Partial equilibrium check (Equation 13)
@@ -203,7 +202,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
             tau = min(tau, mu_term, sigma_term)
         end
-        return tau
+        return max(tau, 1e-10)  # Prevent zero or negative tau
     end
     
     # Identify critical reactions
@@ -230,7 +229,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
         u_new = copy(u_prev)
         rate_new = zeros(numjumps)
         tol = 1e-6
-        max_iter = 100
+        max_iter = 50
         for iter in 1:max_iter
             rate(rate_new, u_new, p, t_prev + tau)
             residual = u_new - u_prev
@@ -240,27 +239,36 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             if norm(residual) < tol
                 break
             end
-            # Approximate Jacobian (diagonal approximation for simplicity)
+            # Improved Jacobian approximation
             J = Diagonal(ones(length(u_new)))
             for j in 1:numjumps
                 for i in 1:length(u_new)
-                    # Heuristic derivative: assume linear or quadratic propensity
-                    rate(rate_new, u_new, p, t_prev + tau)
-                    if rate_new[j] > 0
-                        # Estimate derivative based on stoichiometry
-                        J[i, i] += nu[i, j] * tau * rate_new[j] / max(u_new[i], 1.0)
+                    if rate_new[j] > 0 && u_new[i] > 0
+                        # Scale derivative to prevent overflow
+                        J[i, i] += nu[i, j] * tau * min(rate_new[j] / u_new[i], 1e3)
                     end
                 end
             end
-            u_new -= J \ residual
+            # Check for singular or ill-conditioned Jacobian
+            if any(abs.(diag(J)) .< 1e-10)
+                return u_prev  # Revert to previous state if Jacobian is singular
+            end
+            delta_u = J \ residual
+            # Limit step size to prevent overflow
+            delta_u = clamp.(delta_u, -1e3, 1e3)
+            u_new -= delta_u
             u_new = max.(u_new, 0.0)
+            # Check for numerical overflow
+            if any(isnan.(u_new)) || any(isinf.(u_new))
+                return u_prev
+            end
         end
-        return round.(Int, u_new)
+        return round.(Int, max.(u_new, 0.0))
     end
     
     # Down-shifting condition (Equation 19)
     function use_down_shifting(t, tau_im, tau_ex, a0, t_end)
-        return t + tau_im >= t_end - 100 * (tau_ex + 1 / a0)
+        return a0 > 0 && t + tau_im >= t_end - 100 * (tau_ex + 1 / a0)
     end
     
     # Main simulation loop
@@ -284,9 +292,12 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
         
         # Choose method and stepsize
         a0 = sum(rate_cache)
-        use_implicit = tau_im > nstiff * tau_ex && !use_down_shifting(t_prev, tau_im, tau_ex, a0, t_end)
+        use_implicit = a0 > 0 && tau_im > nstiff * tau_ex && !use_down_shifting(t_prev, tau_im, tau_ex, a0, t_end)
         tau1 = use_implicit ? tau_im : tau_ex
         method = use_implicit ? :implicit : :explicit
+        
+        # Cap tau to prevent large updates
+        tau1 = min(tau1, 1.0)
         
         # Check if tau1 is too small
         if a0 > 0 && tau1 < 10 / a0
@@ -324,7 +335,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             counts .= 0
             for j in 1:numjumps
                 if !critical[j]
-                    counts[j] = pois_rand(rng, rate_cache[j] * tau)
+                    counts[j] = pois_rand(rng, max(rate_cache[j] * tau, 0.0))
                 end
             end
             if method == :implicit
@@ -351,7 +362,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             end
             for j in 1:numjumps
                 if !critical[j]
-                    counts[j] = pois_rand(rng, rate_cache[j] * tau)
+                    counts[j] = pois_rand(rng, max(rate_cache[j] * tau, 0.0))
                 end
             end
             if method == :implicit && tau > tau_ex

@@ -67,12 +67,11 @@ struct ImplicitTauLeaping <: DiffEqBase.DEAlgorithm
     nc::Int          # Critical reaction threshold
     nstiff::Float64  # Stiffness threshold for switching
     delta::Float64   # Partial equilibrium threshold
-    equilibrium_pairs::Vector{Tuple{Int,Int}}  # Reversible reaction pairs
 end
 
 # Default constructor
-ImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100.0, delta=0.05, equilibrium_pairs=[(1, 2)]) = 
-    ImplicitTauLeaping(epsilon, nc, nstiff, delta, equilibrium_pairs)
+ImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100.0, delta=0.05) = 
+    ImplicitTauLeaping(epsilon, nc, nstiff, delta)
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=nothing)
     # Boilerplate setup
@@ -102,7 +101,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
     nc = alg.nc
     nstiff = alg.nstiff
     delta = alg.delta
-    equilibrium_pairs = alg.equilibrium_pairs
     t_end = tspan[2]
     
     # Compute stoichiometry matrix from c function
@@ -119,17 +117,30 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
     end
     nu = compute_stoichiometry(c, u0, numjumps)
     
+    # Detect reversible reaction pairs
+    function find_reversible_pairs(nu)
+        pairs = Vector{Tuple{Int,Int}}()
+        for j in 1:numjumps
+            for k in (j+1):numjumps
+                if nu[:, j] == -nu[:, k]
+                    push!(pairs, (j, k))
+                end
+            end
+        end
+        return pairs
+    end
+    equilibrium_pairs = find_reversible_pairs(nu)
+    
     # Helper function to compute g_i (approximation from Cao et al., 2006)
     function compute_gi(u, nu, i)
-        # Simplified g_i: highest order of reaction involving species i
         max_order = 1.0
         for j in 1:numjumps
             if abs(nu[i, j]) > 0
-                # Approximate reaction order based on propensity (heuristic)
                 rate(rate_cache, u, p, t[end])
                 if rate_cache[j] > 0
-                    order = 1.0  # Assume first-order for simplicity
-                    if j == 1  # For SIR infection (S*I), assume second-order
+                    order = 1.0
+                    # Heuristic: if reaction involves multiple species, assume higher order
+                    if sum(abs.(nu[:, j])) > abs(nu[i, j])
                         order = 2.0
                     end
                     max_order = max(max_order, order)
@@ -229,14 +240,15 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             if norm(residual) < tol
                 break
             end
-            # Approximate Jacobian
+            # Approximate Jacobian (diagonal approximation for simplicity)
             J = Diagonal(ones(length(u_new)))
             for j in 1:numjumps
                 for i in 1:length(u_new)
-                    if j == 1 && i in [1, 2]  # Infection: β*S*I
-                        J[i, i] += nu[i, j] * tau * p[1] * (i == 1 ? u_new[2] : u_new[1])
-                    elseif j == 2 && i == 2  # Recovery: ν*I
-                        J[i, i] += nu[i, j] * tau * p[2]
+                    # Heuristic derivative: assume linear or quadratic propensity
+                    rate(rate_new, u_new, p, t_prev + tau)
+                    if rate_new[j] > 0
+                        # Estimate derivative based on stoichiometry
+                        J[i, i] += nu[i, j] * tau * rate_new[j] / max(u_new[i], 1.0)
                     end
                 end
             end
@@ -277,7 +289,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
         method = use_implicit ? :implicit : :explicit
         
         # Check if tau1 is too small
-        if tau1 < 10 / a0
+        if a0 > 0 && tau1 < 10 / a0
             # Use SSA for a few steps
             steps = method == :implicit ? 10 : 100
             for _ in 1:steps

@@ -4,20 +4,19 @@ using JumpProcesses, SciMLBase
 using KernelAbstractions, Adapt
 using StaticArrays
 
-function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem, 
+function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         alg::SimpleTauLeaping,
         ensemblealg::EnsembleGPUKernel;
         trajectories,
         seed = nothing,
         dt = error("dt is required for SimpleTauLeaping."),
         kwargs...)
-
     if trajectories == 1
         return SciMLBase.__solve(ensembleprob, alg, EnsembleSerial(); trajectories = 1,
             seed, dt, kwargs...)
     end
 
-    ensemblealg.backend === nothing ?  backend = CPU() : 
+    ensemblealg.backend === nothing ? backend = CPU() :
     backend = ensemblealg.backend
 
     jump_prob = ensembleprob.prob
@@ -26,40 +25,42 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
     prob = jump_prob.prob
-    
+
     probs = [remake(jump_prob) for _ in 1:trajectories]
 
     # Run vectorized solve
-    ts, us = vectorized_solve(probs, jump_prob, SimpleTauLeaping(); backend, trajectories, seed, dt)
+    ts,
+    us = vectorized_solve(
+        probs, jump_prob, SimpleTauLeaping(); backend, trajectories, seed, dt)
 
     # Convert to CPU for inspection
     _ts = Array(ts)
     _us = Array(us)
 
     time = @elapsed sol = [begin
-                                ts = @view _ts[:, i]
-                                us = @view _us[:, :, i]
-                                sol_idx = findlast(x -> x != probs[i].prob.tspan[1], ts)
-                                if sol_idx === nothing
-                                    @error "No solution found" tspan=probs[i].tspan[1] ts
-                                    error("Batch solve failed")
-                                end
-                                @views ensembleprob.output_func(
-                                    SciMLBase.build_solution(probs[i].prob,
-                                        alg,
-                                        ts[1:sol_idx],
-                                        [us[j, :] for j in 1:sol_idx],
-                                        k = nothing,
-                                        stats = nothing,
-                                        calculate_error = false,
-                                        retcode = sol_idx !=
-                                                length(ts) ?
-                                                ReturnCode.Terminated :
-                                                ReturnCode.Success),
-                                    i)[1]
-                            end
-                            for i in eachindex(probs)]
-    return SciMLBase.EnsembleSolution(sol, time, true)                      
+                               ts = @view _ts[:, i]
+                               us = @view _us[:, :, i]
+                               sol_idx = findlast(x -> x != probs[i].prob.tspan[1], ts)
+                               if sol_idx === nothing
+                                   @error "No solution found" tspan=probs[i].tspan[1] ts
+                                   error("Batch solve failed")
+                               end
+                               @views ensembleprob.output_func(
+                                   SciMLBase.build_solution(probs[i].prob,
+                                       alg,
+                                       ts[1:sol_idx],
+                                       [us[j, :] for j in 1:sol_idx],
+                                       k = nothing,
+                                       stats = nothing,
+                                       calculate_error = false,
+                                       retcode = sol_idx !=
+                                                 length(ts) ?
+                                                 ReturnCode.Terminated :
+                                                 ReturnCode.Success),
+                                   i)[1]
+                           end
+                           for i in eachindex(probs)]
+    return SciMLBase.EnsembleSolution(sol, time, true)
 end
 
 # Define an immutable struct to hold trajectory-specific data
@@ -77,9 +78,10 @@ struct JumpData{R, C}
 end
 
 # SimpleTauLeaping kernel
-@kernel function simple_tau_leaping_kernel(@Const(probs_data), _us, _ts, dt, @Const(rj_data),
-                                          current_u_buf, rate_cache_buf, counts_buf, local_dc_buf,
-                                          seed::UInt64)
+@kernel function simple_tau_leaping_kernel(
+        @Const(probs_data), _us, _ts, dt, @Const(rj_data),
+        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf,
+        seed::UInt64)
     i = @index(Global, Linear)
 
     # Get thread-local buffers
@@ -111,7 +113,7 @@ end
 
     # Get input/output arrays
     ts_view = @inbounds view(_ts, :, i)
-    us_view = @inbounds view(_us, :, :, i)
+    us_view = @inbounds view(_us,:,:,i)
 
     # Initialize first time step and state
     @inbounds ts_view[1] = tspan[1]
@@ -145,13 +147,15 @@ end
 end
 
 # Vectorized solve function
-function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backend, trajectories, seed, dt, kwargs...)
+function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
+        backend, trajectories, seed, dt, kwargs...)
     # Extract common jump data
     rj = prob.regular_jump
     rj_data = JumpData(rj.rate, rj.c, rj.numjumps)
 
     # Extract trajectory-specific data without static typing
-    probs_data = [TrajectoryData(SA{eltype(p.prob.u0)}[p.prob.u0...], p.prob.p, p.prob.tspan) for p in probs]
+    probs_data = [TrajectoryData(SA{eltype(p.prob.u0)}[p.prob.u0...], p.prob.p, p.prob.tspan)
+                  for p in probs]
 
     # Adapt to GPU
     probs_data_gpu = adapt(backend, probs_data)
@@ -188,7 +192,7 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backe
         end
     end
     init_kernel = init_buffers_kernel(backend)
-    init_event = init_kernel(probs_data_gpu, current_u_buf; ndrange=n_trajectories)
+    init_event = init_kernel(probs_data_gpu, current_u_buf; ndrange = n_trajectories)
     KernelAbstractions.synchronize(backend)
 
     # Seed for Poisson sampling
@@ -197,15 +201,15 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping; backe
     # Launch main kernel
     kernel = simple_tau_leaping_kernel(backend)
     main_event = kernel(probs_data_gpu, us, ts, dt, rj_data_gpu,
-                        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf, seed;
-                        ndrange=n_trajectories)
+        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf, seed;
+        ndrange = n_trajectories)
     KernelAbstractions.synchronize(backend)
 
     return ts, us
 end
 
 # GPU-compatible Poisson sampling
-@inline function poisson_rand(lambda::T) where T
+@inline function poisson_rand(lambda::T) where {T}
     L = exp(-lambda)
     k = 0
     p = 1.0

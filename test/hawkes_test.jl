@@ -37,7 +37,8 @@ function hawkes_jump(i::Int, g, h; uselrate = true)
     urate = rate
     if uselrate
         lrate(u, p, t) = p[1]
-        rateinterval = (u, p, t) -> begin
+        rateinterval = (
+            u, p, t) -> begin
             _lrate = lrate(u, p, t)
             _urate = urate(u, p, t)
             return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)
@@ -115,7 +116,7 @@ for (i, alg) in enumerate(algs)
     else
         stepper = Tsit5()
     end
-    sols = Vector{ODESolution}(undef, Nsims)        
+    sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
@@ -123,7 +124,7 @@ for (i, alg) in enumerate(algs)
 
     if alg isa Coevolve
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-    else        
+    else
         cols = length(u0)
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
     end
@@ -163,9 +164,9 @@ let alg = Coevolve()
             reset_history!(h)
             sols[n] = solve(jprob, Tsit5())
         end
-        
+
         cols = length(u0)
-        if vr_aggregator isa VR_FRM            
+        if vr_aggregator isa VR_FRM
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
         else
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))

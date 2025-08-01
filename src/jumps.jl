@@ -300,13 +300,11 @@ p        = (β=1e-4, ν=.01)
 u0       = [999, 1, 0]       # (S,I,R)
 tspan    = (0.0, 250.0)
 rateidxs = [1, 2]           # i.e. [β,ν]
-reactant_stoich =
-[
+reactant_stoich = [
   [1 => 1, 2 => 1],         # 1*S and 1*I
   [2 => 1]                  # 1*I
 ]
-net_stoich =
-[
+net_stoich = [
   [1 => -1, 2 => 1],        # -1*S and 1*I
   [2 => -1, 3 => 1]         # -1*I and 1*R
 ]

@@ -73,7 +73,7 @@ end
 ImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100.0, delta=0.05) = 
     ImplicitTauLeaping(epsilon, nc, nstiff, delta)
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=nothing)
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed = nothing)
     # Boilerplate setup
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
@@ -166,7 +166,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
             tau = min(tau, mu_term, sigma_term)
         end
-        return max(tau, 1e-10)  # Prevent zero or negative tau
+        return max(tau, 1e-10)
     end
     
     # Partial equilibrium check (Equation 13)
@@ -202,7 +202,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
             sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
             tau = min(tau, mu_term, sigma_term)
         end
-        return max(tau, 1e-10)  # Prevent zero or negative tau
+        return max(tau, 1e-10)
     end
     
     # Identify critical reactions
@@ -224,46 +224,32 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
         return critical
     end
     
-    # Implicit tau-leaping step with Newton's method
+    # Implicit tau-leaping step using NonlinearSolve
     function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p)
-        u_new = copy(u_prev)
-        rate_new = zeros(numjumps)
-        tol = 1e-6
-        max_iter = 50
-        for iter in 1:max_iter
+        # Define the nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (counts_j - tau * a_j(u_prev) + tau * a_j(u_new))) = 0
+        function f(u_new, params)
+            rate_new = similar(rate_cache, eltype(u_new))
             rate(rate_new, u_new, p, t_prev + tau)
             residual = u_new - u_prev
             for j in 1:numjumps
                 residual -= nu[:, j] * (counts[j] - tau * rate_cache[j] + tau * rate_new[j])
             end
-            if norm(residual) < tol
-                break
-            end
-            # Improved Jacobian approximation
-            J = Diagonal(ones(length(u_new)))
-            for j in 1:numjumps
-                for i in 1:length(u_new)
-                    if rate_new[j] > 0 && u_new[i] > 0
-                        # Scale derivative to prevent overflow
-                        J[i, i] += nu[i, j] * tau * min(rate_new[j] / u_new[i], 1e3)
-                    end
-                end
-            end
-            # Check for singular or ill-conditioned Jacobian
-            if any(abs.(diag(J)) .< 1e-10)
-                return u_prev  # Revert to previous state if Jacobian is singular
-            end
-            delta_u = J \ residual
-            # Limit step size to prevent overflow
-            delta_u = clamp.(delta_u, -1e3, 1e3)
-            u_new -= delta_u
-            u_new = max.(u_new, 0.0)
-            # Check for numerical overflow
-            if any(isnan.(u_new)) || any(isinf.(u_new))
-                return u_prev
-            end
+            return residual
         end
-        return round.(Int, max.(u_new, 0.0))
+        
+        # Initial guess
+        u_new = copy(u_prev)
+        
+        # Solve the nonlinear system
+        prob = NonlinearProblem(f, u_new, nothing)
+        sol = solve(prob, NewtonRaphson())
+        
+        # Check for convergence and numerical stability
+        if sol.retcode != ReturnCode.Success || any(isnan.(sol.u)) || any(isinf.(sol.u))
+            return round.(Int, max.(u_prev, 0.0))  # Revert to previous state
+        end
+        
+        return round.(Int, max.(sol.u, 0.0))
     end
     
     # Down-shifting condition (Equation 19)
@@ -386,9 +372,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed=
     
     # Build solution
     sol = DiffEqBase.build_solution(prob, alg, t, u,
-        calculate_error=false,
-        interp=DiffEqBase.ConstantInterpolation(t, u))
-    return sol
+        calculate_error = false,
+        interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
 struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm

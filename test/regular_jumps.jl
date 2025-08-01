@@ -1,5 +1,5 @@
 using JumpProcesses, DiffEqBase
-using Test, LinearAlgebra
+using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 

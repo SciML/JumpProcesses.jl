@@ -1,5 +1,11 @@
 using Documenter, JumpProcesses
 
+# Force PNG backend for plots to reduce documentation file sizes
+# SVG plots from tutorials were creating 30+ MB HTML files
+ENV["GKSwstype"] = "100"  # Force GR to use PNG
+using Plots
+png()  # Set PNG as default backend
+
 docpath = Base.source_dir()
 assetpath = joinpath(docpath, "src", "assets")
 cp(joinpath(docpath, "Manifest.toml"), joinpath(assetpath, "Manifest.toml"), force = true)
@@ -24,7 +30,9 @@ makedocs(sitename = "JumpProcesses.jl",
     format = Documenter.HTML(; assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/JumpProcesses/",
         prettyurls = (get(ENV, "CI", nothing) == "true"),
-        mathengine),
+        mathengine,
+        # Limit example output size to prevent large HTML files  
+        example_size_threshold = 8192),  # 8KB limit instead of unlimited
     pages = pages)
 
 deploydocs(repo = "github.com/SciML/JumpProcesses.jl.git";

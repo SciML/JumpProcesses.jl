@@ -158,8 +158,7 @@ function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
         push!(jumps, ConstantRateJump(new_rate, new_affect!))
         # only prob
         new_affect! = affect!
-        new_rate = (u, p,
-            t) -> rate(u.u, p, t) -
+        new_rate = (u, p, t) -> rate(u.u, p, t) -
                   min(rate(u.u, p, t), rate_control(u.u_control, p, t))
         push!(jumps, ConstantRateJump(new_rate, new_affect!))
         # only prob_control
@@ -168,9 +167,7 @@ function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
             affect!(integrator)
             flip_u!(integrator.u)
         end
-        new_rate = (u,
-            p,
-            t) -> rate_control(u.u_control, p, t) -
+        new_rate = (u, p, t) -> rate_control(u.u_control, p, t) -
                   min(rate(u.u, p, t), rate_control(u.u_control, p, t))
         push!(jumps, ConstantRateJump(new_rate, new_affect!))
     end

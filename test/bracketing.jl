@@ -37,10 +37,8 @@ netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
     netstoch)
 reaction_index = 1
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] ==
-      majump_rates[1] * ulow[1] # low
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[2] ==
-      majump_rates[1] * uhigh[1] # high
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] == majump_rates[1] * ulow[1] # low
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[2] == majump_rates[1] * uhigh[1] # high
 
 # constant rate
 rate(u, params, t) = 1 / u[1]

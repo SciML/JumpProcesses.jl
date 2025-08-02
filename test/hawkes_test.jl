@@ -156,8 +156,7 @@ let alg = Coevolve()
     for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
-        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng,
-            use_vrj_bounds = false)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng, use_vrj_bounds = false)
         @test length(jprob.variable_jumps) == 1
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims

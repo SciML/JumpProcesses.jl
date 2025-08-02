@@ -97,8 +97,7 @@ dep_graph = [
 ]
 spec_to_dep_jumps = [[2]]
 jump_to_dep_specs = [[1], [1]]
-namedpars = (dep_graph = dep_graph, vartojumps_map = spec_to_dep_jumps,
-    jumptovars_map = jump_to_dep_specs)
+namedpars = (dep_graph = dep_graph, vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs)
 
 for method in methods
     local jump_prob = JumpProblem(prob, method, jump, jump2; rng = rng, namedpars...)
@@ -109,8 +108,7 @@ for method in methods
     end
 
     if doprint
-        println("Mix of constant and mass action jumps, method = ", typeof(method),
-            ", sol[end] = ", sol[end, end])
+        println("Mix of constant and mass action jumps, method = ", typeof(method), ", sol[end] = ", sol[end, end])
     end
     @test sol[end, end] > 200
 end

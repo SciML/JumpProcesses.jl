@@ -3,7 +3,6 @@ using Documenter, JumpProcesses
 # Force PNG backend for plots to reduce file size
 ENV["GKSwstype"] = "100"  # Force GR to use PNG
 using Plots
-png()  # Set PNG as default backend
 
 docpath = Base.source_dir()
 assetpath = joinpath(docpath, "src", "assets")

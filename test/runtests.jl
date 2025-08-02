@@ -1,5 +1,5 @@
 #! format: off
-using JumpProcesses, SafeTestsets
+using JumpProcesses, SafeTestsets, Pkg
 
 const GROUP = get(ENV, "GROUP", "All")
 

@@ -1,6 +1,6 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
 using Random, LinearSolve, Statistics
-using StableRNGs
+using StableRNGs, ADTypes
 rng = StableRNG(12345)
 
 a = ExtendedJumpArray(rand(rng, 3), rand(rng, 2))
@@ -33,13 +33,13 @@ prob = ODEProblem(f, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
 integrator = init(jump_prob, Tsit5())
 sol = solve(jump_prob, Tsit5())
-sol = solve(jump_prob, Rosenbrock23(autodiff = false))
+sol = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
 sol = solve(jump_prob, Rosenbrock23())
 
 jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
 integrator = init(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
-sol_gill = solve(jump_prob, Rosenbrock23(autodiff = false))
+sol_gill = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
 sol_gill = solve(jump_prob, Rosenbrock23())
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12

@@ -47,8 +47,7 @@ end
 finalizer_called = 0
 fuel_finalize(cb, u, t, integrator) = global finalizer_called += 1
 
-cb2 = DiscreteCallback(condition, fuel_affect!, initialize = fuel_init!,
-    finalize = fuel_finalize)
+cb2 = DiscreteCallback(condition, fuel_affect!, initialize = fuel_init!, finalize = fuel_finalize)
 sol = solve(jump_prob, SSAStepper(), callback = cb2)
 for tstop in random_tstops
     @test tstop ∈ sol.t
@@ -70,8 +69,7 @@ function paffect!(integrator)
     integrator.p[2] = 1.0
     reset_aggregated_jumps!(integrator)
 end
-sol = solve(jprob, SSAStepper(), tstops = [1000.0],
-    callback = DiscreteCallback(pcondit, paffect!))
+sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
@@ -79,26 +77,22 @@ p .= [1.0, 0.0]
 maj1 = MassActionJump([1 => 1], [1 => -1, 2 => 1]; param_idxs = 1)
 maj2 = MassActionJump([2 => 1], [1 => 1, 2 => -1]; param_idxs = 2)
 jprob = JumpProblem(dprob, Direct(), maj1, maj2, save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0],
-    callback = DiscreteCallback(pcondit, paffect!))
+sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
 p2 = [1.0, 0.0, 0.0]
 maj3 = MassActionJump([1 => 1], [1 => -1, 2 => 1]; param_idxs = 3)
 dprob = DiscreteProblem(u₀, tspan, p2)
-jprob = JumpProblem(dprob, Direct(), maj1, maj2, maj3, save_positions = (false, false),
-    rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0],
-    callback = DiscreteCallback(pcondit, paffect!))
+jprob = JumpProblem(dprob, Direct(), maj1, maj2, maj3, save_positions = (false, false), rng = rng)
+sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p2 .== [0.0, 1.0, 0.0])
 @test sol[1, end] == 100
 
 p2 .= [1.0, 0.0, 0.0]
 jprob = JumpProblem(dprob, Direct(), JumpSet(; massaction_jumps = [maj1, maj2, maj3]),
     save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0],
-    callback = DiscreteCallback(pcondit, paffect!))
+sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p2 .== [0.0, 1.0, 0.0])
 @test sol[1, end] == 100
 
@@ -107,8 +101,7 @@ dprob = DiscreteProblem(u₀, tspan, p)
 maj4 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
     param_idxs = [1, 2])
 jprob = JumpProblem(dprob, Direct(), maj4, save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0],
-    callback = DiscreteCallback(pcondit, paffect!))
+sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
@@ -118,8 +111,7 @@ dprob = DiscreteProblem(u₀, tspan, p)
 maj5 = MassActionJump([[1 => 2]], [[1 => -1, 2 => 1]]; param_idxs = [1])
 jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng = rng)
 @test all(jprob.massaction_jump.scaled_rates .== [0.5])
-jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng = rng,
-    scale_rates = false)
+jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng = rng, scale_rates = false)
 @test all(jprob.massaction_jump.scaled_rates .== [1.0])
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/239

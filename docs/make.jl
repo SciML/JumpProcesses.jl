@@ -3,7 +3,6 @@ using Documenter, JumpProcesses
 # Force PNG backend for plots to reduce file size
 ENV["GKSwstype"] = "100"  # Force GR to use PNG
 using Plots
-png()  # Set PNG as default backend
 
 docpath = Base.source_dir()
 assetpath = joinpath(docpath, "src", "assets")
@@ -27,8 +26,6 @@ makedocs(sitename = "JumpProcesses.jl", authors = "Chris Rackauckas", modules = 
         canonical = "https://docs.sciml.ai/JumpProcesses/",
         prettyurls = (get(ENV, "CI", nothing) == "true"),
         mathengine,
-        # Reduce output size by limiting example output
-        example_size_threshold = 8192,  # Limit examples to 8KB (was unlimited)
         edit_link = "master",
         repolink = "https://github.com/SciML/JumpProcesses.jl"),
     pages = pages)

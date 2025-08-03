@@ -33,15 +33,16 @@ let
     rj = RegularJump(regular_rate, regular_c, 3)
     jump_prob = JumpProblem(prob_disc, Direct(), rj)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(), EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
-    mean_kernel = mean(sol.u[i][1,end] for i in 1:Nsims)
+    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
+        EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
+    mean_kernel = mean(sol.u[i][1, end] for i in 1:Nsims)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(), EnsembleSerial(); trajectories = Nsims, dt = 1.0)
-    mean_serial = mean(sol.u[i][1,end] for i in 1:Nsims)
+    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
+        EnsembleSerial(); trajectories = Nsims, dt = 1.0)
+    mean_serial = mean(sol.u[i][1, end] for i in 1:Nsims)
 
-    @test isapprox(mean_kernel, mean_serial, rtol=0.05)
+    @test isapprox(mean_kernel, mean_serial, rtol = 0.05)
 end
-
 
 # SEIR model with exposed compartment
 let
@@ -71,13 +72,15 @@ let
     # Create JumpProblem
     prob_disc = DiscreteProblem(u0, tspan, p)
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
+    jump_prob = JumpProblem(prob_disc, Direct(), rj; rng = StableRNG(12345))
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(), EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
-    mean_kernel = mean(sol.u[i][end,end] for i in 1:Nsims)
+    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
+        EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
+    mean_kernel = mean(sol.u[i][end, end] for i in 1:Nsims)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(), EnsembleSerial(); trajectories = Nsims, dt = 1.0)
-    mean_serial = mean(sol.u[i][end,end] for i in 1:Nsims)
+    sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
+        EnsembleSerial(); trajectories = Nsims, dt = 1.0)
+    mean_serial = mean(sol.u[i][end, end] for i in 1:Nsims)
 
-    @test isapprox(mean_kernel, mean_serial, rtol=0.05)
+    @test isapprox(mean_kernel, mean_serial, rtol = 0.05)
 end

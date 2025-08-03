@@ -1,6 +1,6 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
 using Random, LinearSolve, Statistics
-using StableRNGs
+using StableRNGs, ADTypes
 rng = StableRNG(12345)
 
 a = ExtendedJumpArray(rand(rng, 3), rand(rng, 2))
@@ -33,13 +33,13 @@ prob = ODEProblem(f, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
 integrator = init(jump_prob, Tsit5())
 sol = solve(jump_prob, Tsit5())
-sol = solve(jump_prob, Rosenbrock23(autodiff = false))
+sol = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
 sol = solve(jump_prob, Rosenbrock23())
 
 jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
 integrator = init(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
-sol_gill = solve(jump_prob, Rosenbrock23(autodiff = false))
+sol_gill = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
 sol_gill = solve(jump_prob, Rosenbrock23())
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
@@ -49,9 +49,9 @@ g = function (du, u, p, t)
 end
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
 jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
-sol = solve(jump_prob,  SRIW1())
-jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng=rng)
-sol_gill = solve(jump_prob_gill,  SRIW1())
+sol = solve(jump_prob, SRIW1())
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng = rng)
+sol_gill = solve(jump_prob_gill, SRIW1())
 @test maximum([sol.u[i][2] for i in 1:length(sol)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol)]) <= 1e-12
 
@@ -122,10 +122,12 @@ function f3(du, u, p, t)
 end
 prob = ODEProblem(f3, [1.0 2.0; 3.0 4.0], (0.0, 1.0))
 rate3(u, p, t) = u[1] + u[2]
-affect3!(integrator) = (integrator.u[1] = 0.25;
-integrator.u[2] = 0.5;
-integrator.u[3] = 0.75;
-integrator.u[4] = 1)
+function affect3!(integrator)
+    (integrator.u[1] = 0.25;
+        integrator.u[2] = 0.5;
+        integrator.u[3] = 0.75;
+        integrator.u[4] = 1)
+end
 jump = VariableRateJump(rate3, affect3!)
 jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
 jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
@@ -320,7 +322,7 @@ let
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
             umean = getmean(Nsims, sjm_prob, alg, dt, tsave, seed)
             @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
-            seed += Nsims 
+            seed += Nsims
         end
     end
 end
@@ -328,30 +330,30 @@ end
 # Correctness test based on 
 # VR_Direct and VR_FRM
 # Function to run ensemble and compute statistics
-function run_ensemble(prob, alg, jumps...; vr_aggregator=VR_FRM(), Nsims=8000)
+function run_ensemble(prob, alg, jumps...; vr_aggregator = VR_FRM(), Nsims = 8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator, rng)
     ensemble = EnsembleProblem(jump_prob)
-    sol = solve(ensemble, alg, trajectories=Nsims, save_everystep=false)
-    return mean(sol.u[i][1,end] for i in 1:Nsims)
+    sol = solve(ensemble, alg, trajectories = Nsims, save_everystep = false)
+    return mean(sol.u[i][1, end] for i in 1:Nsims)
 end
 
 # Test 1: Simple ODE with two variable rate jumps
 let
     rate = (u, p, t) -> u[1]
     affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
-    jump = VariableRateJump(rate, affect!, interp_points=1000)
+    jump = VariableRateJump(rate, affect!, interp_points = 1000)
     jump2 = deepcopy(jump)
-    
+
     f = (du, u, p, t) -> (du[1] = u[1])
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
-    
+
     mean_vrfr = run_ensemble(prob, Tsit5(), jump, jump2)
-    mean_vrcb = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator=VR_Direct())
-    mean_vrcbfw = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator=VR_DirectFW())
-    
-    @test isapprox(mean_vrfr, mean_vrcb, rtol=0.05)
-    @test isapprox(mean_vrcb, mean_vrcbfw, rtol=0.05)
+    mean_vrcb = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator = VR_Direct())
+    mean_vrcbfw = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator = VR_DirectFW())
+
+    @test isapprox(mean_vrfr, mean_vrcb, rtol = 0.05)
+    @test isapprox(mean_vrcb, mean_vrcbfw, rtol = 0.05)
 end
 
 # Test 2: SDE with two variable rate jumps
@@ -362,15 +364,15 @@ let
     affect! = (integrator) -> (integrator.u[1] = integrator.u[1] + 1)
     jump = VariableRateJump(rate, affect!)
     jump2 = deepcopy(jump)
-    
+
     prob = SDEProblem(f, g, [10.0], (0.0, 10.0))
-    
+
     mean_vrfr = run_ensemble(prob, SRIW1(), jump, jump2)
-    mean_vrcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VR_Direct())
-    mean_vrcbfw = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator=VR_DirectFW())
-    
-    @test isapprox(mean_vrfr, mean_vrcb, rtol=0.05)
-    @test isapprox(mean_vrcb, mean_vrcbfw, rtol=0.05)
+    mean_vrcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator = VR_Direct())
+    mean_vrcbfw = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator = VR_DirectFW())
+
+    @test isapprox(mean_vrfr, mean_vrcb, rtol = 0.05)
+    @test isapprox(mean_vrcb, mean_vrcbfw, rtol = 0.05)
 end
 
 # Test 3: ODE with analytical solution
@@ -380,26 +382,26 @@ let
     rate = (u, p, t) -> λ
     affect! = (integrator) -> (integrator.u[1] += 1; nothing)
     jump = VariableRateJump(rate, affect!)
-    
+
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
-    
+
     mean_vrfr = run_ensemble(prob, Tsit5(), jump)
     mean_vrcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_Direct())
     mean_vrcbfw = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_DirectFW())
-    
+
     t = 10.0
     u0 = 0.2
     analytical_mean = u0 * exp(-t) + λ*(1 - exp(-t))
 
-    @test isapprox(mean_vrfr, analytical_mean, rtol=0.05)
-    @test isapprox(mean_vrfr, mean_vrcb, rtol=0.05)
-    @test isapprox(mean_vrcb, mean_vrcbfw, rtol=0.05)
+    @test isapprox(mean_vrfr, analytical_mean, rtol = 0.05)
+    @test isapprox(mean_vrfr, mean_vrcb, rtol = 0.05)
+    @test isapprox(mean_vrcb, mean_vrcbfw, rtol = 0.05)
 end
 
 # Test 4: No. of Jumps
-let   
+let
     f(du, u, p, t) = (du[1] = 0.0; nothing)
-    
+
     # Define birth jump: ∅ → X
     birth_rate(u, p, t) = 10.0
     function birth_affect!(integrator)
@@ -408,13 +410,13 @@ let
         nothing
     end
     birth_jump = VariableRateJump(birth_rate, birth_affect!)
-    
+
     # Define death jump: X → ∅
     death_rate(u, p, t) = 0.5 * u[1]
     function death_affect!(integrator)
         integrator.u[1] -= 1
         integrator.p[3] += 1
-        nothing 
+        nothing
     end
     death_jump = VariableRateJump(death_rate, death_affect!)
 
@@ -422,19 +424,19 @@ let
     results = Dict()
     u0 = [1.0]
     tspan = (0.0, 10.0)
-    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())    
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jump_counts = zeros(Int, Nsims)
         p = [0.0, 0.0, 0]
         prob = ODEProblem(f, u0, tspan, p)
         jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator, rng)
-        
+
         for i in 1:Nsims
             sol = solve(jump_prob, Tsit5())
             jump_counts[i] = jump_prob.prob.p[3]
-            jump_prob.prob.p[3] = 0 
+            jump_prob.prob.p[3] = 0
         end
-        
-        results[vr_aggregator] = (mean_jumps=mean(jump_counts), jump_counts=jump_counts)
+
+        results[vr_aggregator] = (mean_jumps = mean(jump_counts), jump_counts = jump_counts)
         @test sum(jump_counts) > 1000
     end
 
@@ -442,6 +444,6 @@ let
     mean_jumps_vrcb = results[VR_Direct()].mean_jumps
     mean_jumps_vrcbfw = results[VR_DirectFW()].mean_jumps
 
-    @test isapprox(mean_jumps_vrfr, mean_jumps_vrcb, rtol=0.1)
-    @test isapprox(mean_jumps_vrcb, mean_jumps_vrcbfw, rtol=0.1)
+    @test isapprox(mean_jumps_vrfr, mean_jumps_vrcb, rtol = 0.1)
+    @test isapprox(mean_jumps_vrcb, mean_jumps_vrcbfw, rtol = 0.1)
 end

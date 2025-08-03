@@ -37,7 +37,8 @@ function hawkes_jump(i::Int, g, h; uselrate = true)
     urate = rate
     if uselrate
         lrate(u, p, t) = p[1]
-        rateinterval = (u, p, t) -> begin
+        rateinterval = (
+            u, p, t) -> begin
             _lrate = lrate(u, p, t)
             _urate = urate(u, p, t)
             return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)
@@ -115,7 +116,7 @@ for (i, alg) in enumerate(algs)
     else
         stepper = Tsit5()
     end
-    sols = Vector{ODESolution}(undef, Nsims)        
+    sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims
         reset_history!(h)
         sols[n] = solve(jump_prob, stepper)
@@ -123,7 +124,7 @@ for (i, alg) in enumerate(algs)
 
     if alg isa Coevolve
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
-    else        
+    else
         cols = length(u0)
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
     end
@@ -155,17 +156,16 @@ let alg = Coevolve()
     for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
-        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng,
-            use_vrj_bounds = false)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng, use_vrj_bounds = false)
         @test length(jprob.variable_jumps) == 1
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims
             reset_history!(h)
             sols[n] = solve(jprob, Tsit5())
         end
-        
+
         cols = length(u0)
-        if vr_aggregator isa VR_FRM            
+        if vr_aggregator isa VR_FRM
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))[:, 1:cols]
         else
             λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))

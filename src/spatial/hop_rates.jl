@@ -157,8 +157,7 @@ end
 return hopping rate of species at site
 """
 function evalhoprate(hop_rates::HopRatesGraphDs, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.hopping_constants[species] *
-              outdegree(spatial_system, site)
+    @inbounds u[species, site] * hop_rates.hopping_constants[species] * outdegree(spatial_system, site)
 end
 
 ############## hopping rates of form D_{s,i} ################
@@ -197,8 +196,7 @@ end
 return hopping rate of species at site
 """
 function evalhoprate(hop_rates::HopRatesGraphDsi, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.hopping_constants[species, site] *
-              outdegree(spatial_system, site)
+    @inbounds u[species, site] * hop_rates.hopping_constants[species, site] * outdegree(spatial_system, site)
 end
 
 ############## hopping rates of form D_{s,i,j} ################
@@ -315,7 +313,8 @@ struct HopRatesGraphDsLij{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsLij)
-    num_specs, num_sites = length(hop_rates.species_hop_constants),
+    num_specs,
+    num_sites = length(hop_rates.species_hop_constants),
     length(hop_rates.hop_const_cumulative_sums)
     println(io,
         "HopRates with $num_specs species and $num_sites sites. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
@@ -343,8 +342,7 @@ function sample_target_site(hop_rates::HopRatesGraphDsLij, site, species, rng,
 end
 
 function evalhoprate(hop_rates::HopRatesGraphDsLij, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species] *
-              hop_rates.hop_const_cumulative_sums[site][end]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species] * hop_rates.hop_const_cumulative_sums[site][end]
 end
 
 ############## hopping rates of form D_s * L_{i,j} optimized for cartesian grid ################
@@ -363,7 +361,8 @@ struct HopRatesGridDsLij{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsLij)
-    num_specs, num_sites = length(hop_rates.species_hop_constants),
+    num_specs,
+    num_sites = length(hop_rates.species_hop_constants),
     size(hop_rates.hop_const_cumulative_sums, 2)
     println(io,
         "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_s * L_{i,j} where s is species, i is source and j is destination.")
@@ -396,8 +395,7 @@ function sample_target_site(hop_rates::HopRatesGridDsLij, site, species, rng, gr
 end
 
 function evalhoprate(hop_rates::HopRatesGridDsLij, u, species, site, grid)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species] *
-              hop_rates.hop_const_cumulative_sums[end, site]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species] * hop_rates.hop_const_cumulative_sums[end, site]
 end
 
 ############## hopping rates of form D_{s,i} * L_{i,j} ################
@@ -439,8 +437,7 @@ function sample_target_site(hop_rates::HopRatesGraphDsiLij, site, species, rng,
 end
 
 function evalhoprate(hop_rates::HopRatesGraphDsiLij, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] *
-              hop_rates.hop_const_cumulative_sums[site][end]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] * hop_rates.hop_const_cumulative_sums[site][end]
 end
 
 ############## hopping rates of form D_{s,i} * L_{i,j} optimized for cartesian grid ################
@@ -459,7 +456,8 @@ struct HopRatesGridDsiLij{F} <: AbstractHopRates
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsiLij)
-    num_specs, num_sites = length(hop_rates.species_hop_constants),
+    num_specs,
+    num_sites = length(hop_rates.species_hop_constants),
     size(hop_rates.hop_const_cumulative_sums, 2)
     println(io,
         "HopRates with $num_specs species and $num_sites sites, optimized for CartesianGrid. \nHopping constants of form D_{s,i} * L_{i,j} where s is species, i is source and j is destination.")
@@ -494,6 +492,5 @@ function sample_target_site(hop_rates::HopRatesGridDsiLij, site, species, rng, g
 end
 
 function evalhoprate(hop_rates::HopRatesGridDsiLij, u, species, site, grid)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] *
-              hop_rates.hop_const_cumulative_sums[end, site]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] * hop_rates.hop_const_cumulative_sums[end, site]
 end

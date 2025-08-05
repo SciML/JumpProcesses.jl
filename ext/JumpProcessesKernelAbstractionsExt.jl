@@ -134,7 +134,7 @@ end
 
         # Poisson sampling
         @inbounds for k in 1:num_jumps
-            counts[k] = poisson_rand(rate_cache[k])
+            counts[k] = pois_rand(rate_cache[k])
         end
 
         # Apply changes
@@ -211,28 +211,34 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
     return ts, us
 end
 
-# GPU-compatible Poisson sampling
-@inline randexp(T::Type) = -log(rand(T))
-@inline randexp() = randexp(Float64)
+# GPU-compatible Poisson sampling PassthroughRNG
+struct PassthroughRNG <: AbstractRNG end
 
-@inline function count_rand(λ)
-    λ = Float64(λ)
+function count_rand(rng::AbstractRNG, λ)
     n = 0
-    c = randexp(Float64)
+    c = rng isa PassthroughRNG ? randexp() : randexp(rng)
     while c < λ
         n += 1
-        c += randexp(Float64)
+        c += rng isa PassthroughRNG ? randexp() : randexp(rng)
     end
     return n
 end
 
-@inline function ad_rand(λ)
+# Algorithm from:
+#
+#   J.H. Ahrens, U. Dieter (1982)
+#   "Computer Generation of Poisson Deviates from Modified Normal Distributions"
+#   ACM Transactions on Mathematical Software, 8(2):163-179
+#
+#   For μ sufficiently large, (i.e. >= 10.0)
+#
+function ad_rand(rng::AbstractRNG, λ)
     λ = Float64(λ)
     s = sqrt(λ)
     d = 6.0 * λ^2
     L = floor(Int, λ - 1.1484)
 
-    G = λ + s * randn()
+    G = λ + s * (rng isa PassthroughRNG ? randn() : randn(rng))
 
     if G >= 0
         K = floor(Int, G)
@@ -240,7 +246,7 @@ end
             return K
         end
 
-        U = rand()
+        U = rng isa PassthroughRNG ? rand() : rand(rng)
         if d * U >= (λ - K)^3
             return K
         end
@@ -252,8 +258,8 @@ end
     end
 
     while true
-        E = randexp()
-        U = 2 * rand() - 1
+        E = rng isa PassthroughRNG ? randexp() : randexp(rng)
+        U = 2 * (rng isa PassthroughRNG ? rand() : rand(rng)) - 1
         T_val = 1.8 + copysign(E, U)
         if T_val <= -0.6744
             continue
@@ -269,7 +275,8 @@ end
     end
 end
 
-@inline function procf(λ, K::Int, s::Float64)
+# Procedure F
+function procf(λ, K::Int, s::Float64)
     INV_SQRT_2PI = 0.3989422804014327  # 1/sqrt(2π)
     ω = INV_SQRT_2PI / s
     b1 = 1 / (24 * λ)
@@ -298,6 +305,27 @@ end
     return px, py, fx, fy
 end
 
-@inline poisson_rand(λ) = λ < 6 ? count_rand(λ) : ad_rand(λ)
+"""
+```julia
+pois_rand(λ)
+pois_rand(rng::AbstractRNG, λ)
+```
+
+Generates Poisson(λ) distributed random numbers using a fast polyalgorithm.
+
+## Examples
+
+```julia
+# Simple Poisson random which works on GPU
+pois_rand(λ)
+
+# Using RNG
+using RandomNumbers
+rng = Xorshifts.Xoroshiro128Plus()
+pois_rand(rng, λ)
+```
+"""
+pois_rand(λ) = λ < 6 ? count_rand(PassthroughRNG(), λ) : ad_rand(PassthroughRNG(), λ)
+pois_rand(rng::AbstractRNG, λ) = λ < 6 ? count_rand(rng, λ) : ad_rand(rng, λ)
 
 end

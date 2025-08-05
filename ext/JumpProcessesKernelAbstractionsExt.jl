@@ -211,7 +211,9 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
     return ts, us
 end
 
-# GPU-compatible Poisson sampling PassthroughRNG
+export pois_rand, PassthroughRNG
+
+# GPU-compatible Poisson sampling via PassthroughRNG
 struct PassthroughRNG <: AbstractRNG end
 
 rand(rng::PassthroughRNG) = Random.rand()
@@ -300,7 +302,7 @@ function procf(λ, K::Int, s::Float64)
     c0 = 1 - b1 + 3 * b2 - 15 * c3
 
     if K < 10
-        px = -λ
+        px = -float(λ)
         log_py = K * log(λ) - loggamma(K + 1) # log(K!) via loggamma
         py = exp(log_py)
     else
@@ -337,7 +339,7 @@ rng = Xorshifts.Xoroshiro128Plus()
 pois_rand(rng, λ)
 
 # Simple Poisson random on GPU
-pois_rand(PassthroughRNG(), λ)
+pois_rand(PoissonRandom.PassthroughRNG(), λ)
 ```
 """
 pois_rand(λ) = pois_rand(Random.GLOBAL_RNG, λ)

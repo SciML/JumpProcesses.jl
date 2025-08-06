@@ -3,6 +3,7 @@ module JumpProcessesKernelAbstractionsExt
 using JumpProcesses, SciMLBase
 using KernelAbstractions, Adapt
 using StaticArrays
+using PoissonRandom, Random
 
 function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         alg::SimpleTauLeaping,
@@ -131,7 +132,7 @@ end
 
         # Poisson sampling
         @inbounds for k in 1:num_jumps
-            counts[k] = poisson_rand(rate_cache[k])
+            counts[k] = pois_rand(PoissonRandom.PassthroughRNG(), rate_cache[k])
         end
 
         # Apply changes
@@ -206,18 +207,6 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
     KernelAbstractions.synchronize(backend)
 
     return ts, us
-end
-
-# GPU-compatible Poisson sampling
-@inline function poisson_rand(lambda::T) where {T}
-    L = exp(-lambda)
-    k = 0
-    p = 1.0
-    while p > L
-        k += 1
-        p *= rand(T)
-    end
-    return k - 1
 end
 
 end

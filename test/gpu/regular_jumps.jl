@@ -4,7 +4,7 @@ using KernelAbstractions, Adapt, CUDA
 using StableRNGs
 rng = StableRNG(12345)
 
-Nsims = 100_000
+Nsims = 100
 
 # SIR model with influx
 let

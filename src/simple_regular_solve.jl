@@ -61,8 +61,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
-# Define the ImplicitTauLeaping algorithm
-struct ImplicitTauLeaping <: DiffEqBase.DEAlgorithm
+# Define the SimpleImplicitTauLeaping algorithm
+struct SimpleImplicitTauLeaping <: DiffEqBase.DEAlgorithm
     epsilon::Float64  # Error control parameter
     nc::Int          # Critical reaction threshold
     nstiff::Float64  # Stiffness threshold for switching
@@ -70,10 +70,10 @@ struct ImplicitTauLeaping <: DiffEqBase.DEAlgorithm
 end
 
 # Default constructor
-ImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100.0, delta=0.05) = 
-    ImplicitTauLeaping(epsilon, nc, nstiff, delta)
+SimpleImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100.0, delta=0.05) = 
+    SimpleImplicitTauLeaping(epsilon, nc, nstiff, delta)
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::ImplicitTauLeaping; seed = nothing)
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; seed = nothing)
     # Boilerplate setup
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
@@ -389,4 +389,4 @@ function EnsembleGPUKernel()
     EnsembleGPUKernel(nothing, 0.0)
 end
 
-export SimpleTauLeaping, EnsembleGPUKernel, ImplicitTauLeaping
+export SimpleTauLeaping, EnsembleGPUKernel, SimpleImplicitTauLeaping

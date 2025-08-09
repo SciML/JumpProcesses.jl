@@ -4,6 +4,7 @@ using Reexport
 @reexport using DiffEqBase
 
 using LinearAlgebra, Markdown, DocStringExtensions
+using NonlinearSolve
 using DataStructures, PoissonRandom, Random, ArrayInterface
 using FunctionWrappers, UnPack
 using Graphs

@@ -1,6 +1,6 @@
 module JumpProcessesKernelAbstractionsExt
 
-using JumpProcesses, SciMLBase, DiffEqBase
+using JumpProcesses, SciMLBase
 using KernelAbstractions, Adapt
 using StaticArrays
 using PoissonRandom, Random

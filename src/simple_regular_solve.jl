@@ -61,6 +61,60 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
+struct SimpleAdaptiveTauLeaping <: DiffEqBase.DEAlgorithm
+    epsilon::Float64  # Error control parameter
+end
+
+SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
+
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping; seed=nothing)
+    @assert isempty(jump_prob.jump_callback.continuous_callbacks)
+    @assert isempty(jump_prob.jump_callback.discrete_callbacks)
+    prob = jump_prob.prob
+    rng = DEFAULT_RNG
+    (seed !== nothing) && seed!(rng, seed)
+
+    rj = jump_prob.regular_jump
+    rate = rj.rate
+    numjumps = rj.numjumps
+    c = rj.c
+    u0 = copy(prob.u0)
+    tspan = prob.tspan
+    p = prob.p
+
+    u = [copy(u0)]
+    t = [tspan[1]]
+    rate_cache = zeros(Float64, numjumps)
+    counts = zeros(Int, numjumps)
+    du = similar(u0)
+    t_end = tspan[2]
+    epsilon = alg.epsilon
+
+    nu = compute_stoichiometry(c, u0, numjumps, p, t[1])
+
+    while t[end] < t_end
+        u_prev = u[end]
+        t_prev = t[end]
+        rate(rate_cache, u_prev, p, t_prev)
+        tau = compute_tau_explicit(u_prev, rate_cache, nu, p, t_prev, epsilon, rate)
+        tau = min(tau, t_end - t_prev)
+        counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
+        c(du, u_prev, p, t_prev, counts, nothing)
+        u_new = u_prev + du
+        if any(u_new .< 0)
+            tau /= 2
+            continue
+        end
+        push!(u, u_new)
+        push!(t, t_prev + tau)
+    end
+
+    sol = DiffEqBase.build_solution(prob, alg, t, u,
+        calculate_error=false,
+        interp=DiffEqBase.ConstantInterpolation(t, u))
+    return sol
+end
+
 struct SimpleImplicitTauLeaping <: DiffEqBase.DEAlgorithm
     epsilon::Float64  # Error control parameter
     nc::Int          # Critical reaction threshold
@@ -390,4 +444,4 @@ function EnsembleGPUKernel()
     EnsembleGPUKernel(nothing, 0.0)
 end
 
-export SimpleTauLeaping, EnsembleGPUKernel, SimpleImplicitTauLeaping
+export SimpleTauLeaping, EnsembleGPUKernel, SimpleAdaptiveTauLeaping, SimpleImplicitTauLeaping

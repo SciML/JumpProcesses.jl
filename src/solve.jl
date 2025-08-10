@@ -1,6 +1,6 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
-        kwargs...) where {P, recompile_flag}
+        kwargs...) where {P}
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol

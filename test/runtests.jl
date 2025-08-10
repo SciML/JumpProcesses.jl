@@ -10,6 +10,10 @@ function activate_gpu_env()
 end
 
 @time begin
+    if GROUP == "All" || GROUP == "QA"
+        @time @safetestset "QA Tests" begin include("qa.jl") end
+    end
+    
     if GROUP == "All" || GROUP == "InterfaceI"
         @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
         @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end

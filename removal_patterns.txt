@@ -1,4 +1,0 @@
-dev/*/
-previews/*/
-v*/applications/*/
-v*/tutorials/*/

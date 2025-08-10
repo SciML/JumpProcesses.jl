@@ -338,7 +338,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
 end
 
 @inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache,
-        ::I) where {I <: DiffEqBase.DEIntegrator}
+        ::I) where {I <: SciMLBase.DEIntegrator}
     if (cache.affect_funcs isa Vector) &&
        !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
@@ -349,7 +349,7 @@ end
 end
 
 @inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2},
-        ::I) where {T, RNG, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+        ::I) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     nothing
 end
 
@@ -458,7 +458,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
 end
 
 @generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2},
-        integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+        integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     quote
         @unpack affect_funcs = cache
         Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds affect_funcs[i](integrator)) i -> (@inbounds affect_funcs[fieldcount(F2)](integrator))
@@ -466,7 +466,7 @@ end
 end
 
 @inline function execute_affect!(cache::VR_DirectEventCache,
-        integrator::I, idx) where {I <: DiffEqBase.DEIntegrator}
+        integrator::I, idx) where {I <: SciMLBase.DEIntegrator}
     @unpack affect_funcs = cache
     if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
         @inbounds affect_funcs[idx](integrator)

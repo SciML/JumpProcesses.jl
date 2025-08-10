@@ -1,8 +1,7 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
-        recompile::Type{Val{recompile_flag}} = Val{true};
+        alg::DiffEqBase.DEAlgorithm;
         kwargs...) where {P, recompile_flag}
-    integrator = init(jump_prob, alg, timeseries, ts, ks, recompile; kwargs...)
+    integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
 end

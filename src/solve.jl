@@ -2,8 +2,19 @@
 # when the solver (i.e. StochasticDiffEq.jl) allows for jumps in __init
 struct ForceJumpDispatch end
 
+
+
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
+        kwargs...) where {P}
+    integrator = DiffEqBase.__init(jump_prob, alg, ForceJumpDispatch(); kwargs...)
+    solve!(integrator)
+    integrator.sol
+end
+
+#Ambiguity Fix
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
+        alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
         kwargs...) where {P}
     integrator = DiffEqBase.__init(jump_prob, alg, ForceJumpDispatch(); kwargs...)
     solve!(integrator)

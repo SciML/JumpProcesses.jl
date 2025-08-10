@@ -27,9 +27,9 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm; kwargs...)
+        alg::DiffEqBase.DEAlgorithm; kwargs...) where {P}
                 __jump_init(_jump_prob, alg; kwargs...)
-end
+end 
 
 function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
         callback = nothing, seed = nothing,

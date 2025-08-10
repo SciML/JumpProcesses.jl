@@ -33,7 +33,8 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm, disp::ForceJumpDispatch = ForceJumpDispatch();
+        alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm, DiffEqBase.DEAlgorithm}, 
+                disp::ForceJumpDispatch = ForceJumpDispatch();
         callback = nothing, seed = nothing,
         alias_jump = Threads.threadid() == 1,
         kwargs...) where {P}

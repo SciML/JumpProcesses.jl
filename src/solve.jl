@@ -1,13 +1,7 @@
-# Used to ensure that this jump dispatch is preferred over the DiffEq solver
-# when the solver (i.e. StochasticDiffEq.jl) allows for jumps in __init
-struct ForceJumpDispatch end
-
-
-
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
         kwargs...) where {P}
-    integrator = DiffEqBase.__init(jump_prob, alg, ForceJumpDispatch(); kwargs...)
+    integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
 end
@@ -16,7 +10,7 @@ end
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
         kwargs...) where {P}
-    integrator = DiffEqBase.__init(jump_prob, alg, ForceJumpDispatch(); kwargs...)
+    integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
 end
@@ -33,8 +27,11 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm, DiffEqBase.DEAlgorithm}, 
-                disp::ForceJumpDispatch = ForceJumpDispatch();
+        alg::DiffEqBase.DEAlgorithm; kwargs...)
+                __jump_init(_jump_prob, alg; kwargs...)
+end
+
+function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
         callback = nothing, seed = nothing,
         alias_jump = Threads.threadid() == 1,
         kwargs...) where {P}

@@ -38,6 +38,7 @@ The documentation includes
 
 ## Contributions welcomed!
 
+
 Contact us in sciml-bridged on Slack to discuss where to get started, the [`Help wanted`](https://github.com/SciML/JumpProcesses.jl/issues/431) issue, or just open a PR to address an open issue or add new functionality. Contributions, no matter how small, are always welcome and appreciated,
 including documentation editing/writing. See also the [contribution section](#contributing-and-getting-help).
 

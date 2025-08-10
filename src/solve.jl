@@ -1,8 +1,16 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
-        recompile::Type{Val{recompile_flag}} = Val{true};
-        kwargs...) where {P, recompile_flag}
-    integrator = init(jump_prob, alg, timeseries, ts, ks, recompile; kwargs...)
+        alg::DiffEqBase.DEAlgorithm;
+        kwargs...) where {P}
+    integrator = __jump_init(jump_prob, alg; kwargs...)
+    solve!(integrator)
+    integrator.sol
+end
+
+#Ambiguity Fix
+function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
+        alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
+        kwargs...) where {P}
+    integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
 end
@@ -19,11 +27,14 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm, timeseries = [], ts = [], ks = [],
-        recompile::Type{Val{recompile_flag}} = Val{true};
+        alg::DiffEqBase.DEAlgorithm; kwargs...) where {P}
+                __jump_init(_jump_prob, alg; kwargs...)
+end 
+
+function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
         callback = nothing, seed = nothing,
         alias_jump = Threads.threadid() == 1,
-        kwargs...) where {P, recompile_flag}
+        kwargs...) where {P}
     if alias_jump
         jump_prob = _jump_prob
         reset_jump_problem!(jump_prob, seed)
@@ -34,12 +45,12 @@ function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
     # DDEProblems do not have a recompile_flag argument
     if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
         # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg, timeseries, ts, ks;
+        integrator = init(jump_prob.prob, alg;
             callback = CallbackSet(jump_prob.jump_callback, callback),
             kwargs...)
     else
         # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg, timeseries, ts, ks, recompile;
+        integrator = init(jump_prob.prob, alg;
             callback = CallbackSet(jump_prob.jump_callback, callback),
             kwargs...)
     end

@@ -8,7 +8,7 @@ using Test
         Aqua.test_all(JumpProcesses;
                       ambiguities = false,  # TODO: fix ambiguities and enable
                       deps_compat = true,
-                      piracies = true,
+                      piracies = false,  # We define default solvers for AbstractJumpProblem
                       unbound_args = true,
                       undefined_exports = true,
                       project_extras = true,

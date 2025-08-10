@@ -262,7 +262,7 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
     
     # Solve the nonlinear system
     prob = NonlinearProblem(f, u_new, nothing)
-    sol = solve(prob, NewtonRaphson())
+    sol = solve(prob, SimpleNewtonRaphson())
     
     # Check for convergence and numerical stability
     if sol.retcode != ReturnCode.Success || any(isnan.(sol.u)) || any(isinf.(sol.u))

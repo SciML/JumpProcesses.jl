@@ -1,7 +1,11 @@
+# Used to ensure that this jump dispatch is preferred over the DiffEq solver
+# when the solver (i.e. StochasticDiffEq.jl) allows for jumps in __init
+struct ForceJumpDispatch end
+
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
         kwargs...) where {P}
-    integrator = DiffEqBase.__init(jump_prob, alg; kwargs...)
+    integrator = DiffEqBase.__init(jump_prob, alg, ForceJumpDispatch(); kwargs...)
     solve!(integrator)
     integrator.sol
 end
@@ -18,7 +22,7 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm;
+        alg::DiffEqBase.DEAlgorithm, disp::ForceJumpDispatch = ForceJumpDispatch();
         callback = nothing, seed = nothing,
         alias_jump = Threads.threadid() == 1,
         kwargs...) where {P}

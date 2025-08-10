@@ -46,7 +46,7 @@ end
 end
 
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator,
-        ::I) where {I <: DiffEqBase.DEIntegrator}
+        ::I) where {I <: SciMLBase.DEIntegrator}
     if (p.affects! isa Vector) &&
        !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
@@ -56,7 +56,7 @@ end
 end
 
 @inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
-        ::I) where {T, S, F1, F2 <: Tuple, I <: DiffEqBase.DEIntegrator}
+        ::I) where {T, S, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     nothing
 end
 
@@ -75,7 +75,7 @@ end
 end
 
 # executing jump at the next jump time
-function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: DiffEqBase.DEIntegrator}
+function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: SciMLBase.DEIntegrator}
     affects! = p.affects!
     if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
         execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
@@ -88,7 +88,7 @@ function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: DiffEqBase.DE
 end
 
 function (p::AbstractSSAJumpAggregator{
-        T, S, F1, F2})(integrator::DiffEqBase.DEIntegrator) where
+        T, S, F1, F2})(integrator::SciMLBase.DEIntegrator) where
         {T, S, F1, F2 <: Union{Tuple, Nothing}}
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)

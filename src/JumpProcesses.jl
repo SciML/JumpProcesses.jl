@@ -1,37 +1,52 @@
 module JumpProcesses
 
-using Reexport
+using Reexport: Reexport, @reexport
 @reexport using DiffEqBase
 
-using LinearAlgebra, Markdown, DocStringExtensions
-using DataStructures, PoissonRandom, Random, ArrayInterface
-using FunctionWrappers, UnPack
-using Graphs
-using SciMLBase: SciMLBase, isdenseplot
+# Explicit imports from standard libraries
+using LinearAlgebra: LinearAlgebra, I, mul!
+using Markdown: Markdown
+using Random: Random, randexp, randexp!
+
+# Explicit imports from external packages
+using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
+using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_handle
+using PoissonRandom: PoissonRandom, pois_rand
+using ArrayInterface: ArrayInterface
+using FunctionWrappers: FunctionWrappers
+using UnPack: UnPack, @unpack
+using Graphs: Graphs, AbstractGraph, dst, grid, src
+using StaticArrays: StaticArrays, SA, SVector, @SVector, setindex
+using Base.Threads: Threads, @threads
 using Base.FastMath: add_fast
 using Setfield: @set, @set!
 
-import DiffEqCallbacks: gauss_points, gauss_weights
-import DiffEqBase: DiscreteCallback, init, solve, solve!, plot_indices, initialize!,
-                   get_tstops, get_tstops_array, get_tstops_max
+# Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
+
+# Import functions we extend from packages
+import DiffEqCallbacks: gauss_points, gauss_weights
+import DiffEqBase: DiscreteCallback, init, solve, solve!, initialize!
+import SciMLBase: plot_indices
 import DataStructures: update!
 import Graphs: neighbors, outdegree
-
 import RecursiveArrayTools: recursivecopy!
-using StaticArrays, Base.Threads
 import SymbolicIndexingInterface as SII
 
-import Random: AbstractRNG
+# Import additional types and functions from DiffEqBase and SciMLBase
+using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
+                  DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
+                  ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
+                  deleteat!, isinplace, remake, savevalues!, step!,
+                  u_modified!
+using SciMLBase: SciMLBase, DEIntegrator
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
-              DiffEqBase.DEIntegrator{Alg, IIP, U, T} end
-
-import Base.Threads
+              DEIntegrator{Alg, IIP, U, T} end
 
 const DEFAULT_RNG = Random.default_rng()
 

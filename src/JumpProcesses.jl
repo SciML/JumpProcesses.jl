@@ -32,7 +32,6 @@ import DataStructures: update!
 import Graphs: neighbors, outdegree
 import RecursiveArrayTools: recursivecopy!
 import SymbolicIndexingInterface as SII
-using SimpleNonlinearSolve
 
 # Import additional types and functions from DiffEqBase and SciMLBase
 using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,

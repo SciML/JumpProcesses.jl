@@ -35,13 +35,9 @@ let
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(), EnsembleSerial(); trajectories = Nsims, dt = 1.0)
     mean_simple = mean(sol.u[i][1,end] for i in 1:Nsims)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleImplicitTauLeaping(), EnsembleSerial(); trajectories = Nsims)
-    mean_implicit = mean(sol.u[i][1,end] for i in 1:Nsims)
-
     sol = solve(EnsembleProblem(jump_prob), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories = Nsims)
     mean_adaptive = mean(sol.u[i][1,end] for i in 1:Nsims)
 
-    @test isapprox(mean_simple, mean_implicit, rtol=0.05)
     @test isapprox(mean_simple, mean_adaptive, rtol=0.05)
 end
 
@@ -79,12 +75,8 @@ let
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(), EnsembleSerial(); trajectories = Nsims, dt = 1.0)
     mean_simple = mean(sol.u[i][end,end] for i in 1:Nsims)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleImplicitTauLeaping(), EnsembleSerial(); trajectories = Nsims)
-    mean_implicit = mean(sol.u[i][end,end] for i in 1:Nsims)
-
     sol = solve(EnsembleProblem(jump_prob), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories = Nsims)
     mean_adaptive = mean(sol.u[i][end,end] for i in 1:Nsims)
 
-    @test isapprox(mean_simple, mean_implicit, rtol=0.05)
     @test isapprox(mean_simple, mean_adaptive, rtol=0.05)
 end

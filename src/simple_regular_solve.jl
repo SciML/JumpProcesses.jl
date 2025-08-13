@@ -50,6 +50,110 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
+struct SimpleAdaptiveTauLeaping <: DiffEqBase.DEAlgorithm
+    epsilon::Float64  # Error control parameter
+end
+
+SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
+
+function compute_gi(u, nu, hor, i)
+    max_order = 1.0
+    for j in 1:size(nu, 2)
+        if abs(nu[i, j]) > 0
+            max_order = max(max_order, Float64(hor[j]))
+        end
+    end
+    return max_order
+end
+
+function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin)
+    rate(rate_cache, u, p, t)
+    mu = zeros(length(u))
+    sigma2 = zeros(length(u))
+    tau = Inf
+    for i in 1:length(u)
+        for j in 1:size(nu, 2)
+            mu[i] += nu[i, j] * rate_cache[j]
+            sigma2[i] += nu[i, j]^2 * rate_cache[j]
+        end
+        gi = compute_gi(u, nu, hor, i)
+        bound = max(epsilon * u[i] / gi, 1.0)
+        mu_term = abs(mu[i]) > 0 ? bound / abs(mu[i]) : Inf
+        sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
+        tau = min(tau, mu_term, sigma_term)
+    end
+    return max(tau, dtmin)
+end
+
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping; 
+        seed = nothing,
+        dtmin = 1e-10)
+    @assert isempty(jump_prob.jump_callback.continuous_callbacks)
+    @assert isempty(jump_prob.jump_callback.discrete_callbacks)
+    prob = jump_prob.prob
+    rng = DEFAULT_RNG
+    (seed !== nothing) && seed!(rng, seed)
+
+    rj = jump_prob.regular_jump
+    rate = rj.rate
+    numjumps = rj.numjumps
+    c = rj.c
+    u0 = copy(prob.u0)
+    tspan = prob.tspan
+    p = prob.p
+
+    u = [copy(u0)]
+    t = [tspan[1]]
+    rate_cache = zeros(Float64, numjumps)
+    counts = zeros(Int, numjumps)
+    du = similar(u0)
+    t_end = tspan[2]
+    epsilon = alg.epsilon
+
+    # Compute initial stoichiometry and HOR
+    nu = zeros(Int, length(u0), numjumps)
+    for j in 1:numjumps
+        counts_temp = zeros(numjumps)
+        counts_temp[j] = 1
+        c(du, u0, p, t[1], counts_temp, nothing)
+        nu[:, j] = du
+    end
+
+    hor = zeros(Int, size(nu, 2))
+    for j in 1:size(nu, 2)
+        hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
+    end
+
+    while t[end] < t_end
+        u_prev = u[end]
+        t_prev = t[end]
+        # Recompute stoichiometry
+        for j in 1:numjumps
+            counts_temp = zeros(numjumps)
+            counts_temp[j] = 1
+            c(du, u_prev, p, t_prev, counts_temp, nothing)
+            nu[:, j] = du
+        end
+        rate(rate_cache, u_prev, p, t_prev)
+        tau = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate, dtmin)
+        tau = min(tau, t_end - t_prev)
+        counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
+        c(du, u_prev, p, t_prev, counts, nothing)
+        u_new = max.(u_prev + du, 0)
+        if any(u_new .< 0)
+            tau /= 2
+            continue
+        end
+        push!(u, u_new)
+        push!(t, t_prev + tau)
+    end
+
+    sol = DiffEqBase.build_solution(prob, alg, t, u,
+        calculate_error=false,
+        interp=DiffEqBase.ConstantInterpolation(t, u))
+    return sol
+end
+
 struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm
     backend::Backend
     cpu_offload::Float64
@@ -63,4 +167,4 @@ function EnsembleGPUKernel()
     EnsembleGPUKernel(nothing, 0.0)
 end
 
-export SimpleTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, EnsembleGPUKernel, SimpleAdaptiveTauLeaping

@@ -67,6 +67,35 @@ end
 
 SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
 
+function compute_gi(u, nu, hor, i)
+    max_order = 1.0
+    for j in 1:size(nu, 2)
+        if abs(nu[i, j]) > 0
+            max_order = max(max_order, Float64(hor[j]))
+        end
+    end
+    return max_order
+end
+
+function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin)
+    rate(rate_cache, u, p, t)
+    mu = zeros(length(u))
+    sigma2 = zeros(length(u))
+    tau = Inf
+    for i in 1:length(u)
+        for j in 1:size(nu, 2)
+            mu[i] += nu[i, j] * rate_cache[j]
+            sigma2[i] += nu[i, j]^2 * rate_cache[j]
+        end
+        gi = compute_gi(u, nu, hor, i)
+        bound = max(epsilon * u[i] / gi, 1.0)
+        mu_term = abs(mu[i]) > 0 ? bound / abs(mu[i]) : Inf
+        sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
+        tau = min(tau, mu_term, sigma_term)
+    end
+    return max(tau, dtmin)
+end
+
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping; 
         seed = nothing,
         dtmin = 1e-10)
@@ -92,17 +121,36 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     t_end = tspan[2]
     epsilon = alg.epsilon
 
-    nu = compute_stoichiometry(c, u0, numjumps, p, t[1])
+    # Compute initial stoichiometry and HOR
+    nu = zeros(Int, length(u0), numjumps)
+    for j in 1:numjumps
+        counts_temp = zeros(numjumps)
+        counts_temp[j] = 1
+        c(du, u0, p, t[1], counts_temp, nothing)
+        nu[:, j] = du
+    end
+
+    hor = zeros(Int, size(nu, 2))
+    for j in 1:size(nu, 2)
+        hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
+    end
 
     while t[end] < t_end
         u_prev = u[end]
         t_prev = t[end]
+        # Recompute stoichiometry
+        for j in 1:numjumps
+            counts_temp = zeros(numjumps)
+            counts_temp[j] = 1
+            c(du, u_prev, p, t_prev, counts_temp, nothing)
+            nu[:, j] = du
+        end
         rate(rate_cache, u_prev, p, t_prev)
-        tau = compute_tau_explicit(u_prev, rate_cache, nu, p, t_prev, epsilon, rate, dtmin)
+        tau = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate, dtmin)
         tau = min(tau, t_end - t_prev)
         counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
         c(du, u_prev, p, t_prev, counts, nothing)
-        u_new = u_prev + du
+        u_new = max.(u_prev + du, 0)
         if any(u_new .< 0)
             tau /= 2
             continue
@@ -115,57 +163,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         calculate_error=false,
         interp=DiffEqBase.ConstantInterpolation(t, u))
     return sol
-end
-
-# Compute stoichiometry matrix from c function
-function compute_stoichiometry(c, u, numjumps, p, t)
-    nu = zeros(Int, length(u), numjumps)
-    for j in 1:numjumps
-        counts = zeros(numjumps)
-        counts[j] = 1
-        du = similar(u)
-        c(du, u, p, t, counts, nothing)
-        nu[:, j] = round.(Int, du)
-    end
-    return nu
-end
-
-# Compute g_i (approximation from Cao et al., 2006)
-function compute_gi(u, nu, i, rate, rate_cache, p, t)
-    max_order = 1.0
-    for j in 1:size(nu, 2)
-        if abs(nu[i, j]) > 0
-            rate(rate_cache, u, p, t)
-            if rate_cache[j] > 0
-                order = 1.0
-                if sum(abs.(nu[:, j])) > abs(nu[i, j])
-                    order = 2.0
-                end
-                max_order = max(max_order, order)
-            end
-        end
-    end
-    return max_order
-end
-
-# Tau-selection for explicit method (Equation 8)
-function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate, dtmin)
-    rate(rate_cache, u, p, t)
-    mu = zeros(length(u))
-    sigma2 = zeros(length(u))
-    tau = Inf
-    for i in 1:length(u)
-        for j in 1:size(nu, 2)
-            mu[i] += nu[i, j] * rate_cache[j]
-            sigma2[i] += nu[i, j]^2 * rate_cache[j]
-        end
-        gi = compute_gi(u, nu, i, rate, rate_cache, p, t)
-        bound = max(epsilon * u[i] / gi, 1.0)
-        mu_term = abs(mu[i]) > 0 ? bound / abs(mu[i]) : Inf
-        sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
-        tau = min(tau, mu_term, sigma_term)
-    end
-    return max(tau, dtmin)
 end
 
 struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm

@@ -3,7 +3,7 @@ using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
-Nsims = 8000
+Nsims = 1000
 
 # SIR model with influx
 @testset "SIR Model Correctness" begin

@@ -98,7 +98,8 @@ end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping; 
         seed = nothing,
-        dtmin = 1e-10)
+        dtmin = 1e-10,
+        saveat = nothing)
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
     prob = jump_prob.prob
@@ -123,24 +124,27 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
     # Compute initial stoichiometry and HOR
     nu = zeros(Int, length(u0), numjumps)
+    counts_temp = zeros(Int, numjumps)
     for j in 1:numjumps
-        counts_temp = zeros(numjumps)
+        fill!(counts_temp, 0)
         counts_temp[j] = 1
         c(du, u0, p, t[1], counts_temp, nothing)
         nu[:, j] = du
     end
-
     hor = zeros(Int, size(nu, 2))
     for j in 1:size(nu, 2)
         hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
     end
+
+    saveat_times = isnothing(saveat) ? Float64[] : saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat)
+    save_idx = 1
 
     while t[end] < t_end
         u_prev = u[end]
         t_prev = t[end]
         # Recompute stoichiometry
         for j in 1:numjumps
-            counts_temp = zeros(numjumps)
+            fill!(counts_temp, 0)
             counts_temp[j] = 1
             c(du, u_prev, p, t_prev, counts_temp, nothing)
             nu[:, j] = du
@@ -148,15 +152,37 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         rate(rate_cache, u_prev, p, t_prev)
         tau = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate, dtmin)
         tau = min(tau, t_end - t_prev)
+        if !isempty(saveat_times)
+            if save_idx <= length(saveat_times) && t_prev + tau > saveat_times[save_idx]
+                tau = saveat_times[save_idx] - t_prev
+            end
+        end
         counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
         c(du, u_prev, p, t_prev, counts, nothing)
-        u_new = max.(u_prev + du, 0)
+        u_new = u_prev + du
         if any(u_new .< 0)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
             tau /= 2
             continue
         end
+        u_new = max.(u_new, 0)  # Ensure non-negative states
         push!(u, u_new)
         push!(t, t_prev + tau)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t[end] >= saveat_times[save_idx]
+            save_idx += 1
+        end
+    end
+
+    # Interpolate to saveat times if specified
+    if !isempty(saveat_times)
+        t_out = saveat_times
+        u_out = [u[end]]
+        for t_save in saveat_times
+            idx = findlast(ti -> ti <= t_save, t)
+            push!(u_out, u[idx])
+        end
+        t = t_out
+        u = u_out[2:end]
     end
 
     sol = DiffEqBase.build_solution(prob, alg, t, u,

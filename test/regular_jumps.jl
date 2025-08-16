@@ -48,7 +48,7 @@ Nsims = 1000
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
     
     # Solve with SimpleAdaptiveTauLeaping
-    sol_adaptive = solve(EnsembleProblem(jump_prob_tau), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims)
+    sol_adaptive = solve(EnsembleProblem(jump_prob_tau), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat = 1.0)
 
     # Compute mean trajectories at t = 0, 1, ..., 250
     t_points = 0:1.0:250.0
@@ -106,7 +106,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
     
     # Solve with SimpleAdaptiveTauLeaping
-    sol_adaptive = solve(EnsembleProblem(jump_prob_tau), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims)
+    sol_adaptive = solve(EnsembleProblem(jump_prob_tau), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat = 1.0)
 
     # Compute mean trajectories at t = 0, 1, ..., 250
     t_points = 0:1.0:250.0

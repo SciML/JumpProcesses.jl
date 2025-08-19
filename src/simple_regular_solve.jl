@@ -111,17 +111,19 @@ function compute_tau_implicit(u, rate_cache, nu, p, t, rate)
     for i in 1:length(u)
         sum_nu_a = 0.0
         for j in 1:size(nu, 2)
-            sum_nu_a += abs(nu[i, j]) * rate_cache[j]
+            if nu[i, j] < 0  # Only sum negative stoichiometry
+                sum_nu_a += abs(nu[i, j]) * rate_cache[j]
+            end
         end
-        if sum_nu_a > 0
-            tau = min(tau, 1.0 / sum_nu_a)
+        if sum_nu_a > 0 && u[i] > 0  # Avoid division by zero
+            tau = min(tau, u[i] / sum_nu_a)
         end
     end
     return tau
 end
 
 function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
-    # Define the nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (counts_j - tau * (a_j(u_prev) - a_j(u_new)))) = 0
+    # Nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (k_j - tau * (a_j(u_prev) - a_j(u_new)))) = 0
     function f(u_new)
         rate_new = zeros(Float64, numjumps)
         rate(rate_new, u_new, p, t_prev + tau)
@@ -132,7 +134,7 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
         return residual
     end
 
-    # Compute Jacobian using finite differences
+    # Numerical Jacobian
     function compute_jacobian(u_new)
         n = length(u_new)
         J = zeros(Float64, n, n)
@@ -158,12 +160,12 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
         end
         J = compute_jacobian(u_new)
         if abs(det(J)) < 1e-10  # Check for singular Jacobian
-            return nothing  # Signal failure
+            return nothing
         end
         delta = J \ F
         u_new -= delta
         if any(isnan.(u_new)) || any(isinf.(u_new))
-            return nothing  # Signal failure
+            return nothing
         end
     end
     return nothing  # Failed to converge
@@ -219,7 +221,13 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
         rate(rate_cache, u_prev, p, t_prev)
         tau_prime = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate)
         tau_double_prime = compute_tau_implicit(u_prev, rate_cache, nu, p, t_prev, rate)
-        tau = min(tau_prime, tau_double_prime / 10.0)
+        # Cao et al. (2007): Use tau_prime for explicit, tau_double_prime for implicit
+        use_implicit = false
+        tau = tau_prime  # Default to explicit
+        if tau_double_prime < tau_prime && any(u_prev .< 10)  # Implicit if populations are low
+            tau = tau_double_prime
+            use_implicit = true
+        end
         tau = max(tau, dtmin)
         tau = min(tau, t_end - t_prev)
         if !isempty(saveat_times)
@@ -227,23 +235,18 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
                 tau = saveat_times[save_idx] - t_prev
             end
         end
-        counts .= counts .= pois_rand.((rng,), max.(rate_cache * tau, 0.0))
+        counts .= pois_rand.((rng,), max.(rate_cache * tau, 0.0))
         c(du, u_prev, p, t_prev, counts, nothing)
         u_new = u_prev + du
-        if tau_prime <= tau_double_prime / 10.0
-            # Explicit update
-            if any(u_new .< 0)
-                # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
-                tau /= 2
-                continue
-            end
-        else
+        if use_implicit
             u_new = implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
             if u_new === nothing || any(u_new .< 0)
-                # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
-                tau /= 2
+                tau /= 2  # Halve tau if implicit fails or produces negative populations
                 continue
             end
+        elseif any(u_new .< 0)
+            tau /= 2  # Halve tau if explicit produces negative populations
+            continue
         end
         u_new = max.(u_new, 0)
         push!(u, u_new)

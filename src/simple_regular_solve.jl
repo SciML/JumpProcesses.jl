@@ -122,8 +122,8 @@ end
 
 function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
     # Define the nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (counts_j - tau * (a_j(u_prev) - a_j(u_new)))) = 0
-    function f(u_new, params)
-        rate_new = zeros(eltype(u_new), numjumps)
+    function f(u_new)
+        rate_new = zeros(Float64, numjumps)
         rate(rate_new, u_new, p, t_prev + tau)
         residual = u_new - u_prev
         for j in 1:numjumps
@@ -132,19 +132,41 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
         return residual
     end
 
-    # Initial guess
-    u_new = copy(u_prev)
-
-    # Solve the nonlinear system
-    prob = NonlinearProblem(f, u_new, nothing)
-    sol = solve(prob, SimpleNewtonRaphson())
-
-    # Check for convergence and numerical stability
-    if sol.retcode != ReturnCode.Success || any(isnan.(sol.u)) || any(isinf.(sol.u))
-        return nothing  # Signal failure to trigger tau halving
+    # Compute Jacobian using finite differences
+    function compute_jacobian(u_new)
+        n = length(u_new)
+        J = zeros(Float64, n, n)
+        h = 1e-6
+        f_u = f(u_new)
+        for j in 1:n
+            u_pert = copy(u_new)
+            u_pert[j] += h
+            f_pert = f(u_pert)
+            J[:, j] = (f_pert - f_u) / h
+        end
+        return J
     end
 
-    return round.(Int, max.(sol.u, 0.0))
+    # Inline Newton-Raphson
+    u_new = float.(u_prev + sum(nu[:, j] * counts[j] for j in 1:numjumps))  # Initial guess: explicit step
+    tol = 1e-6
+    maxiters = 100
+    for iter in 1:maxiters
+        F = f(u_new)
+        if norm(F) < tol
+            return round.(Int, max.(u_new, 0.0))  # Converged
+        end
+        J = compute_jacobian(u_new)
+        if abs(det(J)) < 1e-10  # Check for singular Jacobian
+            return nothing  # Signal failure
+        end
+        delta = J \ F
+        u_new -= delta
+        if any(isnan.(u_new)) || any(isinf.(u_new))
+            return nothing  # Signal failure
+        end
+    end
+    return nothing  # Failed to converge
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; seed=nothing, dtmin=1e-10, saveat=nothing)
@@ -216,7 +238,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
                 continue
             end
         else
-            # Implicit update using NonlinearSolve
             u_new = implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
             if u_new === nothing || any(u_new .< 0)
                 # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)

@@ -115,62 +115,32 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     return sol
 end
 
+# SimpleImplicitTauLeaping implementation
 struct SimpleImplicitTauLeaping <: DiffEqBase.DEAlgorithm
     epsilon::Float64  # Error control parameter
-    nc::Int          # Critical reaction threshold
-    nstiff::Float64  # Stiffness threshold for switching
-    delta::Float64   # Partial equilibrium threshold
 end
 
-SimpleImplicitTauLeaping(; epsilon=0.05, nc=10, nstiff=100.0, delta=0.05) = 
-    SimpleImplicitTauLeaping(epsilon, nc, nstiff, delta)
+SimpleImplicitTauLeaping(; epsilon=0.05) = SimpleImplicitTauLeaping(epsilon)
 
-# Compute stoichiometry matrix from c function
-function compute_stoichiometry(c, u, numjumps, p, t)
-    nu = zeros(Int, length(u), numjumps)
-    for j in 1:numjumps
-        counts = zeros(numjumps)
-        counts[j] = 1
-        du = similar(u)
-        c(du, u, p, t, counts, nothing)
-        nu[:, j] = round.(Int, du)
-    end
-    return nu
-end
-
-# Detect reversible reaction pairs
-function find_reversible_pairs(nu)
-    pairs = Vector{Tuple{Int,Int}}()
+function compute_hor(nu)
+    hor = zeros(Int, size(nu, 2))
     for j in 1:size(nu, 2)
-        for k in (j+1):size(nu, 2)
-            if nu[:, j] == -nu[:, k]
-                push!(pairs, (j, k))
-            end
-        end
+        hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
     end
-    return pairs
+    return hor
 end
 
-# Compute g_i (approximation from Cao et al., 2006)
-function compute_gi(u, nu, i, rate, rate_cache, p, t)
+function compute_gi(u, nu, hor, i)
     max_order = 1.0
     for j in 1:size(nu, 2)
         if abs(nu[i, j]) > 0
-            rate(rate_cache, u, p, t)
-            if rate_cache[j] > 0
-                order = 1.0
-                if sum(abs.(nu[:, j])) > abs(nu[i, j])
-                    order = 2.0
-                end
-                max_order = max(max_order, order)
-            end
+            max_order = max(max_order, Float64(hor[j]))
         end
     end
     return max_order
 end
 
-# Tau-selection for explicit method (Equation 8)
-function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate)
+function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate)
     rate(rate_cache, u, p, t)
     mu = zeros(length(u))
     sigma2 = zeros(length(u))
@@ -180,104 +150,58 @@ function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate)
             mu[i] += nu[i, j] * rate_cache[j]
             sigma2[i] += nu[i, j]^2 * rate_cache[j]
         end
-        gi = compute_gi(u, nu, i, rate, rate_cache, p, t)
+        gi = compute_gi(u, nu, hor, i)
         bound = max(epsilon * u[i] / gi, 1.0)
         mu_term = abs(mu[i]) > 0 ? bound / abs(mu[i]) : Inf
         sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
         tau = min(tau, mu_term, sigma_term)
     end
-    return max(tau, 1e-10)
+    return tau
 end
 
-# Partial equilibrium check (Equation 13)
-function is_partial_equilibrium(rate_cache, j_plus, j_minus, delta)
-    a_plus = rate_cache[j_plus]
-    a_minus = rate_cache[j_minus]
-    return abs(a_plus - a_minus) <= delta * min(a_plus, a_minus)
-end
-
-# Tau-selection for implicit method (Equation 14)
-function compute_tau_implicit(u, rate_cache, nu, p, t, epsilon, rate, equilibrium_pairs, delta)
+function compute_tau_implicit(u, rate_cache, nu, p, t, rate)
     rate(rate_cache, u, p, t)
-    mu = zeros(length(u))
-    sigma2 = zeros(length(u))
-    non_equilibrium = trues(size(nu, 2))
-    for (j_plus, j_minus) in equilibrium_pairs
-        if is_partial_equilibrium(rate_cache, j_plus, j_minus, delta)
-            non_equilibrium[j_plus] = false
-            non_equilibrium[j_minus] = false
-        end
-    end
     tau = Inf
     for i in 1:length(u)
+        sum_nu_a = 0.0
         for j in 1:size(nu, 2)
-            if non_equilibrium[j]
-                mu[i] += nu[i, j] * rate_cache[j]
-                sigma2[i] += nu[i, j]^2 * rate_cache[j]
-            end
+            sum_nu_a += abs(nu[i, j]) * rate_cache[j]
         end
-        gi = compute_gi(u, nu, i, rate, rate_cache, p, t)
-        bound = max(epsilon * u[i] / gi, 1.0)
-        mu_term = abs(mu[i]) > 0 ? bound / abs(mu[i]) : Inf
-        sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
-        tau = min(tau, mu_term, sigma_term)
-    end
-    return max(tau, 1e-10)
-end
-
-# Identify critical reactions
-function identify_critical_reactions(u, rate_cache, nu, nc)
-    critical = falses(size(nu, 2))
-    for j in 1:size(nu, 2)
-        if rate_cache[j] > 0
-            Lj = Inf
-            for i in 1:length(u)
-                if nu[i, j] < 0
-                    Lj = min(Lj, floor(Int, u[i] / abs(nu[i, j])))
-                end
-            end
-            if Lj < nc
-                critical[j] = true
-            end
+        if sum_nu_a > 0
+            tau = min(tau, 1.0 / sum_nu_a)
         end
     end
-    return critical
+    return tau
 end
 
-# Implicit tau-leaping step using NonlinearSolve
 function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
-    # Define the nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (counts_j - tau * a_j(u_prev) + tau * a_j(u_new))) = 0
+    # Define the nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (counts_j - tau * (a_j(u_prev) - a_j(u_new)))) = 0
     function f(u_new, params)
         rate_new = zeros(eltype(u_new), numjumps)
         rate(rate_new, u_new, p, t_prev + tau)
         residual = u_new - u_prev
         for j in 1:numjumps
-            residual -= nu[:, j] * (counts[j] - tau * rate_cache[j] + tau * rate_new[j])
+            residual -= nu[:, j] * (counts[j] - tau * (rate_cache[j] - rate_new[j]))
         end
         return residual
     end
-    
+
     # Initial guess
     u_new = copy(u_prev)
-    
+
     # Solve the nonlinear system
     prob = NonlinearProblem(f, u_new, nothing)
-    sol = solve(prob, NewtonRaphson())
-    
+    sol = solve(prob, SimpleNewtonRaphson(), tol=1e-6)
+
     # Check for convergence and numerical stability
     if sol.retcode != ReturnCode.Success || any(isnan.(sol.u)) || any(isinf.(sol.u))
-        return round.(Int, max.(u_prev, 0.0))  # Revert to previous state
+        return nothing  # Signal failure to trigger tau halving
     end
-    
+
     return round.(Int, max.(sol.u, 0.0))
 end
 
-# Down-shifting condition (Equation 19)
-function use_down_shifting(t, tau_im, tau_ex, a0, t_end)
-    return a0 > 0 && t + tau_im >= t_end - 100 * (tau_ex + 1 / a0)
-end
-
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; seed=nothing)
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; seed=nothing, dtmin=1e-10, saveat=nothing)
     @assert isempty(jump_prob.jump_callback.continuous_callbacks)
     @assert isempty(jump_prob.jump_callback.discrete_callbacks)
     prob = jump_prob.prob
@@ -291,144 +215,93 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
     u0 = copy(prob.u0)
     tspan = prob.tspan
     p = prob.p
-    
-    # Initialize storage
-    rate_cache = zeros(Float64, numjumps)
-    counts = zeros(Int, numjumps)
-    du = similar(u0)
+
     u = [copy(u0)]
     t = [tspan[1]]
-    
-    # Algorithm parameters
-    epsilon = alg.epsilon
-    nc = alg.nc
-    nstiff = alg.nstiff
-    delta = alg.delta
+    rate_cache = zeros(Float64, numjumps)
+    counts = zeros(Int, numjumps)
+    du = similar(u0, Int)
     t_end = tspan[2]
-    
-    # Compute stoichiometry matrix
-    nu = compute_stoichiometry(c, u0, numjumps, p, t[1])
-    
-    # Detect reversible reaction pairs
-    equilibrium_pairs = find_reversible_pairs(nu)
-    
-    # Main simulation loop
+    epsilon = alg.epsilon
+
+    # Compute initial stoichiometry and HOR
+    nu = zeros(Int, length(u0), numjumps)
+    counts_temp = zeros(Int, numjumps)
+    for j in 1:numjumps
+        fill!(counts_temp, 0)
+        counts_temp[j] = 1
+        c(du, u0, p, t[1], counts_temp, nothing)
+        nu[:, j] = du
+    end
+    hor = compute_hor(nu)
+
+    saveat_times = isnothing(saveat) ? Float64[] : saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat)
+    save_idx = 1
+
     while t[end] < t_end
         u_prev = u[end]
         t_prev = t[end]
-        
-        # Compute propensities
-        rate(rate_cache, u_prev, p, t_prev)
-        
-        # Identify critical reactions
-        critical = identify_critical_reactions(u_prev, rate_cache, nu, nc)
-        
-        # Compute tau values
-        tau_ex = compute_tau_explicit(u_prev, rate_cache, nu, p, t_prev, epsilon, rate)
-        tau_im = compute_tau_implicit(u_prev, rate_cache, nu, p, t_prev, epsilon, rate, equilibrium_pairs, delta)
-        
-        # Compute critical propensity sum
-        ac0 = sum(rate_cache[critical])
-        tau2 = ac0 > 0 ? randexp(rng) / ac0 : Inf
-        
-        # Choose method and stepsize
-        a0 = sum(rate_cache)
-        use_implicit = a0 > 0 && tau_im > nstiff * tau_ex && !use_down_shifting(t_prev, tau_im, tau_ex, a0, t_end)
-        tau1 = use_implicit ? tau_im : tau_ex
-        method = use_implicit ? :implicit : :explicit
-        
-        # Cap tau to prevent large updates
-        tau1 = min(tau1, 1.0)
-        
-        # Check if tau1 is too small
-        if a0 > 0 && tau1 < 10 / a0
-            # Use SSA for a few steps
-            steps = method == :implicit ? 10 : 100
-            for _ in 1:steps
-                if t_prev >= t_end
-                    break
-                end
-                rate(rate_cache, u_prev, p, t_prev)
-                a0 = sum(rate_cache)
-                if a0 == 0
-                    break
-                end
-                tau = randexp(rng) / a0
-                r = rand(rng) * a0
-                cumsum_rate = 0.0
-                for j in 1:numjumps
-                    cumsum_rate += rate_cache[j]
-                    if cumsum_rate > r
-                        u_prev += nu[:, j]
-                        break
-                    end
-                end
-                t_prev += tau
-                push!(u, copy(u_prev))
-                push!(t, t_prev)
-            end
-            continue
+        # Recompute stoichiometry
+        for j in 1:numjumps
+            fill!(counts_temp, 0)
+            counts_temp[j] = 1
+            c(du, u_prev, p, t_prev, counts_temp, nothing)
+            nu[:, j] = du
         end
-        
-        # Choose stepsize and compute firings
-        if tau2 > tau1
-            tau = min(tau1, t_end - t_prev)
-            counts .= 0
-            for j in 1:numjumps
-                if !critical[j]
-                    counts[j] = pois_rand(rng, max(rate_cache[j] * tau, 0.0))
-                end
+        rate(rate_cache, u_prev, p, t_prev)
+        tau_prime = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate)
+        tau_double_prime = compute_tau_implicit(u_prev, rate_cache, nu, p, t_prev, rate)
+        tau = min(tau_prime, tau_double_prime / 10.0)
+        tau = max(tau, dtmin)
+        tau = min(tau, t_end - t_prev)
+        if !isempty(saveat_times)
+            if save_idx <= length(saveat_times) && t_prev + tau > saveat_times[save_idx]
+                tau = saveat_times[save_idx] - t_prev
             end
-            if method == :implicit
-                u_new = implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
-            else
-                c(du, u_prev, p, t_prev, counts, nothing)
-                u_new = u_prev + du
+        end
+        counts .= rand(rng, Poisson.(max.(rate_cache * tau, 0.0)))
+        c(du, u_prev, p, t_prev, counts, nothing)
+        u_new = u_prev + du
+        if tau_prime <= tau_double_prime / 10.0
+            # Explicit update
+            if any(u_new .< 0)
+                # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
+                tau /= 2
+                continue
             end
         else
-            tau = min(tau2, t_end - t_prev)
-            counts .= 0
-            if ac0 > 0
-                r = rand(rng) * ac0
-                cumsum_rate = 0.0
-                for j in 1:numjumps
-                    if critical[j]
-                        cumsum_rate += rate_cache[j]
-                        if cumsum_rate > r
-                            counts[j] = 1
-                            break
-                        end
-                    end
-                end
-            end
-            for j in 1:numjumps
-                if !critical[j]
-                    counts[j] = pois_rand(rng, max(rate_cache[j] * tau, 0.0))
-                end
-            end
-            if method == :implicit && tau > tau_ex
-                u_new = implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
-            else
-                c(du, u_prev, p, t_prev, counts, nothing)
-                u_new = u_prev + du
+            # Implicit update using NonlinearSolve
+            u_new = implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
+            if u_new === nothing || any(u_new .< 0)
+                # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
+                tau /= 2
+                continue
             end
         end
-        
-        # Check for negative populations
-        if any(u_new .< 0)
-            tau1 /= 2
-            continue
-        end
-        
-        # Update state and time
+        u_new = max.(u_new, 0)
         push!(u, u_new)
         push!(t, t_prev + tau)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t[end] >= saveat_times[save_idx]
+            save_idx += 1
+        end
     end
-    
-    # Build solution
+
+    # Interpolate to saveat times if specified
+    if !isempty(saveat_times)
+        t_out = saveat_times
+        u_out = [u[end]]
+        for t_save in saveat_times
+            idx = findlast(ti -> ti <= t_save, t)
+            push!(u_out, u[idx])
+        end
+        t = t_out
+        u = u_out[2:end]
+    end
+
     sol = DiffEqBase.build_solution(prob, alg, t, u,
-        calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(t, u))
+        calculate_error=false,
+        interp=DiffEqBase.ConstantInterpolation(t, u))
+    return sol
 end
 
 struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm

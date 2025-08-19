@@ -137,7 +137,7 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
 
     # Solve the nonlinear system
     prob = NonlinearProblem(f, u_new, nothing)
-    sol = solve(prob, SimpleNewtonRaphson(), tol=1e-6)
+    sol = solve(prob, SimpleNewtonRaphson())
 
     # Check for convergence and numerical stability
     if sol.retcode != ReturnCode.Success || any(isnan.(sol.u)) || any(isinf.(sol.u))
@@ -205,7 +205,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
                 tau = saveat_times[save_idx] - t_prev
             end
         end
-        counts .= rand(rng, Poisson.(max.(rate_cache * tau, 0.0)))
+        counts .= counts .= pois_rand.((rng,), max.(rate_cache * tau, 0.0))
         c(du, u_prev, p, t_prev, counts, nothing)
         u_new = u_prev + du
         if tau_prime <= tau_double_prime / 10.0

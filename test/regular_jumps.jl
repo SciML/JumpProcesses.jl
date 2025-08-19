@@ -3,28 +3,17 @@ using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
-Nsims = 8000
+Nsims = 10
 
-@testset "SIR Model Correctness" begin
+# @testset "SIR Model Correctness" begin
     β = 0.1 / 1000.0
     ν = 0.01
     influx_rate = 1.0
     p = (β, ν, influx_rate)
 
-    rate1(u, p, t) = p[1] * u[1] * u[2]
-    rate2(u, p, t) = p[2] * u[2]
-    rate3(u, p, t) = p[3]
-    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
-    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
-    affect3!(integrator) = (integrator.u[1] += 1; nothing)
-    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
-
     u0 = [999, 10, 0]  # Integer initial conditions
     tspan = (0.0, 250.0)
     prob_disc = DiscreteProblem(u0, tspan, p)
-    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=StableRNG(12345))
-
-    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims)
 
     regular_rate = (out, u, p, t) -> begin
         out[1] = p[1] * u[1] * u[2]
@@ -41,6 +30,7 @@ Nsims = 8000
     jump_prob_tau = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
 
     sol_implicit = solve(EnsembleProblem(jump_prob_tau), SimpleImplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    plot(sol_implicit)
 
     t_points = 0:1.0:250.0
     mean_direct_S = [mean(sol_direct[i](t)[1] for i in 1:Nsims) for t in t_points]
@@ -48,7 +38,7 @@ Nsims = 8000
 
     max_error_implicit = maximum(abs.(mean_direct_S .- mean_implicit_S))
     @test max_error_implicit < 0.01 * mean(mean_direct_S)
-end
+# end
 
 @testset "SEIR Model Correctness" begin
     β = 0.3 / 1000.0

@@ -18,6 +18,8 @@ using StaticArrays: StaticArrays, SVector, setindex
 using Base.Threads: Threads
 using Base.FastMath: add_fast
 
+using SimpleNonlinearSolve
+
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 

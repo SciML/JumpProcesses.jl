@@ -1,6 +1,6 @@
 using JumpProcesses, DiffEqBase
 using Test, LinearAlgebra, Statistics
-using StableRNGs, Plots
+using StableRNGs
 rng = StableRNG(12345)
 
 Nsims = 10
@@ -30,7 +30,6 @@ Nsims = 10
     jump_prob_tau = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
 
     sol_implicit = solve(EnsembleProblem(jump_prob_tau), SimpleImplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims)
-    plot(sol_implicit)
 
     t_points = 0:1.0:250.0
     mean_direct_S = [mean(sol_direct[i](t)[1] for i in 1:Nsims) for t in t_points]

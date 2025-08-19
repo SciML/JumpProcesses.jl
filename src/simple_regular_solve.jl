@@ -69,7 +69,7 @@ end
 SimpleImplicitTauLeaping(; epsilon=0.05) = SimpleImplicitTauLeaping(epsilon)
 
 function compute_hor(nu)
-    hor = zeros(Int, size(nu, 2))
+    hor = zeros(Int64, size(nu, 2))
     for j in 1:size(nu, 2)
         hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
     end
@@ -88,8 +88,8 @@ end
 
 function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate)
     rate(rate_cache, u, p, t)
-    mu = zeros(length(u))
-    sigma2 = zeros(length(u))
+    mu = zeros(Float64, length(u))
+    sigma2 = zeros(Float64, length(u))
     tau = Inf
     for i in 1:length(u)
         for j in 1:size(nu, 2)
@@ -111,11 +111,11 @@ function compute_tau_implicit(u, rate_cache, nu, p, t, rate)
     for i in 1:length(u)
         sum_nu_a = 0.0
         for j in 1:size(nu, 2)
-            if nu[i, j] < 0  # Only sum negative stoichiometry
+            if nu[i, j] < 0
                 sum_nu_a += abs(nu[i, j]) * rate_cache[j]
             end
         end
-        if sum_nu_a > 0 && u[i] > 0  # Avoid division by zero
+        if sum_nu_a > 0 && u[i] > 0
             tau = min(tau, u[i] / sum_nu_a)
         end
     end
@@ -123,9 +123,8 @@ function compute_tau_implicit(u, rate_cache, nu, p, t, rate)
 end
 
 function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
-    # Nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (k_j - tau * (a_j(u_prev) - a_j(u_new)))) = 0
-    function f(u_new)
-        rate_new = zeros(Float64, numjumps)
+    function f(u_new, p)
+        rate_new = zeros(eltype(u_new), numjumps)
         rate(rate_new, u_new, p, t_prev + tau)
         residual = u_new - u_prev
         for j in 1:numjumps
@@ -134,41 +133,14 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
         return residual
     end
 
-    # Numerical Jacobian
-    function compute_jacobian(u_new)
-        n = length(u_new)
-        J = zeros(Float64, n, n)
-        h = 1e-6
-        f_u = f(u_new)
-        for j in 1:n
-            u_pert = copy(u_new)
-            u_pert[j] += h
-            f_pert = f(u_pert)
-            J[:, j] = (f_pert - f_u) / h
-        end
-        return J
-    end
+    u_new = float.(u_prev + sum(nu[:, j] * counts[j] for j in 1:numjumps))
+    prob = NonlinearProblem{false}(f, u_new, p)
+    sol = solve(prob, SimpleNewtonRaphson(), abstol=1e-6, maxiters=100)
 
-    # Inline Newton-Raphson
-    u_new = float.(u_prev + sum(nu[:, j] * counts[j] for j in 1:numjumps))  # Initial guess: explicit step
-    tol = 1e-6
-    maxiters = 100
-    for iter in 1:maxiters
-        F = f(u_new)
-        if norm(F) < tol
-            return round.(Int, max.(u_new, 0.0))  # Converged
-        end
-        J = compute_jacobian(u_new)
-        if abs(det(J)) < 1e-10  # Check for singular Jacobian
-            return nothing
-        end
-        delta = J \ F
-        u_new -= delta
-        if any(isnan.(u_new)) || any(isinf.(u_new))
-            return nothing
-        end
+    if sol.retcode != ReturnCode.Success || any(isnan.(sol.u)) || any(isinf.(sol.u))
+        return nothing
     end
-    return nothing  # Failed to converge
+    return round.(Int64, max.(sol.u, 0.0))
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; seed=nothing, dtmin=1e-10, saveat=nothing)
@@ -211,7 +183,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
     while t[end] < t_end
         u_prev = u[end]
         t_prev = t[end]
-        # Recompute stoichiometry
         for j in 1:numjumps
             fill!(counts_temp, 0)
             counts_temp[j] = 1
@@ -221,11 +192,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
         rate(rate_cache, u_prev, p, t_prev)
         tau_prime = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate)
         tau_double_prime = compute_tau_implicit(u_prev, rate_cache, nu, p, t_prev, rate)
-        # Cao et al. (2007): Use tau_prime for explicit, tau_double_prime for implicit
         use_implicit = false
-        tau = tau_prime  # Default to explicit
-        if tau_double_prime < tau_prime && any(u_prev .< 10)  # Implicit if populations are low
-            tau = tau_double_prime
+        tau = tau_prime
+        if any(u_prev .< 10)
+            tau = min(tau_double_prime, tau_prime) # Tighter cap for accuracy
             use_implicit = true
         end
         tau = max(tau, dtmin)
@@ -241,11 +211,11 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
         if use_implicit
             u_new = implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
             if u_new === nothing || any(u_new .< 0)
-                tau /= 2  # Halve tau if implicit fails or produces negative populations
+                tau /= 2
                 continue
             end
         elseif any(u_new .< 0)
-            tau /= 2  # Halve tau if explicit produces negative populations
+            tau /= 2
             continue
         end
         u_new = max.(u_new, 0)

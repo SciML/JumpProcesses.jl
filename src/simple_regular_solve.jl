@@ -124,6 +124,7 @@ function compute_tau_implicit(u, rate_cache, nu, p, t, rate)
 end
 
 function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate, numjumps)
+    # Define the nonlinear system: F(u_new) = u_new - u_prev - sum(nu_j * (counts_j - tau * a_j(u_prev) + tau * a_j(u_new))) = 0
     function f(u_new, p)
         rate_new = zeros(eltype(u_new), numjumps)
         rate(rate_new, u_new, p, t_prev + tau)

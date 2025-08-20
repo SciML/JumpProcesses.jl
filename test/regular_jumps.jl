@@ -1,5 +1,5 @@
 using JumpProcesses, DiffEqBase
-using Test, LinearAlgebra, Statistics
+using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -32,4 +32,4 @@ prob_disc = DiscreteProblem(u0, tspan, p)
 rj = RegularJump(regular_rate, regular_c, 3)
 jump_prob_tau = JumpProblem(prob_disc, Direct(), rj; rng=StableRNG(12345))
 
-sol_implicit = solve(EnsembleProblem(jump_prob_tau), SimpleImplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+sol = solve(EnsembleProblem(jump_prob_tau), SimpleImplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)

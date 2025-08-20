@@ -67,7 +67,7 @@ struct SimpleImplicitTauLeaping <: DiffEqBase.DEAlgorithm
     critical_threshold::Float64
 end
 
-SimpleImplicitTauLeaping(; epsilon=0.05, L=10.0) = SimpleImplicitTauLeaping(epsilon, L)
+SimpleImplicitTauLeaping(; epsilon=0.05, critical_threshold=10.0) = SimpleImplicitTauLeaping(epsilon, critical_threshold)
 
 function compute_hor(nu)
     hor = zeros(Int64, size(nu, 2))
@@ -127,9 +127,10 @@ function implicit_tau_step(u_prev, t_prev, tau, rate_cache, counts, nu, p, rate,
     function f(u_new, p)
         rate_new = zeros(eltype(u_new), numjumps)
         rate(rate_new, u_new, p, t_prev + tau)
-        residual = u_new - u_prev
+        residual = zeros(eltype(u_new), length(u_new))
+        residual .= u_new - u_prev
         for j in 1:numjumps
-            residual -= nu[:, j] * (counts[j] - tau * (rate_cache[j] - rate_new[j]))
+            residual .-= nu[:, j] * (counts[j] - tau * (rate_cache[j] - rate_new[j]))
         end
         return residual
     end

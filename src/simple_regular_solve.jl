@@ -63,10 +63,11 @@ end
 
 # SimpleImplicitTauLeaping implementation
 struct SimpleImplicitTauLeaping <: DiffEqBase.DEAlgorithm
-    epsilon::Float64  # Error control parameter
+    epsilon::Float64
+    critical_threshold::Float64
 end
 
-SimpleImplicitTauLeaping(; epsilon=0.05) = SimpleImplicitTauLeaping(epsilon)
+SimpleImplicitTauLeaping(; epsilon=0.05, L=10.0) = SimpleImplicitTauLeaping(epsilon, L)
 
 function compute_hor(nu)
     hor = zeros(Int64, size(nu, 2))
@@ -165,6 +166,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
     du = similar(u0, Int)
     t_end = tspan[2]
     epsilon = alg.epsilon
+    critical_threshold = alg.critical_threshold
 
     # Compute initial stoichiometry and HOR
     nu = zeros(Int, length(u0), numjumps)
@@ -194,8 +196,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
         tau_double_prime = compute_tau_implicit(u_prev, rate_cache, nu, p, t_prev, rate)
         use_implicit = false
         tau = tau_prime
-        if any(u_prev .< 10)
-            tau = min(tau_double_prime, tau_prime) # Tighter cap for accuracy
+        if any(u_prev .< critical_threshold)
+            tau = min(tau_double_prime, tau_prime)
             use_implicit = true
         end
         tau = max(tau, dtmin)

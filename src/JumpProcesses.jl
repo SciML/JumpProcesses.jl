@@ -21,6 +21,8 @@ using Base.Threads: Threads, @threads
 using Base.FastMath: add_fast
 using Setfield: @set, @set!
 
+using SimpleNonlinearSolve
+
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 

@@ -1094,7 +1094,7 @@ uuid = "70703baa-626e-46a2-a12c-08ffd08c73b4"
 version = "0.4.10"
 
 [[deps.JumpProcesses]]
-deps = ["ArrayInterface", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "FunctionWrappers", "Graphs", "LinearAlgebra", "Markdown", "PoissonRandom", "Random", "RecursiveArrayTools", "Reexport", "SciMLBase", "Setfield", "StaticArrays", "SymbolicIndexingInterface", "UnPack"]
+deps = ["ArrayInterface", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "FunctionWrappers", "Graphs", "LinearAlgebra", "PoissonRandom", "Random", "RecursiveArrayTools", "Reexport", "SciMLBase", "Setfield", "StaticArrays", "SymbolicIndexingInterface", "UnPack"]
 path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 version = "9.17.0"
@@ -1287,10 +1287,10 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 version = "1.11.0"
 
 [[deps.LinearSolve]]
-deps = ["ArrayInterface", "ChainRulesCore", "ConcreteStructs", "DocStringExtensions", "EnumX", "GPUArraysCore", "InteractiveUtils", "Krylov", "LazyArrays", "Libdl", "LinearAlgebra", "MKL_jll", "Markdown", "PrecompileTools", "Preferences", "RecursiveArrayTools", "Reexport", "SciMLBase", "SciMLLogging", "SciMLOperators", "Setfield", "StaticArraysCore", "UnPack"]
-git-tree-sha1 = "cf918e72417d878cf4f92c7cde4cbdcc8b97a0ee"
+deps = ["ArrayInterface", "ChainRulesCore", "ConcreteStructs", "DocStringExtensions", "EnumX", "GPUArraysCore", "InteractiveUtils", "Krylov", "LazyArrays", "Libdl", "LinearAlgebra", "MKL_jll", "Markdown", "OpenBLAS_jll", "PrecompileTools", "Preferences", "RecursiveArrayTools", "Reexport", "SciMLBase", "SciMLOperators", "Setfield", "StaticArraysCore", "UnPack"]
+git-tree-sha1 = "0f1a02cea457a2e26b67e105aa7ee549419c2550"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
-version = "3.35.0"
+version = "3.37.0"
 
     [deps.LinearSolve.extensions]
     LinearSolveAMDGPUExt = "AMDGPU"
@@ -2166,11 +2166,6 @@ git-tree-sha1 = "330289636fb8107c5f32088d2741e9fd7a061a5c"
 uuid = "94e857df-77ce-4151-89e5-788b33177be4"
 version = "0.1.0"
 
-[[deps.SafeTestsets]]
-git-tree-sha1 = "81ec49d645af090901120a1542e67ecbbe044db3"
-uuid = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
-version = "0.1.0"
-
 [[deps.SciMLBase]]
 deps = ["ADTypes", "Accessors", "Adapt", "ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "Moshi", "PrecompileTools", "Preferences", "Printf", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "SciMLStructures", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface"]
 git-tree-sha1 = "1a1b2ed5178814d32374d98f808163c24d47f1d8"
@@ -2204,17 +2199,11 @@ git-tree-sha1 = "3414071e3458f3065de7fa5aed55283b236b4907"
 uuid = "19f34311-ddf3-4b8b-af20-060888a46c0e"
 version = "0.1.8"
 
-[[deps.SciMLLogging]]
-deps = ["DocStringExtensions", "Logging", "LoggingExtras", "Moshi", "SafeTestsets"]
-git-tree-sha1 = "e8a13b37734bc601500cd29336f114f67c7fb353"
-uuid = "a6db7da4-7206-11f0-1eab-35f2a5dbe1d1"
-version = "1.0.0"
-
 [[deps.SciMLOperators]]
 deps = ["Accessors", "ArrayInterface", "DocStringExtensions", "LinearAlgebra", "MacroTools"]
-git-tree-sha1 = "aea915a39b547c48a18ee041120db1ae8df5a691"
+git-tree-sha1 = "78ac1b947205b07973321f67f17df8fbe6154ac9"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
-version = "1.5.0"
+version = "1.6.0"
 weakdeps = ["SparseArrays", "StaticArraysCore"]
 
     [deps.SciMLOperators.extensions]

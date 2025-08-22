@@ -5,7 +5,6 @@ using Reexport: Reexport, @reexport
 
 # Explicit imports from standard libraries
 using LinearAlgebra: LinearAlgebra, I, mul!
-using Markdown: Markdown
 using Random: Random, randexp, randexp!
 
 # Explicit imports from external packages

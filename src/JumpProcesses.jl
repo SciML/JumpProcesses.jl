@@ -121,6 +121,13 @@ include("SSA_stepper.jl")
 export SSAStepper
 
 # leaping: 
+"""
+Aggregator to indicate that individual jumps should also be handled via the leaping
+algorithm that is passed to solve.
+"""
+struct LeapOnly <: AbstractAggregatorAlgorithm end
+export LeapOnly
+
 include("simple_regular_solve.jl")
 export SimpleTauLeaping, EnsembleGPUKernel
 

@@ -8,23 +8,7 @@ function regular_rate(out, u, p, t)
     out[2] = 0.01u[2]
 end
 
-function regular_c(dc, u, p, t, mark)
-    dc[1, 1] = -1
-    dc[2, 1] = 1
-    dc[2, 2] = -1
-    dc[3, 2] = 1
-end
-
-dc = zeros(3, 2)
-
-rj = RegularJump(regular_rate, regular_c, dc; constant_c = true)
-jumps = JumpSet(rj)
-
-prob = DiscreteProblem([999.0, 1.0, 0.0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, PureLeaping(), rj; rng)
-sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
-
-const _dc = zeros(3, 2)
+const dc = zeros(3, 2)
 dc[1, 1] = -1
 dc[2, 1] = 1
 dc[2, 2] = -1
@@ -46,7 +30,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     u0 = [10, 5, 0]
     tspan = (0.0, 10.0)
     p = [0.1, 0.2]
-    prob = DiscreteProblem(u0, p, tspan)
+    prob = DiscreteProblem(u0, tspan, p)
     
     # Create MassActionJump
     reactant_stoich = [[1 => 1], [1 => 2]]
@@ -86,13 +70,15 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
         out[1] = p[1] * u[1]
     end
     
-    function rj_c(dc, u, p, t, mark)
-        dc[1, 1] = -1
-        dc[3, 1] = 1
+    rj_dc = zeros(3, 1)
+    rj_dc[1, 1] = -1
+    rj_dc[3, 1] = 1
+    
+    function rj_c(du, u, p, t, counts, mark)
+        mul!(du, rj_dc, counts)
     end
     
-    rj_dc = zeros(3, 1)
-    regj = RegularJump(rj_rate, rj_c, rj_dc; constant_c = true)
+    regj = RegularJump(rj_rate, rj_c, 1)
     
     jp_pure_regj = JumpProblem(prob, PureLeaping(), JumpSet(regj))
     @test jp_pure_regj.aggregator isa PureLeaping
@@ -100,8 +86,8 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     @test jp_pure_regj.regular_jump !== nothing
     
     # Test mixed jump types
-    mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = crj, 
-        variable_jumps = vrj, regular_jumps = regj)
+    mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = (crj,), 
+        variable_jumps = (vrj,), regular_jumps = regj)
     jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps)
     @test jp_pure_mixed.aggregator isa PureLeaping
     @test jp_pure_mixed.discrete_jump_aggregation === nothing
@@ -119,8 +105,8 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
                                           hopping_constants = hopping_consts)
     
     # Test MassActionJump with parameter mapping
-    param_mapper = MassActionJumpParamMapper([1, 2])
-    maj_params = MassActionJump(reactant_stoich, net_stoich, param_mapper)
+    maj_params = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1, 2])
     jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params))
-    @test jp_params.massaction_jump.scaled_rates == p
+    scaled_rates = [p[1], p[2]/2]
+    @test jp_params.massaction_jump.scaled_rates == scaled_rates
 end

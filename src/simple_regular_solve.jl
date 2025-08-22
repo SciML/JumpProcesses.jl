@@ -1,20 +1,25 @@
 struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
-function validate_pure_leaping_inputs(jump_prob::JumpProblem)
-    jump_prob.aggregator isa PureLeaping &&
-        isempty(jump_prob.jump_callback.continuous_callbacks) &&
-        isempty(jump_prob.jump_callback.discrete_callbacks) &&
-        isempty(jump_prob.constant_jumps) &&
-        isempty(jump_prob.variable_jumps) &&
-        get_num_majumps(jump_prob.massaction_jump) == 0 &&
-        jump_prob.regular_jump !== nothing    
+function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
+    if !(jump_prob.aggregator isa PureLeaping)
+        @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
+        JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
+        Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
+    end
+    isempty(jump_prob.jump_callback.continuous_callbacks) &&
+    isempty(jump_prob.jump_callback.discrete_callbacks) &&
+    isempty(jump_prob.constant_jumps) &&
+    isempty(jump_prob.variable_jumps) &&
+    get_num_majumps(jump_prob.massaction_jump) == 0 &&
+    jump_prob.regular_jump !== nothing    
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing,
         dt = error("dt is required for SimpleTauLeaping."))
 
-    validate_pure_leaping_inputs(jump_prob) ||
+    @show "here1"
+    validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
     prob = jump_prob.prob
     rng = DEFAULT_RNG

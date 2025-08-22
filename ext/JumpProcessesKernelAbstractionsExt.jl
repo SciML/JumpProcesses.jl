@@ -23,7 +23,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     jump_prob = ensembleprob.prob
 
     # Validate that this is a PureLeaping JumpProblem
-    validate_pure_leaping_inputs(jump_prob) ||
+    validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
     prob = jump_prob.prob
 

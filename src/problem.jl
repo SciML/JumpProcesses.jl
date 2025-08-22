@@ -302,6 +302,48 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         jump_cbs, crjs, cvrjs, jumps.regular_jump, maj, rng, solkwargs)
 end
 
+# Special dispatch for PureLeaping aggregator - bypasses all aggregation
+function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
+        save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
+                         (false, true) : (true, true),
+        rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
+        spatial_system = nothing, hopping_constants = nothing,
+        callback = nothing, kwargs...)
+
+    # Validate no spatial systems (not currently supported)
+    (spatial_system !== nothing || hopping_constants !== nothing) &&
+        error("PureLeaping does not currently support spatial problems.")
+
+    # Initialize the MassActionJump rate constants with the user parameters
+    if using_params(jumps.massaction_jump)
+        rates = jumps.massaction_jump.param_mapper(prob.p)
+        maj = MassActionJump(rates, jumps.massaction_jump.reactant_stoch,
+            jumps.massaction_jump.net_stoch,
+            jumps.massaction_jump.param_mapper; scale_rates = scale_rates,
+            useiszero = useiszero,
+            nocopy = true)
+    else
+        maj = jumps.massaction_jump
+    end
+
+    # For PureLeaping, all jumps are handled by the tau-leaping solver
+    # No discrete jump aggregation or variable rate callbacks are created
+    disc_agg = nothing
+    jump_cbs = CallbackSet()
+    
+    # Store all jump types for access by tau-leaping solver
+    crjs = jumps.constant_jumps
+    vrjs = jumps.variable_jumps
+    
+    iip = isinplace_jump(prob, jumps.regular_jump)
+    solkwargs = make_kwarg(; callback)
+
+    JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs), 
+        typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(jumps.regular_jump),
+        typeof(maj), typeof(rng), typeof(solkwargs)}(prob, aggregator, disc_agg,
+        jump_cbs, crjs, vrjs, jumps.regular_jump, maj, rng, solkwargs)
+end
+
 aggregator(jp::JumpProblem{iip, P, A}) where {iip, P, A} = A
 
 @inline function extend_tstops!(tstops, jp::JumpProblem) 

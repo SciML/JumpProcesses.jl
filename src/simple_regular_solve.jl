@@ -1,12 +1,21 @@
 struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
+function validate_pure_leaping_inputs(jump_prob::JumpProblem)
+    jump_prob.aggregator isa PureLeaping &&
+        isempty(jump_prob.jump_callback.continuous_callbacks) &&
+        isempty(jump_prob.jump_callback.discrete_callbacks) &&
+        isempty(jump_prob.constant_jumps) &&
+        isempty(jump_prob.variable_jumps) &&
+        get_num_majumps(jump_prob.massaction_jump) == 0 &&
+        jump_prob.regular_jump !== nothing    
+end
+
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing,
         dt = error("dt is required for SimpleTauLeaping."))
 
-    # boilerplate from SimpleTauLeaping method
-    @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
-    @assert isempty(jump_prob.jump_callback.discrete_callbacks)
+    validate_pure_leaping_inputs(jump_prob) ||
+        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
     prob = jump_prob.prob
     rng = DEFAULT_RNG
     (seed !== nothing) && seed!(rng, seed)
@@ -62,4 +71,3 @@ end
 function EnsembleGPUKernel()
     EnsembleGPUKernel(nothing, 0.0)
 end
-

@@ -21,7 +21,7 @@ rj = RegularJump(regular_rate, regular_c, dc; constant_c = true)
 jumps = JumpSet(rj)
 
 prob = DiscreteProblem([999.0, 1.0, 0.0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, Direct(), rj; rng = rng)
+jump_prob = JumpProblem(prob, PureLeaping(), rj; rng)
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
 
 const _dc = zeros(3, 2)
@@ -37,7 +37,7 @@ end
 rj = RegularJump(regular_rate, regular_c, 2)
 jumps = JumpSet(rj)
 prob = DiscreteProblem([999, 1, 0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, Direct(), rj; rng = rng)
+jump_prob = JumpProblem(prob, PureLeaping(), rj; rng)
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
 
 # Test PureLeaping aggregator functionality

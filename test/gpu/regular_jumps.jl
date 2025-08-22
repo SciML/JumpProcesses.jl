@@ -31,7 +31,7 @@ let
 
     prob_disc = DiscreteProblem(u0, tspan, p)
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob = JumpProblem(prob_disc, Direct(), rj)
+    jump_prob = JumpProblem(prob_disc, PureLeaping(), rj)
 
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
         EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
@@ -72,7 +72,7 @@ let
     # Create JumpProblem
     prob_disc = DiscreteProblem(u0, tspan, p)
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob = JumpProblem(prob_disc, Direct(), rj; rng = StableRNG(12345))
+    jump_prob = JumpProblem(prob_disc, PureLeaping(), rj; rng = StableRNG(12345))
 
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
         EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
@@ -83,4 +83,34 @@ let
     mean_serial = mean(sol.u[i][end, end] for i in 1:Nsims)
 
     @test isapprox(mean_kernel, mean_serial, rtol = 0.05)
+end
+
+# Test PureLeaping validation for GPU
+@testset "PureLeaping GPU Validation" begin
+    β = 0.1 / 1000.0
+    ν = 0.01
+    p = (β, ν)
+    
+    regular_rate = (out, u, p, t) -> begin
+        out[1] = p[1] * u[1] * u[2]  # β*S*I (infection)
+        out[2] = p[2] * u[2]         # ν*I (recovery)
+    end
+    
+    regular_c = (dc, u, p, t, counts, mark) -> begin
+        dc .= 0.0
+        dc[1] = -counts[1]           # S: -infection
+        dc[2] = counts[1] - counts[2] # I: +infection - recovery
+        dc[3] = counts[2]            # R: +recovery
+    end
+    
+    u0 = [999.0, 10.0, 0.0]  # S, I, R
+    tspan = (0.0, 50.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    rj = RegularJump(regular_rate, regular_c, 2)
+    
+    # This should fail - Direct aggregator with SimpleTauLeaping
+    jump_prob_direct = JumpProblem(prob_disc, Direct(), rj)
+    @test_throws ErrorException solve(EnsembleProblem(jump_prob_direct), 
+        SimpleTauLeaping(), EnsembleGPUKernel(CUDABackend()); 
+        trajectories = 10, dt = 1.0)
 end

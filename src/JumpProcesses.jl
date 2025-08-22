@@ -56,73 +56,94 @@ const USE_RSSA_THRESHOLD = 100
 const USE_SORTINGDIRECT_THRESHOLD = 200
 
 include("jumps.jl")
+export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, JumpSet
+
 include("massaction_rates.jl")
+
+# constant rate aggregators (i.e. SSAs)
 include("aggregators/aggregators.jl")
+export get_num_majumps, needs_depgraph, needs_vartojumps_map, reset_aggregated_jumps!
+
 include("aggregators/ssajump.jl")
+
 include("aggregators/direct.jl")
+export Direct, DirectFW
+
 include("aggregators/frm.jl")
+export FRM, FRMFW
+
 include("aggregators/sortingdirect.jl")
+export SortingDirect
+
 include("aggregators/nrm.jl")
+export NRM
+
 include("aggregators/bracketing.jl")
+export BracketData
+
 include("aggregators/rssa.jl")
+export RSSA
+
 include("aggregators/prioritytable.jl")
+
 include("aggregators/directcr.jl")
+export DirectCR
+
 include("aggregators/rssacr.jl")
+export RSSACR
+
 include("aggregators/rdirect.jl")
+export RDirect
+
 include("aggregators/coevolve.jl")
+export Coevolve
+
 include("aggregators/ccnrm.jl")
+export CCNRM
+
+include("aggregators/aggregated_api.jl")
+
+# variable rate aggregators (i.e. SSAs)
+include("extended_jump_array.jl")
+export ExtendedJumpArray
+
+include("variable_rate.jl")
+export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
+
+# core problem and timestepping
+include("problem.jl")
+export JumpProblem, SplitCoupledJumpProblem
+
+include("solve.jl")
+export init, solve, solve!
+
+include("SSA_stepper.jl")
+export SSAStepper
+
+# leaping: 
+include("simple_regular_solve.jl")
+export SimpleTauLeaping, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
+export SpatialMassActionJump
+
 include("spatial/topology.jl")
+export CartesianGrid, CartesianGridRej, outdegree, num_sites, neighbors
+
 include("spatial/hop_rates.jl")
 include("spatial/reaction_rates.jl")
 include("spatial/flatten.jl")
 include("spatial/utils.jl")
 include("spatial/bracketing.jl")
-
 include("spatial/nsm.jl")
+export NSM
+
 include("spatial/directcrdirect.jl")
+export DirectCRDirect
 
-include("aggregators/aggregated_api.jl")
-
-include("extended_jump_array.jl")
-include("variable_rate.jl")
-include("problem.jl")
-include("solve.jl")
+# coupling
 include("coupled_array.jl")
 include("coupling.jl")
-include("SSA_stepper.jl")
-include("simple_regular_solve.jl")
-
-export ConstantRateJump, VariableRateJump, RegularJump,
-       MassActionJump, JumpSet
-
-export JumpProblem
-
-export SplitCoupledJumpProblem
-
-export Direct, DirectFW, SortingDirect, DirectCR
-export BracketData, RSSA
-export FRM, FRMFW, NRM, CCNRM
-export RSSACR, RDirect
-export Coevolve
-
-export get_num_majumps, needs_depgraph, needs_vartojumps_map
-
-export init, solve, solve!
-
-export reset_aggregated_jumps!
-
-export ExtendedJumpArray
-
-# Export VariableRateAggregator types
-export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
-
-# spatial structs and functions
-export CartesianGrid, CartesianGridRej
-export SpatialMassActionJump
-export outdegree, num_sites, neighbors
-export NSM, DirectCRDirect
 
 end # module

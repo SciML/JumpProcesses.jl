@@ -62,8 +62,7 @@ function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs;
         rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
-    cont_agg = cvrjs
-    return new_prob, variable_jump_callback, cont_agg
+    return new_prob, variable_jump_callback
 end
 
 # extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
@@ -381,16 +380,14 @@ function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs; rng = DEFAULT_R
     new_prob = prob
     cache = VR_DirectEventCache(jumps, VR_Direct(), prob, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
-    cont_agg = cvrjs
-    return new_prob, variable_jump_callback, cont_agg
+    return new_prob, variable_jump_callback
 end
 
 function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs; rng = DEFAULT_RNG)
     new_prob = prob
     cache = VR_DirectEventCache(jumps, VR_DirectFW(), prob, eltype(prob.tspan); rng)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
-    cont_agg = cvrjs
-    return new_prob, variable_jump_callback, cont_agg
+    return new_prob, variable_jump_callback
 end
 
 # recursively evaluate the cumulative sum of the rates for type stability 

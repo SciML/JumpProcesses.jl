@@ -381,7 +381,6 @@ function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = ReturnCode.T
     nothing
 end
 
-export SSAStepper
 
 function SciMLBase.isdenseplot(sol::ODESolution{
         T, N, uType, uType2, DType, tType, rateType, discType, P,

@@ -63,4 +63,3 @@ function EnsembleGPUKernel()
     EnsembleGPUKernel(nothing, 0.0)
 end
 
-export SimpleTauLeaping, EnsembleGPUKernel

@@ -45,7 +45,6 @@ FunctionWrappers = "1.1"
 Graphs = "1.11"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
-LinearSolve = "2, 3"
 OrdinaryDiffEq = "6"
 Pkg = "1"
 PoissonRandom = "0.4"
@@ -80,4 +79,4 @@ StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["ADTypes", "Aqua", "ExplicitImports", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "Pkg", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test", "FastBroadcast"]
+test = ["ADTypes", "Aqua", "ExplicitImports", "LinearAlgebra", "OrdinaryDiffEq", "Pkg", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test", "FastBroadcast"]

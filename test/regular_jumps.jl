@@ -101,7 +101,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     
     # Test mixed jump types
     mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = crj, 
-        variables_jumps = vrj, regular_jumps = regj)
+        variable_jumps = vrj, regular_jumps = regj)
     jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps)
     @test jp_pure_mixed.aggregator isa PureLeaping
     @test jp_pure_mixed.discrete_jump_aggregation === nothing

@@ -31,7 +31,7 @@ let
 
     prob_disc = DiscreteProblem(u0, tspan, p)
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob = JumpProblem(prob_disc, Direct(), rj)
+    jump_prob = JumpProblem(prob_disc, PureLeaping(), rj)
 
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
         EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)
@@ -72,7 +72,7 @@ let
     # Create JumpProblem
     prob_disc = DiscreteProblem(u0, tspan, p)
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob = JumpProblem(prob_disc, Direct(), rj; rng = StableRNG(12345))
+    jump_prob = JumpProblem(prob_disc, PureLeaping(), rj; rng = StableRNG(12345))
 
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
         EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)

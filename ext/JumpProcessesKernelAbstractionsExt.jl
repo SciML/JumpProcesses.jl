@@ -22,9 +22,9 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
 
     jump_prob = ensembleprob.prob
 
-    # boilerplate from SimpleTauLeaping method
-    @assert isempty(jump_prob.jump_callback.continuous_callbacks) # still needs to be a regular jump
-    @assert isempty(jump_prob.jump_callback.discrete_callbacks)
+    # Validate that this is a PureLeaping JumpProblem
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
     prob = jump_prob.prob
 
     probs = [remake(jump_prob) for _ in 1:trajectories]

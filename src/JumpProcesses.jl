@@ -110,6 +110,13 @@ export ExtendedJumpArray
 include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
+"""
+Aggregator to indicate that individual jumps should also be handled via the leaping
+algorithm that is passed to solve.
+"""
+struct PureLeaping <: AbstractAggregatorAlgorithm end
+export PureLeaping
+
 # core problem and timestepping
 include("problem.jl")
 export JumpProblem, SplitCoupledJumpProblem

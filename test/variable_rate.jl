@@ -1,5 +1,5 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
-using Random, Statistics
+using Random, LinearSolve, Statistics
 using StableRNGs, ADTypes
 rng = StableRNG(12345)
 

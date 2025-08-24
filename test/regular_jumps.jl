@@ -42,7 +42,7 @@ Nsims = 1000
         dc[3] = counts[2]
     end
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob_tau = JumpProblem(prob_disc, Direct(), rj; rng = rng)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng = rng)
 
     # Solve with SimpleTauLeaping (dt=0.1)
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
@@ -100,7 +100,7 @@ end
         dc[4] = counts[3]
     end
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob_tau = JumpProblem(prob_disc, Direct(), rj; rng = rng)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng = rng)
 
     # Solve with SimpleTauLeaping (dt=0.1)
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)

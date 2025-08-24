@@ -71,7 +71,7 @@ function compute_gi(u, nu, hor, i)
     max_order = 1.0
     for j in 1:size(nu, 2)
         if abs(nu[i, j]) > 0
-            max_order = max(max_order, Float64(hor[j]))
+            max_order = max(max_order, float(hor[j]))
         end
     end
     return max_order

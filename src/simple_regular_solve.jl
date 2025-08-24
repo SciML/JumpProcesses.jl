@@ -144,7 +144,15 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     end
     hor = compute_hor(nu)
 
-    saveat_times = isnothing(saveat) ? Vector{typeof(t)}() : saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat)
+    saveat_times = nothing
+    if isnothing(saveat)
+        saveat_times = Vector{typeof(tspan[1])}()
+    elseif saveat isa Number
+        saveat_times = collect(range(tspan[1], tspan[2], step=saveat))
+    else
+        saveat_times = collect(saveat)
+    end
+
     save_idx = 1
 
     while t[end] < t_end

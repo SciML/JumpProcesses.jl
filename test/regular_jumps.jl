@@ -65,8 +65,8 @@ Nsims = 1000
 
     # Test mean infected trajectories
     for i in 1:251
-        @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.10)
-        @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.10)
+        @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.05)
+        @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.05)
     end
 end
 
@@ -131,8 +131,8 @@ end
 
     # Test mean infected trajectories
     for i in 1:251
-        @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.10)
-        @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.10)
+        @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.05)
+        @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.05)
     end
 end
 

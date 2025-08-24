@@ -67,6 +67,14 @@ end
 
 SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
 
+function compute_hor(nu)
+    hor = zeros(Int, size(nu, 2))
+    for j in 1:size(nu, 2)
+        hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
+    end
+    return hor
+end
+
 function compute_gi(u, nu, hor, i)
     max_order = 1.0
     for j in 1:size(nu, 2)
@@ -100,16 +108,21 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         seed = nothing,
         dtmin = 1e-10,
         saveat = nothing)
-    validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
+    if jump_prob.massaction_jump === nothing
+        error("SimpleAdaptiveTauLeaping requires a JumpProblem with a MassActionJump.")
+    end
     prob = jump_prob.prob
     rng = DEFAULT_RNG
     (seed !== nothing) && seed!(rng, seed)
 
-    rj = jump_prob.regular_jump
-    rate = rj.rate
-    numjumps = rj.numjumps
-    c = rj.c
+    maj = jump_prob.massaction_jump
+    numjumps = get_num_majumps(maj)
+    # Extract rates
+    rate = (out, u, p, t) -> begin
+        for j in 1:get_num_majumps(maj)
+            out[j] = evalrxrate(u, j, maj)
+        end
+    end
     u0 = copy(prob.u0)
     tspan = prob.tspan
     p = prob.p
@@ -122,19 +135,14 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     t_end = tspan[2]
     epsilon = alg.epsilon
 
-    # Compute initial stoichiometry and HOR
+    # Extract stoichiometry once from MassActionJump
     nu = zeros(Int, length(u0), numjumps)
-    counts_temp = zeros(Int, numjumps)
     for j in 1:numjumps
-        fill!(counts_temp, 0)
-        counts_temp[j] = 1
-        c(du, u0, p, t[1], counts_temp, nothing)
-        nu[:, j] = du
+        for (spec_idx, stoich) in maj.net_stoch[j]
+            nu[spec_idx, j] = stoich
+        end
     end
-    hor = zeros(Int, size(nu, 2))
-    for j in 1:size(nu, 2)
-        hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
-    end
+    hor = compute_hor(nu)
 
     saveat_times = isnothing(saveat) ? Vector{typeof(t)}() : saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat)
     save_idx = 1
@@ -142,13 +150,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     while t[end] < t_end
         u_prev = u[end]
         t_prev = t[end]
-        # Recompute stoichiometry
-        for j in 1:numjumps
-            fill!(counts_temp, 0)
-            counts_temp[j] = 1
-            c(du, u_prev, p, t_prev, counts_temp, nothing)
-            nu[:, j] = du
-        end
         rate(rate_cache, u_prev, p, t_prev)
         tau = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate, dtmin)
         tau = min(tau, t_end - t_prev)
@@ -158,7 +159,12 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
             end
         end
         counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
-        c(du, u_prev, p, t_prev, counts, nothing)
+        du .= 0
+        for j in 1:numjumps
+            for (spec_idx, stoich) in maj.net_stoch[j]
+                du[spec_idx] += stoich * counts[j]
+            end
+        end
         u_new = u_prev + du
         if any(<(0), u_new)
             # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)

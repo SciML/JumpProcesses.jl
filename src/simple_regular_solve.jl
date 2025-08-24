@@ -100,8 +100,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         seed = nothing,
         dtmin = 1e-10,
         saveat = nothing)
-    @assert isempty(jump_prob.jump_callback.continuous_callbacks)
-    @assert isempty(jump_prob.jump_callback.discrete_callbacks)
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
     prob = jump_prob.prob
     rng = DEFAULT_RNG
     (seed !== nothing) && seed!(rng, seed)

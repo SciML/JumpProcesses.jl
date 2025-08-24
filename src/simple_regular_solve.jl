@@ -61,8 +61,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
-struct SimpleAdaptiveTauLeaping <: DiffEqBase.DEAlgorithm
-    epsilon::Float64  # Error control parameter
+struct SimpleAdaptiveTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
+    epsilon::T  # Error control parameter
 end
 
 SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)

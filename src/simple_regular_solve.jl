@@ -136,7 +136,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
     end
 
-    saveat_times = isnothing(saveat) ? Float64[] : saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat)
+    saveat_times = isnothing(saveat) ? Vector{typeof(t)}() : saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat)
     save_idx = 1
 
     while t[end] < t_end
@@ -160,7 +160,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
         c(du, u_prev, p, t_prev, counts, nothing)
         u_new = u_prev + du
-        if any(u_new .< 0)
+        if any(<(0), u_new)
             # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
             tau /= 2
             continue

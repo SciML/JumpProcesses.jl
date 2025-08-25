@@ -155,6 +155,9 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     end
 
     DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)
+    if integrator.save_end
+        SciMLBase.save_final_discretes!(integrator, integrator.opts.callback)
+    end
 
     if integrator.sol.retcode === ReturnCode.Default
         integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
@@ -246,6 +249,9 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false)
     cb.initialize(cb, integrator.u, prob.tspan[1], integrator)
     DiffEqBase.initialize!(opts.callback, integrator.u, prob.tspan[1], integrator)
+    if save_start
+        SciMLBase.save_discretes_if_enabled!(integrator, opts.callback; skip_duplicates = true)
+    end
     integrator
 end
 

@@ -118,26 +118,30 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
     # Extract rates
-    rate = (out, u, p, t) -> begin
-        for j in 1:get_num_majumps(maj)
-            out[j] = evalrxrate(u, j, maj)
+    rate = jump_prob.regular_jump !== nothing ? jump_prob.regular_jump.rate :
+        (out, u, p, t) -> begin
+            for j in 1:numjumps
+                out[j] = evalrxrate(u, j, maj)
+            end
         end
-    end
+    c = jump_prob.regular_jump !== nothing ? jump_prob.regular_jump.c : nothing
     u0 = copy(prob.u0)
     tspan = prob.tspan
     p = prob.p
 
-    # Initialize output vectors
-    u_out = [copy(u0)]
-    t_out = [tspan[1]]
-    rate_cache = zeros(Float64, numjumps)
-    counts = zeros(Int, numjumps)
+    # Initialize current state and saved history
+    u_current = copy(u0)
+    t_current = tspan[1]
+    usave = [copy(u0)]
+    tsave = [tspan[1]]
+    rate_cache = zeros(float(eltype(u0)), numjumps)
+    counts = zero(rate_cache)
     du = similar(u0)
     t_end = tspan[2]
     epsilon = alg.epsilon
 
     # Extract stoichiometry once from MassActionJump
-    nu = zeros(Int, length(u0), numjumps)
+    nu = zeros(float(eltype(u0)), length(u0), numjumps)
     for j in 1:numjumps
         for (spec_idx, stoich) in maj.net_stoch[j]
             nu[spec_idx, j] = stoich
@@ -145,6 +149,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     end
     hor = compute_hor(nu)
 
+    # Set up saveat_times
     saveat_times = nothing
     if isnothing(saveat)
         saveat_times = Vector{typeof(tspan[1])}()
@@ -156,10 +161,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
     save_idx = 1
 
-    # Current state for timestepping
-    u_current = copy(u0)
-    t_current = tspan[1]
-
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)
         tau = compute_tau_explicit(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin)
@@ -169,9 +170,13 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         end
         counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
         du .= 0
-        for j in 1:numjumps
-            for (spec_idx, stoich) in maj.net_stoch[j]
-                du[spec_idx] += stoich * counts[j]
+        if c !== nothing
+            c(du, u_current, p, t_current, counts, nothing)
+        else
+            for j in 1:numjumps
+                for (spec_idx, stoich) in maj.net_stoch[j]
+                    du[spec_idx] += stoich * counts[j]
+                end
             end
         end
         u_new = u_current + du
@@ -185,8 +190,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
         # Save state if at a saveat time or if saveat is empty
         if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
-            push!(u_out, copy(u_new))
-            push!(t_out, t_new)
+            push!(usave, u_new)
+            push!(tsave, t_new)
             if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
                 save_idx += 1
             end
@@ -196,9 +201,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         t_current = t_new
     end
 
-    sol = DiffEqBase.build_solution(prob, alg, t_out, u_out,
+    sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error=false,
-        interp=DiffEqBase.ConstantInterpolation(t_out, u_out))
+        interp=DiffEqBase.ConstantInterpolation(tsave, usave))
     return sol
 end
 

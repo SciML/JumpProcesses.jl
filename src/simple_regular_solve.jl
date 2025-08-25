@@ -83,19 +83,33 @@ end
 function compute_hor(nu)
     hor = zeros(Int, size(nu, 2))
     for j in 1:size(nu, 2)
-        hor[j] = sum(abs.(nu[:, j])) > maximum(abs.(nu[:, j])) ? 2 : 1
+        order = sum(abs(stoich) for stoich in nu[:, j] if stoich < 0; init=0)
+        if order > 3
+            error("Reaction $j has order $order, which is not supported (maximum order is 3).")
+        end
+        hor[j] = order
     end
     return hor
 end
 
 function compute_gi(u, nu, hor, i)
-    max_order = 1.0
+    max_gi = 1
     for j in 1:size(nu, 2)
-        if abs(nu[i, j]) > 0
-            max_order = max(max_order, float(hor[j]))
+        if nu[i, j] < 0  # Species i is a substrate
+            if hor[j] == 1
+                max_gi = max(max_gi, 1)
+            elseif hor[j] == 2 || hor[j] == 3
+                stoich = abs(nu[i, j])
+                if stoich >= 2
+                    gi = 2 / stoich + 1 / (stoich - 1)
+                    max_gi = max(max_gi, ceil(Int, gi))
+                elseif stoich == 1
+                    max_gi = max(max_gi, hor[j])
+                end
+            end
         end
     end
-    return max_order
+    return max_gi
 end
 
 function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin)

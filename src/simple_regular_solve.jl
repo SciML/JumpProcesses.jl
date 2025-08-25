@@ -185,7 +185,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
             tau /= 2
             continue
         end
-        u_new = max.(u_new, 0)
+        for i in eachindex(u_new)
+            u_new[i] = max(u_new[i], 0)
+        end
         t_new = t_current + tau
 
         # Save state if at a saveat time or if saveat is empty

@@ -127,8 +127,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     tspan = prob.tspan
     p = prob.p
 
-    u = [copy(u0)]
-    t = [tspan[1]]
+    # Initialize output vectors
+    u_out = [copy(u0)]
+    t_out = [tspan[1]]
     rate_cache = zeros(Float64, numjumps)
     counts = zeros(Int, numjumps)
     du = similar(u0)
@@ -155,16 +156,16 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
     save_idx = 1
 
-    while t[end] < t_end
-        u_prev = u[end]
-        t_prev = t[end]
-        rate(rate_cache, u_prev, p, t_prev)
-        tau = compute_tau_explicit(u_prev, rate_cache, nu, hor, p, t_prev, epsilon, rate, dtmin)
-        tau = min(tau, t_end - t_prev)
-        if !isempty(saveat_times)
-            if save_idx <= length(saveat_times) && t_prev + tau > saveat_times[save_idx]
-                tau = saveat_times[save_idx] - t_prev
-            end
+    # Current state for timestepping
+    u_current = copy(u0)
+    t_current = tspan[1]
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        tau = compute_tau_explicit(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin)
+        tau = min(tau, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
         end
         counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
         du .= 0
@@ -173,35 +174,31 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
                 du[spec_idx] += stoich * counts[j]
             end
         end
-        u_new = u_prev + du
+        u_new = u_current + du
         if any(<(0), u_new)
             # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
             tau /= 2
             continue
         end
-        u_new = max.(u_new, 0)  # Ensure non-negative states
-        push!(u, u_new)
-        push!(t, t_prev + tau)
-        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t[end] >= saveat_times[save_idx]
-            save_idx += 1
+        u_new = max.(u_new, 0)
+        t_new = t_current + tau
+
+        # Save state if at a saveat time or if saveat is empty
+        if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(u_out, copy(u_new))
+            push!(t_out, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
         end
+
+        u_current = u_new
+        t_current = t_new
     end
 
-    # Interpolate to saveat times if specified
-    if !isempty(saveat_times)
-        t_out = saveat_times
-        u_out = [u[end]]
-        for t_save in saveat_times
-            idx = findlast(ti -> ti <= t_save, t)
-            push!(u_out, u[idx])
-        end
-        t = t_out
-        u = u_out[2:end]
-    end
-
-    sol = DiffEqBase.build_solution(prob, alg, t, u,
+    sol = DiffEqBase.build_solution(prob, alg, t_out, u_out,
         calculate_error=false,
-        interp=DiffEqBase.ConstantInterpolation(t, u))
+        interp=DiffEqBase.ConstantInterpolation(t_out, u_out))
     return sol
 end
 

@@ -100,18 +100,18 @@ end
 
 function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin)
     rate(rate_cache, u, p, t)
-    mu = zeros(length(u))
-    sigma2 = zeros(length(u))
     tau = Inf
     for i in 1:length(u)
+        mu = zero(eltype(u))
+        sigma2 = zero(eltype(u))
         for j in 1:size(nu, 2)
-            mu[i] += nu[i, j] * rate_cache[j]
-            sigma2[i] += nu[i, j]^2 * rate_cache[j]
+            mu += nu[i, j] * rate_cache[j]
+            sigma2 += nu[i, j]^2 * rate_cache[j]
         end
         gi = compute_gi(u, nu, hor, i)
         bound = max(epsilon * u[i] / gi, 1.0)
-        mu_term = abs(mu[i]) > 0 ? bound / abs(mu[i]) : Inf
-        sigma_term = sigma2[i] > 0 ? bound^2 / sigma2[i] : Inf
+        mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf
+        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf
         tau = min(tau, mu_term, sigma_term)
     end
     return max(tau, dtmin)

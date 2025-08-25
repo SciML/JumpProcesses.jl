@@ -1,5 +1,11 @@
 struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
+struct SimpleAdaptiveTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
+    epsilon::T  # Error control parameter
+end
+
+SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
+
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     if !(jump_prob.aggregator isa PureLeaping)
         @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
@@ -12,6 +18,19 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     isempty(jump_prob.variable_jumps) &&
     get_num_majumps(jump_prob.massaction_jump) == 0 &&
     jump_prob.regular_jump !== nothing    
+end
+
+function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping)
+    if !(jump_prob.aggregator isa PureLeaping)
+        @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
+        JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
+        Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
+    end
+    isempty(jump_prob.jump_callback.continuous_callbacks) &&
+    isempty(jump_prob.jump_callback.discrete_callbacks) &&
+    isempty(jump_prob.constant_jumps) &&
+    isempty(jump_prob.variable_jumps) &&
+    jump_prob.massaction_jump !== nothing
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
@@ -61,12 +80,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
-struct SimpleAdaptiveTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
-    epsilon::T  # Error control parameter
-end
-
-SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
-
 function compute_hor(nu)
     hor = zeros(Int, size(nu, 2))
     for j in 1:size(nu, 2)
@@ -108,9 +121,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         seed = nothing,
         dtmin = 1e-10,
         saveat = nothing)
-    if jump_prob.massaction_jump === nothing
-        error("SimpleAdaptiveTauLeaping requires a JumpProblem with a MassActionJump.")
-    end
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
     prob = jump_prob.prob
     rng = DEFAULT_RNG
     (seed !== nothing) && seed!(rng, seed)

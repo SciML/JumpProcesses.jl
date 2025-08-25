@@ -80,10 +80,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
-function compute_hor(nu)
-    hor = zeros(Int, size(nu, 2))
-    for j in 1:size(nu, 2)
-        order = sum(abs(stoich) for stoich in nu[:, j] if stoich < 0; init=0)
+function compute_hor(reactant_stoch, numjumps)
+    hor = zeros(Int, numjumps)
+    for j in 1:numjumps
+        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=0)
         if order > 3
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end
@@ -99,11 +99,11 @@ function compute_gi(u, nu, hor, i)
             if hor[j] == 1
                 max_gi = max(max_gi, 1)
             elseif hor[j] == 2 || hor[j] == 3
-                stoich = abs(nu[i, j])
-                if stoich >= 2
-                    gi = 2 / stoich + 1 / (stoich - 1)
+                stoch = abs(nu[i, j])
+                if stoch >= 2
+                    gi = 2 / stoch + 1 / (stoch - 1)
                     max_gi = max(max_gi, ceil(Int, gi))
-                elseif stoich == 1
+                elseif stoch == 1
                     max_gi = max(max_gi, hor[j])
                 end
             end
@@ -167,14 +167,16 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     t_end = tspan[2]
     epsilon = alg.epsilon
 
-    # Extract stoichiometry once from MassActionJump
+    # Extract stochiometry once from MassActionJump
     nu = zeros(float(eltype(u0)), length(u0), numjumps)
     for j in 1:numjumps
-        for (spec_idx, stoich) in maj.net_stoch[j]
-            nu[spec_idx, j] = stoich
+        for (spec_idx, stoch) in maj.net_stoch[j]
+            nu[spec_idx, j] = stoch
         end
     end
-    hor = compute_hor(nu)
+    # Extract reactant stochiometry for hor
+    reactant_stoch = maj.reactant_stoch
+    hor = compute_hor(reactant_stoch, numjumps)
 
     # Set up saveat_times
     saveat_times = nothing
@@ -201,8 +203,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
             c(du, u_current, p, t_current, counts, nothing)
         else
             for j in 1:numjumps
-                for (spec_idx, stoich) in maj.net_stoch[j]
-                    du[spec_idx] += stoich * counts[j]
+                for (spec_idx, stoch) in maj.net_stoch[j]
+                    du[spec_idx] += stoch * counts[j]
                 end
             end
         end

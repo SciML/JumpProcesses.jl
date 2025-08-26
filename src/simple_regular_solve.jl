@@ -15,12 +15,11 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
-        seed = nothing,
-        dt = error("dt is required for SimpleTauLeaping."))
+        seed = nothing, dt = error("dt is required for SimpleTauLeaping."))
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
-    prob = jump_prob.prob
-    rng = DEFAULT_RNG
+    
+    @unpack prob, rng = jump_prob
     (seed !== nothing) && seed!(rng, seed)
 
     rj = jump_prob.regular_jump

@@ -92,27 +92,44 @@ function compute_hor(reactant_stoch, numjumps)
     return hor
 end
 
-function compute_gi(u, nu, hor, i)
+function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
+    # Initialize reaction_conditions as a vector of vectors of tuples
+    reaction_conditions = [Vector() for _ in 1:numspecies]
+    for j in 1:numjumps
+        for (spec_idx, stoch) in reactant_stoch[j]
+            if stoch > 0  # Species is a reactant
+                push!(reaction_conditions[spec_idx], (j, stoch, hor[j]))
+            end
+        end
+    end
+    return reaction_conditions
+end
+
+function compute_gi(u, reaction_conditions, i)
     max_gi = 1
-    for j in 1:size(nu, 2)
-        if nu[i, j] < 0  # Species i is a substrate
-            if hor[j] == 1
-                max_gi = max(max_gi, 1)
-            elseif hor[j] == 2 || hor[j] == 3
-                stoch = abs(nu[i, j])
-                if stoch >= 2
-                    gi = 2 / stoch + 1 / (stoch - 1)
-                    max_gi = max(max_gi, ceil(Int, gi))
-                elseif stoch == 1
-                    max_gi = max(max_gi, hor[j])
-                end
+    for (j, nu_ij, hor_j) in reaction_conditions[i]
+        if hor_j == 1
+            max_gi = max(max_gi, 1)
+        elseif hor_j == 2
+            if nu_ij == 1
+                max_gi = max(max_gi, 2)
+            elseif nu_ij >= 2
+                gi = u[i] * (2 / nu_ij + 1 / (nu_ij - 1))
+                max_gi = max(max_gi, ceil(Int, gi))
+            end
+        elseif hor_j == 3
+            if nu_ij == 1
+                max_gi = max(max_gi, 3)
+            elseif nu_ij >= 2
+                gi = 1.5 * u[i] * (2 / nu_ij + 1 / (nu_ij - 1))
+                max_gi = max(max_gi, ceil(Int, gi))
             end
         end
     end
     return max_gi
 end
 
-function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin)
+function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate, dtmin, reaction_conditions, numjumps)
     rate(rate_cache, u, p, t)
     tau = Inf
     for i in 1:length(u)
@@ -122,7 +139,7 @@ function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin
             mu += nu[i, j] * rate_cache[j]
             sigma2 += nu[i, j]^2 * rate_cache[j]
         end
-        gi = compute_gi(u, nu, hor, i)
+        gi = compute_gi(u, reaction_conditions, i)
         bound = max(epsilon * u[i] / gi, 1.0)
         mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf
         sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf
@@ -167,16 +184,17 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     t_end = tspan[2]
     epsilon = alg.epsilon
 
-    # Extract stochiometry once from MassActionJump
+    # Extract net stoichiometry for state updates
     nu = zeros(float(eltype(u0)), length(u0), numjumps)
     for j in 1:numjumps
         for (spec_idx, stoch) in maj.net_stoch[j]
             nu[spec_idx, j] = stoch
         end
     end
-    # Extract reactant stochiometry for hor
+    # Extract reactant stoichiometry for hor and gi
     reactant_stoch = maj.reactant_stoch
     hor = compute_hor(reactant_stoch, numjumps)
+    reaction_conditions = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
 
     # Set up saveat_times
     saveat_times = nothing
@@ -192,7 +210,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)
-        tau = compute_tau_explicit(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin)
+        tau = compute_tau_explicit(u_current, rate_cache, nu, p, t_current, epsilon, rate, dtmin, reaction_conditions, numjumps)
         tau = min(tau, t_end - t_current)
         if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
             tau = saveat_times[save_idx] - t_current
@@ -221,7 +239,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
         # Save state if at a saveat time or if saveat is empty
         if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
-            push!(usave, u_new)
+            push!(usave, copy(u_new))
             push!(tsave, t_new)
             if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
                 save_idx += 1

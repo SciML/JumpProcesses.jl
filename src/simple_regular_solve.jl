@@ -81,6 +81,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
 end
 
 function compute_hor(reactant_stoch, numjumps)
+    # Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
+    # HOR is the sum of stoichiometric coefficients of reactants in reaction j.
     hor = zeros(Int, numjumps)
     for j in 1:numjumps
         order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=0)
@@ -93,7 +95,9 @@ function compute_hor(reactant_stoch, numjumps)
 end
 
 function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    # Initialize reaction_conditions as a vector of vectors of tuples
+    # Precompute reaction conditions for each species i, storing reactions j where i is a reactant,
+    # along with stoichiometry (nu_ij) and HOR (hor_j), to optimize compute_gi.
+    # Reactant stoichiometry is used per Cao et al. (2006), Section IV, for g_i calculations.
     reaction_conditions = [Vector() for _ in 1:numspecies]
     for j in 1:numjumps
         for (spec_idx, stoch) in reactant_stoch[j]
@@ -106,6 +110,14 @@ function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjump
 end
 
 function compute_gi(u, reaction_conditions, i)
+    # Compute g_i for species i, bounding the relative change in propensity functions,
+    # as per Cao et al. (2006), Section IV (between equations 27-28).
+    # g_i is the maximum over all reactions j where species i is a reactant:
+    # - HOR = 1: g_i = 1
+    # - HOR = 2, nu_ij = 1: g_i = 2
+    # - HOR = 2, nu_ij >= 2: g_i = x_i * (2/nu_ij + 1/(nu_ij - 1))
+    # - HOR = 3, nu_ij = 1: g_i = 3
+    # - HOR = 3, nu_ij >= 2: g_i = 1.5 * x_i * (2/nu_ij + 1/(nu_ij - 1))
     max_gi = 1
     for (j, nu_ij, hor_j) in reaction_conditions[i]
         if hor_j == 1
@@ -130,20 +142,25 @@ function compute_gi(u, reaction_conditions, i)
 end
 
 function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate, dtmin, reaction_conditions, numjumps)
+    # Compute the tau-leaping step-size using equation (8) from Cao et al. (2006):
+    # tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
+    # where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
+    # mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
+    # I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
     rate(rate_cache, u, p, t)
     tau = Inf
     for i in 1:length(u)
         mu = zero(eltype(u))
         sigma2 = zero(eltype(u))
         for j in 1:size(nu, 2)
-            mu += nu[i, j] * rate_cache[j]
-            sigma2 += nu[i, j]^2 * rate_cache[j]
+            mu += nu[i, j] * rate_cache[j] # Equation (9a)
+            sigma2 += nu[i, j]^2 * rate_cache[j] # Equation (9b)
         end
         gi = compute_gi(u, reaction_conditions, i)
-        bound = max(epsilon * u[i] / gi, 1.0)
-        mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf
-        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf
-        tau = min(tau, mu_term, sigma_term)
+        bound = max(epsilon * u[i] / gi, 1.0) # max(epsilon * x_i / g_i, 1)
+        mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf # First term in equation (8)
+        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf # Second term in equation (8)
+        tau = min(tau, mu_term, sigma_term) # Equation (8)
     end
     return max(tau, dtmin)
 end
@@ -228,7 +245,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
         end
         u_new = u_current + du
         if any(<(0), u_new)
-            # Halve tau to avoid negative populations, as per Cao et al. (2006, J. Chem. Phys., DOI: 10.1063/1.2159468)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
             tau /= 2
             continue
         end

@@ -39,7 +39,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     maj = MassActionJump(rates, reactant_stoich, net_stoich)
     
     # Test PureLeaping JumpProblem creation
-    jp_pure = JumpProblem(prob, PureLeaping(), JumpSet(maj))
+    jp_pure = JumpProblem(prob, PureLeaping(), JumpSet(maj); rng)
     @test jp_pure.aggregator isa PureLeaping
     @test jp_pure.discrete_jump_aggregation === nothing
     @test jp_pure.massaction_jump !== nothing
@@ -50,7 +50,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     affect!(integrator) = (integrator.u[1] -= 1; integrator.u[3] += 1)
     crj = ConstantRateJump(rate, affect!)
     
-    jp_pure_crj = JumpProblem(prob, PureLeaping(), JumpSet(crj))
+    jp_pure_crj = JumpProblem(prob, PureLeaping(), JumpSet(crj); rng)
     @test jp_pure_crj.aggregator isa PureLeaping
     @test jp_pure_crj.discrete_jump_aggregation === nothing
     @test length(jp_pure_crj.constant_jumps) == 1
@@ -60,7 +60,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     vaffect!(integrator) = (integrator.u[1] -= 1; integrator.u[3] += 1)
     vrj = VariableRateJump(vrate, vaffect!)
     
-    jp_pure_vrj = JumpProblem(prob, PureLeaping(), JumpSet(vrj))
+    jp_pure_vrj = JumpProblem(prob, PureLeaping(), JumpSet(vrj); rng)
     @test jp_pure_vrj.aggregator isa PureLeaping
     @test jp_pure_vrj.discrete_jump_aggregation === nothing
     @test length(jp_pure_vrj.variable_jumps) == 1
@@ -80,7 +80,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     
     regj = RegularJump(rj_rate, rj_c, 1)
     
-    jp_pure_regj = JumpProblem(prob, PureLeaping(), JumpSet(regj))
+    jp_pure_regj = JumpProblem(prob, PureLeaping(), JumpSet(regj); rng)
     @test jp_pure_regj.aggregator isa PureLeaping
     @test jp_pure_regj.discrete_jump_aggregation === nothing
     @test jp_pure_regj.regular_jump !== nothing
@@ -88,7 +88,7 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     # Test mixed jump types
     mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = (crj,), 
         variable_jumps = (vrj,), regular_jumps = regj)
-    jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps)
+    jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps; rng)
     @test jp_pure_mixed.aggregator isa PureLeaping
     @test jp_pure_mixed.discrete_jump_aggregation === nothing
     @test jp_pure_mixed.massaction_jump !== nothing
@@ -99,14 +99,14 @@ sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
     # Test spatial system error
     spatial_sys = CartesianGrid((2, 2))
     hopping_consts = [1.0]
-    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); 
+    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
                                           spatial_system = spatial_sys)
-    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); 
+    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
                                           hopping_constants = hopping_consts)
     
     # Test MassActionJump with parameter mapping
     maj_params = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1, 2])
-    jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params))
+    jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params); rng)
     scaled_rates = [p[1], p[2]/2]
     @test jp_params.massaction_jump.scaled_rates == scaled_rates
 end

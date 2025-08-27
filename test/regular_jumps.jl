@@ -214,9 +214,8 @@ end
     @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
                                           spatial_system = spatial_sys)
     @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
-
                                           hopping_constants = hopping_consts)
-    
+
     # Test MassActionJump with parameter mapping
     maj_params = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1, 2])
     jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params); rng)

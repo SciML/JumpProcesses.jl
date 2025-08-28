@@ -110,14 +110,18 @@ function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjump
 end
 
 function compute_gi(u, reaction_conditions, i)
-    # Compute g_i for species i, bounding the relative change in propensity functions,
+    # Compute g_i for species i to bound the relative change in propensity functions,
     # as per Cao et al. (2006), Section IV (between equations 27-28).
     # g_i is the maximum over all reactions j where species i is a reactant:
-    # - HOR = 1: g_i = 1
-    # - HOR = 2, nu_ij = 1: g_i = 2
-    # - HOR = 2, nu_ij >= 2: g_i = x_i * (2/nu_ij + 1/(nu_ij - 1))
-    # - HOR = 3, nu_ij = 1: g_i = 3
-    # - HOR = 3, nu_ij >= 2: g_i = 1.5 * x_i * (2/nu_ij + 1/(nu_ij - 1))
+    # - HOR = 1 (first-order, e.g., S_i -> products): g_i = 1
+    # - HOR = 2 (second-order):
+    #   - nu_ij = 1 (e.g., S_i + S_k -> products): g_i = 2
+    #   - nu_ij = 2 (e.g., 2S_i -> products): g_i = x_i * (2/2 + 1/(2-1)) = 2x_i
+    # - HOR = 3 (third-order):
+    #   - nu_ij = 1 (e.g., S_i + S_k + S_m -> products): g_i = 3
+    #   - nu_ij = 2 (e.g., 2S_i + S_k -> products): g_i = 1.5 * x_i * (2/2 + 1/(2-1)) = 3x_i
+    #   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 1.5 * x_i * (2/3 + 1/(3-1)) = 1.75x_i
+    # Uses precomputed reaction_conditions to optimize checks for HOR = 2 or 3 with nu_ij >= 2.
     max_gi = 1
     for (j, nu_ij, hor_j) in reaction_conditions[i]
         if hor_j == 1
@@ -126,15 +130,18 @@ function compute_gi(u, reaction_conditions, i)
             if nu_ij == 1
                 max_gi = max(max_gi, 2)
             elseif nu_ij >= 2
+                # For nu_ij = 2: g_i = x_i * (2/2 + 1/(2-1)) = 2x_i
                 gi = u[i] * (2 / nu_ij + 1 / (nu_ij - 1))
-                max_gi = max(max_gi, ceil(Int, gi))
+                max_gi = max(max_gi, ceil(Int64, gi))
             end
         elseif hor_j == 3
             if nu_ij == 1
                 max_gi = max(max_gi, 3)
             elseif nu_ij >= 2
+                # For nu_ij = 2: g_i = 1.5 * x_i * (2/2 + 1/(2-1)) = 3x_i
+                # For nu_ij = 3: g_i = 1.5 * x_i * (2/3 + 1/(3-1)) = 1.75x_i
                 gi = 1.5 * u[i] * (2 / nu_ij + 1 / (nu_ij - 1))
-                max_gi = max(max_gi, ceil(Int, gi))
+                max_gi = max(max_gi, ceil(Int64, gi))
             end
         end
     end

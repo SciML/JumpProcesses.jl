@@ -3,5 +3,5 @@
 *.jl.mem
 Manifest.toml
 .vscode/
-.claude_plans
-.claude_plans/*
+.claude/
+.claude/*

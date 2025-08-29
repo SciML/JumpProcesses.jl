@@ -95,24 +95,31 @@ function compute_hor(reactant_stoch, numjumps)
 end
 
 function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    # Precompute reaction conditions for each species i, storing reactions j where i is a reactant,
-    # along with stoichiometry (nu_ij) and HOR (hor_j), to optimize compute_gi.
-    # Reactant stoichiometry is used per Cao et al. (2006), Section IV, for g_i calculations.
-    reaction_conditions = [Vector() for _ in 1:numspecies]
+    # Precompute reaction conditions for each species i, including:
+    # - max_hor: the highest order of reaction (HOR) where species i is a reactant.
+    # - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
+    # Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
+    max_hor = zeros(Int, numspecies)
+    max_stoich = zeros(Int, numspecies)
     for j in 1:numjumps
         for (spec_idx, stoch) in reactant_stoch[j]
             if stoch > 0  # Species is a reactant
-                push!(reaction_conditions[spec_idx], (j, stoch, hor[j]))
+                if hor[j] > max_hor[spec_idx]
+                    max_hor[spec_idx] = hor[j]
+                    max_stoich[spec_idx] = stoch
+                elseif hor[j] == max_hor[spec_idx]
+                    max_stoich[spec_idx] = max(max_stoich[spec_idx], stoch)
+                end
             end
         end
     end
-    return reaction_conditions
+    return max_hor, max_stoich
 end
 
-function compute_gi(u, reaction_conditions, i)
+function compute_gi(u, max_hor, max_stoich, i, t)
     # Compute g_i for species i to bound the relative change in propensity functions,
     # as per Cao et al. (2006), Section IV, equation (27).
-    # g_i is determined by the highest order of reaction (HOR) where species i is a reactant:
+    # g_i is determined by the highest order of reaction (HOR) and maximum stoichiometry (nu_ij) where species i is a reactant:
     # - HOR = 1 (first-order, e.g., S_i -> products): g_i = 1
     # - HOR = 2 (second-order):
     #   - nu_ij = 1 (e.g., S_i + S_k -> products): g_i = 2
@@ -121,43 +128,30 @@ function compute_gi(u, reaction_conditions, i)
     #   - nu_ij = 1 (e.g., S_i + S_k + S_m -> products): g_i = 3
     #   - nu_ij = 2 (e.g., 2S_i + S_k -> products): g_i = (3/2) * (2 + 1/(x_i - 1))
     #   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
-    # Uses precomputed reaction_conditions to optimize checks for HOR = 2 or 3 with nu_ij >= 2.
-    max_hor = maximum(isempty(reaction_conditions[i]) ? 0 : [hor_j for (j, nu_ij, hor_j) in reaction_conditions[i]])
-    max_gi = 1
-    for (j, nu_ij, hor_j) in reaction_conditions[i]
-        if hor_j == max_hor
-            if hor_j == 1
-                max_gi = max(max_gi, 1)
-            elseif hor_j == 2
-                if nu_ij == 1
-                    max_gi = max(max_gi, 2)
-                elseif nu_ij == 2
-                    if u[i] > 1  # Ensure x_i - 1 > 0
-                        gi = 2 + 1 / (u[i] - 1)
-                        max_gi = max(max_gi, ceil(Int64, gi))
-                    end
-                end
-            elseif hor_j == 3
-                if nu_ij == 1
-                    max_gi = max(max_gi, 3)
-                elseif nu_ij == 2
-                    if u[i] > 1  # Ensure x_i - 1 > 0
-                        gi = 1.5 * (2 + 1 / (u[i] - 1))
-                        max_gi = max(max_gi, ceil(Int64, gi))
-                    end
-                elseif nu_ij == 3
-                    if u[i] > 2  # Ensure x_i - 2 > 0
-                        gi = 3 + 1 / (u[i] - 1) + 2 / (u[i] - 2)
-                        max_gi = max(max_gi, ceil(Int64, gi))
-                    end
-                end
-            end
+    # Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
+    if max_hor[i] == 0  # No reactions involve species i as a reactant
+        return 1.0
+    elseif max_hor[i] == 1
+        return 1.0
+    elseif max_hor[i] == 2
+        if max_stoich[i] == 1
+            return 2.0
+        elseif max_stoich[i] == 2
+            return u[i] > 1 ? 2.0 + 1.0 / (u[i] - 1) : 2.0  # Fallback to 2.0 if x_i <= 1
+        end
+    elseif max_hor[i] == 3
+        if max_stoich[i] == 1
+            return 3.0
+        elseif max_stoich[i] == 2
+            return u[i] > 1 ? 1.5 * (2.0 + 1.0 / (u[i] - 1)) : 3.0  # Fallback to 3.0 if x_i <= 1
+        elseif max_stoich[i] == 3
+            return u[i] > 2 ? 3.0 + 1.0 / (u[i] - 1) + 2.0 / (u[i] - 2) : 3.0  # Fallback to 3.0 if x_i <= 2
         end
     end
-    return max_gi
+    return 1.0  # Default case
 end
 
-function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate, dtmin, reaction_conditions, numjumps)
+function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
     # Compute the tau-leaping step-size using equation (8) from Cao et al. (2006):
     # tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
     # where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
@@ -172,7 +166,7 @@ function compute_tau_explicit(u, rate_cache, nu, p, t, epsilon, rate, dtmin, rea
             mu += nu[i, j] * rate_cache[j] # Equation (9a)
             sigma2 += nu[i, j]^2 * rate_cache[j] # Equation (9b)
         end
-        gi = compute_gi(u, reaction_conditions, i)
+        gi = compute_gi(u, max_hor, max_stoich, i, t)
         bound = max(epsilon * u[i] / gi, 1.0) # max(epsilon * x_i / g_i, 1)
         mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf # First term in equation (8)
         sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf # Second term in equation (8)
@@ -227,7 +221,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     # Extract reactant stoichiometry for hor and gi
     reactant_stoch = maj.reactant_stoch
     hor = compute_hor(reactant_stoch, numjumps)
-    reaction_conditions = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
+    max_hor, max_stoich = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
 
     # Set up saveat_times
     saveat_times = nothing
@@ -243,7 +237,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)
-        tau = compute_tau_explicit(u_current, rate_cache, nu, p, t_current, epsilon, rate, dtmin, reaction_conditions, numjumps)
+        tau = compute_tau_explicit(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
         tau = min(tau, t_end - t_current)
         if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
             tau = saveat_times[save_idx] - t_current

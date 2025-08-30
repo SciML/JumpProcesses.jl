@@ -152,12 +152,15 @@ function compute_gi(u, max_hor, max_stoich, i, t)
 end
 
 function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-    # Compute the tau-leaping step-size using equation (8) from Cao et al. (2006):
+    # Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):
     # tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
     # where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
     # mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
     # I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
     rate(rate_cache, u, p, t)
+    if all(==(0), rate_cache)  # Handle case where all rates are zero
+        return dtmin
+    end
     tau = Inf
     for i in 1:length(u)
         mu = zero(eltype(u))

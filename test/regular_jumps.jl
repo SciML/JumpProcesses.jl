@@ -136,6 +136,28 @@ end
     end
 end
 
+# Test zero-rate case for SimpleAdaptiveTauLeaping
+@testset "Zero Rates Test for SimpleAdaptiveTauLeaping" begin
+    # SIR model: S + I -> 2I, I -> R
+    reactant_stoch = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    net_stoch = [[1=>-1, 2=>1], [2=>-1, 3=>1], []]
+    rates = [0.1/1000, 0.05, 0.0]  # beta/N, gamma, dummy rate for empty reaction
+    maj = MassActionJump(rates, reactant_stoch, net_stoch)
+    u0 = [0, 0, 0]  # All populations zero
+    tspan = (0.0, 250.0)
+    prob = DiscreteProblem(u0, tspan)
+    jump_prob = JumpProblem(prob, PureLeaping(), maj)
+
+    sol = solve(EnsembleProblem(jump_prob), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims, dtmin = 0.1, saveat=1.0)
+    
+    for i in 1:Nsims
+        # Check that solution completes and covers tspan
+        @test sol[i].t[end] ≈ 250.0 atol=1e-6
+        # Check that state remains zero
+        @test all(u == [0, 0, 0] for u in sol[i].u)
+    end
+end
+
 # Test PureLeaping aggregator functionality
 @testset "PureLeaping Aggregator Tests" begin
     # Test with MassActionJump

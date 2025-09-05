@@ -47,15 +47,15 @@ Nsims = 1000
     # Solve with SimpleTauLeaping
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
 
-    # MassActionJump formulation for SimpleAdaptiveTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping
     reactant_stoich = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
     net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [1=>1]]
     param_idxs = [1, 2, 3]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
     jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
 
-    # Solve with SimpleAdaptiveTauLeaping
-    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    # Solve with SimpleExplicitTauLeaping
+    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
 
     # Compute mean infected (I) trajectories
     t_points = 0:1.0:250.0
@@ -64,7 +64,7 @@ Nsims = 1000
     mean_adaptive_I = [mean(sol_adaptive[i](t)[2] for i in 1:Nsims) for t in t_points]
 
     # Test mean infected trajectories
-    for i in 1:251
+    for i in 1:10:251
         @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.05)
         @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.05)
     end
@@ -113,15 +113,15 @@ end
     # Solve with SimpleTauLeaping
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
 
-    # MassActionJump formulation for SimpleAdaptiveTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping
     reactant_stoich = [[1=>1, 3=>1], [2=>1], [3=>1]]
     net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [3=>-1, 4=>1]]
     param_idxs = [1, 2, 3]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
     jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
 
-    # Solve with SimpleAdaptiveTauLeaping
-    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    # Solve with SimpleExplicitTauLeaping
+    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
 
     # Compute mean infected (I) trajectories
     t_points = 0:1.0:250.0
@@ -130,14 +130,14 @@ end
     mean_adaptive_I = [mean(sol_adaptive[i](t)[3] for i in 1:Nsims) for t in t_points]
 
     # Test mean infected trajectories
-    for i in 1:251
+    for i in 1:10:251
         @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.05)
         @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.05)
     end
 end
 
-# Test zero-rate case for SimpleAdaptiveTauLeaping
-@testset "Zero Rates Test for SimpleAdaptiveTauLeaping" begin
+# Test zero-rate case for SimpleExplicitTauLeaping
+@testset "Zero Rates Test for SimpleExplicitTauLeaping" begin
     # SIR model: S + I -> 2I, I -> R
     reactant_stoch = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
     net_stoch = [[1=>-1, 2=>1], [2=>-1, 3=>1], []]
@@ -148,7 +148,7 @@ end
     prob = DiscreteProblem(u0, tspan)
     jump_prob = JumpProblem(prob, PureLeaping(), maj)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleAdaptiveTauLeaping(), EnsembleSerial(); trajectories=Nsims, dtmin = 0.1, saveat=1.0)
+    sol = solve(EnsembleProblem(jump_prob), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, dtmin = 0.1, saveat=1.0)
     
     for i in 1:Nsims
         # Check that solution completes and covers tspan

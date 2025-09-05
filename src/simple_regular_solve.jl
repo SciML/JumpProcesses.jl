@@ -1,10 +1,10 @@
 struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
-struct SimpleAdaptiveTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
+struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
     epsilon::T  # Error control parameter
 end
 
-SimpleAdaptiveTauLeaping(; epsilon=0.05) = SimpleAdaptiveTauLeaping(epsilon)
+SimpleExplicitTauLeaping(; epsilon=0.05) = SimpleExplicitTauLeaping(epsilon)
 
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     if !(jump_prob.aggregator isa PureLeaping)
@@ -20,7 +20,7 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     jump_prob.regular_jump !== nothing    
 end
 
-function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping)
+function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping)
     if !(jump_prob.aggregator isa PureLeaping)
         @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
         JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
@@ -158,7 +158,7 @@ function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin
     # mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
     # I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
     rate(rate_cache, u, p, t)
-    if all(==(0), rate_cache)  # Handle case where all rates are zero
+    if all(==(0.0), rate_cache)  # Handle case where all rates are zero
         return dtmin
     end
     tau = Inf
@@ -178,7 +178,7 @@ function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin
     return max(tau, dtmin)
 end
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping; 
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping; 
         seed = nothing,
         dtmin = 1e-10,
         saveat = nothing)
@@ -262,6 +262,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
             tau /= 2
             continue
         end
+        # Ensure non-negativity, as per Cao et al. (2006), Section 3.3
         for i in eachindex(u_new)
             u_new[i] = max(u_new[i], 0)
         end

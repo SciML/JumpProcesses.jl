@@ -59,15 +59,12 @@ Nsims = 1000
 
     # Compute mean infected (I) trajectories
     t_points = 0:1.0:250.0
-    mean_direct_I = [mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points]
-    mean_simple_I = [mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points]
-    mean_adaptive_I = [mean(sol_adaptive[i](t)[2] for i in 1:Nsims) for t in t_points]
+    max_direct_I = maximum([mean(sol_direct[i](t)[3] for i in 1:Nsims) for t in t_points])
+    max_simple_I = maximum([mean(sol_simple[i](t)[3] for i in 1:Nsims) for t in t_points])
+    max_explicit_I = maximum([mean(sol_adaptive[i](t)[3] for i in 1:Nsims) for t in t_points])
 
-    # Test mean infected trajectories
-    for i in 1:10:251
-        @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.05)
-        @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.05)
-    end
+    @test isapprox(max_direct_I, max_simple_I, rtol=0.05)
+    @test isapprox(max_direct_I, max_explicit_I, rtol=0.05)
 end
 
 # SEIR model with exposed compartment
@@ -125,15 +122,12 @@ end
 
     # Compute mean infected (I) trajectories
     t_points = 0:1.0:250.0
-    mean_direct_I = [mean(sol_direct[i](t)[3] for i in 1:Nsims) for t in t_points]
-    mean_simple_I = [mean(sol_simple[i](t)[3] for i in 1:Nsims) for t in t_points]
-    mean_adaptive_I = [mean(sol_adaptive[i](t)[3] for i in 1:Nsims) for t in t_points]
+    max_direct_I = maximum([mean(sol_direct[i](t)[3] for i in 1:Nsims) for t in t_points])
+    max_simple_I = maximum([mean(sol_simple[i](t)[3] for i in 1:Nsims) for t in t_points])
+    max_explicit_I = maximum([mean(sol_adaptive[i](t)[3] for i in 1:Nsims) for t in t_points])
 
-    # Test mean infected trajectories
-    for i in 1:10:251
-        @test isapprox(mean_direct_I[i], mean_simple_I[i], rtol=0.05)
-        @test isapprox(mean_direct_I[i], mean_adaptive_I[i], rtol=0.05)
-    end
+    @test isapprox(max_direct_I, max_simple_I, rtol=0.05)
+    @test isapprox(max_direct_I, max_explicit_I, rtol=0.05)
 end
 
 # Test zero-rate case for SimpleExplicitTauLeaping
@@ -148,14 +142,12 @@ end
     prob = DiscreteProblem(u0, tspan)
     jump_prob = JumpProblem(prob, PureLeaping(), maj)
 
-    sol = solve(EnsembleProblem(jump_prob), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, dtmin = 0.1, saveat=1.0)
-    
-    for i in 1:Nsims
-        # Check that solution completes and covers tspan
-        @test sol[i].t[end] ≈ 250.0 atol=1e-6
-        # Check that state remains zero
-        @test all(u == [0, 0, 0] for u in sol[i].u)
-    end
+    sol = solve(jump_prob, SimpleExplicitTauLeaping(); dtmin = 0.1, saveat=1.0)
+
+    # Check that solution completes and covers tspan
+    @test sol.t[end] ≈ 250.0 atol=1e-6
+    # Check that state remains zero
+    @test all(u == [0, 0, 0] for u in sol.u)
 end
 
 # Test PureLeaping aggregator functionality

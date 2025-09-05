@@ -82,7 +82,7 @@ end
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
 end
 
-# SEIR model with exposed compartment
+# SEIR model with exposed compartmen
 @testset "SEIR Model Correctness" begin
     β = 0.3 / 1000.0
     σ = 0.2

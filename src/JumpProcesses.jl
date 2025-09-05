@@ -129,7 +129,7 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, EnsembleGPUKernel, SimpleExplicitTauLeaping
+export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

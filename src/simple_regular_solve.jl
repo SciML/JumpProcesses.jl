@@ -151,7 +151,7 @@ function compute_gi(u, max_hor, max_stoich, i, t)
     return 1.0  # Default case
 end
 
-function compute_tau_explicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
     # Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):
     # tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
     # where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
@@ -240,7 +240,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
 
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)
-        tau = compute_tau_explicit(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
         tau = min(tau, t_end - t_current)
         if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
             tau = saveat_times[save_idx] - t_current

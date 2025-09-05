@@ -18,6 +18,8 @@ using StaticArrays: StaticArrays, SVector, setindex
 using Base.Threads: Threads
 using Base.FastMath: add_fast
 
+using SimpleNonlinearSolve
+
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 
@@ -131,7 +133,7 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleExplicitTauLeaping, SimpleAdaptiveTauLeaping, NewtonImplicitSolver, TrapezoidalImplicitSolver, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

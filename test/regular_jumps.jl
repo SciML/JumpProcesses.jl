@@ -354,3 +354,140 @@ end
         save_start = true, save_end = true)
     @test sol.t == [0.0, 2.0, 8.0, 10.0]
 end
+
+# SimpleAdaptiveTauLeaping correctness - SIR model
+@testset "SimpleAdaptiveTauLeaping SIR Correctness" begin
+    β = 0.1 / 1000.0
+    ν = 0.01
+    influx_rate = 1.0
+    p = (β, ν, influx_rate)
+
+    rate1(u, p, t) = p[1] * u[1] * u[2]
+    rate2(u, p, t) = p[2] * u[2]
+    rate3(u, p, t) = p[3]
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
+    affect3!(integrator) = (integrator.u[1] += 1; nothing)
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!),
+        ConstantRateJump(rate3, affect3!))
+
+    u0 = [999.0, 10.0, 0.0]
+    tspan = (0.0, 250.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng = rng)
+
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial();
+        trajectories = Nsims, saveat = 1.0)
+
+    reactant_stoich = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [1=>1]]
+    param_idxs = [1, 2, 3]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs = param_idxs)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng = rng)
+
+    sol_adaptive_newton = solve(EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(solver = NewtonImplicitSolver()),
+        EnsembleSerial(); trajectories = Nsims, saveat = 1.0)
+    sol_adaptive_trap = solve(EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(solver = TrapezoidalImplicitSolver()),
+        EnsembleSerial(); trajectories = Nsims, saveat = 1.0)
+
+    t_points = 0:1.0:250.0
+    max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_newton = maximum([mean(sol_adaptive_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_trap = maximum([mean(sol_adaptive_trap[i](t)[2] for i in 1:Nsims) for t in t_points])
+
+    @test isapprox(max_direct_I, max_adaptive_newton, rtol = 0.05)
+    @test isapprox(max_direct_I, max_adaptive_trap, rtol = 0.05)
+end
+
+# SimpleAdaptiveTauLeaping correctness - SEIR model
+@testset "SimpleAdaptiveTauLeaping SEIR Correctness" begin
+    β = 0.3 / 1000.0
+    σ = 0.2
+    ν = 0.01
+    p = (β, σ, ν)
+
+    rate1(u, p, t) = p[1] * u[1] * u[3]
+    rate2(u, p, t) = p[2] * u[2]
+    rate3(u, p, t) = p[3] * u[3]
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
+    affect3!(integrator) = (integrator.u[3] -= 1; integrator.u[4] += 1; nothing)
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!),
+        ConstantRateJump(rate3, affect3!))
+
+    u0 = [999.0, 0.0, 10.0, 0.0]
+    tspan = (0.0, 250.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng = rng)
+
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial();
+        trajectories = Nsims, saveat = 1.0)
+
+    reactant_stoich = [[1=>1, 3=>1], [2=>1], [3=>1]]
+    net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [3=>-1, 4=>1]]
+    param_idxs = [1, 2, 3]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs = param_idxs)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng = rng)
+
+    sol_adaptive_newton = solve(EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(solver = NewtonImplicitSolver()),
+        EnsembleSerial(); trajectories = Nsims, saveat = 1.0)
+    sol_adaptive_trap = solve(EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(solver = TrapezoidalImplicitSolver()),
+        EnsembleSerial(); trajectories = Nsims, saveat = 1.0)
+
+    t_points = 0:1.0:250.0
+    max_direct_I = maximum([mean(sol_direct[i](t)[3] for i in 1:Nsims) for t in t_points])
+    max_adaptive_newton = maximum([mean(sol_adaptive_newton[i](t)[3] for i in 1:Nsims) for t in t_points])
+    max_adaptive_trap = maximum([mean(sol_adaptive_trap[i](t)[3] for i in 1:Nsims) for t in t_points])
+
+    @test isapprox(max_direct_I, max_adaptive_newton, rtol = 0.05)
+    @test isapprox(max_direct_I, max_adaptive_trap, rtol = 0.05)
+end
+
+# SimpleAdaptiveTauLeaping integration tests (stiff system)
+@testset "SimpleAdaptiveTauLeaping Integration Tests" begin
+    # Stiff system from Cao et al. (2007): S1 -> S2, S2 -> S1, S2 -> S3
+    c = (1000.0, 1000.0, 1.0)
+    reactant_stoich1 = [Pair(1, 1)]
+    net_stoich1 = [Pair(1, -1), Pair(2, 1)]
+    reactant_stoich2 = [Pair(2, 1)]
+    net_stoich2 = [Pair(1, 1), Pair(2, -1)]
+    reactant_stoich3 = [Pair(2, 1)]
+    net_stoich3 = [Pair(2, -1), Pair(3, 1)]
+    stiff_jumps = MassActionJump([c[1], c[2], c[3]],
+        [reactant_stoich1, reactant_stoich2, reactant_stoich3],
+        [net_stoich1, net_stoich2, net_stoich3])
+
+    u0 = [100, 0, 0]
+    tspan = (0.0, 10.0)
+    prob = DiscreteProblem(u0, tspan)
+    jump_prob = JumpProblem(prob, PureLeaping(), stiff_jumps; rng = rng)
+
+    sol = solve(jump_prob, SimpleAdaptiveTauLeaping(); saveat = 0.1)
+    @test sol.t[end] ≈ 10.0 atol = 1e-6
+
+    # Reversible isomerization from Cao et al. (2004)
+    c2 = (1000.0, 1000.0)
+    reactant_stoich_r1 = [Pair(1, 1)]
+    net_stoich_r1 = [Pair(1, -1), Pair(2, 1)]
+    reactant_stoich_r2 = [Pair(2, 1)]
+    net_stoich_r2 = [Pair(1, 1), Pair(2, -1)]
+    rev_jumps = MassActionJump([c2[1], c2[2]],
+        [reactant_stoich_r1, reactant_stoich_r2],
+        [net_stoich_r1, net_stoich_r2])
+
+    u0_rev = [1000, 0]
+    tspan_rev = (0.0, 0.1)
+    prob_rev = DiscreteProblem(u0_rev, tspan_rev)
+    jump_prob_rev = JumpProblem(prob_rev, PureLeaping(), rev_jumps; rng = rng)
+
+    sol_newton = solve(jump_prob_rev, SimpleAdaptiveTauLeaping(epsilon = 0.05,
+        solver = NewtonImplicitSolver()))
+    sol_trap = solve(jump_prob_rev, SimpleAdaptiveTauLeaping(epsilon = 0.05,
+        solver = TrapezoidalImplicitSolver()))
+    @test sol_newton.t[end] ≈ 0.1 atol = 1e-6
+    @test sol_trap.t[end] ≈ 0.1 atol = 1e-6
+end

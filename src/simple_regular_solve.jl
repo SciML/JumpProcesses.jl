@@ -246,11 +246,15 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
 
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
-    rate = (out, u, p, t) -> begin
-        for j in 1:numjumps
-            out[j] = evalrxrate(u, j, maj)
+    rj = jump_prob.regular_jump
+    # Extract rates
+    rate = rj !== nothing ? rj.rate :
+        (out, u, p, t) -> begin
+            for j in 1:numjumps
+                out[j] = evalrxrate(u, j, maj)
+            end
         end
-    end
+    c = rj !== nothing ? rj.c : nothing
     u0 = copy(prob.u0)
     tspan = prob.tspan
     p = prob.p

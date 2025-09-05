@@ -71,7 +71,7 @@ Nsims = 1000
     @test isapprox(max_direct_I, max_implicit_trapezoidal, rtol=0.05)
 end
 
-# SEIR model with exposed compartment
+# SEIR model with exposed compartmen
 @testset "SEIR Model Correctness" begin
     β = 0.3 / 1000.0
     σ = 0.2

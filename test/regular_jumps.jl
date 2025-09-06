@@ -55,15 +55,15 @@ Nsims = 1000
     jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
 
     # Solve with SimpleAdaptiveTauLeaping
-    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
-    sol_implicit_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_adaptive_newton = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_adaptive_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
 
     # Compute mean infected (I) trajectories
     t_points = 0:1.0:250.0
     max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
     max_direct_I = maximum([mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_adaptive_newton = maximum([mean(sol_implicit_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_adaptive_trapezoidal = maximum([mean(sol_implicit_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_newton = maximum([mean(sol_adaptive_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_trapezoidal = maximum([mean(sol_adaptive_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
 
     # Test mean infected trajectories
     @test isapprox(max_direct_I, max_direct_I, rtol=0.05)
@@ -122,15 +122,15 @@ end
     jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
 
     # Solve with SimpleAdaptiveTauLeaping
-    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
-    sol_implicit_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_adaptive_newton = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_adaptive_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
 
     # Compute mean infected (I) trajectories
     t_points = 0:1.0:250.0
     max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
     max_direct_I = maximum([mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_adaptive_newton = maximum([mean(sol_implicit_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_adaptive_trapezoidal = maximum([mean(sol_implicit_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_newton = maximum([mean(sol_adaptive_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_trapezoidal = maximum([mean(sol_adaptive_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
 
     # Test mean infected trajectories
     @test isapprox(max_direct_I, max_direct_I, rtol=0.05)

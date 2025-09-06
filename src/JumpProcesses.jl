@@ -4,8 +4,8 @@ using Reexport: Reexport, @reexport
 @reexport using DiffEqBase
 
 # Explicit imports from standard libraries
-using LinearAlgebra: LinearAlgebra, mul!
-using Random: Random, randexp, seed!
+using LinearAlgebra: LinearAlgebra, I, mul!, eigvals
+using Random: Random, randexp, randexp!, seed!
 
 # Explicit imports from external packages
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF

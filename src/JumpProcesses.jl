@@ -4,7 +4,7 @@ using Reexport: Reexport, @reexport
 @reexport using DiffEqBase
 
 # Explicit imports from standard libraries
-using LinearAlgebra: LinearAlgebra, I, mul!
+using LinearAlgebra: LinearAlgebra, I, mul!, eigvals
 using Random: Random, randexp, randexp!
 
 # Explicit imports from external packages

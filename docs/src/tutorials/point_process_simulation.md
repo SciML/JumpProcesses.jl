@@ -250,5 +250,5 @@ This tutorial demonstrated how to simulate simple TPPs. In addition to that,
 JumpProcesses and the SciML ecosystem can be a powerful tool in describing more
 general TPPs. We demonstrate this capability in the [advanced TPP tutorial](@ref
 tpp_advanced), which shows how to interface JumpProcesses with
-[PointProcesses.jl](https://github.com/gdalle/PointProcesses.jl) and covers via
+[PointProcesses.jl](https://github.com/JoseKling/PointProcesses.jl) and covers via
 this interface many different aspects usually studied in point process theory.

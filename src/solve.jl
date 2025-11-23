@@ -1,6 +1,9 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
-        kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
+
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -9,7 +12,10 @@ end
 #Ambiguity Fix
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
-        kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
+
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -27,8 +33,11 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm; kwargs...) where {P}
-                __jump_init(_jump_prob, alg; kwargs...)
+        alg::DiffEqBase.DEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
+
+    __jump_init(_jump_prob, alg; kwargs...)
 end 
 
 function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;

@@ -117,6 +117,7 @@ function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
 end
 
 function DiffEqBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)
+    # init will handle kwargs merging via init_call
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol

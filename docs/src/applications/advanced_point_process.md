@@ -1,4 +1,4 @@
-# [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses] (@id tpp_advanced)
+# [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses](@id tpp_advanced)
 
 JumpProcesses was initially developed to simulate the trajectory of jump
 processes. Therefore, those with a background in point process might find the

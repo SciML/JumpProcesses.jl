@@ -173,7 +173,7 @@ SSAStepper only supports DiscreteCallbacks for event detection.
 """
 function check_continuous_callback_error(callback)
     if callback === nothing
-        return
+        return nothing
     end
 
     if callback isa DiffEqBase.ContinuousCallback
@@ -189,6 +189,7 @@ function check_continuous_callback_error(callback)
                   "solver (e.g., Tsit5()) if you need continuous event detection.")
         end
     end
+    return nothing
 end
 
 function DiffEqBase.__init(jump_prob::JumpProblem,

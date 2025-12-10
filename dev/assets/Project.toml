@@ -13,7 +13,7 @@ StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 
 [sources]
-JumpProcesses = {path = "/home/chrisrackauckas/github-runners/demeter4-5/_work/JumpProcesses.jl/JumpProcesses.jl"}
+JumpProcesses = {path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"}
 
 [compat]
 Catalyst = "14.0, 15"

@@ -75,7 +75,7 @@ end
 
 # Update species i brackets in the aggregator.
 @inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::AbstractVector)
-    @unpack ulow, uhigh = p
+    (; ulow, uhigh) = p
     @inbounds for (i, uval) in enumerate(u)
         ulow[i], uhigh[i] = get_spec_brackets(p.bracket_data, i, uval)
     end

@@ -125,7 +125,7 @@ end
 reset all structs, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, integrator, t)
-    @unpack spatial_system, rx_rates, hop_rates, rng = aggregation
+    (; spatial_system, rx_rates, hop_rates, rng) = aggregation
     u = integrator.u
 
     reset!(rx_rates)

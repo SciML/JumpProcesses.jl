@@ -126,7 +126,7 @@ end
 # recalculate jump rates for jumps that depend on the just executed jump
 # requires dependency graph
 function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
-    @unpack cur_rates, rates, ma_jumps, rt = p
+    (; cur_rates, rates, ma_jumps, rt) = p
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     num_majumps = get_num_majumps(ma_jumps)
 

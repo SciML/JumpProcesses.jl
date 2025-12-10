@@ -32,7 +32,7 @@ end
 PriorityGroup{U}(maxpriority::T) where {T, U} = PriorityGroup(maxpriority, 0, Vector{U}())
 
 @inline function insert!(pg::PriorityGroup, pid)
-    @unpack numpids, pids = pg
+    (; numpids, pids) = pg
 
     if numpids == length(pids)
         push!(pids, pid)
@@ -45,7 +45,7 @@ PriorityGroup{U}(maxpriority::T) where {T, U} = PriorityGroup(maxpriority, 0, Ve
 end
 
 @inline function remove!(pg::PriorityGroup, pididx)
-    @unpack numpids, pids = pg
+    (; numpids, pids) = pg
 
     @inbounds lastpid = pids[numpids]
 
@@ -148,7 +148,7 @@ end
 Adds extra groups to the table to accommodate a new maxpriority.
 """
 function padtable!(pt::PriorityTable, pid, priority)
-    @unpack maxpriority, groups, gsums = pt
+    (; maxpriority, groups, gsums) = pt
     pidtype = typeof(pid)
 
     while priority >= maxpriority
@@ -163,7 +163,7 @@ end
 # assumes pid is at most 1 greater than last priority (id) currently in table
 # i.e. pid = length(pidtogroup) + 1
 function insert!(pt::PriorityTable, pid, priority)
-    @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
+    (; maxpriority, groups, gsums, pidtogroup, priortogid) = pt
 
     # find group for new priority
     gid = priortogid(priority)
@@ -190,7 +190,7 @@ function insert!(pt::PriorityTable, pid, priority)
 end
 
 function update!(pt::PriorityTable, pid, oldpriority, newpriority)
-    @unpack maxpriority, groups, gsums, pidtogroup, priortogid = pt
+    (; maxpriority, groups, gsums, pidtogroup, priortogid) = pt
 
     oldgid = priortogid(oldpriority)
     newgid = priortogid(newpriority)
@@ -233,7 +233,7 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
 end
 
 function reset!(pt::PriorityTable{F, S, T, U}) where {F, S, T, U}
-    @unpack groups, gsums, pidtogroup = pt
+    (; groups, gsums, pidtogroup) = pt
     pt.gsum = zero(F)
     fill!(gsums, zero(F))
     fill!(pidtogroup, (zero(T), zero(T)))
@@ -270,7 +270,7 @@ end
 end
 
 @inline function sample(pg::PriorityGroup, priorities, rng = DEFAULT_RNG)
-    @unpack maxpriority, numpids, pids = pg
+    (; maxpriority, numpids, pids) = pg
 
     pididx = 0
     pid = zero(eltype(pids))
@@ -290,7 +290,7 @@ end
 end
 
 function sample(pt::PriorityTable, priorities, rng = DEFAULT_RNG)
-    @unpack groups, gsum, gsums = pt
+    (; groups, gsum, gsums) = pt
 
     # return id zero if total priority is zero
     (gsum < eps(typeof(gsum))) && return zero(eltype(groups[1].pids))
@@ -384,7 +384,7 @@ end
 # Rebuild the table when there are no more reaction times within the current
 # time window. 
 function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
-    @unpack pidtogroup, groups, times, binwidthconst = ptt
+    (; pidtogroup, groups, times, binwidthconst) = ptt
     fill!(pidtogroup, (zero(F), zero(F)))
 
     numbins = length(groups)
@@ -413,7 +413,7 @@ end
 
 # Get the reaction with the earliest timestep.
 function getfirst(ptt::PriorityTimeTable)
-    @unpack groups, times, minbin = ptt
+    (; groups, times, minbin) = ptt
     minbin == 0 && return (0, 0)
 
     while groups[minbin].numpids == 0
@@ -439,7 +439,7 @@ function getfirst(ptt::PriorityTimeTable)
 end
 
 function insert!(ptt::PriorityTimeTable, pid, time)
-    @unpack timegrouper, pidtogroup, groups = ptt
+    (; timegrouper, pidtogroup, groups) = ptt
     gid = timegrouper(time)
     @inbounds pididx = insert!(groups[gid], pid)
     @inbounds pidtogroup[pid] = (gid, pididx)
@@ -451,7 +451,7 @@ end
 # between bins if the new time is within the current time window; otherwise
 # we remove the reaction and wait until rebuild. 
 function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, F}
-    @unpack times, timegrouper, maxtime, pidtogroup, groups = ptt
+    (; times, timegrouper, maxtime, pidtogroup, groups) = ptt
 
     times[pid] = newtime
     if oldtime >= maxtime

@@ -93,7 +93,7 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     if nomorejumps!(p, sum_rate)
         return nothing
     end
-    @unpack rng, cur_rates, max_rate = p
+    (; rng, cur_rates, max_rate) = p
 
     num_rxs = length(cur_rates)
     counter = 0
@@ -112,7 +112,7 @@ end
 ######################## SSA specific helper routines #########################
 function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
-    @unpack ma_jumps, rates, cur_rates, sum_rate = p
+    (; ma_jumps, rates, cur_rates, sum_rate) = p
     num_majumps = get_num_majumps(ma_jumps)
     max_rate_increased = false
     @inbounds for rx in dep_rxs

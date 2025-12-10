@@ -13,7 +13,6 @@ using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_
 using PoissonRandom: PoissonRandom, pois_rand
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
-using UnPack: UnPack, @unpack
 using Graphs: Graphs, AbstractGraph, dst, grid, src
 using StaticArrays: StaticArrays, SA, SVector, @SVector, setindex
 using Base.Threads: Threads, @threads

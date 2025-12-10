@@ -1,7 +1,7 @@
 name = "JumpProcesses"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "9.19.2"
+version = "9.19.3"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
@@ -20,7 +20,6 @@ SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
-UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [weakdeps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -62,7 +61,6 @@ Statistics = "1"
 StochasticDiffEq = "6.82"
 SymbolicIndexingInterface = "0.3.35"
 Test = "1"
-UnPack = "1.0.2"
 julia = "1.10"
 
 [extras]

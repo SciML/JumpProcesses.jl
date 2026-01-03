@@ -12,9 +12,6 @@ PointProcesses = "af0b7596-9bb0-472a-a012-63904f2b4c55"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 
-[sources]
-JumpProcesses = {path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"}
-
 [compat]
 Catalyst = "14.0, 15"
 DensityInterface = "0.4"

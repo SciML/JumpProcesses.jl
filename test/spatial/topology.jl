@@ -17,7 +17,7 @@ num_samples = 10^5
 rel_tol = 0.01
 grids = [
     JP.CartesianGridRej(dims),
-    Graphs.grid(dims)
+    Graphs.grid(dims),
 ]
 for grid in grids
     show(io, "text/plain", grid)
@@ -30,7 +30,7 @@ for grid in grids
     @test JP.outdegree(grid, 6) == 5
     for site in sites
         @test [JP.nth_nbr(grid, site, n) for n in 1:outdegree(grid, site)] ==
-              collect(neighbors(grid, site))
+            collect(neighbors(grid, site))
         d = Dict{Int, Int}()
         for i in 1:num_samples
             nb = JP.rand_nbr(rng, grid, site)

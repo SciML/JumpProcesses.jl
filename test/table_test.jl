@@ -3,9 +3,9 @@ using Test
 const DJ = JumpProcesses
 
 # test data
-minpriority = 2.0^exponent(1e-12)
-maxpriority = 2.0^exponent(1e12)
-priorities = [1e-13, 0.99 * minpriority, minpriority, 1.01e-4, 1e-4, 5.0, 0.0, 1e10]
+minpriority = 2.0^exponent(1.0e-12)
+maxpriority = 2.0^exponent(1.0e12)
+priorities = [1.0e-13, 0.99 * minpriority, minpriority, 1.01e-4, 1.0e-4, 5.0, 0.0, 1.0e10]
 
 mingid = exponent(minpriority)   # = -40
 ptog = priority -> DJ.priortogid(priority, mingid)
@@ -54,7 +54,7 @@ priorities[10] = 0.0
 
 # test sampling
 cnt = 0
-Nsamps = Int(1e7)
+Nsamps = Int(1.0e7)
 for i in 1:Nsamps
     global cnt
     pid = DJ.sample(pt, priorities)
@@ -76,7 +76,7 @@ ptt = DJ.PriorityTimeTable(times, mintime, timestep)
 DJ.update!(ptt, 1, times[1], 10 * times[1]) # 2. -> 20., group 2 to group 14
 @test ptt.groups[14].numpids == 1
 @test DJ.getfirst(ptt) == (2, 8.0)
-# Updating beyond the time window should not change the max priority. 
+# Updating beyond the time window should not change the max priority.
 DJ.update!(ptt, 1, times[1], 70.0) # 20. -> 70.
 @test ptt.groups[14].numpids == 0
 @test ptt.maxtime == 66.0

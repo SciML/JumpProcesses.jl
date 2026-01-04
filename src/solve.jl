@@ -1,49 +1,59 @@
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
+function DiffEqBase.__solve(
+        jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
-        merge_callbacks = true, kwargs...) where {P}
+        merge_callbacks = true, kwargs...
+    ) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
 
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
-    integrator.sol
+    return integrator.sol
 end
 
 #Ambiguity Fix
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
+function DiffEqBase.__solve(
+        jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
-        merge_callbacks = true, kwargs...) where {P}
+        merge_callbacks = true, kwargs...
+    ) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
 
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
-    integrator.sol
+    return integrator.sol
 end
 
 # if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
 # SSAStepper
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P};
-        kwargs...) where {P <: DiscreteProblem}
-    DiffEqBase.__solve(jump_prob, SSAStepper(); kwargs...)
+function DiffEqBase.__solve(
+        jump_prob::DiffEqBase.AbstractJumpProblem{P};
+        kwargs...
+    ) where {P <: DiscreteProblem}
+    return DiffEqBase.__solve(jump_prob, SSAStepper(); kwargs...)
 end
 
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...)
     error("Auto-solver selection is currently only implemented for JumpProblems defined over DiscreteProblems. Please explicitly specify a solver algorithm in calling solve.")
 end
 
-function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+function DiffEqBase.__init(
+        _jump_prob::DiffEqBase.AbstractJumpProblem{P},
+        alg::DiffEqBase.DEAlgorithm; merge_callbacks = true, kwargs...
+    ) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
 
-    __jump_init(_jump_prob, alg; kwargs...)
-end 
+    return __jump_init(_jump_prob, alg; kwargs...)
+end
 
-function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
+function __jump_init(
+        _jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
         callback = nothing, seed = nothing,
         alias_jump = Threads.threadid() == 1,
-        kwargs...) where {P}
+        kwargs...
+    ) where {P}
     if alias_jump
         jump_prob = _jump_prob
         reset_jump_problem!(jump_prob, seed)
@@ -52,16 +62,20 @@ function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
     end
 
     # DDEProblems do not have a recompile_flag argument
-    if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
+    return if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
         # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg;
+        integrator = init(
+            jump_prob.prob, alg;
             callback = CallbackSet(jump_prob.jump_callback, callback),
-            kwargs...)
+            kwargs...
+        )
     else
         # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg;
+        integrator = init(
+            jump_prob.prob, alg;
             callback = CallbackSet(jump_prob.jump_callback, callback),
-            kwargs...)
+            kwargs...
+        )
     end
 end
 
@@ -80,7 +94,7 @@ function resetted_jump_problem(_jump_prob, seed)
         randexp!(_jump_prob.rng, jump_prob.prob.u0.jump_u)
         jump_prob.prob.u0.jump_u .*= -1
     end
-    jump_prob
+    return jump_prob
 end
 
 function reset_jump_problem!(jump_prob, seed)
@@ -88,7 +102,7 @@ function reset_jump_problem!(jump_prob, seed)
         Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
     end
 
-    if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray
+    return if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray
         randexp!(jump_prob.rng, jump_prob.prob.u0.jump_u)
         jump_prob.prob.u0.jump_u .*= -1
     end

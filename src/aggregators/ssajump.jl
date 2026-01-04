@@ -22,7 +22,7 @@ An aggregator interface for SSA-like algorithms.
 abstract type AbstractSSAJumpAggregator{T, S, F1, F2, RNG} <: AbstractJumpAggregator end
 
 function DiscreteCallback(c::AbstractSSAJumpAggregator)
-    DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
+    return DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
 end
 
 ########### The following routines are templates for all SSAs ###########
@@ -36,7 +36,7 @@ end
 
 @inline function makewrapper(::Type{T}, aff) where {T}
     # rewrap existing wrappers
-    if aff isa FunctionWrappers.FunctionWrapper
+    return if aff isa FunctionWrappers.FunctionWrapper
         T(aff.obj[])
     elseif aff isa Function
         T(aff)
@@ -45,19 +45,23 @@ end
     end
 end
 
-@inline function concretize_affects!(p::AbstractSSAJumpAggregator,
-        ::I) where {I <: SciMLBase.DEIntegrator}
+@inline function concretize_affects!(
+        p::AbstractSSAJumpAggregator,
+        ::I
+    ) where {I <: SciMLBase.DEIntegrator}
     if (p.affects! isa Vector) &&
-       !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+            !(p.affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
         p.affects! = AffectWrapper[makewrapper(AffectWrapper, aff) for aff in p.affects!]
     end
-    nothing
+    return nothing
 end
 
-@inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
-        ::I) where {T, S, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
-    nothing
+@inline function concretize_affects!(
+        p::AbstractSSAJumpAggregator{T, S, F1, F2},
+        ::I
+    ) where {T, S, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
+    return nothing
 end
 
 # setting up a new simulation
@@ -66,12 +70,12 @@ function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)
     u_modified!(integrator, false)
-    nothing
+    return nothing
 end
 
 # condition for jump to occur
 @inline function (p::AbstractSSAJumpAggregator)(u, t, integrator)
-    p.next_jump_time == t
+    return p.next_jump_time == t
 end
 
 # executing jump at the next jump time
@@ -84,16 +88,19 @@ function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: SciMLBase.DEI
     end
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
-    nothing
+    return nothing
 end
 
-function (p::AbstractSSAJumpAggregator{
-        T, S, F1, F2})(integrator::SciMLBase.DEIntegrator) where
-        {T, S, F1, F2 <: Union{Tuple, Nothing}}
+function (
+        p::AbstractSSAJumpAggregator{
+            T, S, F1, F2,
+        }
+    )(integrator::SciMLBase.DEIntegrator) where
+    {T, S, F1, F2 <: Union{Tuple, Nothing}}
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
-    nothing
+    return nothing
 end
 
 ############################## Generic Routines ###############################
@@ -107,7 +114,7 @@ Adds a `tstop` to the integrator at the next jump time.
     if p.next_jump_time < p.end_time
         add_tstop!(integrator, p.next_jump_time)
     end
-    nothing
+    return nothing
 end
 
 """
@@ -116,15 +123,19 @@ end
 
 Helper routine for setting up standard fields of SSA jump aggregations.
 """
-function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
-        affects!, save_positions, rng; kwargs...)
+function build_jump_aggregation(
+        jump_agg_type, u, p, t, end_time, ma_jumps, rates,
+        affects!, save_positions, rng; kwargs...
+    )
 
     # mass action jumps
     majumps = ma_jumps
     if majumps === nothing
-        majumps = MassActionJump(Vector{typeof(t)}(),
+        majumps = MassActionJump(
+            Vector{typeof(t)}(),
             Vector{Vector{Pair{Int, eltype(u)}}}(),
-            Vector{Vector{Pair{Int, eltype(u)}}}())
+            Vector{Vector{Pair{Int, eltype(u)}}}()
+        )
     end
 
     # current jump rates, allows mass action rates and constant jumps
@@ -133,8 +144,10 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
     sum_rate = zero(typeof(t))
     next_jump = 0
     next_jump_time = typemax(typeof(t))
-    jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-        majumps, rates, affects!, save_positions, rng; kwargs...)
+    return jump_agg_type(
+        next_jump, next_jump_time, end_time, cur_rates, sum_rate,
+        majumps, rates, affects!, save_positions, rng; kwargs...
+    )
 end
 
 """
@@ -163,7 +176,7 @@ function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
     end
 
     p.sum_rate = sum_rate
-    nothing
+    return nothing
 end
 
 """
@@ -195,13 +208,15 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     num_majumps = get_num_majumps(p.ma_jumps)
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
-        @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,
-            params, t, rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(
+            p.ma_jumps, num_majumps, p.rates, u,
+            params, t, rx
+        )
         sum_rate += cur_rates[rx]
     end
 
     p.sum_rate = sum_rate
-    nothing
+    return nothing
 end
 
 """
@@ -228,9 +243,11 @@ Execute `p.next_jump`.
     return integrator.u
 end
 
-@generated function update_state!(p::AbstractSSAJumpAggregator, integrator, u,
-        affects!::T) where {T <: Tuple}
-    quote
+@generated function update_state!(
+        p::AbstractSSAJumpAggregator, integrator, u,
+        affects!::T
+    ) where {T <: Tuple}
+    return quote
         (; ma_jumps, next_jump) = p
         num_ma_rates = get_num_majumps(ma_jumps)
         if next_jump <= num_ma_rates # is next jump a mass action jump
@@ -241,7 +258,7 @@ end
             end
         else
             idx = next_jump - num_ma_rates
-            Base.Cartesian.@nif $(fieldcount(T)) i->(i == idx) i->(@inbounds affects![i](integrator)) i->(@inbounds affects![fieldcount(T)](integrator))
+            Base.Cartesian.@nif $(fieldcount(T)) i -> (i == idx) i -> (@inbounds affects![i](integrator)) i -> (@inbounds affects![fieldcount(T)](integrator))
         end
 
         # save jump that was just executed
@@ -298,7 +315,8 @@ Perform rejection sampling test (used in RSSA methods).
 """
 @inline function rejectrx(
         ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u,
-        jidx, params, t)
+        jidx, params, t
+    )
     # rejection test
     @inbounds r2 = rand(rng) * cur_rate_high[jidx]
     @inbounds crlow = cur_rate_low[jidx]

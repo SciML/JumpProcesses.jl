@@ -16,8 +16,10 @@ site_rates = JP.LowHigh(zeros(n), zeros(n))
 majump_rates = [0.1] # death at rate 0.1
 reactstoch = [[1 => 1]]
 netstoch = [[1 => -1]]
-majump = MassActionJump(majump_rates, reactstoch,
-    netstoch)
+majump = MassActionJump(
+    majump_rates, reactstoch,
+    netstoch
+)
 rx_rates = JP.LowHigh(JP.RxRates(n, majump))
 
 # set up hop rates
@@ -40,18 +42,18 @@ for site in 1:num_sites(spatial_system)
 end
 
 # test species brackets
-@test u_low_high.low[1, 1]≈u[1, 1] * (1 - fluctuation_rate) atol=1
-@test u_low_high.high[1, 1]≈u[1, 1] * (1 + fluctuation_rate) atol=1
+@test u_low_high.low[1, 1] ≈ u[1, 1] * (1 - fluctuation_rate) atol = 1
+@test u_low_high.high[1, 1] ≈ u[1, 1] * (1 + fluctuation_rate) atol = 1
 
 # test site rate brackets
 site = 1
 rx = 1
 species = 1
 @test JP.total_site_rx_rate(rx_rates.low, site) ==
-      majump_rates[rx] * u_low_high.low[species, site]
+    majump_rates[rx] * u_low_high.low[species, site]
 @test JP.total_site_rx_rate(rx_rates.high, site) ==
-      majump_rates[rx] * u_low_high.high[species, site]
+    majump_rates[rx] * u_low_high.high[species, site]
 @test JP.total_site_hop_rate(hop_rates.low, site) ==
-      hop_constants[site] * u_low_high.low[species, site]
+    hop_constants[site] * u_low_high.low[species, site]
 @test JP.total_site_hop_rate(hop_rates.high, site) ==
-      hop_constants[site] * u_low_high.high[species, site]
+    hop_constants[site] * u_low_high.high[species, site]

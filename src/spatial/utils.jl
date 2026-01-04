@@ -17,8 +17,10 @@ struct SpatialJump{J}
 end
 
 function Base.show(io::IO, ::MIME"text/plain", jump::SpatialJump)
-    println(io,
-        "SpatialJump with source $(jump.src), destination $(jump.dst) and index $(jump.jidx).")
+    return println(
+        io,
+        "SpatialJump with source $(jump.src), destination $(jump.dst) and index $(jump.jidx)."
+    )
 end
 
 ######################## helper routines for all spatial SSAs ########################
@@ -29,25 +31,27 @@ sample jump at site with direct method
 """
 function sample_jump_direct(p, site)
     if rand(p.rng) * (total_site_rate(p.rx_rates, p.hop_rates, site)) <
-       total_site_rx_rate(p.rx_rates, site)
+            total_site_rx_rate(p.rx_rates, site)
         rx = sample_rx_at_site(p.rx_rates, site, p.rng)
         return SpatialJump(site, rx + p.numspecies, site)
     else
         species_to_diffuse,
-        target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
-            p.spatial_system)
+            target_site = sample_hop_at_site(
+            p.hop_rates, site, p.rng,
+            p.spatial_system
+        )
         return SpatialJump(site, species_to_diffuse, target_site)
     end
 end
 
 function total_site_rate(rx_rates::RxRates, hop_rates::AbstractHopRates, site)
-    total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)
+    return total_site_hop_rate(hop_rates, site) + total_site_rx_rate(rx_rates, site)
 end
 
 function update_rates_after_reaction!(p, integrator, site, reaction_id)
     u = integrator.u
     update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], integrator, site)
-    update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
+    return update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
 end
 
 function update_rates_after_hop!(p, integrator, source_site, target_site, species)
@@ -56,7 +60,7 @@ function update_rates_after_hop!(p, integrator, source_site, target_site, specie
     update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
 
     update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, target_site)
-    update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
+    return update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
 end
 
 """
@@ -70,12 +74,14 @@ function update_state!(p, integrator)
         execute_hop!(integrator, jump.src, jump.dst, jump.jidx)
     else
         rx_index = reaction_id_from_jump(p, jump)
-        @inbounds executerx!((@view integrator.u[:, jump.src]), rx_index,
-            p.rx_rates.ma_jumps)
+        @inbounds executerx!(
+            (@view integrator.u[:, jump.src]), rx_index,
+            p.rx_rates.ma_jumps
+        )
     end
     # save jump that was just executed
     p.prev_jump = jump
-    nothing
+    return nothing
 end
 
 """
@@ -84,7 +90,7 @@ end
 true if jump is a hop
 """
 function is_hop(p, jump)
-    jump.jidx <= p.numspecies
+    return jump.jidx <= p.numspecies
 end
 
 """
@@ -94,7 +100,7 @@ documentation
 """
 function execute_hop!(integrator, source_site, target_site, species)
     @inbounds integrator.u[species, source_site] -= 1
-    @inbounds integrator.u[species, target_site] += 1
+    return @inbounds integrator.u[species, target_site] += 1
 end
 
 """
@@ -103,5 +109,5 @@ end
 return reaction id by subtracting the number of hops
 """
 function reaction_id_from_jump(p, jump)
-    jump.jidx - p.numspecies
+    return jump.jidx - p.numspecies
 end

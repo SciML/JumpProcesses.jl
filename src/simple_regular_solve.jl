@@ -6,16 +6,18 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
         Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
     end
-    isempty(jump_prob.jump_callback.continuous_callbacks) &&
-    isempty(jump_prob.jump_callback.discrete_callbacks) &&
-    isempty(jump_prob.constant_jumps) &&
-    isempty(jump_prob.variable_jumps) &&
-    get_num_majumps(jump_prob.massaction_jump) == 0 &&
-    jump_prob.regular_jump !== nothing    
+    return isempty(jump_prob.jump_callback.continuous_callbacks) &&
+        isempty(jump_prob.jump_callback.discrete_callbacks) &&
+        isempty(jump_prob.constant_jumps) &&
+        isempty(jump_prob.variable_jumps) &&
+        get_num_majumps(jump_prob.massaction_jump) == 0 &&
+        jump_prob.regular_jump !== nothing
 end
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
-        seed = nothing, dt = error("dt is required for SimpleTauLeaping."))
+function DiffEqBase.solve(
+        jump_prob::JumpProblem, alg::SimpleTauLeaping;
+        seed = nothing, dt = error("dt is required for SimpleTauLeaping.")
+    )
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
 
@@ -56,9 +58,11 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         u[i] = du + uprev
     end
 
-    sol = DiffEqBase.build_solution(prob, alg, t, u,
+    return sol = DiffEqBase.build_solution(
+        prob, alg, t, u,
         calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(t, u))
+        interp = DiffEqBase.ConstantInterpolation(t, u)
+    )
 end
 
 struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm
@@ -67,9 +71,9 @@ struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm
 end
 
 function EnsembleGPUKernel(backend)
-    EnsembleGPUKernel(backend, 0.0)
+    return EnsembleGPUKernel(backend, 0.0)
 end
 
 function EnsembleGPUKernel()
-    EnsembleGPUKernel(nothing, 0.0)
+    return EnsembleGPUKernel(nothing, 0.0)
 end

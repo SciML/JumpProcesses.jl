@@ -5,14 +5,14 @@ rng = StableRNG(12345)
 rate = (u, p, t) -> p[1] * u[1] * u[2]
 affect! = function (integrator)
     integrator.u[1] -= 1
-    integrator.u[2] += 1
+    return integrator.u[2] += 1
 end
 jump = ConstantRateJump(rate, affect!)
 
 rate = (u, p, t) -> p[2] * u[2]
 affect! = function (integrator)
     integrator.u[2] -= 1
-    integrator.u[3] += 1
+    return integrator.u[3] += 1
 end
 jump2 = ConstantRateJump(rate, affect!)
 
@@ -21,8 +21,10 @@ p = (0.1 / 1000, 0.01)
 tspan = (0.0, 2500.0)
 
 dprob = DiscreteProblem(u0, tspan, p)
-jprob = JumpProblem(dprob, Direct(), jump, jump2, save_positions = (false, false),
-    rng = rng)
+jprob = JumpProblem(
+    dprob, Direct(), jump, jump2, save_positions = (false, false),
+    rng = rng
+)
 sol = solve(jprob, SSAStepper())
 @test sol[3, end] == 1000
 
@@ -65,8 +67,8 @@ sol3 = solve(jprob3, SSAStepper())
 #################
 
 # test error handling
-@test_throws ErrorException jprob4=remake(jprob, prob = dprob2, p = p2)
-@test_throws ErrorException jprob5=remake(jprob, aggregator = RSSA())
+@test_throws ErrorException jprob4 = remake(jprob, prob = dprob2, p = p2)
+@test_throws ErrorException jprob5 = remake(jprob, aggregator = RSSA())
 
 # test for #446
 let
@@ -97,7 +99,7 @@ let
     jprob3 = remake(jprob2; u0)
     sol = solve(jprob3, Tsit5())
     @test all(==(0.0), sol[1, :])
-    @test_throws ErrorException jprob4=remake(jprob, u0 = 1)
+    @test_throws ErrorException jprob4 = remake(jprob, u0 = 1)
 end
 
 # tests when changing u0 via a passed in prob
@@ -118,7 +120,7 @@ let
     @test all(==(0.0), sol[1, :])
     u0 = [4.0]
     prob2 = remake(jprob.prob; u0)
-    @test_throws ErrorException jprob2=remake(jprob; prob = prob2)
+    @test_throws ErrorException jprob2 = remake(jprob; prob = prob2)
     u0eja = JumpProcesses.remake_extended_u0(jprob.prob, u0, rng)
     prob3 = remake(jprob.prob; u0 = u0eja)
     jprob3 = remake(jprob; prob = prob3)

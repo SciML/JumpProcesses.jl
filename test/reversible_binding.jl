@@ -3,16 +3,16 @@ using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)
 
-Nsims = 1e4
+Nsims = 1.0e4
 
 # ABC model A + B <--> C
 reactstoch = [
     [1 => 1, 2 => 1],
-    [3 => 1]
+    [3 => 1],
 ]
 netstoch = [
     [1 => -1, 2 => -1, 3 => 1],
-    [1 => 1, 2 => 1, 3 => -1]
+    [1 => 1, 2 => 1, 3 => -1],
 ]
 rates = [0.1, 1.0]
 u0 = [500, 500, 0]
@@ -27,7 +27,7 @@ function getmean(jprob, Nsims)
         Amean += sol[1, end]
     end
     Amean /= Nsims
-    Amean
+    return Amean
 end
 
 function mastereqmean(u, rates)
@@ -41,15 +41,17 @@ function mastereqmean(u, rates)
     P_a = nullspace(L)
     P_a ./= sum(P_a)
     P_a .= abs.(P_a)
-    sum((a - 1) * p for (a, p) in enumerate(P_a))
+    return sum((a - 1) * p for (a, p) in enumerate(P_a))
 end
 mastereq_mean = mastereqmean(u0, rates)
 
 algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 relative_tolerance = 0.01
 for alg in algs
-    local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-        rng = rng)
+    local jprob = JumpProblem(
+        prob, alg, majumps, save_positions = (false, false),
+        rng = rng
+    )
     local Amean = getmean(jprob, Nsims)
     @test abs(Amean - mastereq_mean) / mastereq_mean < relative_tolerance
 end

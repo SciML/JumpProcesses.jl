@@ -33,10 +33,10 @@ import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
 using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
-                  DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
-                  ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
-                  deleteat!, isinplace, remake, savevalues!, step!,
-                  u_modified!
+    DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
+    ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
+    deleteat!, isinplace, remake, savevalues!, step!,
+    u_modified!
 using SciMLBase: SciMLBase, DEIntegrator
 
 abstract type AbstractJump end
@@ -44,7 +44,7 @@ abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
-              DEIntegrator{Alg, IIP, U, T} end
+DEIntegrator{Alg, IIP, U, T} end
 
 const DEFAULT_RNG = Random.default_rng()
 
@@ -126,7 +126,7 @@ export init, solve, solve!
 include("SSA_stepper.jl")
 export SSAStepper
 
-# leaping: 
+# leaping:
 include("simple_regular_solve.jl")
 export SimpleTauLeaping, EnsembleGPUKernel
 

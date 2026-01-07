@@ -67,13 +67,12 @@ end
 
 function resetted_jump_problem(_jump_prob, seed)
     jump_prob = deepcopy(_jump_prob)
-    if !isempty(jump_prob.jump_callback.discrete_callbacks)
+    # Only reseed if an explicit seed is provided. This respects the user's RNG choice
+    # and enables reproducibility. For EnsembleProblems, use prob_func to set unique seeds
+    # for each trajectory if different results are needed.
+    if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
         rng = jump_prob.jump_callback.discrete_callbacks[1].condition.rng
-        if seed === nothing
-            Random.seed!(rng, rand(UInt64))
-        else
-            Random.seed!(rng, seed)
-        end
+        Random.seed!(rng, seed)
     end
 
     if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray

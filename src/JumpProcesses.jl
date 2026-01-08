@@ -4,7 +4,7 @@ using Reexport: Reexport, @reexport
 @reexport using DiffEqBase
 
 # Explicit imports from standard libraries
-using LinearAlgebra: LinearAlgebra, I, mul!
+using LinearAlgebra: LinearAlgebra, I, mul!, eigvals
 using Random: Random, randexp, randexp!
 
 # Explicit imports from external packages
@@ -18,6 +18,8 @@ using StaticArrays: StaticArrays, SA, SVector, @SVector, setindex
 using Base.Threads: Threads, @threads
 using Base.FastMath: add_fast
 using Setfield: @set, @set!
+
+using SimpleNonlinearSolve
 
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
@@ -128,7 +130,7 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleAdaptiveTauLeaping, NewtonImplicitSolver, TrapezoidalImplicitSolver, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

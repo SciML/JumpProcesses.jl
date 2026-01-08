@@ -1,28 +1,142 @@
 using JumpProcesses, DiffEqBase
-using Test, LinearAlgebra
+using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
-function regular_rate(out, u, p, t)
-    out[1] = (0.1 / 1000.0) * u[1] * u[2]
-    out[2] = 0.01u[2]
+Nsims = 1000
+
+# SIR model with influx
+@testset "SIR Model Correctness" begin
+    β = 0.1 / 1000.0
+    ν = 0.01
+    influx_rate = 1.0
+    p = (β, ν, influx_rate)
+
+    # ConstantRateJump formulation for SSAStepper
+    rate1(u, p, t) = p[1] * u[1] * u[2]  # β*S*I (infection)
+    rate2(u, p, t) = p[2] * u[2]         # ν*I (recovery)
+    rate3(u, p, t) = p[3]                # influx_rate (S influx)
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
+    affect3!(integrator) = (integrator.u[1] += 1; nothing)
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
+
+    u0 = [999.0, 10.0, 0.0]  # S, I, R
+    tspan = (0.0, 250.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=rng)
+
+    # Solve with SSAStepper
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+
+    # RegularJump formulation for SimpleTauLeaping
+    regular_rate = (out, u, p, t) -> begin
+        out[1] = p[1] * u[1] * u[2]
+        out[2] = p[2] * u[2]
+        out[3] = p[3]
+    end
+    regular_c = (dc, u, p, t, counts, mark) -> begin
+        dc .= 0
+        dc[1] = -counts[1] + counts[3]
+        dc[2] = counts[1] - counts[2]
+        dc[3] = counts[2]
+    end
+    rj = RegularJump(regular_rate, regular_c, 3)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng=rng)
+
+    # Solve with SimpleTauLeaping
+    sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
+
+    # MassActionJump formulation for SimpleAdaptiveTauLeaping
+    reactant_stoich = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [1=>1]]
+    param_idxs = [1, 2, 3]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
+
+    # Solve with SimpleAdaptiveTauLeaping
+    sol_adaptive_newton = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_adaptive_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+
+    # Compute mean infected (I) trajectories
+    t_points = 0:1.0:250.0
+    max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_direct_I = maximum([mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_newton = maximum([mean(sol_adaptive_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_trapezoidal = maximum([mean(sol_adaptive_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
+
+    # Test mean infected trajectories
+    @test isapprox(max_direct_I, max_direct_I, rtol=0.05)
+    @test isapprox(max_direct_I, max_adaptive_newton, rtol=0.05)
+    @test isapprox(max_direct_I, max_adaptive_trapezoidal, rtol=0.05)
 end
 
-const dc = zeros(3, 2)
-dc[1, 1] = -1
-dc[2, 1] = 1
-dc[2, 2] = -1
-dc[3, 2] = 1
+# SEIR model with exposed compartment
+@testset "SEIR Model Correctness" begin
+    β = 0.3 / 1000.0
+    σ = 0.2
+    ν = 0.01
+    p = (β, σ, ν)
 
-function regular_c(du, u, p, t, counts, mark)
-    mul!(du, dc, counts)
+    # ConstantRateJump formulation for SSAStepper
+    rate1(u, p, t) = p[1] * u[1] * u[3]  # β*S*I (infection)
+    rate2(u, p, t) = p[2] * u[2]         # σ*E (progression)
+    rate3(u, p, t) = p[3] * u[3]         # ν*I (recovery)
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
+    affect3!(integrator) = (integrator.u[3] -= 1; integrator.u[4] += 1; nothing)
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
+
+    u0 = [999.0, 0.0, 10.0, 0.0]  # S, E, I, R
+    tspan = (0.0, 250.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=rng)
+
+    # Solve with SSAStepper
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+
+    # RegularJump formulation for SimpleTauLeaping
+    regular_rate = (out, u, p, t) -> begin
+        out[1] = p[1] * u[1] * u[3]
+        out[2] = p[2] * u[2]
+        out[3] = p[3] * u[3]
+    end
+    regular_c = (dc, u, p, t, counts, mark) -> begin
+        dc .= 0.0
+        dc[1] = -counts[1]
+        dc[2] = counts[1] - counts[2]
+        dc[3] = counts[2] - counts[3]
+        dc[4] = counts[3]
+    end
+    rj = RegularJump(regular_rate, regular_c, 3)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng=rng)
+
+    # Solve with SimpleTauLeaping
+    sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
+
+    # MassActionJump formulation for SimpleAdaptiveTauLeaping
+    reactant_stoich = [[1=>1, 3=>1], [2=>1], [3=>1]]
+    net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [3=>-1, 4=>1]]
+    param_idxs = [1, 2, 3]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
+
+    # Solve with SimpleAdaptiveTauLeaping
+    sol_adaptive_newton = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_adaptive_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleAdaptiveTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+
+    # Compute mean infected (I) trajectories
+    t_points = 0:1.0:250.0
+    max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_direct_I = maximum([mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_newton = maximum([mean(sol_adaptive_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
+    max_adaptive_trapezoidal = maximum([mean(sol_adaptive_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
+
+    # Test mean infected trajectories
+    @test isapprox(max_direct_I, max_direct_I, rtol=0.05)
+    @test isapprox(max_direct_I, max_adaptive_newton, rtol=0.05)
+    @test isapprox(max_direct_I, max_adaptive_trapezoidal, rtol=0.05)
 end
-
-rj = RegularJump(regular_rate, regular_c, 2)
-jumps = JumpSet(rj)
-prob = DiscreteProblem([999, 1, 0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, PureLeaping(), rj; rng)
-sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
 
 # Test PureLeaping aggregator functionality
 @testset "PureLeaping Aggregator Tests" begin

@@ -225,11 +225,11 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         end
     else
         cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[end])
-        rng = cb.condition.rng
-        if seed === nothing
-            Random.seed!(rng, rand(UInt64))
-        else
-            Random.seed!(rng, seed)
+        # Only reseed if an explicit seed is provided. This respects the user's RNG choice
+        # and enables reproducibility. For EnsembleProblems, use prob_func to set unique seeds
+        # for each trajectory if different results are needed.
+        if seed !== nothing
+            Random.seed!(cb.condition.rng, seed)
         end
     end
     opts = (callback = CallbackSet(callback),)

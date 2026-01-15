@@ -29,6 +29,10 @@ jobs:
         group:
           - InterfaceI
           - InterfaceII
+          - QA
+        exclude:
+          - version: "pre"
+            group: QA
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
       julia-version: "${{ matrix.version }}"

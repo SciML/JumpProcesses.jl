@@ -4,7 +4,7 @@ using Reexport: Reexport, @reexport
 @reexport using DiffEqBase
 
 # Explicit imports from standard libraries
-using LinearAlgebra: LinearAlgebra, I, mul!
+using LinearAlgebra: LinearAlgebra, mul!
 using Random: Random, randexp, randexp!
 
 # Explicit imports from external packages
@@ -14,10 +14,10 @@ using PoissonRandom: PoissonRandom, pois_rand
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
 using Graphs: Graphs, AbstractGraph, dst, grid, src
-using StaticArrays: StaticArrays, SA, SVector, @SVector, setindex
-using Base.Threads: Threads, @threads
+using StaticArrays: StaticArrays, SVector, setindex
+using Base.Threads: Threads
 using Base.FastMath: add_fast
-using Setfield: @set, @set!
+using Setfield: @set!
 
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge

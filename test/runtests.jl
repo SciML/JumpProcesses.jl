@@ -10,7 +10,7 @@ function activate_gpu_env()
 end
 
 @time begin
-    if GROUP == "All" || GROUP == "QA"
+    if GROUP == "QA"
         @time @safetestset "QA Tests" begin include("qa.jl") end
     end
     

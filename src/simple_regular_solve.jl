@@ -190,7 +190,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
-    @unpack prob, rng = jump_prob
+    prob = jump_prob.prob
+    rng = jump_prob.rng
+    
     (seed !== nothing) && seed!(rng, seed)
 
     maj = jump_prob.massaction_jump

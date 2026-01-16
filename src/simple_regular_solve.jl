@@ -87,7 +87,7 @@ function compute_hor(reactant_stoch, numjumps)
     stoch_type = eltype(first(first(reactant_stoch)))
     hor = zeros(stoch_type, numjumps)
     for j in 1:numjumps
-        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j])
+        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=zero(stoch_type))
         if order > 3
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end
@@ -101,8 +101,9 @@ end
 # - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
 # Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
 function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    max_hor = zeros(Int, numspecies)
-    max_stoich = zeros(Int, numspecies)
+    hor_type = eltype(hor)
+    max_hor = zeros(hor_type, numspecies)
+    max_stoich = zeros(hor_type, numspecies)
     for j in 1:numjumps
         for (spec_idx, stoch) in reactant_stoch[j]
             if stoch > 0  # Species is a reactant

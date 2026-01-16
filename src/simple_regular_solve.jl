@@ -132,26 +132,28 @@ end
 #   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
 # Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
 function compute_gi(u, max_hor, max_stoich, i, t)
+    one_max_hor = one(1 / one(eltype(u)))
+    
     if max_hor[i] == 0  # No reactions involve species i as a reactant
-        return 1.0
+        return one_max_hor
     elseif max_hor[i] == 1
-        return 1.0
+        return one_max_hor
     elseif max_hor[i] == 2
         if max_stoich[i] == 1
-            return 2.0
+            return 2 * one_max_hor
         elseif max_stoich[i] == 2
-            return u[i] > 1 ? 2.0 + 1.0 / (u[i] - 1) : 2.0  # Fallback to 2.0 if x_i <= 1
+            return u[i] > one_max_hor ? 2 * one_max_hor + one_max_hor / (u[i] - one_max_hor) : 2 * one_max_hor  # Fallback to 2 if x_i <= 1
         end
     elseif max_hor[i] == 3
         if max_stoich[i] == 1
-            return 3.0
+            return 3 * one_max_hor
         elseif max_stoich[i] == 2
-            return u[i] > 1 ? 1.5 * (2.0 + 1.0 / (u[i] - 1)) : 3.0  # Fallback to 3.0 if x_i <= 1
+            return u[i] > one_max_hor ? (3 * one_max_hor / 2) * (2 * one_max_hor + one_max_hor / (u[i] - one_max_hor)) : 3 * one_max_hor  # Fallback to 3 if x_i <= 1
         elseif max_stoich[i] == 3
-            return u[i] > 2 ? 3.0 + 1.0 / (u[i] - 1) + 2.0 / (u[i] - 2) : 3.0  # Fallback to 3.0 if x_i <= 2
+            return u[i] > 2 * one_max_hor ? 3 * one_max_hor + one_max_hor / (u[i] - one_max_hor) + 2 * one_max_hor / (u[i] - 2 * one_max_hor) : 3 * one_max_hor  # Fallback to 3 if x_i <= 2
         end
     end
-    return 1.0  # Default case
+    return one_max_hor  # Default case
 end
 
 # Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):

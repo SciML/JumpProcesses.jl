@@ -410,7 +410,7 @@ end
 function total_variable_rate(
         cache::VR_DirectEventCache{
             T, RNG, F1, F2}, u, p, t) where {T, RNG, F1, F2}
-    @unpack cum_rate_sum, rate_funcs = cache
+    (; cum_rate_sum, rate_funcs) = cache
     sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
     return sum_rate
 end
@@ -457,14 +457,14 @@ end
 @generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2},
         integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     quote
-        @unpack affect_funcs = cache
+        (; affect_funcs) = cache
         Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds affect_funcs[i](integrator)) i -> (@inbounds affect_funcs[fieldcount(F2)](integrator))
     end
 end
 
 @inline function execute_affect!(cache::VR_DirectEventCache,
         integrator::I, idx) where {I <: SciMLBase.DEIntegrator}
-    @unpack affect_funcs = cache
+    (; affect_funcs) = cache
     if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
         @inbounds affect_funcs[idx](integrator)
     else
@@ -474,7 +474,7 @@ end
 
 # Affect functor defined directly on the cache
 function (cache::VR_DirectEventCache)(integrator)
-    @unpack t, u, p = integrator
+    (; t, u, p) = integrator
     total_variable_rate_sum = total_variable_rate(cache, u, p, t)
     if total_variable_rate_sum <= 0
         cache.total_rate = 0

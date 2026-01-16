@@ -117,6 +117,7 @@ function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
 end
 
 function DiffEqBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)
+    # init will handle kwargs merging via init_call
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -164,6 +165,33 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     end
 end
 
+"""
+    check_continuous_callback_error(callback)
+
+Check if the callback contains any continuous callbacks and throw an informative error.
+SSAStepper only supports DiscreteCallbacks for event detection.
+"""
+function check_continuous_callback_error(callback)
+    if callback === nothing
+        return nothing
+    end
+
+    if callback isa DiffEqBase.ContinuousCallback
+        error("SSAStepper does not support continuous callbacks. Only DiscreteCallbacks " *
+              "are supported for event detection with SSAStepper. Please use an ODE/SDE " *
+              "solver (e.g., Tsit5()) if you need continuous event detection.")
+    elseif callback isa DiffEqBase.CallbackSet
+        n_continuous = length(callback.continuous_callbacks)
+        if n_continuous > 0
+            error("SSAStepper does not support continuous callbacks (found $n_continuous " *
+                  "continuous callback$(n_continuous > 1 ? "s" : "")). Only DiscreteCallbacks " *
+                  "are supported for event detection with SSAStepper. Please use an ODE/SDE " *
+                  "solver (e.g., Tsit5()) if you need continuous event detection.")
+        end
+    end
+    return nothing
+end
+
 function DiffEqBase.__init(jump_prob::JumpProblem,
         alg::SSAStepper;
         save_start = true,
@@ -183,8 +211,13 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     end
     prob = jump_prob.prob
 
+    # Check for continuous callbacks in the jump system
     isempty(jump_prob.jump_callback.continuous_callbacks) ||
-        error("SSAStepper does not support continuous callbacks. Please use an ODE/SDE solver over ODE or SDE problems instead.")
+        error("SSAStepper does not support continuous callbacks in the jump system. " *
+              "Please use an ODE/SDE solver over ODE or SDE problems instead.")
+
+    # Check for continuous callbacks passed via kwargs (from JumpProblem constructor or solve)
+    check_continuous_callback_error(callback)
     if alias_jump
         cb = jump_prob.jump_callback.discrete_callbacks[end]
         if seed !== nothing
@@ -192,11 +225,11 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         end
     else
         cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[end])
-        rng = cb.condition.rng
-        if seed === nothing
-            Random.seed!(rng, rand(UInt64))
-        else
-            Random.seed!(rng, seed)
+        # Only reseed if an explicit seed is provided. This respects the user's RNG choice
+        # and enables reproducibility. For EnsembleProblems, use prob_func to set unique seeds
+        # for each trajectory if different results are needed.
+        if seed !== nothing
+            Random.seed!(cb.condition.rng, seed)
         end
     end
     opts = (callback = CallbackSet(callback),)

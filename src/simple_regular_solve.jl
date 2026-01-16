@@ -36,10 +36,10 @@ end
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing, dt = error("dt is required for SimpleTauLeaping."))
     validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
-    
-    @unpack prob, rng = jump_prob
-    (seed !== nothing) && seed!(rng, seed)
+        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
+
+    (; prob, rng) = jump_prob
+    (seed !== nothing) && Random.seed!(rng, seed)
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)

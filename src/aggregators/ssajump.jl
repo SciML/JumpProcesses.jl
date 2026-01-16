@@ -210,7 +210,7 @@ end
 Execute `p.next_jump`.
 """
 @inline function update_state!(p::AbstractSSAJumpAggregator, integrator, u, affects!)
-    @unpack ma_jumps, next_jump = p
+    (; ma_jumps, next_jump) = p
     num_ma_rates = get_num_majumps(ma_jumps)
     if next_jump <= num_ma_rates # is next jump a mass action jump
         if u isa SVector
@@ -231,7 +231,7 @@ end
 @generated function update_state!(p::AbstractSSAJumpAggregator, integrator, u,
         affects!::T) where {T <: Tuple}
     quote
-        @unpack ma_jumps, next_jump = p
+        (; ma_jumps, next_jump) = p
         num_ma_rates = get_num_majumps(ma_jumps)
         if next_jump <= num_ma_rates # is next jump a mass action jump
             if u isa SVector

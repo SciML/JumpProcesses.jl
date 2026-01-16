@@ -1,6 +1,9 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
-        kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
+
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -9,7 +12,10 @@ end
 #Ambiguity Fix
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
-        kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
+
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -27,8 +33,11 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm; kwargs...) where {P}
-                __jump_init(_jump_prob, alg; kwargs...)
+        alg::DiffEqBase.DEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
+
+    __jump_init(_jump_prob, alg; kwargs...)
 end 
 
 function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
@@ -58,13 +67,12 @@ end
 
 function resetted_jump_problem(_jump_prob, seed)
     jump_prob = deepcopy(_jump_prob)
-    if !isempty(jump_prob.jump_callback.discrete_callbacks)
+    # Only reseed if an explicit seed is provided. This respects the user's RNG choice
+    # and enables reproducibility. For EnsembleProblems, use prob_func to set unique seeds
+    # for each trajectory if different results are needed.
+    if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
         rng = jump_prob.jump_callback.discrete_callbacks[1].condition.rng
-        if seed === nothing
-            Random.seed!(rng, rand(UInt64))
-        else
-            Random.seed!(rng, seed)
-        end
+        Random.seed!(rng, seed)
     end
 
     if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray

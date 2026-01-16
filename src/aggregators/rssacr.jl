@@ -134,7 +134,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
         return nothing
     end
 
-    @unpack rt, ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
+    (; rt, ma_jumps, rates, cur_rate_high, cur_rate_low, rng) = p
     num_majumps = get_num_majumps(ma_jumps)
     rerl = zero(sum_rate)
 
@@ -164,7 +164,7 @@ update bracketing for species that depend on the just executed jump
 @inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::AbstractVector,
         params, t)
     # update bracketing intervals
-    @unpack ulow, uhigh = p
+    (; ulow, uhigh) = p
     crhigh = p.cur_rate_high
 
     @inbounds for uidx in p.jumptovars_map[p.next_jump]

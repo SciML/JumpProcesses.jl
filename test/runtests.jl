@@ -10,7 +10,7 @@ function activate_gpu_env()
 end
 
 @time begin
-    if GROUP == "All" || GROUP == "QA"
+    if GROUP == "QA"
         @time @safetestset "QA Tests" begin include("qa.jl") end
     end
     
@@ -25,6 +25,7 @@ end
         @time @safetestset "Tau Leaping Tests" begin include("regular_jumps.jl") end
         @time @safetestset "Simple SSA Callback Test" begin include("ssa_callback_test.jl") end
         @time @safetestset "SIR Discrete Callback Test" begin include("sir_model.jl") end
+        @time @safetestset "Callback Merging Tests" begin include("callbacks.jl") end
         @time @safetestset "Linear Reaction SSA Test" begin include("linearreaction_test.jl") end
         @time @safetestset "Mass Action Jump Tests; Gene Expr Model" begin include("geneexpr_test.jl") end
         @time @safetestset "Mass Action Jump Tests; Nonlinear Rx Model" begin include("bimolerx_test.jl") end

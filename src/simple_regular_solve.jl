@@ -80,10 +80,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
+# Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
+# HOR is the sum of stoichiometric coefficients of reactants in reaction j.
+# Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
 function compute_hor(reactant_stoch, numjumps)
-    # Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
-    # HOR is the sum of stoichiometric coefficients of reactants in reaction j.
-    # Extract the element type from reactant_stoch
     stoch_type = eltype(first(first(reactant_stoch)))
     hor = zeros(stoch_type, numjumps)
     for j in 1:numjumps
@@ -96,11 +96,11 @@ function compute_hor(reactant_stoch, numjumps)
     return hor
 end
 
+# Precompute reaction conditions for each species i, including:
+# - max_hor: the highest order of reaction (HOR) where species i is a reactant.
+# - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
+# Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
 function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    # Precompute reaction conditions for each species i, including:
-    # - max_hor: the highest order of reaction (HOR) where species i is a reactant.
-    # - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
-    # Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
     max_hor = zeros(Int, numspecies)
     max_stoich = zeros(Int, numspecies)
     for j in 1:numjumps
@@ -118,19 +118,19 @@ function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjump
     return max_hor, max_stoich
 end
 
+# Compute g_i for species i to bound the relative change in propensity functions,
+# as per Cao et al. (2006), Section IV, equation (27).
+# g_i is determined by the highest order of reaction (HOR) and maximum stoichiometry (nu_ij) where species i is a reactant:
+# - HOR = 1 (first-order, e.g., S_i -> products): g_i = 1
+# - HOR = 2 (second-order):
+#   - nu_ij = 1 (e.g., S_i + S_k -> products): g_i = 2
+#   - nu_ij = 2 (e.g., 2S_i -> products): g_i = 2 + 1/(x_i - 1)
+# - HOR = 3 (third-order):
+#   - nu_ij = 1 (e.g., S_i + S_k + S_m -> products): g_i = 3
+#   - nu_ij = 2 (e.g., 2S_i + S_k -> products): g_i = (3/2) * (2 + 1/(x_i - 1))
+#   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
+# Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
 function compute_gi(u, max_hor, max_stoich, i, t)
-    # Compute g_i for species i to bound the relative change in propensity functions,
-    # as per Cao et al. (2006), Section IV, equation (27).
-    # g_i is determined by the highest order of reaction (HOR) and maximum stoichiometry (nu_ij) where species i is a reactant:
-    # - HOR = 1 (first-order, e.g., S_i -> products): g_i = 1
-    # - HOR = 2 (second-order):
-    #   - nu_ij = 1 (e.g., S_i + S_k -> products): g_i = 2
-    #   - nu_ij = 2 (e.g., 2S_i -> products): g_i = 2 + 1/(x_i - 1)
-    # - HOR = 3 (third-order):
-    #   - nu_ij = 1 (e.g., S_i + S_k + S_m -> products): g_i = 3
-    #   - nu_ij = 2 (e.g., 2S_i + S_k -> products): g_i = (3/2) * (2 + 1/(x_i - 1))
-    #   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
-    # Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
     if max_hor[i] == 0  # No reactions involve species i as a reactant
         return 1.0
     elseif max_hor[i] == 1
@@ -153,12 +153,12 @@ function compute_gi(u, max_hor, max_stoich, i, t)
     return 1.0  # Default case
 end
 
+# Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):
+# tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
+# where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
+# mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
+# I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
 function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-    # Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):
-    # tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
-    # where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
-    # mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
-    # I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
     rate(rate_cache, u, p, t)
     if all(==(0.0), rate_cache)  # Handle case where all rates are zero
         return dtmin

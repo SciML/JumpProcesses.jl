@@ -83,9 +83,11 @@ end
 function compute_hor(reactant_stoch, numjumps)
     # Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
     # HOR is the sum of stoichiometric coefficients of reactants in reaction j.
-    hor = zeros(Int, numjumps)
+    # Extract the element type from reactant_stoch
+    stoch_type = eltype(first(first(reactant_stoch)))
+    hor = zeros(stoch_type, numjumps)
     for j in 1:numjumps
-        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=0)
+        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j])
         if order > 3
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end

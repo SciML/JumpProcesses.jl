@@ -192,6 +192,61 @@ function massaction_rate(maj, numjumps)
     end
 end
 
+function simple_explicit_tau_leaping_loop!(prob, alg, u_current, u_new, t_current, t_end, p, rng, rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon, dtmin, saveat_times, usave, tsave, du, counts, rate_cache)
+    save_idx = 1
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        if all(<=(0), rate_cache)  # No reactions can occur, step to final time
+            t_current = t_end
+            break
+        end
+        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+        tau = min(tau, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
+        end
+        # Calculate Poisson random numbers only for positive rates
+        rate_effective = rate_cache * tau
+        for j in eachindex(counts)
+            if rate_effective[j] <= zero(eltype(rate_effective))
+                counts[j] = zero(eltype(counts))
+            else
+                counts[j] = pois_rand(rng, rate_effective[j])
+            end
+        end
+        du .= 0
+        if c !== nothing
+            c(du, u_current, p, t_current, counts, nothing)
+        else
+            for j in 1:numjumps
+                for (spec_idx, stoch) in maj.net_stoch[j]
+                    du[spec_idx] += stoch * counts[j]
+                end
+            end
+        end
+        u_new .= u_current .+ du
+        if any(<(0), u_new)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
+            tau /= 2
+            continue
+        end
+        t_new = t_current + tau
+
+        # Save state if at a saveat time or if saveat is empty
+        if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
+        end
+
+        u_current .= u_new
+        t_current = t_new
+    end
+end
+
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping; 
         seed = nothing,
         dtmin = nothing,
@@ -251,59 +306,8 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         saveat_times = collect(saveat)
     end
 
-    save_idx = 1
-
-    while t_current < t_end
-        rate(rate_cache, u_current, p, t_current)
-        if all(<=(0), rate_cache)  # No reactions can occur, step to final time
-            t_current = t_end
-            break
-        end
-        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-        tau = min(tau, t_end - t_current)
-        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
-            tau = saveat_times[save_idx] - t_current
-        end
-        # Calculate Poisson random numbers only for positive rates
-        rate_effective = rate_cache * tau
-        for j in eachindex(counts)
-            if rate_effective[j] <= zero(eltype(rate_effective))
-                counts[j] = zero(eltype(counts))
-            else
-                counts[j] = pois_rand(rng, rate_effective[j])
-            end
-        end
-        du .= 0
-        if c !== nothing
-            c(du, u_current, p, t_current, counts, nothing)
-        else
-            for j in 1:numjumps
-                for (spec_idx, stoch) in maj.net_stoch[j]
-                    du[spec_idx] += stoch * counts[j]
-                end
-            end
-        end
-        u_new .= u_current .+ du
-        if any(<(0), u_new)
-            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
-            tau /= 2
-            continue
-        end
-        t_new = t_current + tau
-
-        # Save state if at a saveat time or if saveat is empty
-        if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
-            push!(usave, copy(u_new))
-            push!(tsave, t_new)
-            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
-                save_idx += 1
-            end
-        end
-
-        u_current .= u_new
-        t_current = t_new
-    end
-
+    simple_explicit_tau_leaping_loop!(prob, alg, u_current, u_new, t_current, t_end, p, rng, rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon, dtmin, saveat_times, usave, tsave, du, counts, rate_cache)
+    
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error=false,
         interp=DiffEqBase.ConstantInterpolation(tsave, usave))

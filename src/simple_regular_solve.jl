@@ -185,13 +185,18 @@ end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping; 
         seed = nothing,
-        dtmin = 1e-10,
+        dtmin = nothing,
         saveat = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
     prob = jump_prob.prob
     rng = jump_prob.rng
+    tspan = prob.tspan
+    
+    if dtmin === nothing
+        dtmin = 1e-10 * one(typeof(tspan[2]))
+    end
     
     (seed !== nothing) && seed!(rng, seed)
 
@@ -207,7 +212,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         end
     c = rj !== nothing ? rj.c : nothing
     u0 = copy(prob.u0)
-    tspan = prob.tspan
     p = prob.p
 
     # Initialize current state and saved history

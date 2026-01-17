@@ -216,6 +216,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
 
     # Initialize current state and saved history
     u_current = copy(u0)
+    u_new = similar(u0)
     t_current = tspan[1]
     usave = [copy(u0)]
     tsave = [tspan[1]]
@@ -278,7 +279,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
                 end
             end
         end
-        u_new = u_current + du
+        u_new .= u_current .+ du
         if any(<(0), u_new)
             # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
             tau /= 2
@@ -295,7 +296,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
             end
         end
 
-        u_current = u_new
+        u_current .= u_new
         t_current = t_new
     end
 

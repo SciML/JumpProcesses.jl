@@ -166,7 +166,7 @@ function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor
     if all(<=(0), rate_cache)  # Handle case where all rates are zero or negative
         return dtmin
     end
-    tau = Inf
+    tau = typemax(typeof(t))
     for i in 1:length(u)
         mu = zero(eltype(u))
         sigma2 = zero(eltype(u))
@@ -176,8 +176,8 @@ function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor
         end
         gi = compute_gi(u, max_hor, max_stoich, i, t)
         bound = max(epsilon * u[i] / gi, 1.0) # max(epsilon * x_i / g_i, 1)
-        mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf # First term in equation (8)
-        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf # Second term in equation (8)
+        mu_term = abs(mu) > 0 ? bound / abs(mu) : typemax(typeof(t)) # First term in equation (8)
+        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : typemax(typeof(t)) # Second term in equation (8)
         tau = min(tau, mu_term, sigma_term) # Equation (8)
     end
     return max(tau, dtmin)

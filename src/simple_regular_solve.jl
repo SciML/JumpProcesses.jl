@@ -259,7 +259,15 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
             tau = saveat_times[save_idx] - t_current
         end
-        counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
+        # Calculate Poisson random numbers only for positive rates
+        rate_effective = rate_cache * tau
+        for j in eachindex(counts)
+            if rate_effective[j] <= zero(eltype(rate_effective))
+                counts[j] = zero(eltype(counts))
+            else
+                counts[j] = pois_rand(rng, rate_effective[j])
+            end
+        end
         du .= 0
         if c !== nothing
             c(du, u_current, p, t_current, counts, nothing)

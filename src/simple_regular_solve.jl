@@ -163,7 +163,7 @@ end
 # I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
 function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
     rate(rate_cache, u, p, t)
-    if all(==(0.0), rate_cache)  # Handle case where all rates are zero
+    if all(<=(0), rate_cache)  # Handle case where all rates are zero or negative
         return dtmin
     end
     tau = Inf
@@ -247,6 +247,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
 
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)
+        if all(<=(0), rate_cache)  # No reactions can occur, step to final time
+            t_current = t_end
+            break
+        end
         tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
         tau = min(tau, t_end - t_current)
         if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]

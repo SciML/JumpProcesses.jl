@@ -175,7 +175,7 @@ function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor
             sigma2 += nu[i, j]^2 * rate_cache[j] # Equation (9b)
         end
         gi = compute_gi(u, max_hor, max_stoich, i, t)
-        bound = max(epsilon * u[i] / gi, 1.0) # max(epsilon * x_i / g_i, 1)
+        bound = max(epsilon * u[i] / gi, one(eltype(u))) # max(epsilon * x_i / g_i, 1)
         mu_term = abs(mu) > 0 ? bound / abs(mu) : typemax(typeof(t)) # First term in equation (8)
         sigma_term = sigma2 > 0 ? bound^2 / sigma2 : typemax(typeof(t)) # Second term in equation (8)
         tau = min(tau, mu_term, sigma_term) # Equation (8)

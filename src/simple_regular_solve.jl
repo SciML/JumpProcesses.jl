@@ -238,7 +238,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     max_hor, max_stoich = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
 
     # Set up saveat_times
-    saveat_times = nothing
     if isnothing(saveat)
         saveat_times = Vector{typeof(tspan[1])}()
     elseif saveat isa Number

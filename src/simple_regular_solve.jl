@@ -284,10 +284,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
             tau /= 2
             continue
         end
-        # Ensure non-negativity, as per Cao et al. (2006), Section 3.3
-        for i in eachindex(u_new)
-            u_new[i] = max(u_new[i], 0)
-        end
         t_new = t_current + tau
 
         # Save state if at a saveat time or if saveat is empty

@@ -183,6 +183,15 @@ function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor
     return max(tau, dtmin)
 end
 
+# Function to generate a mass action rate function
+function massaction_rate(maj, numjumps)
+    return (out, u, p, t) -> begin
+        for j in 1:numjumps
+            out[j] = evalrxrate(u, j, maj)
+        end
+    end
+end
+
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping; 
         seed = nothing,
         dtmin = nothing,
@@ -204,12 +213,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     numjumps = get_num_majumps(maj)
     rj = jump_prob.regular_jump
     # Extract rates
-    rate = rj !== nothing ? rj.rate :
-        (out, u, p, t) -> begin
-            for j in 1:numjumps
-                out[j] = evalrxrate(u, j, maj)
-            end
-        end
+    rate = rj !== nothing ? rj.rate : massaction_rate(maj, numjumps)
     c = rj !== nothing ? rj.c : nothing
     u0 = copy(prob.u0)
     p = prob.p

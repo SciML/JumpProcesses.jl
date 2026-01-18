@@ -202,7 +202,7 @@ end
 function simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
-        dtmin, saveat_times, usave, tsave, du, counts, rate_cache)
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, maj)
     save_idx = 1
 
     while t_current < t_end
@@ -326,7 +326,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
-        dtmin, saveat_times, usave, tsave, du, counts, rate_cache)
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, maj)
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,

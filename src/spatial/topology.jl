@@ -85,17 +85,16 @@ end
 """
 given a vector of hopping constants of length num_neighbors(grid, site), form the vector of size 2*(dimension of grid) with zeros at indices where the neighbor is out of bounds. Store it in to_pad
 """
-function pad_hop_vec!(to_pad::AbstractVector{F}, grid, site,
-        hop_vec::Vector{F}) where {F <: Number}
+function pad_hop_vec!(to_pad::AbstractVector, grid, site, hop_vec::AbstractVector)
     CI = grid.CI
     I = CI[site]
     nbr_counter = 1
-    for (i, off) in enumerate(grid.offsets)
+    @inbounds for (i, off) in enumerate(grid.offsets)
         if I + off in CI
             to_pad[i] = hop_vec[nbr_counter]
             nbr_counter += 1
         else
-            to_pad[i] = zero(F)
+            to_pad[i] = zero(eltype(to_pad))
         end
     end
     to_pad

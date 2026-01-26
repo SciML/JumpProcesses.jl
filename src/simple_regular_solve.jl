@@ -4,7 +4,7 @@ struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
     epsilon::T  # Error control parameter
 end
 
-SimpleExplicitTauLeaping(; epsilon=0.05) = SimpleExplicitTauLeaping(epsilon)
+SimpleExplicitTauLeaping(; epsilon = 0.05) = SimpleExplicitTauLeaping(epsilon)
 
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     if !(jump_prob.aggregator isa PureLeaping)
@@ -13,11 +13,11 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
     end
     isempty(jump_prob.jump_callback.continuous_callbacks) &&
-    isempty(jump_prob.jump_callback.discrete_callbacks) &&
-    isempty(jump_prob.constant_jumps) &&
-    isempty(jump_prob.variable_jumps) &&
-    get_num_majumps(jump_prob.massaction_jump) == 0 &&
-    jump_prob.regular_jump !== nothing    
+        isempty(jump_prob.jump_callback.discrete_callbacks) &&
+        isempty(jump_prob.constant_jumps) &&
+        isempty(jump_prob.variable_jumps) &&
+        get_num_majumps(jump_prob.massaction_jump) == 0 &&
+        jump_prob.regular_jump !== nothing
 end
 
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping)
@@ -27,19 +27,19 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplici
         Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
     end
     isempty(jump_prob.jump_callback.continuous_callbacks) &&
-    isempty(jump_prob.jump_callback.discrete_callbacks) &&
-    isempty(jump_prob.constant_jumps) &&
-    isempty(jump_prob.variable_jumps) &&
-    jump_prob.massaction_jump !== nothing
+        isempty(jump_prob.jump_callback.discrete_callbacks) &&
+        isempty(jump_prob.constant_jumps) &&
+        isempty(jump_prob.variable_jumps) &&
+        jump_prob.massaction_jump !== nothing
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing, dt = error("dt is required for SimpleTauLeaping."))
     validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
-    
-    @unpack prob, rng = jump_prob
-    (seed !== nothing) && seed!(rng, seed)
+        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
+
+    (; prob, rng) = jump_prob
+    (seed !== nothing) && Random.seed!(rng, seed)
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)
@@ -80,12 +80,15 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         interp = DiffEqBase.ConstantInterpolation(t, u))
 end
 
+# Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
+# HOR is the sum of stoichiometric coefficients of reactants in reaction j.
+# Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
 function compute_hor(reactant_stoch, numjumps)
-    # Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
-    # HOR is the sum of stoichiometric coefficients of reactants in reaction j.
-    hor = zeros(Int, numjumps)
+    stoch_type = eltype(first(first(reactant_stoch)))
+    hor = zeros(stoch_type, numjumps)
     for j in 1:numjumps
-        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=0)
+        order = sum(
+            stoch for (spec_idx, stoch) in reactant_stoch[j]; init = zero(stoch_type))
         if order > 3
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end
@@ -94,13 +97,14 @@ function compute_hor(reactant_stoch, numjumps)
     return hor
 end
 
+# Precompute reaction conditions for each species i, including:
+# - max_hor: the highest order of reaction (HOR) where species i is a reactant.
+# - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
+# Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
 function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    # Precompute reaction conditions for each species i, including:
-    # - max_hor: the highest order of reaction (HOR) where species i is a reactant.
-    # - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
-    # Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
-    max_hor = zeros(Int, numspecies)
-    max_stoich = zeros(Int, numspecies)
+    hor_type = eltype(hor)
+    max_hor = zeros(hor_type, numspecies)
+    max_stoich = zeros(hor_type, numspecies)
     for j in 1:numjumps
         for (spec_idx, stoch) in reactant_stoch[j]
             if stoch > 0  # Species is a reactant
@@ -116,52 +120,60 @@ function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjump
     return max_hor, max_stoich
 end
 
+# Compute g_i for species i to bound the relative change in propensity functions,
+# as per Cao et al. (2006), Section IV, equation (27).
+# g_i is determined by the highest order of reaction (HOR) and maximum stoichiometry (nu_ij) where species i is a reactant:
+# - HOR = 1 (first-order, e.g., S_i -> products): g_i = 1
+# - HOR = 2 (second-order):
+#   - nu_ij = 1 (e.g., S_i + S_k -> products): g_i = 2
+#   - nu_ij = 2 (e.g., 2S_i -> products): g_i = 2 + 1/(x_i - 1)
+# - HOR = 3 (third-order):
+#   - nu_ij = 1 (e.g., S_i + S_k + S_m -> products): g_i = 3
+#   - nu_ij = 2 (e.g., 2S_i + S_k -> products): g_i = (3/2) * (2 + 1/(x_i - 1))
+#   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
+# Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
 function compute_gi(u, max_hor, max_stoich, i, t)
-    # Compute g_i for species i to bound the relative change in propensity functions,
-    # as per Cao et al. (2006), Section IV, equation (27).
-    # g_i is determined by the highest order of reaction (HOR) and maximum stoichiometry (nu_ij) where species i is a reactant:
-    # - HOR = 1 (first-order, e.g., S_i -> products): g_i = 1
-    # - HOR = 2 (second-order):
-    #   - nu_ij = 1 (e.g., S_i + S_k -> products): g_i = 2
-    #   - nu_ij = 2 (e.g., 2S_i -> products): g_i = 2 + 1/(x_i - 1)
-    # - HOR = 3 (third-order):
-    #   - nu_ij = 1 (e.g., S_i + S_k + S_m -> products): g_i = 3
-    #   - nu_ij = 2 (e.g., 2S_i + S_k -> products): g_i = (3/2) * (2 + 1/(x_i - 1))
-    #   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
-    # Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
+    one_max_hor = one(1 / one(eltype(u)))
+
     if max_hor[i] == 0  # No reactions involve species i as a reactant
-        return 1.0
+        return one_max_hor
     elseif max_hor[i] == 1
-        return 1.0
+        return one_max_hor
     elseif max_hor[i] == 2
         if max_stoich[i] == 1
-            return 2.0
-        elseif max_stoich[i] == 2
-            return u[i] > 1 ? 2.0 + 1.0 / (u[i] - 1) : 2.0  # Fallback to 2.0 if x_i <= 1
+            return 2 * one_max_hor
+        else # if max_stoich[i] == 2
+            return u[i] > one_max_hor ?
+                   2 * one_max_hor + one_max_hor / (u[i] - one_max_hor) : 2 * one_max_hor  # Fallback to 2 if x_i <= 1
         end
     elseif max_hor[i] == 3
         if max_stoich[i] == 1
-            return 3.0
+            return 3 * one_max_hor
         elseif max_stoich[i] == 2
-            return u[i] > 1 ? 1.5 * (2.0 + 1.0 / (u[i] - 1)) : 3.0  # Fallback to 3.0 if x_i <= 1
-        elseif max_stoich[i] == 3
-            return u[i] > 2 ? 3.0 + 1.0 / (u[i] - 1) + 2.0 / (u[i] - 2) : 3.0  # Fallback to 3.0 if x_i <= 2
+            return u[i] > one_max_hor ?
+                   (3 * one_max_hor / 2) *
+                   (2 * one_max_hor + one_max_hor / (u[i] - one_max_hor)) : 3 * one_max_hor  # Fallback to 3 if x_i <= 1
+        else # if max_stoich[i] == 3
+            return u[i] > 2 * one_max_hor ?
+                   3 * one_max_hor + one_max_hor / (u[i] - one_max_hor) +
+                   2 * one_max_hor / (u[i] - 2 * one_max_hor) : 3 * one_max_hor  # Fallback to 3 if x_i <= 2
         end
     end
-    return 1.0  # Default case
+    return one_max_hor  # Default case
 end
 
-function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-    # Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):
-    # tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
-    # where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
-    # mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
-    # I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
+# Compute the tau-leaping step-size using equation (20) from Cao et al. (2006):
+# tau = min_{i in I_rs} { max(epsilon * x_i / g_i, 1) / |mu_i(x)|, max(epsilon * x_i / g_i, 1)^2 / sigma_i^2(x) }
+# where mu_i(x) and sigma_i^2(x) are defined in equations (9a) and (9b):
+# mu_i(x) = sum_j nu_ij * a_j(x), sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
+# I_rs is the set of reactant species (assumed to be all species here, as critical reactions are not specified).
+function compute_tau(
+        u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
     rate(rate_cache, u, p, t)
-    if all(==(0.0), rate_cache)  # Handle case where all rates are zero
+    if all(<=(0), rate_cache)  # Handle case where all rates are zero or negative
         return dtmin
     end
-    tau = Inf
+    tau = typemax(typeof(t))
     for i in 1:length(u)
         mu = zero(eltype(u))
         sigma2 = zero(eltype(u))
@@ -170,41 +182,116 @@ function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor
             sigma2 += nu[i, j]^2 * rate_cache[j] # Equation (9b)
         end
         gi = compute_gi(u, max_hor, max_stoich, i, t)
-        bound = max(epsilon * u[i] / gi, 1.0) # max(epsilon * x_i / g_i, 1)
-        mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf # First term in equation (8)
-        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf # Second term in equation (8)
+        bound = max(epsilon * u[i] / gi, one(eltype(u))) # max(epsilon * x_i / g_i, 1)
+        mu_term = abs(mu) > 0 ? bound / abs(mu) : typemax(typeof(t)) # First term in equation (8)
+        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : typemax(typeof(t)) # Second term in equation (8)
         tau = min(tau, mu_term, sigma_term) # Equation (8)
     end
     return max(tau, dtmin)
 end
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping; 
+# Function to generate a mass action rate function
+function massaction_rate(maj, numjumps)
+    return (out, u, p, t) -> begin
+        for j in 1:numjumps
+            out[j] = evalrxrate(u, j, maj)
+        end
+    end
+end
+
+function simple_explicit_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, maj)
+    save_idx = 1
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        if all(<=(0), rate_cache)  # No reactions can occur, step to final time
+            # Save final state at t_end
+            push!(usave, copy(u_current))
+            push!(tsave, t_end)
+            t_current = t_end
+            break
+        end
+        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current,
+            epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+        tau = min(tau, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) &&
+           t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
+        end
+        # Calculate Poisson random numbers only for positive rates
+        rate_effective = rate_cache * tau
+        for j in eachindex(counts)
+            if rate_effective[j] <= zero(eltype(rate_effective))
+                counts[j] = zero(eltype(counts))
+            else
+                counts[j] = pois_rand(rng, rate_effective[j])
+            end
+        end
+        du .= 0
+        if c !== nothing
+            c(du, u_current, p, t_current, counts, nothing)
+        else
+            for j in 1:numjumps
+                for (spec_idx, stoch) in maj.net_stoch[j]
+                    du[spec_idx] += stoch * counts[j]
+                end
+            end
+        end
+        u_new .= u_current .+ du
+        if any(<(0), u_new)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
+            tau /= 2
+            continue
+        end
+        t_new = t_current + tau
+
+        # Save state if at a saveat time or if saveat is empty
+        if isempty(saveat_times) ||
+           (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
+        end
+
+        u_current .= u_new
+        t_current = t_new
+    end
+end
+
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         seed = nothing,
-        dtmin = 1e-10,
+        dtmin = nothing,
         saveat = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
-    @unpack prob, rng = jump_prob
+    prob = jump_prob.prob
+    rng = jump_prob.rng
+    tspan = prob.tspan
+
+    if dtmin === nothing
+        dtmin = 1e-10 * one(typeof(tspan[2]))
+    end
+
     (seed !== nothing) && seed!(rng, seed)
 
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
     rj = jump_prob.regular_jump
     # Extract rates
-    rate = rj !== nothing ? rj.rate :
-        (out, u, p, t) -> begin
-            for j in 1:numjumps
-                out[j] = evalrxrate(u, j, maj)
-            end
-        end
+    rate = rj !== nothing ? rj.rate : massaction_rate(maj, numjumps)
     c = rj !== nothing ? rj.c : nothing
     u0 = copy(prob.u0)
-    tspan = prob.tspan
     p = prob.p
 
     # Initialize current state and saved history
     u_current = copy(u0)
+    u_new = similar(u0)
     t_current = tspan[1]
     usave = [copy(u0)]
     tsave = [tspan[1]]
@@ -224,66 +311,26 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     # Extract reactant stoichiometry for hor and gi
     reactant_stoch = maj.reactant_stoch
     hor = compute_hor(reactant_stoch, numjumps)
-    max_hor, max_stoich = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
+    max_hor, max_stoich = precompute_reaction_conditions(
+        reactant_stoch, hor, length(u0), numjumps)
 
     # Set up saveat_times
-    saveat_times = nothing
     if isnothing(saveat)
         saveat_times = Vector{typeof(tspan[1])}()
     elseif saveat isa Number
-        saveat_times = collect(range(tspan[1], tspan[2], step=saveat))
+        saveat_times = collect(range(tspan[1], tspan[2], step = saveat))
     else
         saveat_times = collect(saveat)
     end
 
-    save_idx = 1
-
-    while t_current < t_end
-        rate(rate_cache, u_current, p, t_current)
-        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-        tau = min(tau, t_end - t_current)
-        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
-            tau = saveat_times[save_idx] - t_current
-        end
-        counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
-        du .= 0
-        if c !== nothing
-            c(du, u_current, p, t_current, counts, nothing)
-        else
-            for j in 1:numjumps
-                for (spec_idx, stoch) in maj.net_stoch[j]
-                    du[spec_idx] += stoch * counts[j]
-                end
-            end
-        end
-        u_new = u_current + du
-        if any(<(0), u_new)
-            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
-            tau /= 2
-            continue
-        end
-        # Ensure non-negativity, as per Cao et al. (2006), Section 3.3
-        for i in eachindex(u_new)
-            u_new[i] = max(u_new[i], 0)
-        end
-        t_new = t_current + tau
-
-        # Save state if at a saveat time or if saveat is empty
-        if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
-            push!(usave, copy(u_new))
-            push!(tsave, t_new)
-            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
-                save_idx += 1
-            end
-        end
-
-        u_current = u_new
-        t_current = t_new
-    end
+    simple_explicit_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, maj)
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
-        calculate_error=false,
-        interp=DiffEqBase.ConstantInterpolation(tsave, usave))
+        calculate_error = false,
+        interp = DiffEqBase.ConstantInterpolation(tsave, usave))
     return sol
 end
 

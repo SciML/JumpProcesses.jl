@@ -12,13 +12,14 @@ on:
       - 'docs/**'
 jobs:
   test:
+    if: false  # Disabled: waiting on OrdinaryDiffEq updates. See issue for details.
     runs-on: ubuntu-latest
     strategy:
       matrix:
         downgrade_mode: ['alldeps']
         julia-version: ['1.10']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}

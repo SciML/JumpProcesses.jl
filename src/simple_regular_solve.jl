@@ -39,7 +39,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
 
     (; prob, rng) = jump_prob
-    (seed !== nothing) && Random.seed!(rng, seed)
+    (seed !== nothing) && seed!(rng, seed)
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)
@@ -202,7 +202,7 @@ end
 function simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
-        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, maj)
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj)
     save_idx = 1
 
     while t_current < t_end
@@ -222,7 +222,7 @@ function simple_explicit_tau_leaping_loop!(
             tau = saveat_times[save_idx] - t_current
         end
         # Calculate Poisson random numbers only for positive rates
-        rate_effective = rate_cache * tau
+        rate_effective .= rate_cache .* tau
         for j in eachindex(counts)
             if rate_effective[j] <= zero(eltype(rate_effective))
                 counts[j] = zero(eltype(counts))
@@ -296,6 +296,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     usave = [copy(u0)]
     tsave = [tspan[1]]
     rate_cache = zeros(float(eltype(u0)), numjumps)
+    rate_effective = similar(rate_cache)
     counts = zero(rate_cache)
     du = similar(u0)
     t_end = tspan[2]
@@ -326,7 +327,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
-        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, maj)
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj)
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,

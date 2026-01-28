@@ -447,3 +447,111 @@ let
     @test isapprox(mean_jumps_vrfr, mean_jumps_vrcb, rtol = 0.1)
     @test isapprox(mean_jumps_vrcb, mean_jumps_vrcbfw, rtol = 0.1)
 end
+
+# Test combining MassActionJump with VariableRateJump for all aggregators
+# This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
+# where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to
+# update_u_brackets! iterating over the full array instead of just species
+let
+    rng = StableRNG(12345)
+
+    function f!(du, u, p, t)
+        du .= 0
+    end
+
+    # VariableRateJump (rate depends on time)
+    vrj_rate(u, p, t) = p[1] * (1 + sin(t)) * u[1]
+    vrj_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    vrj = VariableRateJump(vrj_rate, vrj_affect!)
+
+    # MassActionJump: X2 -> X1 with rate k2
+    maj = MassActionJump([0.5], [[2 => 1]], [[1 => 1, 2 => -1]])
+
+    u0 = [10.0, 5.0]
+    tspan = (0.0, 1.0)
+    p = [0.1]
+    prob = ODEProblem(f!, u0, tspan, p)
+
+    # Test all aggregators that support MassActionJump
+    # Note: Coevolve requires dependency graphs for non-bounded VRJs so we skip it here
+    aggregators = [
+        Direct(),
+        FRM(),
+        NRM(),
+        SortingDirect(),
+        DirectCR(),
+        RDirect(),
+        RSSA(),
+        RSSACR()
+    ]
+
+    for agg in aggregators
+        local jprob = JumpProblem(prob, agg, maj, vrj; rng)
+        local sol = solve(jprob, Tsit5())
+        @test SciMLBase.successful_retcode(sol)
+        # Verify conservation: total population should be conserved
+        @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
+    end
+end
+
+# Test with ConstantRateJump + VariableRateJump (no MassActionJump)
+let
+    rng = StableRNG(12345)
+
+    function f!(du, u, p, t)
+        du .= 0
+    end
+
+    # VariableRateJump
+    vrj_rate(u, p, t) = 0.1 * (1 + sin(t)) * u[1]
+    vrj_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    vrj = VariableRateJump(vrj_rate, vrj_affect!)
+
+    # ConstantRateJump: X2 -> X1
+    crj_rate(u, p, t) = 0.5 * u[2]
+    crj_affect!(integrator) = (integrator.u[1] += 1; integrator.u[2] -= 1)
+    crj = ConstantRateJump(crj_rate, crj_affect!)
+
+    u0 = [10.0, 5.0]
+    tspan = (0.0, 1.0)
+    prob = ODEProblem(f!, u0, tspan)
+
+    # Test with Direct aggregator (most common case)
+    jprob = JumpProblem(prob, Direct(), crj, vrj; rng)
+    sol = solve(jprob, Tsit5())
+    @test SciMLBase.successful_retcode(sol)
+    @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
+end
+
+# Test with multiple VariableRateJumps + MassActionJump
+let
+    rng = StableRNG(12345)
+
+    function f!(du, u, p, t)
+        du .= 0
+    end
+
+    # Two VariableRateJumps
+    vrj1_rate(u, p, t) = 0.1 * u[1]
+    vrj1_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    vrj1 = VariableRateJump(vrj1_rate, vrj1_affect!)
+
+    vrj2_rate(u, p, t) = 0.05 * u[2]
+    vrj2_affect!(integrator) = (integrator.u[2] -= 1; integrator.u[1] += 1)
+    vrj2 = VariableRateJump(vrj2_rate, vrj2_affect!)
+
+    # MassActionJump
+    maj = MassActionJump([0.2], [[1 => 1]], [[1 => -1, 2 => 1]])
+
+    u0 = [20.0, 10.0]
+    tspan = (0.0, 2.0)
+    prob = ODEProblem(f!, u0, tspan)
+
+    # Test RSSA and RSSACR specifically (the aggregators that had the bug)
+    for agg in [RSSA(), RSSACR()]
+        local jprob = JumpProblem(prob, agg, maj, vrj1, vrj2; rng)
+        local sol = solve(jprob, Tsit5())
+        @test SciMLBase.successful_retcode(sol)
+        @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
+    end
+end

@@ -91,6 +91,11 @@ end
     nothing
 end
 
+# For ExtendedJumpArray, only iterate over the species portion (u.u), not the jump tracking portion
+@inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::ExtendedJumpArray)
+    update_u_brackets!(p, u.u)
+end
+
 # Set up bracketing. The aggregator must have fields
 #    ulow, uhigh, cur_rate_low, cur_rate_high, sum_rate, ma_jumps, rates.
 function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)

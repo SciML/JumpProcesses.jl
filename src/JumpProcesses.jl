@@ -59,6 +59,9 @@ export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, JumpSet
 
 include("massaction_rates.jl")
 
+include("extended_jump_array.jl")
+export ExtendedJumpArray
+
 # constant rate aggregators (i.e. SSAs)
 include("aggregators/aggregators.jl")
 export get_num_majumps, needs_depgraph, needs_vartojumps_map, reset_aggregated_jumps!
@@ -103,9 +106,6 @@ export CCNRM
 include("aggregators/aggregated_api.jl")
 
 # variable rate aggregators (i.e. SSAs)
-include("extended_jump_array.jl")
-export ExtendedJumpArray
-
 include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 

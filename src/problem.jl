@@ -109,40 +109,52 @@ function remake_extended_u0(prob, newu0, rng)
 end
 
 Base.@pure remaker_of(prob::T) where {T <: JumpProblem} = DiffEqBase.parameterless_type(T)
-function DiffEqBase.remake(jprob::JumpProblem; kwargs...)
+function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
+        interpret_symbolicmap = true, use_defaults = false, kwargs...)
     T = remaker_of(jprob)
 
     errmesg = """
     JumpProblems can currently only be remade with new u0, p, tspan or prob fields. To change other fields create a new JumpProblem. Feel free to open an issue on JumpProcesses to discuss further.
     """
-    !issubset(keys(kwargs), (:u0, :p, :tspan, :prob)) && error(errmesg)
+    !issubset(keys(kwargs), (:tspan, :prob)) && error(errmesg)
 
     if :prob ∉ keys(kwargs)
         # Update u0 when we are wrapping via ExtendedJumpArrays. If the user passes an
         # ExtendedJumpArray we assume they properly initialized it
         prob = jprob.prob
-        if (prob.u0 isa ExtendedJumpArray) && (:u0 in keys(kwargs))
-            newu0 = kwargs[:u0]
-            # if newu0 is of the wrapped type, initialize a new ExtendedJumpArray
-            if typeof(newu0) == typeof(prob.u0.u)
-                u0 = remake_extended_u0(prob, newu0, jprob.rng)
-                _kwargs = @set! kwargs[:u0] = u0
-            elseif typeof(newu0) != typeof(prob.u0)
-                error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
+        if (prob.u0 isa ExtendedJumpArray) && (u0 !== missing)
+            if u0 isa ExtendedJumpArray
+                # User provided ExtendedJumpArray directly - use as-is (current behavior)
+                # This gives users full control over jump_u values
+                final_u0 = u0
             else
-                _kwargs = kwargs
+                # Resolve symbolic maps if needed (handles [:X => 3.0], [sys.X => 3.0], Dict, etc.)
+                resolved_u0, _ = SciMLBase.updated_u0_p(prob, u0, missing; interpret_symbolicmap, use_defaults)
+
+                # Extract state values and wrap with fresh jump_u (resampled)
+                # This handles both:
+                #   - symbolic maps (resolved_u0 is ExtendedJumpArray with updated u)
+                #   - numeric arrays (resolved_u0 is Vector{Float64})
+                state_vals = resolved_u0 isa ExtendedJumpArray ? resolved_u0.u : resolved_u0
+
+                # Validate type compatibility
+                if typeof(state_vals) != typeof(prob.u0.u)
+                    error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
+                end
+
+                final_u0 = remake_extended_u0(prob, state_vals, jprob.rng)
             end
-            newprob = DiffEqBase.remake(jprob.prob; _kwargs...)
+            newprob = DiffEqBase.remake(prob; u0 = final_u0, p, interpret_symbolicmap, use_defaults, kwargs...)
         else
-            newprob = DiffEqBase.remake(jprob.prob; kwargs...)
+            newprob = DiffEqBase.remake(prob; u0, p, interpret_symbolicmap, use_defaults, kwargs...)
         end
 
         # if the parameters were changed we must remake the MassActionJump too
-        if (:p ∈ keys(kwargs)) && using_params(jprob.massaction_jump)
+        if (p !== missing) && using_params(jprob.massaction_jump)
             update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
         end
     else
-        any(k -> k in keys(kwargs), (:u0, :p, :tspan)) &&
+        ((u0 !== missing) || (p !== missing) || (:tspan ∈ keys(kwargs))) &&
             error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
         newprob = kwargs[:prob]
 

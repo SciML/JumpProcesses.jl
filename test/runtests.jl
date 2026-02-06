@@ -43,6 +43,7 @@ end
         @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
         @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
         @time @safetestset "Remake tests" begin include("remake_test.jl") end
+        @time @safetestset "ExtendedJumpArray remake tests" begin include("extended_jump_array_remake.jl") end
         @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
         @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
         @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end

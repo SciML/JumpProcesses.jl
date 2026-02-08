@@ -40,14 +40,14 @@ reactstoch = [
     [2 => 1],
     [1 => 1, 2 => 1],
     [3 => 1],
-    [3 => 3]
+    [3 => 3],
 ]
 netstoch = [
     [1 => -2, 2 => 1],
     [1 => 2, 2 => -1],
     [1 => -1, 2 => -1, 3 => 1],
     [1 => 1, 2 => 1, 3 => -1],
-    [1 => 3, 3 => -3]
+    [1 => 3, 3 => -3],
 ]
 rates = [1.0, 2.0, 0.5, 0.75, 0.25]
 spec_to_dep_jumps = [[1, 3], [2, 3], [4, 5]]
@@ -61,7 +61,7 @@ function runSSAs(jump_prob; use_stepper = true)
         sol = use_stepper ? solve(jump_prob, SSAStepper()) : solve(jump_prob)
         Psamp[i] = sol[1, end]
     end
-    mean(Psamp)
+    return mean(Psamp)
 end
 
 # TESTING:
@@ -70,9 +70,11 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 # plotting one full trajectory
 if doplot
     for alg in SSAalgs
-        local jump_prob = JumpProblem(prob, alg, majumps,
+        local jump_prob = JumpProblem(
+            prob, alg, majumps,
             vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
+            jumptovars_map = jump_to_dep_specs, rng = rng
+        )
         local sol = solve(jump_prob, SSAStepper())
         local plothand = plot(sol, seriestype = :steppost, reuse = false)
         display(plothand)
@@ -82,13 +84,17 @@ end
 # test the means
 if dotestmean
     for (i, alg) in enumerate(SSAalgs)
-        local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
+        local jump_prob = JumpProblem(
+            prob, alg, majumps, save_positions = (false, false),
             vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
+            jumptovars_map = jump_to_dep_specs, rng = rng
+        )
         means = runSSAs(jump_prob)
         relerr = abs(means - expected_avg) / expected_avg
-        doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
-            ", rel err = ", relerr)
+        doprintmeans && println(
+            "Mean from method: ", typeof(alg), " is = ", means,
+            ", rel err = ", relerr
+        )
         @test abs(means - expected_avg) < reltol * expected_avg
 
         # test not specifying SSAStepper
@@ -105,14 +111,18 @@ if dotestmean
         push!(majump_vec, MassActionJump(rates[i], reactstoch[i], netstoch[i]))
     end
     jset = JumpSet((), (), nothing, majump_vec)
-    jump_prob = JumpProblem(prob, Direct(), jset, save_positions = (false, false),
+    jump_prob = JumpProblem(
+        prob, Direct(), jset, save_positions = (false, false),
         vartojumps_map = spec_to_dep_jumps,
-        jumptovars_map = jump_to_dep_specs, rng = rng)
+        jumptovars_map = jump_to_dep_specs, rng = rng
+    )
     meanval = runSSAs(jump_prob)
     relerr = abs(meanval - expected_avg) / expected_avg
     if doprintmeans
-        println("Using individual MassActionJumps; Mean from method: ", typeof(Direct()),
-            " is = ", meanval, ", rel err = ", relerr)
+        println(
+            "Using individual MassActionJumps; Mean from method: ", typeof(Direct()),
+            " is = ", meanval, ", rel err = ", relerr
+        )
     end
     @test abs(meanval - expected_avg) < reltol * expected_avg
 end

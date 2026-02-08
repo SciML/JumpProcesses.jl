@@ -37,44 +37,70 @@ uniform_majumps_1 = SpatialMassActionJump(uniform_rates[:, 1], reactstoch, netst
 uniform_majumps_2 = SpatialMassActionJump(uniform_rates, reactstoch, netstoch)
 uniform_majumps_3 = SpatialMassActionJump(
     [1.0], reshape(uniform_rates[2, :], 1, num_nodes),
-    reactstoch, netstoch) # hybrid
-uniform_majumps_4 = SpatialMassActionJump(MassActionJump(uniform_rates[:, 1], reactstoch,
-    netstoch))
+    reactstoch, netstoch
+) # hybrid
+uniform_majumps_4 = SpatialMassActionJump(
+    MassActionJump(
+        uniform_rates[:, 1], reactstoch,
+        netstoch
+    )
+)
 uniform_majumps = [
     uniform_majumps_1,
     uniform_majumps_2,
     uniform_majumps_3,
-    uniform_majumps_4
+    uniform_majumps_4,
 ]
 
 non_uniform_majumps_1 = SpatialMassActionJump(non_uniform_rates, reactstoch, netstoch) # reactions are zero outside of center site
-non_uniform_majumps_2 = SpatialMassActionJump([1.0],
-    reshape(non_uniform_rates[2, :], 1,
-        num_nodes), reactstoch, netstoch) # birth everywhere, death only at center site
+non_uniform_majumps_2 = SpatialMassActionJump(
+    [1.0],
+    reshape(
+        non_uniform_rates[2, :], 1,
+        num_nodes
+    ), reactstoch, netstoch
+) # birth everywhere, death only at center site
 non_uniform_majumps_3 = SpatialMassActionJump(
-    [1.0 0.0 0.0 0.0 0.0;
-     0.0 0.0 0.0 0.0 death_rate], reactstoch,
-    netstoch) # birth on the left, death on the right
+    [
+        1.0 0.0 0.0 0.0 0.0;
+        0.0 0.0 0.0 0.0 death_rate
+    ], reactstoch,
+    netstoch
+) # birth on the left, death on the right
 non_uniform_majumps = [non_uniform_majumps_1, non_uniform_majumps_2, non_uniform_majumps_3]
 
 # put together the JumpProblem's
-uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
-                                        hopping_constants = hopping_constants,
-                                        spatial_system = grid,
-                                        save_positions = (false, false), rng = rng)
-                                    for majump in uniform_majumps]
+uniform_jump_problems = JumpProblem[
+    JumpProblem(
+            prob, NSM(), majump,
+            hopping_constants = hopping_constants,
+            spatial_system = grid,
+            save_positions = (false, false), rng = rng
+        )
+        for majump in uniform_majumps
+]
 # flattenned
-append!(uniform_jump_problems,
-    JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants = hopping_constants,
-                    spatial_system = grid, save_positions = (false, false), rng = rng)
-                for majump in uniform_majumps])
+append!(
+    uniform_jump_problems,
+    JumpProblem[
+        JumpProblem(
+                prob, NRM(), majump, hopping_constants = hopping_constants,
+                spatial_system = grid, save_positions = (false, false), rng = rng
+            )
+            for majump in uniform_majumps
+    ]
+)
 
 # non-uniform
-non_uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
-                                            hopping_constants = hopping_constants,
-                                            spatial_system = grid,
-                                            save_positions = (false, false), rng = rng)
-                                        for majump in non_uniform_majumps]
+non_uniform_jump_problems = JumpProblem[
+    JumpProblem(
+            prob, NSM(), majump,
+            hopping_constants = hopping_constants,
+            spatial_system = grid,
+            save_positions = (false, false), rng = rng
+        )
+        for majump in non_uniform_majumps
+]
 
 # testing
 function get_mean_end_state(jump_prob, Nsims)
@@ -83,7 +109,7 @@ function get_mean_end_state(jump_prob, Nsims)
         sol = solve(jump_prob, SSAStepper())
         end_state .+= sol.u[end]
     end
-    end_state / Nsims
+    return end_state / Nsims
 end
 
 function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
@@ -96,7 +122,7 @@ function discrete_laplacian_from_spatial_system(spatial_system, hopping_rate)
         end
     end
     laplacian .*= hopping_rate
-    laplacian
+    return laplacian
 end
 L = discrete_laplacian_from_spatial_system(grid, diffusivity)
 
@@ -117,7 +143,7 @@ end
 
 # birth and death zero outside of center site
 function f2(u, p, t)
-    L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + [0.0, 0.0, 1.0, 0.0, 0.0]
+    return L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + [0.0, 0.0, 1.0, 0.0, 0.0]
 end
 ode_prob = ODEProblem(f2, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
@@ -145,7 +171,7 @@ end
 
 # birth on left end, death on right end
 function f4(u, p, t)
-    L * u - diagm([0.0, 0.0, 0.0, 0.0, death_rate]) * u + [1.0, 0.0, 0.0, 0.0, 0.0]
+    return L * u - diagm([0.0, 0.0, 0.0, 0.0, death_rate]) * u + [1.0, 0.0, 0.0, 0.0, 0.0]
 end
 ode_prob = ODEProblem(f4, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())

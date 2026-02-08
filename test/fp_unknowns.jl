@@ -9,16 +9,22 @@ rng = StableRNG(12345)
 #    1, X --> ∅
 function test(rng)
     # dep graphs
-    dg = [[1, 2, 3, 4],
+    dg = [
+        [1, 2, 3, 4],
         [2, 3, 4],
         [2, 3, 4],
-        [2, 3, 4]]
-    vtoj = [[2, 3, 4],
-        [2]]
-    jtov = [[1],
+        [2, 3, 4],
+    ]
+    vtoj = [
+        [2, 3, 4],
+        [2],
+    ]
+    jtov = [
+        [1],
         [1, 2],
         [1, 2],
-        [1]]
+        [1],
+    ]
 
     # reaction as MassActionJump
     sr = [1.0, 0.5, 4.0, 1.0]
@@ -34,9 +40,11 @@ function test(rng)
     Xmeans = zeros(length(SSAalgs))
     Ymeans = zeros(length(SSAalgs))
     for (j, agg) in enumerate(SSAalgs)
-        jprob = JumpProblem(dprob, agg, maj; save_positions = (false, false), rng,
+        jprob = JumpProblem(
+            dprob, agg, maj; save_positions = (false, false), rng,
             vartojumps_map = vtoj, jumptovars_map = jtov, dep_graph = dg,
-            scale_rates = false)
+            scale_rates = false
+        )
         for i in 1:Nsims
             sol = solve(jprob, SSAStepper())
             Xmeans[j] += sol[1, end]
@@ -44,7 +52,7 @@ function test(rng)
         end
     end
     Xmeans ./= Nsims
-    Ymeans ./= Nsims
+    return Ymeans ./= Nsims
     # for i in 2:length(SSAalgs)
     #     @test abs(Xmeans[i] - Xmeans[1]) < (.1 * Xmeans[1])
     #     @test abs(Ymeans[i] - Ymeans[1]) < (.1 * Ymeans[1])

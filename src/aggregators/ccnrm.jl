@@ -4,7 +4,7 @@
 # (2015). doi: 10.1063/1.4928635.
 
 mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PT} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+    AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -20,10 +20,12 @@ mutable struct CCNRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PT} <:
     ptt::PT
 end
 
-function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function CCNRMJumpAggregation(
+        nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; num_specs, dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        kwargs...
+    ) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -41,28 +43,35 @@ function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     binwidthconst = haskey(kwargs, :binwidthconst) ? kwargs[:binwidthconst] : 16
     numbinsconst = haskey(kwargs, :numbinsconst) ? kwargs[:numbinsconst] : 20
-    ptt = PriorityTimeTable(zeros(T, length(crs)), zero(T), one(T),
-        binwidthconst = binwidthconst, numbinsconst = numbinsconst) # We will re-initialize this in initialize!()
+    ptt = PriorityTimeTable(
+        zeros(T, length(crs)), zero(T), one(T),
+        binwidthconst = binwidthconst, numbinsconst = numbinsconst
+    ) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(ptt)}(
+    return CCNRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(ptt)}(
         nj, nj, njt, et,
         crs, sr, maj,
         rs, affs!, sps,
-        rng, dg, ptt)
+        rng, dg, ptt
+    )
 end
 
-+############################# Required Functions ##############################
++ ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::CCNRM, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+function aggregate(
+        aggregator::CCNRM, u, p, t, end_time, constant_jumps,
+        ma_jumps, save_positions, rng; kwargs...
+    )
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    build_jump_aggregation(CCNRMJumpAggregation, u, p, t, end_time, ma_jumps,
+    return build_jump_aggregation(
+        CCNRMJumpAggregation, u, p, t, end_time, ma_jumps,
         rates, affects!, save_positions, rng; num_specs = length(u),
-        kwargs...)
+        kwargs...
+    )
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -70,7 +79,7 @@ function initialize!(p::CCNRMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     initialize_rates_and_times!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
-    nothing
+    return nothing
 end
 
 # execute one jump, changing the system state
@@ -80,7 +89,7 @@ function execute_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t, affec
 
     # update current jump rates and times
     update_dependent_rates!(p, u, params, t)
-    nothing
+    return nothing
 end
 
 # calculate the next jump / jump time
@@ -88,7 +97,7 @@ end
 function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
     p.next_jump, p.next_jump_time = getfirst(p.ptt)
 
-    # Rebuild the table if no next jump is found. 
+    # Rebuild the table if no next jump is found.
     if p.next_jump == 0
         timestep = 1 / sum(p.cur_rates)
         min_time = minimum(p.ptt.times)
@@ -96,7 +105,7 @@ function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
         p.next_jump, p.next_jump_time = getfirst(p.ptt)
     end
 
-    nothing
+    return nothing
 end
 
 ######################## SSA specific helper routines ########################
@@ -113,8 +122,10 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
         oldtime = times[rx]
 
         # update the jump rate
-        @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u,
-            params, t, rx)
+        @inbounds cur_rates[rx] = calculate_jump_rate(
+            ma_jumps, num_majumps, rates, u,
+            params, t, rx
+        )
 
         # Calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)
@@ -131,10 +142,10 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, u, params, t)
             end
         end
     end
-    nothing
+    return nothing
 end
 
-# Evaluate all the rates and initialize the times in the priority table. 
+# Evaluate all the rates and initialize the times in the priority table.
 function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t)
     # Initialize next-reaction times for the mass action jumps
     majumps = p.ma_jumps
@@ -154,9 +165,9 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t)
         idx += 1
     end
 
-    # Build the priority time table with the times and bin width. 
+    # Build the priority time table with the times and bin width.
     timestep = 1 / sum(cur_rates)
     p.ptt.times = pttdata
     rebuild!(p.ptt, t, timestep)
-    nothing
+    return nothing
 end

@@ -15,7 +15,7 @@ const offsets_2D = [
     CartesianIndex(0, -1),
     CartesianIndex(-1, 0),
     CartesianIndex(1, 0),
-    CartesianIndex(0, 1)
+    CartesianIndex(0, 1),
 ]
 const offsets_3D = [
     CartesianIndex(0, 0, -1),
@@ -23,7 +23,7 @@ const offsets_3D = [
     CartesianIndex(-1, 0, 0),
     CartesianIndex(1, 0, 0),
     CartesianIndex(0, 1, 0),
-    CartesianIndex(0, 0, 1)
+    CartesianIndex(0, 0, 1),
 ]
 
 """
@@ -61,7 +61,7 @@ function nth_nbr(grid, site, n)
     CI = grid.CI
     offsets = grid.offsets
     @inbounds I = CI[site]
-    @inbounds for off in offsets
+    return @inbounds for off in offsets
         nb = I + off
         if nb in CI
             n -= 1
@@ -79,7 +79,7 @@ function neighbors(grid, site)
     CI = grid.CI
     LI = grid.LI
     I = CI[site]
-    Iterators.map(off -> LI[off + I], Iterators.filter(off -> off + I in CI, grid.offsets))
+    return Iterators.map(off -> LI[off + I], Iterators.filter(off -> off + I in CI, grid.offsets))
 end
 
 """
@@ -97,7 +97,7 @@ function pad_hop_vec!(to_pad::AbstractVector, grid, site, hop_vec::AbstractVecto
             to_pad[i] = zero(eltype(to_pad))
         end
     end
-    to_pad
+    return to_pad
 end
 
 CartesianGrid(dims) = CartesianGridRej(dims) # use CartesianGridRej by default
@@ -127,11 +127,11 @@ function CartesianGridRej(dims::Tuple)
     LI = LinearIndices(dims)
     offsets = potential_offsets(dim)
     nums_neighbors = Int8[count(x -> x + CI[site] in CI, offsets) for site in 1:prod(dims)]
-    CartesianGridRej(dims, nums_neighbors, CI, LI, offsets)
+    return CartesianGridRej(dims, nums_neighbors, CI, LI, offsets)
 end
 CartesianGridRej(dims) = CartesianGridRej(Tuple(dims))
 function CartesianGridRej(dimension, linear_size::Int)
-    CartesianGridRej([linear_size for i in 1:dimension])
+    return CartesianGridRej([linear_size for i in 1:dimension])
 end
 function rand_nbr(rng, grid::CartesianGridRej, site::Int)
     CI = grid.CI
@@ -141,9 +141,12 @@ function rand_nbr(rng, grid::CartesianGridRej, site::Int)
         @inbounds nb = rand(rng, offsets) + I
         @inbounds nb in CI && return grid.LI[nb]
     end
+    return
 end
 
-function Base.show(io::IO, ::MIME"text/plain",
-        grid::CartesianGridRej)
-    println(io, "A Cartesian grid with dimensions $(grid.dims)")
+function Base.show(
+        io::IO, ::MIME"text/plain",
+        grid::CartesianGridRej
+    )
+    return println(io, "A Cartesian grid with dimensions $(grid.dims)")
 end

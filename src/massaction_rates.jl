@@ -3,8 +3,10 @@
 # stochiometric coefficient.
 ###############################################################################
 
-@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
+@inline function evalrxrate(
+        speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U}
+    )::R where {T <: Integer, R, U <: AbstractVector{R}}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -18,8 +20,10 @@
     @inbounds return val * majump.scaled_rates[rxidx]
 end
 
-@inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Real, R, U <: AbstractVector{R}}
+@inline function evalrxrate(
+        speciesvec::AbstractVector{T}, rxidx,
+        majump::MassActionJump{U}
+    )::R where {T <: Real, R, U <: AbstractVector{R}}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -29,30 +33,36 @@ end
             val *= specpop
         end
         # we need to check the smallest rate law term is positive
-        # i.e. for an order k reaction: x - k + 1 > 0 
+        # i.e. for an order k reaction: x - k + 1 > 0
         (specpop <= 0) && return zero(R)
     end
 
     @inbounds return val * majump.scaled_rates[rxidx]
 end
 
-@inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
-        majump::M) where {T, S, M <: AbstractMassActionJump}
+@inline function executerx!(
+        speciesvec::AbstractVector{T}, rxidx::S,
+        majump::M
+    ) where {T, S, M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
         speciesvec[specstoch[1]] += specstoch[2]
     end
-    nothing
+    return nothing
 end
 
-@inline function executerx(speciesvec::SVector{T}, rxidx::S,
-        majump::M) where {T, S, M <: AbstractMassActionJump}
+@inline function executerx(
+        speciesvec::SVector{T}, rxidx::S,
+        majump::M
+    ) where {T, S, M <: AbstractMassActionJump}
     @inbounds net_stoch = majump.net_stoch[rxidx]
     @inbounds for specstoch in net_stoch
-        speciesvec = setindex(speciesvec, speciesvec[specstoch[1]] + specstoch[2],
-            specstoch[1])
+        speciesvec = setindex(
+            speciesvec, speciesvec[specstoch[1]] + specstoch[2],
+            specstoch[1]
+        )
     end
-    speciesvec
+    return speciesvec
 
     #=
     map(net_stoch) do stoch
@@ -61,9 +71,13 @@ end
     =#
 end
 
-function scalerates!(unscaled_rates::AbstractVector{U},
-        stochmat::AbstractVector{V}) where {U, S, T, W <: Pair{S, T},
-        V <: AbstractVector{W}}
+function scalerates!(
+        unscaled_rates::AbstractVector{U},
+        stochmat::AbstractVector{V}
+    ) where {
+        U, S, T, W <: Pair{S, T},
+        V <: AbstractVector{W},
+    }
     @inbounds for i in eachindex(unscaled_rates)
         coef = one(T)
         @inbounds for specstoch in stochmat[i]
@@ -71,12 +85,16 @@ function scalerates!(unscaled_rates::AbstractVector{U},
         end
         unscaled_rates[i] /= coef
     end
-    nothing
+    return nothing
 end
 
-function scalerates!(unscaled_rates::AbstractMatrix{U},
-        stochmat::AbstractVector{V}) where {U, S, T, W <: Pair{S, T},
-        V <: AbstractVector{W}}
+function scalerates!(
+        unscaled_rates::AbstractMatrix{U},
+        stochmat::AbstractVector{V}
+    ) where {
+        U, S, T, W <: Pair{S, T},
+        V <: AbstractVector{W},
+    }
     @inbounds for i in size(unscaled_rates, 1)
         coef = one(T)
         @inbounds for specstoch in stochmat[i]
@@ -84,16 +102,18 @@ function scalerates!(unscaled_rates::AbstractMatrix{U},
         end
         unscaled_rates[i, :] /= coef
     end
-    nothing
+    return nothing
 end
 
-function scalerate(unscaled_rate::U,
-        stochmat::AbstractVector{Pair{S, T}}) where {U <: Number, S, T}
+function scalerate(
+        unscaled_rate::U,
+        stochmat::AbstractVector{Pair{S, T}}
+    ) where {U <: Number, S, T}
     coef = one(T)
     @inbounds for specstoch in stochmat
         coef *= factorial(specstoch[2])
     end
-    unscaled_rate /= coef
+    return unscaled_rate /= coef
 end
 
 ###############################################################################
@@ -116,14 +136,14 @@ function var_to_jumps_map(numspec, ma_jumps::AbstractMassActionJump)
     end
 
     foreach(s -> unique!(sort!(s)), spec_to_dep_rxs)
-    spec_to_dep_rxs
+    return spec_to_dep_rxs
 end
 
 """
 make a map from reactions to dependent species
 """
 function jump_to_vars_map(majumps)
-    [[s for (s, c) in majumps.net_stoch[i]] for i in 1:get_num_majumps(majumps)]
+    return [[s for (s, c) in majumps.net_stoch[i]] for i in 1:get_num_majumps(majumps)]
 end
 
 # dependency graph is a map from a reaction to a vector of reactions
@@ -146,7 +166,7 @@ function make_dependency_graph(numspec, ma_jumps::AbstractMassActionJump)
 
     add_self_dependencies!(dep_graph, dosort = false)
     foreach(deps -> unique!(sort!(deps)), dep_graph)
-    dep_graph
+    return dep_graph
 end
 
 # update dependency graph to make sure jumps depend on themselves
@@ -157,4 +177,5 @@ function add_self_dependencies!(dg; dosort = true)
             dosort && sort!(jump_deps)
         end
     end
+    return
 end

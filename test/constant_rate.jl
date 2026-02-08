@@ -5,13 +5,13 @@ rng = StableRNG(12345)
 
 rate = (u, p, t) -> u
 affect! = function (integrator)
-    integrator.u += 1
+    return integrator.u += 1
 end
 jump = ConstantRateJump(rate, affect!)
 
 rate = (u, p, t) -> 0.5u
 affect! = function (integrator)
-    integrator.u -= 1
+    return integrator.u -= 1
 end
 jump2 = ConstantRateJump(rate, affect!)
 

@@ -2,11 +2,13 @@
 Composition-Rejection with Rejection sampling method (RSSA-CR)
 """
 
-const MINJUMPRATE = 2.0^exponent(1e-12)
+const MINJUMPRATE = 2.0^exponent(1.0e-12)
 
-mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD,
-    P <: PriorityTable, W <: Function} <:
-               AbstractSSAJumpAggregator{F, S, F1, F2, RNG}
+mutable struct RSSACRJumpAggregation{
+        F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD,
+        P <: PriorityTable, W <: Function,
+    } <:
+    AbstractSSAJumpAggregator{F, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::F
@@ -30,12 +32,14 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, U, VJMAP, JVMAP, BD,
     ratetogroup::W
 end
 
-function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
+function RSSACRJumpAggregation(
+        nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG; u::U,
         vartojumps_map = nothing, jumptovars_map = nothing,
         bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
         maxrate = convert(F, Inf),
-        kwargs...) where {F, S, F1, F2, RNG, U}
+        kwargs...
+    ) where {F, S, F1, F2, RNG, U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
@@ -80,25 +84,33 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     rt = PriorityTable(ratetogroup, zeros(F, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, U, typeof(vtoj_map),
+    return RSSACRJumpAggregation{
+        typeof(njt), S, F1, affecttype, RNG, U, typeof(vtoj_map),
         typeof(jtov_map), typeof(bd), typeof(rt),
-        typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
+        typeof(ratetogroup),
+    }(
+        nj, nj, njt, et, crl_bnds, crh_bnds,
         sum_rate, maj, rs, affs!, sps, rng, vtoj_map,
         jtov_map, bd, ulow, uhigh, minrate, maxrate,
-        rt, ratetogroup)
+        rt, ratetogroup
+    )
 end
 
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::RSSACR, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+function aggregate(
+        aggregator::RSSACR, u, p, t, end_time, constant_jumps,
+        ma_jumps, save_positions, rng; kwargs...
+    )
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    build_jump_aggregation(RSSACRJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions, rng; u = u, kwargs...)
+    return build_jump_aggregation(
+        RSSACRJumpAggregation, u, p, t, end_time, ma_jumps,
+        rates, affects!, save_positions, rng; u = u, kwargs...
+    )
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -113,7 +125,7 @@ function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
     end
 
     generate_jumps!(p, integrator, u, params, t)
-    nothing
+    return nothing
 end
 
 # execute one jump, changing the system state
@@ -123,7 +135,7 @@ function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t, affe
 
     # update rates
     update_dependent_rates!(p, u, params, t)
-    nothing
+    return nothing
 end
 
 # calculate the next jump / jump time
@@ -144,8 +156,10 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
         return nothing
     end
     rerl += randexp(rng)
-    while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
-        params, t)
+    while rejectrx(
+            ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
+            params, t
+        )
         # sample candidate reaction
         jidx = sample(rt, cur_rate_high, rng)
         rerl += randexp(rng)
@@ -154,15 +168,17 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
 
     # update time to next jump
     p.next_jump_time = t + rerl / sum_rate
-    nothing
+    return nothing
 end
 
 ######################## SSA specific helper routines #########################
 """
 update bracketing for species that depend on the just executed jump
 """
-@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::AbstractVector,
-        params, t)
+@inline function update_dependent_rates!(
+        p::RSSACRJumpAggregation, u::AbstractVector,
+        params, t
+    )
     # update bracketing intervals
     (; ulow, uhigh) = p
     crhigh = p.cur_rate_high
@@ -186,7 +202,7 @@ update bracketing for species that depend on the just executed jump
     end
 
     p.sum_rate = groupsum(p.rt)
-    nothing
+    return nothing
 end
 
 @inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::SVector, params, t)
@@ -214,5 +230,5 @@ end
     end
 
     p.sum_rate = groupsum(p.rt)
-    nothing
+    return nothing
 end

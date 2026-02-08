@@ -6,14 +6,14 @@ rng = StableRNG(12345)
 rate = (u, p, t) -> (0.1 / 1000.0) * u[1] * u[2]
 affect! = function (integrator)
     integrator.u[1] -= 1
-    integrator.u[2] += 1
+    return integrator.u[2] += 1
 end
 jump = ConstantRateJump(rate, affect!)
 
 rate = (u, p, t) -> 0.01u[2]
 affect! = function (integrator)
     integrator.u[2] -= 1
-    integrator.u[3] += 1
+    return integrator.u[3] += 1
 end
 jump2 = ConstantRateJump(rate, affect!)
 
@@ -24,7 +24,7 @@ integrator = init(jump_prob, FunctionMap())
 condition(u, t, integrator) = t == 100
 function purge_affect!(integrator)
     integrator.u[2] ÷= 10
-    reset_aggregated_jumps!(integrator)
+    return reset_aggregated_jumps!(integrator)
 end
 cb = DiscreteCallback(condition, purge_affect!, save_positions = (false, false))
 sol = solve(jump_prob, FunctionMap(), callback = cb, tstops = [100])
@@ -34,11 +34,15 @@ sol = solve(jump_prob, SSAStepper(), callback = cb, tstops = [100])
 let
     # here we order S = 1, I = 2, and R = 3
     # substrate stoichiometry:
-    substoich = [[1 => 1, 2 => 1],    # 1*S + 1*I
-        [2 => 1]]                     # 1*I
+    substoich = [
+        [1 => 1, 2 => 1],    # 1*S + 1*I
+        [2 => 1],
+    ]                     # 1*I
     # net change by each jump type
-    netstoich = [[1 => -1, 2 => 1],   # S -> S-1, I -> I+1
-        [2 => -1, 3 => 1]]            # I -> I-1, R -> R+1
+    netstoich = [
+        [1 => -1, 2 => 1],   # S -> S-1, I -> I+1
+        [2 => -1, 3 => 1],
+    ]            # I -> I-1, R -> R+1
     # rate constants for each jump
     p = (0.1 / 1000, 0.01)
 

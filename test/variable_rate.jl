@@ -96,8 +96,8 @@ sol(4.0)
 sol.u[4]
 
 rate2b(u, p, t) = u[1]
-affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
-jump = VariableRateJump(rate2b, affect2!)
+affect2b!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
+jump = VariableRateJump(rate2b, affect2b!)
 jump2 = deepcopy(jump)
 jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
 jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)

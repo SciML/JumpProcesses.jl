@@ -92,9 +92,10 @@ function compute_hor(reactant_stoch, numjumps)
     # Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
     stoch_type = eltype(first(first(reactant_stoch)))
     hor = zeros(stoch_type, numjumps)
+    max_order = 3 * one(stoch_type)  # Maximum supported reaction order (type-aware)
     for j in 1:numjumps
         order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=zero(stoch_type))
-        if order > 3
+        if order > max_order
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end
         hor[j] = order
@@ -110,9 +111,11 @@ function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjump
     hor_type = eltype(hor)
     max_hor = zeros(hor_type, numspecies)
     max_stoich = zeros(hor_type, numspecies)
+    stoch_type = eltype(first(first(reactant_stoch)))
+    zero_stoch = zero(stoch_type)
     for j in 1:numjumps
         for (spec_idx, stoch) in reactant_stoch[j]
-            if stoch > 0  # Species is a reactant
+            if stoch > zero_stoch  # Species is a reactant
                 if hor[j] > max_hor[spec_idx]
                     max_hor[spec_idx] = hor[j]
                     max_stoich[spec_idx] = stoch
@@ -139,22 +142,27 @@ function compute_gi(u, max_hor, max_stoich, i, t)
     #   - nu_ij = 3 (e.g., 3S_i -> products): g_i = 3 + 1/(x_i - 1) + 2/(x_i - 2)
     # Uses precomputed max_hor and max_stoich to reduce work to O(num_species) per timestep.
     one_max_hor = one(1 / one(eltype(u)))
+    hor_type = eltype(max_hor)
+    zero_hor = zero(hor_type)
+    one_hor = one(hor_type)
+    two_hor = one_hor + one_hor
+    three_hor = two_hor + one_hor
 
-    if max_hor[i] == 0  # No reactions involve species i as a reactant
+    if max_hor[i] == zero_hor  # No reactions involve species i as a reactant
         return one_max_hor
-    elseif max_hor[i] == 1
+    elseif max_hor[i] == one_hor
         return one_max_hor
-    elseif max_hor[i] == 2
-        if max_stoich[i] == 1
+    elseif max_hor[i] == two_hor
+        if max_stoich[i] == one_hor
             return 2 * one_max_hor
         else  # max_stoich[i] == 2
             return u[i] > one_max_hor ? 
                    2 * one_max_hor + one_max_hor / (u[i] - one_max_hor) : 2 * one_max_hor  # Fallback to 2 if x_i <= 1
         end
-    elseif max_hor[i] == 3
-        if max_stoich[i] == 1
+    elseif max_hor[i] == three_hor
+        if max_stoich[i] == one_hor
             return 3 * one_max_hor
-        elseif max_stoich[i] == 2
+        elseif max_stoich[i] == two_hor
             return u[i] > one_max_hor ? 
                    (3 * one_max_hor / 2) * (2 * one_max_hor + one_max_hor / (u[i] - one_max_hor)) : 3 * one_max_hor  # Fallback to 3 if x_i <= 1
         else  # max_stoich[i] == 3
@@ -199,14 +207,19 @@ function implicit_equation!(resid, u_new, params)
     u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver = params
     rate(rate_cache, u_new, p, t + tau)
     resid .= u_new .- u_current
-    for j in 1:numjumps
-        for spec_idx in 1:size(nu, 1)
-            if isa(solver, NewtonImplicitSolver)
+    if isa(solver, NewtonImplicitSolver)
+        for j in 1:numjumps
+            for spec_idx in 1:size(nu, 1)
                 resid[spec_idx] -= nu[spec_idx, j] * rate_cache[j] * tau  # Cao et al. (2004)
-            else  # TrapezoidalImplicitSolver
-                rate_current = similar(rate_cache)
-                rate(rate_current, u_current, p, t)
-                resid[spec_idx] -= nu[spec_idx, j] * 0.5 * (rate_cache[j] + rate_current[j]) * tau
+            end
+        end
+    else  # TrapezoidalImplicitSolver
+        rate_current = similar(rate_cache)
+        rate(rate_current, u_current, p, t)
+        half = one(eltype(rate_cache)) / 2
+        for j in 1:numjumps
+            for spec_idx in 1:size(nu, 1)
+                resid[spec_idx] -= nu[spec_idx, j] * half * (rate_cache[j] + rate_current[j]) * tau
             end
         end
     end
@@ -215,7 +228,7 @@ end
 
 # Solve implicit equation using SimpleNonlinearSolve
 function solve_implicit(u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver)
-    u_new = convert(Vector{Float64}, u_current)
+    u_new = convert(Vector{float(eltype(u_current))}, u_current)
     prob = NonlinearProblem(implicit_equation!, u_new, (u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver))
     sol = solve(prob, SimpleNewtonRaphson(autodiff=AutoFiniteDiff()); abstol=1e-6, reltol=1e-6)
     return sol.u, sol.retcode == ReturnCode.Success
@@ -252,8 +265,9 @@ function simple_implicit_tau_leaping_loop!(
         end
 
         rate(rate_cache, u_new_float, p, t_current + tau)
-        counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))
-        du .= 0
+        zero_rate = zero(eltype(rate_cache))
+        counts .= pois_rand.(rng, max.(rate_cache * tau, zero_rate))
+        du .= zero(eltype(du))
         for j in 1:numjumps
             for (spec_idx, stoch) in maj.net_stoch[j]
                 du[spec_idx] += stoch * counts[j]
@@ -261,14 +275,15 @@ function simple_implicit_tau_leaping_loop!(
         end
         u_new = u_current + du
 
-        if any(<(0), u_new)
+        zero_pop = zero(eltype(u_new))
+        if any(<(zero_pop), u_new)
             # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
             tau /= 2
             continue
         end
         # Ensure non-negativity, as per Cao et al. (2006), Section 3.3
         for i in eachindex(u_new)
-            u_new[i] = max(u_new[i], 0)
+            u_new[i] = max(u_new[i], zero_pop)
         end
         t_new = t_current + tau
 

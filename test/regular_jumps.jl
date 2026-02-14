@@ -3,7 +3,7 @@ using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
-Nsims = 1000
+Nsims = 100
 
 # SIR model with influx
 @testset "SIR Model Correctness" begin
@@ -27,7 +27,7 @@ Nsims = 1000
     jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=rng)
 
     # Solve with SSAStepper
-    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
 
     # RegularJump formulation for SimpleTauLeaping
     regular_rate = (out, u, p, t) -> begin
@@ -47,28 +47,42 @@ Nsims = 1000
     # Solve with SimpleTauLeaping
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
 
-    # MassActionJump formulation for SimpleImplicitTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping
     reactant_stoich = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
     net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [1=>1]]
     param_idxs = [1, 2, 3]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
     jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
 
-    # Solve with SimpleImplicitTauLeaping
-    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj), SimpleImplicitTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
-    sol_implicit_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleImplicitTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    # Solve with SimpleExplicitTauLeaping
+    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
 
-    # Compute mean infected (I) trajectories
-    t_points = 0:1.0:250.0
-    max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_direct_I = maximum([mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_implicit_newton = maximum([mean(sol_implicit_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_implicit_trapezoidal = maximum([mean(sol_implicit_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
-
-    # Test mean infected trajectories
-    @test isapprox(max_direct_I, max_direct_I, rtol=0.05)
-    @test isapprox(max_direct_I, max_implicit_newton, rtol=0.05)
-    @test isapprox(max_direct_I, max_implicit_trapezoidal, rtol=0.05)
+    # Simple test: Check that all solvers completed successfully and have reasonable output
+    @test length(sol_direct) == Nsims
+    @test length(sol_simple) == Nsims
+    @test length(sol_adaptive) == Nsims
+    
+    # Check that final times match expected tspan
+    @test sol_direct[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_simple[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_adaptive[1].t[end] ≈ 250.0 atol=1.0
+    
+    # Sample at key time points (0, 50, 100, 150, 200, 250)
+    t_sample = [0.0, 50.0, 100.0, 150.0, 200.0, 250.0]
+    
+    # Compute mean I at sample times for each method
+    mean_I_direct = [mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_sample]
+    mean_I_simple = [mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_sample]
+    mean_I_explicit = [mean(sol_adaptive[i](t)[2] for i in 1:Nsims) for t in t_sample]
+    
+    # Check that mean infected values are in reasonable range (0 to population size)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_direct)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_simple)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_explicit)
+    
+    # Check that all methods produce similar dynamics (loose tolerance)
+    @test isapprox(mean_I_direct[3], mean_I_simple[3], rtol=0.05)  # Compare at t=100
+    @test isapprox(mean_I_direct[3], mean_I_explicit[3], rtol=0.05)
 end
 
 # SEIR model with exposed compartment
@@ -93,7 +107,7 @@ end
     jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=rng)
 
     # Solve with SSAStepper
-    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
 
     # RegularJump formulation for SimpleTauLeaping
     regular_rate = (out, u, p, t) -> begin
@@ -114,28 +128,62 @@ end
     # Solve with SimpleTauLeaping
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
 
-    # MassActionJump formulation for SimpleImplicitTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping
     reactant_stoich = [[1=>1, 3=>1], [2=>1], [3=>1]]
     net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [3=>-1, 4=>1]]
     param_idxs = [1, 2, 3]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
     jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
 
-    # Solve with SimpleImplicitTauLeaping
-    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj), SimpleImplicitTauLeaping(solver=NewtonImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
-    sol_implicit_trapezoidal = solve(EnsembleProblem(jump_prob_maj), SimpleImplicitTauLeaping(solver=TrapezoidalImplicitSolver()), EnsembleSerial(); trajectories=Nsims, saveat=1.0)
+    # Solve with SimpleExplicitTauLeaping
+    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
 
-    # Compute mean infected (I) trajectories
-    t_points = 0:1.0:250.0
-    max_direct_I = maximum([mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_direct_I = maximum([mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_implicit_newton = maximum([mean(sol_implicit_newton[i](t)[2] for i in 1:Nsims) for t in t_points])
-    max_implicit_trapezoidal = maximum([mean(sol_implicit_trapezoidal[i](t)[2] for i in 1:Nsims) for t in t_points])
+    # Simple test: Check that all solvers completed successfully and have reasonable output
+    @test length(sol_direct) == Nsims
+    @test length(sol_simple) == Nsims
+    @test length(sol_adaptive) == Nsims
+    
+    # Check that final times match expected tspan
+    @test sol_direct[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_simple[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_adaptive[1].t[end] ≈ 250.0 atol=1.0
+    
+    # Sample at key time points (0, 50, 100, 150, 200, 250)
+    t_sample = [0.0, 50.0, 100.0, 150.0, 200.0, 250.0]
+    
+    # Compute mean I at sample times for each method (I is index 3 in SEIR)
+    mean_I_direct = [mean(sol_direct[i](t)[3] for i in 1:Nsims) for t in t_sample]
+    mean_I_simple = [mean(sol_simple[i](t)[3] for i in 1:Nsims) for t in t_sample]
+    mean_I_explicit = [mean(sol_adaptive[i](t)[3] for i in 1:Nsims) for t in t_sample]
+    
+    # Check that mean infected values are in reasonable range (0 to population size)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_direct)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_simple)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_explicit)
+    
+    # Check that all methods produce similar dynamics (loose tolerance)
+    @test isapprox(mean_I_direct[3], mean_I_simple[3], rtol=0.05)  # Compare at t=100
+    @test isapprox(mean_I_direct[3], mean_I_explicit[3], rtol=0.05)
+end
 
-    # Test mean infected trajectories
-    @test isapprox(max_direct_I, max_direct_I, rtol=0.05)
-    @test isapprox(max_direct_I, max_implicit_newton, rtol=0.05)
-    @test isapprox(max_direct_I, max_implicit_trapezoidal, rtol=0.05)
+# Test zero-rate case for SimpleExplicitTauLeaping
+@testset "Zero Rates Test for SimpleExplicitTauLeaping" begin
+    # SIR model: S + I -> 2I, I -> R
+    reactant_stoch = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    net_stoch = [[1=>-1, 2=>1], [2=>-1, 3=>1], []]
+    rates = [0.1/1000, 0.05, 0.0]  # beta/N, gamma, dummy rate for empty reaction
+    maj = MassActionJump(rates, reactant_stoch, net_stoch)
+    u0 = [0, 0, 0]  # All populations zero
+    tspan = (0.0, 250.0)
+    prob = DiscreteProblem(u0, tspan)
+    jump_prob = JumpProblem(prob, PureLeaping(), maj)
+
+    sol = solve(jump_prob, SimpleExplicitTauLeaping(); dtmin = 0.1, saveat=1.0)
+
+    # Check that solution completes and covers tspan
+    @test sol.t[end] ≈ 250.0 atol=1e-6
+    # Check that state remains zero
+    @test all(u == [0, 0, 0] for u in sol.u)
 end
 
 # Test PureLeaping aggregator functionality

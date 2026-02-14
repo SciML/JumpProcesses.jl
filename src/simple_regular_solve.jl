@@ -34,7 +34,8 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplici
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
-        seed = nothing, dt = error("dt is required for SimpleTauLeaping."))
+        seed = nothing, dt = error("dt is required for SimpleTauLeaping."),
+        saveat = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
 
@@ -58,26 +59,53 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     p = prob.p
 
     n = Int((tspan[2] - tspan[1]) / dt) + 1
-    u = Vector{typeof(prob.u0)}(undef, n)
-    u[1] = u0
-    t = tspan[1]:dt:tspan[2]
 
-    # iteration variables
-    counts = zero(rate_cache) # counts for each variable
-
-    for i in 2:n # iterate over dt-slices
-        uprev = u[i - 1]
-        tprev = t[i - 1]
-        rate(rate_cache, uprev, p, tprev)
-        rate_cache .*= dt # multiply by the width of the time interval
-        counts .= pois_rand.((rng,), rate_cache) # set counts to the poisson arrivals with our given rates
-        c(du, uprev, p, tprev, counts, mark)
-        u[i] = du + uprev
+    # Set up saveat_times
+    if isnothing(saveat)
+        saveat_times = Vector{typeof(tspan[1])}()
+    elseif saveat isa Number
+        saveat_times = collect(range(tspan[1], tspan[2], step = saveat))
+    else
+        saveat_times = collect(saveat)
     end
 
-    sol = DiffEqBase.build_solution(prob, alg, t, u,
+    usave = [copy(u0)]
+    tsave = typeof(tspan[1])[tspan[1]]
+    save_idx = isempty(saveat_times) ? 1 :
+               (saveat_times[1] ≈ tspan[1] ? 2 : 1)
+
+    # Pre-allocate working buffers — swap each step to avoid copying
+    uprev = u0          # u0 is already a copy
+    u_new = similar(u0)
+    counts = zero(rate_cache)
+
+    for i in 2:n
+        tprev = tspan[1] + (i - 2) * dt
+        t_new = tprev + dt
+        rate(rate_cache, uprev, p, tprev)
+        rate_cache .*= dt
+        counts .= pois_rand.((rng,), rate_cache)
+        c(du, uprev, p, tprev, counts, mark)
+        u_new .= du .+ uprev
+
+        # Save logic — only allocate (via copy) when actually saving
+        if isempty(saveat_times)
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+        else
+            while save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx]
+                push!(usave, copy(u_new))
+                push!(tsave, saveat_times[save_idx])
+                save_idx += 1
+            end
+        end
+
+        uprev, u_new = u_new, uprev
+    end
+
+    sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(t, u))
+        interp = DiffEqBase.ConstantInterpolation(tsave, usave))
 end
 
 # Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
@@ -203,7 +231,8 @@ function simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj)
-    save_idx = 1
+    # Skip first saveat time if it matches the initial time (already saved by caller)
+    save_idx = (!isempty(saveat_times) && saveat_times[1] ≈ t_current) ? 2 : 1
 
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)

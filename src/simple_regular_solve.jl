@@ -33,9 +33,45 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplici
         jump_prob.massaction_jump !== nothing
 end
 
+"""
+    _process_saveat(saveat, tspan, save_start, save_end)
+
+Process `saveat` into a sorted vector of strictly interior save times (excluding
+both `tspan` endpoints), and resolve `save_start`/`save_end` defaults following
+OrdinaryDiffEq conventions.
+
+Endpoint saving is controlled purely by the returned `save_start`/`save_end`
+flags. When the user passes `nothing` for these, defaults are:
+- No saveat or saveat is a Number: `true` for both.
+- saveat is a collection: `true` if the corresponding endpoint is `in` the collection.
+"""
+function _process_saveat(saveat, tspan, save_start, save_end)
+    t0, tf = tspan
+    if isnothing(saveat)
+        saveat_vec = Vector{typeof(t0)}()
+        _save_start = something(save_start, true)
+        _save_end = something(save_end, true)
+    elseif saveat isa Number
+        saveat_vec = collect(t0 + saveat:saveat:tf)
+        if !isempty(saveat_vec) && last(saveat_vec) == tf
+            pop!(saveat_vec)
+        end
+        _save_start = something(save_start, true)
+        _save_end = something(save_end, true)
+    else
+        saveat_vec = sort!(collect(saveat))
+        _save_start = something(save_start, insorted(t0, saveat_vec))
+        _save_end = something(save_end, insorted(tf, saveat_vec))
+        lo = searchsortedlast(saveat_vec, t0) + 1
+        hi = searchsortedfirst(saveat_vec, tf) - 1
+        saveat_vec = saveat_vec[lo:hi]
+    end
+    return saveat_vec, _save_start, _save_end
+end
+
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing, dt = error("dt is required for SimpleTauLeaping."),
-        saveat = nothing)
+        saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
 
@@ -60,19 +96,16 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
 
     n = Int((tspan[2] - tspan[1]) / dt) + 1
 
-    # Set up saveat_times
-    if isnothing(saveat)
-        saveat_times = Vector{typeof(tspan[1])}()
-    elseif saveat isa Number
-        saveat_times = collect(range(tspan[1], tspan[2], step = saveat))
-    else
-        saveat_times = collect(saveat)
-    end
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
 
-    usave = [copy(u0)]
-    tsave = typeof(tspan[1])[tspan[1]]
-    save_idx = isempty(saveat_times) ? 1 :
-               (saveat_times[1] ≈ tspan[1] ? 2 : 1)
+    if save_start
+        usave = [copy(u0)]
+        tsave = typeof(tspan[1])[tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
+    save_idx = 1
 
     # Pre-allocate working buffers — swap each step to avoid copying
     uprev = u0          # u0 is already a copy
@@ -101,6 +134,12 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         end
 
         uprev, u_new = u_new, uprev
+    end
+
+    # Save endpoint if requested and not already saved
+    if save_end && (isempty(tsave) || tsave[end] != tspan[2])
+        push!(usave, copy(uprev))
+        push!(tsave, tspan[2])
     end
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
@@ -230,16 +269,13 @@ end
 function simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
-        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj)
-    # Skip first saveat time if it matches the initial time (already saved by caller)
-    save_idx = (!isempty(saveat_times) && saveat_times[1] ≈ t_current) ? 2 : 1
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj,
+        save_end)
+    save_idx = 1
 
     while t_current < t_end
         rate(rate_cache, u_current, p, t_current)
         if all(<=(0), rate_cache)  # No reactions can occur, step to final time
-            # Save final state at t_end
-            push!(usave, copy(u_current))
-            push!(tsave, t_end)
             t_current = t_end
             break
         end
@@ -290,12 +326,18 @@ function simple_explicit_tau_leaping_loop!(
         u_current .= u_new
         t_current = t_new
     end
+
+    # Save endpoint if requested and not already saved
+    if save_end && (isempty(tsave) || tsave[end] != t_end)
+        push!(usave, copy(u_current))
+        push!(tsave, t_end)
+    end
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         seed = nothing,
         dtmin = nothing,
-        saveat = nothing)
+        saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleExplicitTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
@@ -318,12 +360,19 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     u0 = copy(prob.u0)
     p = prob.p
 
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
+
     # Initialize current state and saved history
     u_current = copy(u0)
     u_new = similar(u0)
     t_current = tspan[1]
-    usave = [copy(u0)]
-    tsave = [tspan[1]]
+    if save_start
+        usave = [copy(u0)]
+        tsave = [tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
     rate_cache = zeros(float(eltype(u0)), numjumps)
     rate_effective = similar(rate_cache)
     counts = zero(rate_cache)
@@ -344,19 +393,11 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     max_hor, max_stoich = precompute_reaction_conditions(
         reactant_stoch, hor, length(u0), numjumps)
 
-    # Set up saveat_times
-    if isnothing(saveat)
-        saveat_times = Vector{typeof(tspan[1])}()
-    elseif saveat isa Number
-        saveat_times = collect(range(tspan[1], tspan[2], step = saveat))
-    else
-        saveat_times = collect(saveat)
-    end
-
     simple_explicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
-        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj)
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj,
+        save_end)
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,

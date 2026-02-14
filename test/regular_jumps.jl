@@ -255,9 +255,9 @@ end
     @test jp_params.massaction_jump.scaled_rates == scaled_rates
 end
 
-# Test that saveat controls which times are stored in solutions
+# Test that saveat/save_start/save_end control which times are stored in solutions
 @testset "Saving Controls" begin
-    # Simple birth process for testing save behavior
+    # Simple birth process for testing SSAStepper save behavior
     birth_rate(u, p, t) = 1.0
     birth_affect!(integrator) = (integrator.u[1] += 1; nothing)
     crj = ConstantRateJump(birth_rate, birth_affect!)
@@ -275,32 +275,82 @@ end
     sol2 = solve(jp2, SSAStepper(); saveat = 1.0)
     @test length(sol2.t) > length(sol.t)
 
-    # SimpleTauLeaping without saveat: stores every dt step
+    # --- SimpleTauLeaping save_start/save_end/saveat tests ---
     regular_rate = (out, u, p, t) -> (out[1] = 1.0)
     regular_c = (dc, u, p, t, counts, mark) -> (dc[1] = counts[1])
     rj = RegularJump(regular_rate, regular_c, 1)
     jp_tau = JumpProblem(prob, PureLeaping(), rj; rng)
+
+    # No saveat: stores every dt step (save_start=true, save_end=true by default)
     sol_tau = solve(jp_tau, SimpleTauLeaping(); dt = 1.0)
-    @test sol_tau.t ≈ collect(0.0:1.0:10.0)
+    @test sol_tau.t == collect(0.0:1.0:10.0)
 
-    # SimpleTauLeaping WITH saveat: stores only saveat times
-    sol_tau_saveat = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = 2.0)
-    @test sol_tau_saveat.t ≈ collect(0.0:2.0:10.0)
-    @test length(sol_tau_saveat.t) == 6
+    # saveat as Number: defaults save_start=true, save_end=true
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = 2.0)
+    @test sol.t == collect(0.0:2.0:10.0)
 
-    # SimpleTauLeaping with saveat as a collection
-    sol_tau_vec = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [0.0, 5.0, 10.0])
-    @test sol_tau_vec.t ≈ [0.0, 5.0, 10.0]
-    @test length(sol_tau_vec.t) == 3
+    # saveat as Number + save_start=false
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = 2.0, save_start = false)
+    @test sol.t == collect(2.0:2.0:10.0)
 
-    # SimpleExplicitTauLeaping with saveat (needs non-empty reactant stoichiometry)
+    # saveat as Number + save_end=false
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = 2.0, save_end = false)
+    @test sol.t == collect(0.0:2.0:8.0)
+
+    # saveat as Number + save_start=false + save_end=false
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = 2.0,
+        save_start = false, save_end = false)
+    @test sol.t == collect(2.0:2.0:8.0)
+
+    # saveat collection including both endpoints: defaults save_start=true, save_end=true
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [0.0, 5.0, 10.0])
+    @test sol.t == [0.0, 5.0, 10.0]
+
+    # saveat collection without endpoints: defaults save_start=false, save_end=false
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [2.0, 5.0, 8.0])
+    @test sol.t == [2.0, 5.0, 8.0]
+
+    # saveat collection without endpoints + explicit save_start=true, save_end=true
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [2.0, 5.0, 8.0],
+        save_start = true, save_end = true)
+    @test sol.t == [0.0, 2.0, 5.0, 8.0, 10.0]
+
+    # saveat collection with endpoints + explicit save_start=false, save_end=false
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [0.0, 5.0, 10.0],
+        save_start = false, save_end = false)
+    @test sol.t == [5.0]
+
+    # saveat unordered collection: should be sorted automatically
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [10.0, 0.0, 5.0])
+    @test sol.t == [0.0, 5.0, 10.0]
+
+    # saveat collection with out-of-range times: filtered out
+    sol = solve(jp_tau, SimpleTauLeaping(); dt = 0.1, saveat = [-1.0, 5.0, 20.0])
+    @test sol.t == [5.0]
+
+    # --- SimpleExplicitTauLeaping save_start/save_end/saveat tests ---
     u0_decay = [100.0]
     prob_decay = DiscreteProblem(u0_decay, tspan)
     reactant_stoich = [[1 => 1]]
     net_stoich = [[1 => -1]]
     maj = MassActionJump([0.1], reactant_stoich, net_stoich)
     jp_explicit = JumpProblem(prob_decay, PureLeaping(), maj; rng)
-    sol_explicit = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = 2.0)
-    @test sol_explicit.t ≈ collect(0.0:2.0:10.0)
-    @test length(sol_explicit.t) == 6
+
+    # saveat as Number: defaults save_start=true, save_end=true
+    sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = 2.0)
+    @test sol.t == collect(0.0:2.0:10.0)
+
+    # saveat as Number + save_start=false + save_end=false
+    sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = 2.0,
+        save_start = false, save_end = false)
+    @test sol.t == collect(2.0:2.0:8.0)
+
+    # saveat collection including endpoints
+    sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = [0.0, 5.0, 10.0])
+    @test sol.t == [0.0, 5.0, 10.0]
+
+    # saveat collection without endpoints + explicit save_start=true, save_end=true
+    sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = [2.0, 8.0],
+        save_start = true, save_end = true)
+    @test sol.t == [0.0, 2.0, 8.0, 10.0]
 end

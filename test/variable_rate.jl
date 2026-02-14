@@ -22,7 +22,7 @@ a .= b .+ c .+ d
 
 rate = (u, p, t) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
-jump = VariableRateJump(rate, affect!, interp_points = 1000)
+jump = VariableRateJump(rate, affect!)
 jump2 = deepcopy(jump)
 
 f = function (du, u, p, t)
@@ -271,11 +271,13 @@ end
 # https://github.com/SciML/JumpProcesses.jl/issues/320
 # note that even with the seeded StableRNG this test is not 
 # deterministic for some reason.
-function getmean(Nsims, prob, alg, dt, tsave, seed)
+function getmean(Nsims, prob, alg, tsave, seed)
     umean = zeros(length(tsave))
     for i in 1:Nsims
-        sol = solve(prob, alg; saveat = dt, seed)
-        umean .+= Array(sol(tsave; idxs = 1))
+        sol = solve(prob, alg; saveat = tsave, seed)
+        for j in eachindex(umean)
+            umean[j] += sol.u[j][1]
+        end
         seed += 1
     end
     umean ./= Nsims
@@ -304,23 +306,22 @@ let
         integrator.u[1] += 1
         nothing
     end
-    b_jump = VariableRateJump(b_rate, birth!)
+    b_jump = VariableRateJump(b_rate, birth!; save_positions = (false, false))
 
     d_rate(u, p, t) = (u[1] * p[2])
     function death!(integrator)
         integrator.u[1] -= 1
         nothing
     end
-    d_jump = VariableRateJump(d_rate, death!)
+    d_jump = VariableRateJump(d_rate, death!; save_positions = (false, false))
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    dt = 0.1
-    tsave = range(tspan[1], tspan[2]; step = dt)
+    tsave = range(tspan[1], tspan[2]; step = 0.1)
     for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
-            umean = getmean(Nsims, sjm_prob, alg, dt, tsave, seed)
+            umean = getmean(Nsims, sjm_prob, alg, tsave, seed)
             @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
             seed += Nsims
         end
@@ -342,7 +343,7 @@ end
 let
     rate = (u, p, t) -> u[1]
     affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
-    jump = VariableRateJump(rate, affect!, interp_points = 1000)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
     jump2 = deepcopy(jump)
 
     f = (du, u, p, t) -> (du[1] = u[1])
@@ -362,7 +363,7 @@ let
     g = (du, u, p, t) -> (du[1] = -u[1] / 10.0)
     rate = (u, p, t) -> u[1] / 10.0
     affect! = (integrator) -> (integrator.u[1] = integrator.u[1] + 1)
-    jump = VariableRateJump(rate, affect!)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
     jump2 = deepcopy(jump)
 
     prob = SDEProblem(f, g, [10.0], (0.0, 10.0))
@@ -381,7 +382,7 @@ let
     f = (du, u, p, t) -> (du[1] = -u[1]; nothing)
     rate = (u, p, t) -> λ
     affect! = (integrator) -> (integrator.u[1] += 1; nothing)
-    jump = VariableRateJump(rate, affect!)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
 
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
 
@@ -409,7 +410,7 @@ let
         integrator.p[3] += 1
         nothing
     end
-    birth_jump = VariableRateJump(birth_rate, birth_affect!)
+    birth_jump = VariableRateJump(birth_rate, birth_affect!; save_positions = (false, false))
 
     # Define death jump: X → ∅
     death_rate(u, p, t) = 0.5 * u[1]
@@ -418,7 +419,7 @@ let
         integrator.p[3] += 1
         nothing
     end
-    death_jump = VariableRateJump(death_rate, death_affect!)
+    death_jump = VariableRateJump(death_rate, death_affect!; save_positions = (false, false))
 
     Nsims = 100
     results = Dict()

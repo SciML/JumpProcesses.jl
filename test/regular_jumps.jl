@@ -1,28 +1,190 @@
 using JumpProcesses, DiffEqBase
-using Test, LinearAlgebra
+using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
-function regular_rate(out, u, p, t)
-    out[1] = (0.1 / 1000.0) * u[1] * u[2]
-    out[2] = 0.01u[2]
+Nsims = 100
+
+# SIR model with influx
+@testset "SIR Model Correctness" begin
+    β = 0.1 / 1000.0
+    ν = 0.01
+    influx_rate = 1.0
+    p = (β, ν, influx_rate)
+
+    # ConstantRateJump formulation for SSAStepper
+    rate1(u, p, t) = p[1] * u[1] * u[2]  # β*S*I (infection)
+    rate2(u, p, t) = p[2] * u[2]         # ν*I (recovery)
+    rate3(u, p, t) = p[3]                # influx_rate (S influx)
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
+    affect3!(integrator) = (integrator.u[1] += 1; nothing)
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
+
+    u0 = [999.0, 10.0, 0.0]  # S, I, R
+    tspan = (0.0, 250.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=rng)
+
+    # Solve with SSAStepper
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
+
+    # RegularJump formulation for SimpleTauLeaping
+    regular_rate = (out, u, p, t) -> begin
+        out[1] = p[1] * u[1] * u[2]
+        out[2] = p[2] * u[2]
+        out[3] = p[3]
+    end
+    regular_c = (dc, u, p, t, counts, mark) -> begin
+        dc .= 0
+        dc[1] = -counts[1] + counts[3]
+        dc[2] = counts[1] - counts[2]
+        dc[3] = counts[2]
+    end
+    rj = RegularJump(regular_rate, regular_c, 3)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng=rng)
+
+    # Solve with SimpleTauLeaping
+    sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
+
+    # MassActionJump formulation for SimpleExplicitTauLeaping
+    reactant_stoich = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [1=>1]]
+    param_idxs = [1, 2, 3]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
+
+    # Solve with SimpleExplicitTauLeaping
+    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
+
+    # Simple test: Check that all solvers completed successfully and have reasonable output
+    @test length(sol_direct) == Nsims
+    @test length(sol_simple) == Nsims
+    @test length(sol_adaptive) == Nsims
+    
+    # Check that final times match expected tspan
+    @test sol_direct[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_simple[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_adaptive[1].t[end] ≈ 250.0 atol=1.0
+    
+    # Sample at key time points (0, 50, 100, 150, 200, 250)
+    t_sample = [0.0, 50.0, 100.0, 150.0, 200.0, 250.0]
+    
+    # Compute mean I at sample times for each method
+    mean_I_direct = [mean(sol_direct[i](t)[2] for i in 1:Nsims) for t in t_sample]
+    mean_I_simple = [mean(sol_simple[i](t)[2] for i in 1:Nsims) for t in t_sample]
+    mean_I_explicit = [mean(sol_adaptive[i](t)[2] for i in 1:Nsims) for t in t_sample]
+    
+    # Check that mean infected values are in reasonable range (0 to population size)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_direct)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_simple)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_explicit)
+    
+    # Check that all methods produce similar dynamics (loose tolerance)
+    @test isapprox(mean_I_direct[3], mean_I_simple[3], rtol=0.05)  # Compare at t=100
+    @test isapprox(mean_I_direct[3], mean_I_explicit[3], rtol=0.05)
 end
 
-const dc = zeros(3, 2)
-dc[1, 1] = -1
-dc[2, 1] = 1
-dc[2, 2] = -1
-dc[3, 2] = 1
+# SEIR model with exposed compartment
+@testset "SEIR Model Correctness" begin
+    β = 0.3 / 1000.0
+    σ = 0.2
+    ν = 0.01
+    p = (β, σ, ν)
 
-function regular_c(du, u, p, t, counts, mark)
-    mul!(du, dc, counts)
+    # ConstantRateJump formulation for SSAStepper
+    rate1(u, p, t) = p[1] * u[1] * u[3]  # β*S*I (infection)
+    rate2(u, p, t) = p[2] * u[2]         # σ*E (progression)
+    rate3(u, p, t) = p[3] * u[3]         # ν*I (recovery)
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
+    affect3!(integrator) = (integrator.u[3] -= 1; integrator.u[4] += 1; nothing)
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
+
+    u0 = [999.0, 0.0, 10.0, 0.0]  # S, E, I, R
+    tspan = (0.0, 250.0)
+    prob_disc = DiscreteProblem(u0, tspan, p)
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng=rng)
+
+    # Solve with SSAStepper
+    sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
+
+    # RegularJump formulation for SimpleTauLeaping
+    regular_rate = (out, u, p, t) -> begin
+        out[1] = p[1] * u[1] * u[3]
+        out[2] = p[2] * u[2]
+        out[3] = p[3] * u[3]
+    end
+    regular_c = (dc, u, p, t, counts, mark) -> begin
+        dc .= 0.0
+        dc[1] = -counts[1]
+        dc[2] = counts[1] - counts[2]
+        dc[3] = counts[2] - counts[3]
+        dc[4] = counts[3]
+    end
+    rj = RegularJump(regular_rate, regular_c, 3)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng=rng)
+
+    # Solve with SimpleTauLeaping
+    sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial(); trajectories=Nsims, dt=0.1)
+
+    # MassActionJump formulation for SimpleExplicitTauLeaping
+    reactant_stoich = [[1=>1, 3=>1], [2=>1], [3=>1]]
+    net_stoich = [[1=>-1, 2=>1], [2=>-1, 3=>1], [3=>-1, 4=>1]]
+    param_idxs = [1, 2, 3]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=param_idxs)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng=rng)
+
+    # Solve with SimpleExplicitTauLeaping
+    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial(); trajectories=Nsims, saveat=5.0)
+
+    # Simple test: Check that all solvers completed successfully and have reasonable output
+    @test length(sol_direct) == Nsims
+    @test length(sol_simple) == Nsims
+    @test length(sol_adaptive) == Nsims
+    
+    # Check that final times match expected tspan
+    @test sol_direct[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_simple[1].t[end] ≈ 250.0 atol=1.0
+    @test sol_adaptive[1].t[end] ≈ 250.0 atol=1.0
+    
+    # Sample at key time points (0, 50, 100, 150, 200, 250)
+    t_sample = [0.0, 50.0, 100.0, 150.0, 200.0, 250.0]
+    
+    # Compute mean I at sample times for each method (I is index 3 in SEIR)
+    mean_I_direct = [mean(sol_direct[i](t)[3] for i in 1:Nsims) for t in t_sample]
+    mean_I_simple = [mean(sol_simple[i](t)[3] for i in 1:Nsims) for t in t_sample]
+    mean_I_explicit = [mean(sol_adaptive[i](t)[3] for i in 1:Nsims) for t in t_sample]
+    
+    # Check that mean infected values are in reasonable range (0 to population size)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_direct)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_simple)
+    @test all(0 ≤ m ≤ 1000 for m in mean_I_explicit)
+    
+    # Check that all methods produce similar dynamics (loose tolerance)
+    @test isapprox(mean_I_direct[3], mean_I_simple[3], rtol=0.05)  # Compare at t=100
+    @test isapprox(mean_I_direct[3], mean_I_explicit[3], rtol=0.05)
 end
 
-rj = RegularJump(regular_rate, regular_c, 2)
-jumps = JumpSet(rj)
-prob = DiscreteProblem([999, 1, 0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, PureLeaping(), rj; rng)
-sol = solve(jump_prob, SimpleTauLeaping(); dt = 1.0)
+# Test zero-rate case for SimpleExplicitTauLeaping
+@testset "Zero Rates Test for SimpleExplicitTauLeaping" begin
+    # SIR model: S + I -> 2I, I -> R
+    reactant_stoch = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    net_stoch = [[1=>-1, 2=>1], [2=>-1, 3=>1], []]
+    rates = [0.1/1000, 0.05, 0.0]  # beta/N, gamma, dummy rate for empty reaction
+    maj = MassActionJump(rates, reactant_stoch, net_stoch)
+    u0 = [0, 0, 0]  # All populations zero
+    tspan = (0.0, 250.0)
+    prob = DiscreteProblem(u0, tspan)
+    jump_prob = JumpProblem(prob, PureLeaping(), maj)
+
+    sol = solve(jump_prob, SimpleExplicitTauLeaping(); dtmin = 0.1, saveat=1.0)
+
+    # Check that solution completes and covers tspan
+    @test sol.t[end] ≈ 250.0 atol=1e-6
+    # Check that state remains zero
+    @test all(u == [0, 0, 0] for u in sol.u)
+end
 
 # Test PureLeaping aggregator functionality
 @testset "PureLeaping Aggregator Tests" begin

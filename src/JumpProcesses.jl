@@ -5,7 +5,7 @@ using Reexport: Reexport, @reexport
 
 # Explicit imports from standard libraries
 using LinearAlgebra: LinearAlgebra, mul!
-using Random: Random, randexp, randexp!
+using Random: Random, randexp, randexp!, seed!
 
 # Explicit imports from external packages
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
@@ -127,7 +127,7 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

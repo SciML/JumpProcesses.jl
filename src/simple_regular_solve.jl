@@ -468,7 +468,7 @@ function simple_implicit_tau_leaping_loop!(
         prob, alg, u_current, t_current, t_end, p, rng,
         rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache,
-        maj, solver)
+        maj, solver, save_end)
     save_idx = 1
 
     while t_current < t_end
@@ -519,17 +519,23 @@ function simple_implicit_tau_leaping_loop!(
         u_current = u_new
         t_current = t_new
     end
+
+    # Save endpoint if requested and not already saved
+    if save_end && (isempty(tsave) || tsave[end] != t_end)
+        push!(usave, copy(u_current))
+        push!(tsave, t_end)
+    end
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; 
         seed = nothing,
         dtmin = nothing,
-        saveat = nothing)
+        saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleImplicitTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
     (; prob, rng) = jump_prob
-    (seed !== nothing) && Random.seed!(rng, seed)
+    (seed !== nothing) && seed!(rng, seed)
 
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
@@ -545,10 +551,18 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
         dtmin = 1e-10 * one(typeof(tspan[2]))
     end
 
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
+
+    # Initialize current state and saved history
     u_current = copy(u0)
     t_current = tspan[1]
-    usave = [copy(u0)]
-    tsave = [tspan[1]]
+    if save_start
+        usave = [copy(u0)]
+        tsave = [tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
     rate_cache = zeros(float(eltype(u0)), numjumps)
     counts = zero(rate_cache)
     du = similar(u0)
@@ -566,19 +580,11 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
     hor = compute_hor(reactant_stoch, numjumps)
     max_hor, max_stoich = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
 
-    # Set up saveat_times
-    if isnothing(saveat)
-        saveat_times = Vector{typeof(tspan[1])}()
-    elseif saveat isa Number
-        saveat_times = collect(range(tspan[1], tspan[2], step=saveat))
-    else
-        saveat_times = collect(saveat)
-    end
     simple_implicit_tau_leaping_loop!(
         prob, alg, u_current, t_current, t_end, p, rng,
         rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache,
-        maj, solver)
+        maj, solver, save_end)
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error=false,

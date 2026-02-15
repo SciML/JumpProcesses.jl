@@ -273,12 +273,17 @@ end
 # deterministic for some reason.
 function getmean(Nsims, prob, alg, tsave, seed)
     umean = zeros(length(tsave))
-    for i in 1:Nsims
-        sol = solve(prob, alg; saveat = tsave, seed)
+    integrator = init(prob, alg; saveat = tsave, seed)
+    solve!(integrator)
+    for j in eachindex(umean)
+        umean[j] += integrator.sol.u[j][1]
+    end
+    for i in 2:Nsims
+        reinit!(integrator)
+        solve!(integrator)
         for j in eachindex(umean)
-            umean[j] += sol.u[j][1]
+            umean[j] += integrator.sol.u[j][1]
         end
-        seed += 1
     end
     umean ./= Nsims
     return umean

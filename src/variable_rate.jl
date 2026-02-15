@@ -201,7 +201,13 @@ function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
         integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
         nothing
     end
+    initialize = function (cb, u, t, integrator)
+        integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
+        u_modified!(integrator, true)
+        nothing
+    end
     new_cb = ContinuousCallback(condition, affect!;
+        initialize,
         idxs = jump.idxs,
         rootfind = jump.rootfind,
         interp_points = jump.interp_points,

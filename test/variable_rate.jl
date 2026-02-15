@@ -334,9 +334,12 @@ end
 function run_ensemble(prob, alg, jumps...; vr_aggregator = VR_FRM(), Nsims = 8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator, rng)
-    ensemble = EnsembleProblem(jump_prob)
-    sol = solve(ensemble, alg, trajectories = Nsims, save_everystep = false)
-    return mean(sol.u[i][1, end] for i in 1:Nsims)
+    total = 0.0
+    for i in 1:Nsims
+        sol = solve(jump_prob, alg; save_everystep = false)
+        total += sol.u[end][1]
+    end
+    return total / Nsims
 end
 
 # Test 1: Simple ODE with two variable rate jumps
@@ -432,7 +435,7 @@ let
         jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator, rng)
 
         for i in 1:Nsims
-            sol = solve(jump_prob, Tsit5())
+            sol = solve(jump_prob, Tsit5(); save_everystep = false)
             jump_counts[i] = jump_prob.prob.p[3]
             jump_prob.prob.p[3] = 0
         end

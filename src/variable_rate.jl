@@ -203,7 +203,8 @@ function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
     end
     initialize = function (cb, u, t, integrator)
         integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
-        u_modified!(integrator, true)
+        integrator.uprev.jump_u[idx] = integrator.u.jump_u[idx]
+        u_modified!(integrator, false)
         nothing
     end
     new_cb = ContinuousCallback(condition, affect!;

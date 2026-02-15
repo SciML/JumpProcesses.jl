@@ -378,6 +378,8 @@ end
     @test sol_explicit.u[end][3] >= sol_explicit.u[1][3]
     @test sol_implicit_newton.u[end][3] >= sol_implicit_newton.u[1][3]
     @test sol_implicit_trap.u[end][3] >= sol_implicit_trap.u[1][3]
+end
+
 # Test that saveat/save_start/save_end control which times are stored in solutions
 @testset "Saving Controls" begin
     # Simple birth process for testing SSAStepper save behavior
@@ -476,4 +478,38 @@ end
     sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = [2.0, 8.0],
         save_start = true, save_end = true)
     @test sol.t == [0.0, 2.0, 8.0, 10.0]
+
+    # --- SimpleImplicitTauLeaping save_start/save_end/saveat tests ---
+    u0_implicit = [100.0]
+    prob_implicit = DiscreteProblem(u0_implicit, tspan)
+    reactant_stoich_implicit = [[1 => 1]]
+    net_stoich_implicit = [[1 => -1]]
+    maj_implicit = MassActionJump([0.1], reactant_stoich_implicit, net_stoich_implicit)
+    jp_implicit = JumpProblem(prob_implicit, PureLeaping(), maj_implicit; rng)
+
+    # saveat as Number: defaults save_start=true, save_end=true
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0)
+    @test sol.t == collect(0.0:2.0:10.0)
+
+    # saveat as Number + save_start=false + save_end=false
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0,
+        save_start = false, save_end = false)
+    @test sol.t == collect(2.0:2.0:8.0)
+
+    # saveat collection including endpoints
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = [0.0, 5.0, 10.0])
+    @test sol.t == [0.0, 5.0, 10.0]
+
+    # saveat collection without endpoints + explicit save_start=true, save_end=true
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = [2.0, 8.0],
+        save_start = true, save_end = true)
+    @test sol.t == [0.0, 2.0, 8.0, 10.0]
+
+    # Test with save_start=false
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0, save_start = false)
+    @test sol.t == collect(2.0:2.0:10.0)
+
+    # Test with save_end=false
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0, save_end = false)
+    @test sol.t == collect(0.0:2.0:8.0)
 end

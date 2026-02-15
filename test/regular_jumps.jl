@@ -11,7 +11,7 @@ function compute_mean_at_saves(sol, Nsims, npts, species_idx)
     mean_vals = zeros(npts)
     for i in 1:Nsims
         for j in 1:npts
-            mean_vals[j] += sol[i].u[j][species_idx]
+            mean_vals[j] += sol.u[i].u[j][species_idx]
         end
     end
     mean_vals ./= Nsims

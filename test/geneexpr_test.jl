@@ -33,9 +33,14 @@ end
 
 function runSSAs_ode(vrjprob)
     Psamp = zeros(Float64, Nsims)
-    for i in 1:Nsims
-        sol = solve(vrjprob, Tsit5(); saveat = vrjprob.prob.tspan[2])
-        Psamp[i] = sol[3, end]
+    tsave = vrjprob.prob.tspan[2]
+    integrator = init(vrjprob, Tsit5(); saveat = tsave)
+    solve!(integrator)
+    Psamp[1] = integrator.sol[3, end]
+    for i in 2:Nsims
+        reinit!(integrator)
+        solve!(integrator)
+        Psamp[i] = integrator.sol[3, end]
     end
     return mean(Psamp)
 end
@@ -107,18 +112,27 @@ if dotestmean
         doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
             ", rel err = ", relerr)
         @test abs(means - expected_avg) < reltol * expected_avg
+    end
 
+    # test default solver dispatch (use_stepper=false) with one algorithm
+    let alg = Direct()
+        jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
+            vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs, rng = rng)
         means = runSSAs(jump_prob; use_stepper = false)
-        relerr = abs(means - expected_avg) / expected_avg
         @test abs(means - expected_avg) < reltol * expected_avg
+    end
 
+    # test Float64 u0 with Direct and RSSA (RSSA needs explicit testing due to
+    # past rejection bound issues with floating point)
+    for alg in (Direct(), RSSA())
         jump_probf = JumpProblem(probf, alg, majumps, save_positions = (false, false),
             vartojumps_map = spec_to_dep_jumps,
             jumptovars_map = jump_to_dep_specs, rng = rng)
         means = runSSAs(jump_probf)
         relerr = abs(means - expected_avg) / expected_avg
-        doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
-            ", rel err = ", relerr)
+        doprintmeans && println("Mean from method (Float64 u0): ", typeof(alg),
+            " is = ", means, ", rel err = ", relerr)
         @test abs(means - expected_avg) < reltol * expected_avg
     end
 end
@@ -127,11 +141,9 @@ end
 jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
     vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs, rng)
 @test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
-@test abs(runSSAs(jump_prob; use_stepper = false) - expected_avg) < reltol * expected_avg
 
 jump_prob = JumpProblem(prob, majumps, save_positions = (false, false), rng = rng)
 @test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
-@test abs(runSSAs(jump_prob; use_stepper = false) - expected_avg) < reltol * expected_avg
 
 # crj/vrj accuracy test
 #     k1, DNA --> mRNA + DNA

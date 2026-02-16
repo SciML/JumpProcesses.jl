@@ -407,10 +407,20 @@ function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs; rng = DEFAULT
     return new_prob, variable_jump_callback
 end
 
-# recursively evaluate the cumulative sum of the rates for type stability 
-@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates)
+# recursively evaluate the cumulative sum of the rates for type stability
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates::Tuple)
     cur_sum = zero(eltype(cum_rate_sum))
     cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
+end
+
+# loop-based version for Vector rate_funcs (avoids dynamic splatting)
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates::AbstractVector)
+    cur_sum = zero(eltype(cum_rate_sum))
+    @inbounds for (idx, rate) in enumerate(rates)
+        cur_sum += rate(u, p, t)
+        cum_rate_sum[idx] = cur_sum
+    end
+    return cur_sum
 end
 
 @inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate, rates...)
@@ -454,8 +464,8 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
 
     p = integrator.p
     rate_increment = zero(t)
-    gps = gauss_points[NUM_GAUSS_QUAD_NODES]
-    weights = gauss_weights[NUM_GAUSS_QUAD_NODES]
+    gps = _GAUSS_POINTS
+    weights = _GAUSS_WEIGHTS
     tmid = (t + cache.prev_time) / 2
     halfdt = dt / 2
     u_τ = first(SciMLBase.get_tmp_cache(integrator))

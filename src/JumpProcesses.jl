@@ -23,6 +23,10 @@ import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 
 # Import functions we extend from packages
 import DiffEqCallbacks: gauss_points, gauss_weights
+# Cache gauss quadrature data at module load to avoid type instability from
+# non-const gauss_points/gauss_weights globals in DiffEqCallbacks.
+const _GAUSS_POINTS = gauss_points[4]
+const _GAUSS_WEIGHTS = gauss_weights[4]
 import DiffEqBase: DiscreteCallback, init, solve, solve!, initialize!
 import SciMLBase: plot_indices
 import DataStructures: update!

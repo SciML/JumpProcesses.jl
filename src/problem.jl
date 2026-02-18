@@ -241,7 +241,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
-        callback = nothing, use_vrj_bounds = true, kwargs...)
+        callback = nothing, tstops = nothing, use_vrj_bounds = true, kwargs...)
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -306,9 +306,9 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
     iip = isinplace_jump(prob, jumps.regular_jump)
-    solkwargs = make_kwarg(; callback)
+    solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
-    JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(jump_cbs), 
+    JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(cvrjs), typeof(jumps.regular_jump),
         typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc_agg,
         jump_cbs, crjs, cvrjs, jumps.regular_jump, maj, rng, solkwargs)
@@ -320,7 +320,7 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
-        callback = nothing, kwargs...)
+        callback = nothing, tstops = nothing, kwargs...)
 
     # Validate no spatial systems (not currently supported)
     (spatial_system !== nothing || hopping_constants !== nothing) &&
@@ -348,9 +348,9 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     vrjs = jumps.variable_jumps
     
     iip = isinplace_jump(prob, jumps.regular_jump)
-    solkwargs = make_kwarg(; callback)
+    solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
-    JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs), 
+    JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(jumps.regular_jump),
         typeof(maj), typeof(rng), typeof(solkwargs)}(prob, aggregator, disc_agg,
         jump_cbs, crjs, vrjs, jumps.regular_jump, maj, rng, solkwargs)

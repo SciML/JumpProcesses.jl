@@ -57,6 +57,7 @@ see the
 for details.
 """
 struct SSAStepper <: DiffEqBase.DEAlgorithm end
+SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
 
 """
 $(TYPEDEF)
@@ -270,11 +271,17 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     (tdir <= 0) &&
         error("The time interval to solve over is non-increasing, i.e. tspan[2] <= tspan[1]. This is not allowed for pure jump problem.")
 
+    # Stash callable tstops (e.g. SymbolicTstops); use empty vector for init.
     if tstops === nothing
         alias_tstops = true
+        callable_tstops = nothing
         _tstops = eltype(jump_prob.prob.tspan)[]
-    else
+    elseif tstops isa AbstractArray || tstops isa Tuple || tstops isa Number
+        callable_tstops = nothing
         _tstops = tstops
+    else
+        callable_tstops = tstops
+        _tstops = eltype(jump_prob.prob.tspan)[]
     end
 
     integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
@@ -285,6 +292,14 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     if save_start
         SciMLBase.save_discretes_if_enabled!(integrator, opts.callback; skip_duplicates = true)
     end
+
+    # Evaluate callable tstops now that callbacks are initialized and parameters finalized.
+    if callable_tstops !== nothing
+        for ts in callable_tstops(SII.parameter_values(integrator), prob.tspan)
+            add_tstop!(integrator, ts)
+        end
+    end
+
     integrator
 end
 

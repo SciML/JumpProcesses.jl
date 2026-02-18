@@ -177,3 +177,52 @@ let
     @test integ.tstops !== tstops
     @test isempty(tstops)
 end
+
+# test callable tstops (e.g. SymbolicTstops) with SSAStepper
+let
+    rate(u, p, t) = p[1]
+    affect!(integrator) = (integrator.u[1] += 1)
+    crj = ConstantRateJump(rate, affect!)
+    prob = DiscreteProblem([0], (0.0, 10.0), [10.0])
+    jprob = JumpProblem(prob, Direct(), crj; rng)
+
+    # basic callable tstops
+    my_tstops = (p, tspan) -> [3.0, 6.0]
+    sol = solve(jprob, SSAStepper(); tstops = my_tstops)
+    @test sol.t[end] == 10.0
+    @test 3.0 ∈ sol.t
+    @test 6.0 ∈ sol.t
+
+    # parameter-dependent callable tstops
+    param_tstops = (p, tspan) -> [p[1] / 5.0, p[1] / 2.0]
+    sol2 = solve(jprob, SSAStepper(); tstops = param_tstops)
+    @test sol2.t[end] == 10.0
+    @test 2.0 ∈ sol2.t   # 10.0 / 5.0
+    @test 5.0 ∈ sol2.t   # 10.0 / 2.0
+
+    # callable tstops with a DiscreteCallback that fires at callable tstop times
+    condition(u, t, integrator) = t == 3.0
+    cb_affect!(integrator) = (integrator.u[1] += 1000)
+    cb = DiscreteCallback(condition, cb_affect!)
+    sol3 = solve(jprob, SSAStepper(); tstops = my_tstops, callback = cb)
+    @test sol3.t[end] == 10.0
+    @test 3.0 ∈ sol3.t
+    # verify the callback fired: use findlast to get post-callback state at t=3.0
+    idx = findlast(==(3.0), sol3.t)
+    @test sol3.u[idx][1] >= 1000
+
+    # callable returning a tuple
+    tuple_tstops = (p, tspan) -> (2.0, 7.0)
+    sol4 = solve(jprob, SSAStepper(); tstops = tuple_tstops)
+    @test sol4.t[end] == 10.0
+    @test 2.0 ∈ sol4.t
+    @test 7.0 ∈ sol4.t
+
+    # callable tstops stored in JumpProblem via constructor kwarg
+    jprob2 = JumpProblem(prob, Direct(), crj; rng, tstops = my_tstops)
+    @test haskey(jprob2.kwargs, :tstops)
+    sol5 = solve(jprob2, SSAStepper())
+    @test sol5.t[end] == 10.0
+    @test 3.0 ∈ sol5.t
+    @test 6.0 ∈ sol5.t
+end

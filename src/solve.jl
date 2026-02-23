@@ -65,10 +65,13 @@ function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
     end
 end
 
-# Derive an independent seed from the caller's seed. Uses a temporary Xoshiro seeded
-# with the input to generate a new seed, ensuring the jump aggregator's RNG stream is
-# independent of the noise process even when StochasticDiffEq passes the same seed to both.
-_derive_jump_seed(seed) = rand(Random.Xoshiro(seed), UInt64)
+# Derive an independent seed from the caller's seed. When a caller (e.g. StochasticDiffEq)
+# passes the same seed used for its noise process, we must produce a distinct seed for the
+# jump aggregator's RNG. We cannot assume the JumpProblem's stored RNG is any particular
+# type, so we pass the seed through `hash` (to decorrelate from the input) and then through
+# a Xoshiro draw (to ensure strong mixing regardless of the target RNG's seeding quality).
+const _JUMP_SEED_SALT = 0x4a756d7050726f63  # "JumPProc" in ASCII
+_derive_jump_seed(seed) = rand(Random.Xoshiro(hash(seed, _JUMP_SEED_SALT)), UInt64)
 
 function resetted_jump_problem(_jump_prob, seed)
     jump_prob = deepcopy(_jump_prob)

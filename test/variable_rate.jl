@@ -257,13 +257,15 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VR_FRM(), rng)
-    @test allunique(sjm_prob.prob.u0.jump_u)
-    u0old = copy(sjm_prob.prob.u0.jump_u)
+    # After callback initialize, integrator.u.jump_u should have unique thresholds
+    # that differ between sequential solves (RNG advances each time).
+    jump_u_old = zeros(length(sjm_prob.prob.u0.jump_u))
     for i in 1:Nsims
-        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
-        @test allunique(sjm_prob.prob.u0.jump_u)
-        @test all(u0old != sjm_prob.prob.u0.jump_u)
-        u0old .= sjm_prob.prob.u0.jump_u
+        integrator = init(sjm_prob, Tsit5(); saveat = tspan[2])
+        @test allunique(integrator.u.jump_u)
+        @test integrator.u.jump_u != jump_u_old
+        jump_u_old .= integrator.u.jump_u
+        solve!(integrator)
     end
 end
 

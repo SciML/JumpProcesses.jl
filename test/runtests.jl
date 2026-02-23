@@ -41,6 +41,7 @@ end
         @time @safetestset "Save_positions test" begin include("save_positions.jl") end
         @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
         @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
+        @time @safetestset "Ensemble Problem Tests" begin include("ensemble_problems.jl") end
         @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
         @time @safetestset "Remake tests" begin include("remake_test.jl") end
         @time @safetestset "ExtendedJumpArray remake tests" begin include("extended_jump_array_remake.jl") end

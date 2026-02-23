@@ -65,30 +65,23 @@ function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
     end
 end
 
+# Derive an independent seed from the caller's seed. Uses a temporary Xoshiro seeded
+# with the input to generate a new seed, ensuring the jump aggregator's RNG stream is
+# independent of the noise process even when StochasticDiffEq passes the same seed to both.
+_derive_jump_seed(seed) = rand(Random.Xoshiro(seed), UInt64)
+
 function resetted_jump_problem(_jump_prob, seed)
     jump_prob = deepcopy(_jump_prob)
-    # Only reseed if an explicit seed is provided. This respects the user's RNG choice
-    # and enables reproducibility. For EnsembleProblems, use prob_func to set unique seeds
-    # for each trajectory if different results are needed.
     if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
         rng = jump_prob.jump_callback.discrete_callbacks[1].condition.rng
-        Random.seed!(rng, seed)
-    end
-
-    if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray
-        randexp!(_jump_prob.rng, jump_prob.prob.u0.jump_u)
-        jump_prob.prob.u0.jump_u .*= -1
+        Random.seed!(rng, _derive_jump_seed(seed))
     end
     jump_prob
 end
 
 function reset_jump_problem!(jump_prob, seed)
     if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
-        Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
-    end
-
-    if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray
-        randexp!(jump_prob.rng, jump_prob.prob.u0.jump_u)
-        jump_prob.prob.u0.jump_u .*= -1
+        Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,
+            _derive_jump_seed(seed))
     end
 end

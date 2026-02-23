@@ -51,11 +51,15 @@ first_jump_time(traj) = traj.t[2]
     @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
-            trajectories = 3, save_everystep = false)
+            trajectories = 3)
+        times = [first_jump_time(sol.u[i]) for i in 1:3]
+        @test allunique(times)
         finals = [sol.u[i].u[end][1] for i in 1:3]
         @test allunique(finals)
     end
 
+    # EM() uses a fixed time grid so jump event times aren't directly visible
+    # in t[2]; we check final values instead.
     @testset "SDE + VR (VR_FRM)" begin
         jprob = make_sde_vr_jump_prob(VR_FRM())
         sol = solve(EnsembleProblem(jprob), EM(), EnsembleSerial();
@@ -78,7 +82,10 @@ end
 
     @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
-        finals = [solve(jprob, Tsit5(); save_everystep = false).u[end][1] for _ in 1:3]
+        sols = [solve(jprob, Tsit5()) for _ in 1:3]
+        times = [first_jump_time(s) for s in sols]
+        @test allunique(times)
+        finals = [s.u[end][1] for s in sols]
         @test allunique(finals)
     end
 end

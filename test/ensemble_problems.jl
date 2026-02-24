@@ -206,12 +206,13 @@ end
 # 7. JumpProblem rng kwarg forwarded to solver
 # ==========================================================================
 
-@testset "JumpProblem rng kwarg forwarded to solver" begin
+@testset "JumpProblem rng kwarg throws ArgumentError" begin
     j1 = ConstantRateJump((u, p, t) -> 1.0, integrator -> (integrator.u[1] += 1))
     dprob = DiscreteProblem([10], (0.0, 10.0))
-    jprob = JumpProblem(dprob, Direct(), j1; rng = StableRNG(1))
-    @test haskey(jprob.kwargs, :rng)
-    @test jprob.kwargs[:rng] isa StableRNG
-    sol = solve(jprob, SSAStepper())
+    j1_local = ConstantRateJump((u, p, t) -> 1.0, integrator -> (integrator.u[1] += 1))
+    dprob_local = DiscreteProblem([10], (0.0, 10.0))
+    jprob = JumpProblem(dprob_local, Direct(), j1_local)
+    @test_throws ArgumentError JumpProblem(dprob_local, Direct(), j1_local; rng = StableRNG(1))
+    sol = solve(jprob, SSAStepper(); rng = StableRNG(1))
     @test sol.retcode == ReturnCode.Success
 end

@@ -20,10 +20,10 @@ tspan = (0.0, 5.0)
 prob = DiscreteProblem(u0, tspan, rates)
 majumps = MassActionJump(rates, reactstoch, netstoch)
 
-function getmean(jprob, Nsims)
+function getmean(jprob, Nsims; rng = nothing)
     Amean = 0
     for i in 1:Nsims
-        sol = solve(jprob, SSAStepper())
+        sol = isnothing(rng) ? solve(jprob, SSAStepper()) : solve(jprob, SSAStepper(); rng)
         Amean += sol[1, end]
     end
     Amean /= Nsims
@@ -48,8 +48,7 @@ mastereq_mean = mastereqmean(u0, rates)
 algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 relative_tolerance = 0.01
 for alg in algs
-    local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-        rng = rng)
-    local Amean = getmean(jprob, Nsims)
+    local jprob = JumpProblem(prob, alg, majumps, save_positions = (false, false))
+    local Amean = getmean(jprob, Nsims; rng)
     @test abs(Amean - mastereq_mean) / mastereq_mean < relative_tolerance
 end

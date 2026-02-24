@@ -75,14 +75,6 @@ sol = solve(jprob, SSAStepper(); rng = StableRNG(1234))
 A `seed` keyword argument is also supported as a shorthand for creating a `Xoshiro`
 generator: `solve(jprob, SSAStepper(); seed = 1234)`.
 
-Alternatively, `rng` can be passed to `JumpProblem` where it will be forwarded to the
-solver automatically:
-
-```julia
-jprob = JumpProblem(dprob, Direct(), maj; rng = Xoshiro(1234))
-sol = solve(jprob, SSAStepper())  # uses Xoshiro(1234)
-```
-
 By default, JumpProcesses uses Julia's built-in `Random.default_rng()`.
 
 ## What are these aggregators and aggregations in JumpProcesses?

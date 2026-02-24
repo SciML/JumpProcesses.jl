@@ -60,10 +60,6 @@ $(FIELDS)
     integration interface, and treated like general `VariableRateJump`s.
   - `vr_aggregator`, indicates the aggregator to use for sampling variable rate jumps. Current
     default is `VR_FRM`.
-  - `rng`, a random number generator to use for jump sampling. If provided, it is stored in
-    the problem's solver keyword arguments and forwarded to the solver when `solve` or `init`
-    is called. The recommended approach is to pass `rng` directly to `solve` or `init`:
-    `solve(jprob, SSAStepper(); rng = my_rng)`.
   - `tstops`, time stops to pass through to the solver. Can be an `AbstractVector` of times
     or a callable `(p, tspan) -> times`.
 
@@ -242,9 +238,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         vr_aggregator::VariableRateAggregator = VR_FRM(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        rng = nothing, scale_rates = true, useiszero = true,
+        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, use_vrj_bounds = true, kwargs...)
+
+    if haskey(kwargs, :rng)
+        throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
+    end
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -309,7 +309,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
     iip = isinplace_jump(prob, jumps.regular_jump)
-    solkwargs = make_kwarg(; filter(!isnothing, (; callback, tstops, rng))...)
+    solkwargs = make_kwarg(; filter(!isnothing, (; callback, tstops))...)
 
     JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(cvrjs), typeof(jumps.regular_jump),
@@ -321,9 +321,13 @@ end
 function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        rng = nothing, scale_rates = true, useiszero = true,
+        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, kwargs...)
+
+    if haskey(kwargs, :rng)
+        throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
+    end
 
     # Validate no spatial systems (not currently supported)
     (spatial_system !== nothing || hopping_constants !== nothing) &&
@@ -351,7 +355,7 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     vrjs = jumps.variable_jumps
 
     iip = isinplace_jump(prob, jumps.regular_jump)
-    solkwargs = make_kwarg(; filter(!isnothing, (; callback, tstops, rng))...)
+    solkwargs = make_kwarg(; filter(!isnothing, (; callback, tstops))...)
 
     JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(jumps.regular_jump),

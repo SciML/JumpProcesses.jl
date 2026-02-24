@@ -1,17 +1,15 @@
 """
-    resolve_rng(rng, seed[, fallback_rng])
+    resolve_rng(rng, seed)
 
 Resolve which RNG to use for a jump simulation.
 
-Priority: `rng` > `seed` (creates `Xoshiro`) > `fallback_rng` > `Random.default_rng()`.
+Priority: `rng` > `seed` (creates `Xoshiro`) > `Random.default_rng()`.
 """
-function resolve_rng(rng, seed, fallback_rng = nothing)
+function resolve_rng(rng, seed)
     if rng !== nothing
         rng
     elseif seed !== nothing
         Random.Xoshiro(seed)
-    elseif fallback_rng !== nothing
-        fallback_rng
     else
         Random.default_rng()
     end

@@ -77,7 +77,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
 
     prob = jump_prob.prob
-    _rng = resolve_rng(rng, seed, get(jump_prob.kwargs, :rng, nothing))
+    _rng = resolve_rng(rng, seed)
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)
@@ -343,7 +343,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         error("SimpleExplicitTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
     prob = jump_prob.prob
-    _rng = resolve_rng(rng, seed, get(jump_prob.kwargs, :rng, nothing))
+    _rng = resolve_rng(rng, seed)
     tspan = prob.tspan
 
     if dtmin === nothing

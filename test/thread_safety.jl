@@ -9,10 +9,10 @@ params = (1.0, 2.0, 50.0)
 tspan = (0.0, 4.0)
 u0 = [5]
 dprob = DiscreteProblem(u0, tspan, params)
-jprob = JumpProblem(dprob, Direct(), maj; rng = rng)
-solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads(); trajectories = 10)
+jprob = JumpProblem(dprob, Direct(), maj)
+solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads(); trajectories = 10, rng)
 solve(EnsembleProblem(jprob; safetycopy = true), SSAStepper(), EnsembleThreads();
-    trajectories = 10)
+    trajectories = 10, rng)
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/472
 let

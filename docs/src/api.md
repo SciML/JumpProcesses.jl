@@ -68,34 +68,16 @@ sol = solve(jprob, SSAStepper(); seed = 1234)
 # equivalent to: solve(jprob, SSAStepper(); rng = Xoshiro(1234))
 ```
 
-### Passing `rng` via `JumpProblem`
-
-The `rng` keyword can also be passed to [`JumpProblem`](@ref), where it is
-stored and automatically forwarded to the solver:
-
-```julia
-jprob = JumpProblem(dprob, Direct(), jump; rng = StableRNG(1234))
-sol = solve(jprob, SSAStepper())  # uses StableRNG(1234)
-```
-
-An `rng` passed directly to `solve`/`init` takes priority over one stored in
-the `JumpProblem`.
-
 ### Resolution priority
 
-When multiple RNG sources are provided, the following priority determines which
-is used:
+When both `rng` and `seed` are passed to the same `solve`/`init` call, `rng`
+takes priority:
 
 | User provides | Result |
 |---|---|
 | `rng` via `solve`/`init` | Uses that `rng` |
 | `seed` via `solve`/`init` | Creates `Xoshiro(seed)` |
-| `rng` via `JumpProblem` | Uses that `rng` |
 | Nothing | Uses `Random.default_rng()` (SSAStepper, ODE, tau-leaping) or a randomly-seeded `Xoshiro` (SDE) |
-
-When both `rng` and `seed` are passed to the same call, `rng` takes priority.
-When `solve`/`init` kwargs and `JumpProblem` kwargs overlap on the same key,
-`solve`/`init` kwargs take priority.
 
 ### Behavior by solver pathway
 
@@ -144,5 +126,5 @@ StochasticDiffEq has its own `_resolve_rng` that additionally handles
 `TaskLocalRNG` conversion and the problem's stored seed.
 
 For **tau-leaping**, JumpProcesses defines a custom `DiffEqBase.solve` that
-bypasses the standard `__solve`/`__init` pathway. It calls `resolve_rng` with
-the `JumpProblem`'s stored `rng` kwarg as a fallback.
+bypasses the standard `__solve`/`__init` pathway. It calls `resolve_rng`
+directly with the `rng` and `seed` kwargs from the `solve` call.

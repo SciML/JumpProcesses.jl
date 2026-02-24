@@ -38,11 +38,7 @@ end
 function runSSAs_ode(vrjprob; rng = nothing)
     Psamp = zeros(Float64, Nsims)
     tsave = vrjprob.prob.tspan[2]
-    integrator = if isnothing(rng)
-        init(vrjprob, Tsit5(); saveat = tsave)
-    else
-        init(vrjprob, Tsit5(); saveat = tsave, rng)
-    end
+    integrator = init(vrjprob, Tsit5(); saveat = tsave, rng)
     solve!(integrator)
     Psamp[1] = integrator.sol[3, end]
     for i in 2:Nsims

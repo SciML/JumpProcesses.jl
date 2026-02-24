@@ -33,6 +33,9 @@ function make_sde_vr_jump_prob()
     JumpProblem(sprob, Direct(), vrj)
 end
 
+# Helpers
+first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
+
 # ==========================================================================
 # 1. JumpProblem(; rng=...) throws ArgumentError
 # ==========================================================================
@@ -102,7 +105,7 @@ end
 @testset "ODE + VR: different seeds → different trajectories" begin
     jprob = make_ode_vr_jump_prob()
     sols = [solve(jprob, Tsit5(); rng = StableRNG(s)) for s in (100, 200, 300)]
-    times = [s.t[2] for s in sols]
+    times = [first_jump_time(s) for s in sols]
     @test allunique(times)
 end
 
@@ -126,7 +129,18 @@ end
 end
 
 # ==========================================================================
-# 10. SimpleTauLeaping: rng via solve kwargs
+# 10. SDE + VR: different seeds → different trajectories
+# ==========================================================================
+@testset "SDE + VR: different seeds → different trajectories" begin
+    jprob = make_sde_vr_jump_prob()
+    sols = [solve(jprob, SRIW1(); save_everystep = false,
+        rng = StableRNG(s)) for s in (100, 200, 300)]
+    times = [first_jump_time(s) for s in sols]
+    @test allunique(times)
+end
+
+# ==========================================================================
+# 11. SimpleTauLeaping: rng via solve kwargs
 # ==========================================================================
 @testset "SimpleTauLeaping: rng via solve kwargs" begin
     rate(out, u, p, t) = (out .= max.(u, 0); nothing)
@@ -140,7 +154,7 @@ end
 end
 
 # ==========================================================================
-# 11. SimpleTauLeaping: different seeds → different trajectories
+# 12. SimpleTauLeaping: different seeds → different trajectories
 # ==========================================================================
 @testset "SimpleTauLeaping: different seeds → different trajectories" begin
     rate(out, u, p, t) = (out .= max.(u, 0); nothing)
@@ -154,7 +168,7 @@ end
 end
 
 # ==========================================================================
-# 12. has_rng / get_rng / set_rng! interface on SSAIntegrator
+# 13. has_rng / get_rng / set_rng! interface on SSAIntegrator
 # ==========================================================================
 @testset "SSAIntegrator RNG interface" begin
     jprob = make_ssa_jump_prob()
@@ -173,7 +187,7 @@ end
 end
 
 # ==========================================================================
-# 13. No rng kwarg: uses default_rng (non-reproducible but functional)
+# 14. No rng kwarg: uses default_rng (non-reproducible but functional)
 # ==========================================================================
 @testset "No rng kwarg: functional solve" begin
     @testset "SSAStepper" begin
@@ -187,19 +201,96 @@ end
         sol = solve(jprob, Tsit5())
         @test sol.retcode == ReturnCode.Success
     end
+
+    @testset "SDE + VR" begin
+        jprob = make_sde_vr_jump_prob()
+        sol = solve(jprob, EM(); dt = 0.01)
+        @test sol.retcode == ReturnCode.Success
+    end
 end
 
 # ==========================================================================
-# 14. seed kwarg: creates Xoshiro from integer seed
+# 15. seed kwarg: creates Xoshiro from integer seed
 # ==========================================================================
 @testset "seed kwarg creates Xoshiro" begin
-    jprob = make_ssa_jump_prob()
-    integrator = init(jprob, SSAStepper(); seed = 42)
-    @test SciMLBase.get_rng(integrator) isa Xoshiro
+    @testset "SSAStepper" begin
+        jprob = make_ssa_jump_prob()
+        integrator = init(jprob, SSAStepper(); seed = 42)
+        @test SciMLBase.get_rng(integrator) isa Xoshiro
+    end
+
+    @testset "ODE + VR" begin
+        jprob = make_ode_vr_jump_prob()
+        integrator = init(jprob, Tsit5(); seed = 42)
+        @test SciMLBase.get_rng(integrator) isa Xoshiro
+    end
+
+    @testset "SDE + VR" begin
+        jprob = make_sde_vr_jump_prob()
+        integrator = init(jprob, EM(); dt = 0.01, seed = 42)
+        @test SciMLBase.get_rng(integrator) isa Xoshiro
+    end
 end
 
 # ==========================================================================
-# 15. rng takes priority over seed
+# 16. seed kwarg reproducibility: same seed → same trajectory
+# ==========================================================================
+@testset "seed kwarg reproducibility" begin
+    @testset "SSAStepper" begin
+        jprob = make_ssa_jump_prob()
+        sol1 = solve(jprob, SSAStepper(); seed = 42)
+        sol2 = solve(jprob, SSAStepper(); seed = 42)
+        @test sol1.t == sol2.t
+        @test sol1.u == sol2.u
+    end
+
+    @testset "ODE + VR" begin
+        jprob = make_ode_vr_jump_prob()
+        sol1 = solve(jprob, Tsit5(); seed = 42)
+        sol2 = solve(jprob, Tsit5(); seed = 42)
+        @test sol1.t ≈ sol2.t
+        @test sol1.u[end] ≈ sol2.u[end]
+    end
+
+    @testset "SDE + VR" begin
+        jprob = make_sde_vr_jump_prob()
+        sol1 = solve(jprob, EM(); dt = 0.01, save_everystep = false, seed = 42)
+        sol2 = solve(jprob, EM(); dt = 0.01, save_everystep = false, seed = 42)
+        @test sol1.u[end] ≈ sol2.u[end]
+    end
+end
+
+# ==========================================================================
+# 17. seed kwarg: different seeds → different trajectories
+# ==========================================================================
+@testset "seed kwarg: different seeds → different trajectories" begin
+    @testset "SSAStepper" begin
+        jprob = make_ssa_jump_prob()
+        sol1 = solve(jprob, SSAStepper(); seed = 100)
+        sol2 = solve(jprob, SSAStepper(); seed = 200)
+        sol3 = solve(jprob, SSAStepper(); seed = 300)
+        times = [sol1.t[2], sol2.t[2], sol3.t[2]]
+        @test allunique(times)
+    end
+
+    @testset "ODE + VR" begin
+        jprob = make_ode_vr_jump_prob()
+        sols = [solve(jprob, Tsit5(); seed = s) for s in (100, 200, 300)]
+        times = [first_jump_time(s) for s in sols]
+        @test allunique(times)
+    end
+
+    @testset "SDE + VR" begin
+        jprob = make_sde_vr_jump_prob()
+        sols = [solve(jprob, SRIW1(); save_everystep = false,
+            seed = s) for s in (100, 200, 300)]
+        times = [first_jump_time(s) for s in sols]
+        @test allunique(times)
+    end
+end
+
+# ==========================================================================
+# 18. rng takes priority over seed
 # ==========================================================================
 @testset "rng takes priority over seed" begin
     jprob = make_ssa_jump_prob()

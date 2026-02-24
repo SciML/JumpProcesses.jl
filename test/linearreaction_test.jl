@@ -3,7 +3,7 @@
 using DiffEqBase, JumpProcesses, Statistics
 using Test
 using StableRNGs
-rng = StableRNG(12345)
+const rng = StableRNG(12345)
 
 # using BenchmarkTools
 # dobenchmark = true

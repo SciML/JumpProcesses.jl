@@ -5,8 +5,6 @@ using JumpProcesses, OrdinaryDiffEq, Test, SymbolicIndexingInterface
 using StableRNGs
 
 @testset "remake JumpProblem with VariableRateJumps (ExtendedJumpArray)" begin
-    rng = StableRNG(12345)
-
     # Setup: Create an ODEProblem with SymbolCache for symbolic indexing
     f(du, u, p, t) = (du .= 0; nothing)
     g = ODEFunction(f; sys = SymbolCache([:X, :Y], [:k1, :k2], :t))
@@ -23,15 +21,19 @@ using StableRNGs
     @test jprob.prob.u0 isa ExtendedJumpArray
     @test jprob.prob.u0.u == [10.0, 5.0]
 
+    # Solve original problem and capture jump_u after initialization
+    orig_integrator = init(jprob, Tsit5(); rng = StableRNG(42))
+    orig_jump_u = copy(orig_integrator.u.jump_u)
+
     @testset "remake with numeric Vector{Float64}" begin
         prob2 = remake(jprob; u0 = [20.0, 10.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u == [20.0, 10.0]
-        # jump_u is zeroed at construction; callback initializes it at solve time
         @test all(iszero, prob2.prob.u0.jump_u)
-        # After init the callback should set jump_u to non-zero thresholds
-        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        # After init, callback sets fresh jump_u thresholds (different RNG seed)
+        integrator = init(prob2, Tsit5(); rng = StableRNG(99))
         @test any(!iszero, integrator.u.jump_u)
+        @test integrator.u.jump_u != orig_jump_u
     end
 
     @testset "remake with ExtendedJumpArray (no resample)" begin
@@ -48,34 +50,34 @@ using StableRNGs
     end
 
     @testset "remake with Symbol pairs" begin
-        # This was the FAILING case - should work after fix
         prob2 = remake(jprob; u0 = [:X => 25.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u[1] == 25.0
-        # jump_u zeroed at construction, initialized by callback at solve time
         @test all(iszero, prob2.prob.u0.jump_u)
-        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        # After init, callback sets fresh jump_u thresholds (different RNG seed)
+        integrator = init(prob2, Tsit5(); rng = StableRNG(99))
         @test any(!iszero, integrator.u.jump_u)
+        @test integrator.u.jump_u != orig_jump_u
     end
 
     @testset "remake with multiple Symbol pairs" begin
         prob2 = remake(jprob; u0 = [:X => 35.0, :Y => 15.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u == [35.0, 15.0]
-        # jump_u zeroed at construction, initialized by callback at solve time
         @test all(iszero, prob2.prob.u0.jump_u)
-        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        integrator = init(prob2, Tsit5(); rng = StableRNG(99))
         @test any(!iszero, integrator.u.jump_u)
+        @test integrator.u.jump_u != orig_jump_u
     end
 
     @testset "remake with Dict" begin
         prob2 = remake(jprob; u0 = Dict(:X => 40.0))
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u[1] == 40.0
-        # jump_u zeroed at construction, initialized by callback at solve time
         @test all(iszero, prob2.prob.u0.jump_u)
-        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        integrator = init(prob2, Tsit5(); rng = StableRNG(99))
         @test any(!iszero, integrator.u.jump_u)
+        @test integrator.u.jump_u != orig_jump_u
     end
 
     @testset "remake with parameters only (u0 unchanged)" begin
@@ -93,21 +95,27 @@ using StableRNGs
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u[1] == 50.0
         @test prob2.prob.p[1] == 3.0
-        # jump_u zeroed at construction, initialized by callback at solve time
         @test all(iszero, prob2.prob.u0.jump_u)
-        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        integrator = init(prob2, Tsit5(); rng = StableRNG(99))
         @test any(!iszero, integrator.u.jump_u)
+        @test integrator.u.jump_u != orig_jump_u
     end
 
     @testset "remake preserves problem solvability" begin
-        # Ensure remade problems can actually be solved
-        prob2 = remake(jprob; u0 = [5.0, 2.0])
-        sol = solve(prob2, Tsit5())
-        @test SciMLBase.successful_retcode(sol)
+        # Solve original, then remake and solve again — jump_u should differ
+        sol1 = solve(jprob, Tsit5(); rng = StableRNG(42))
+        @test SciMLBase.successful_retcode(sol1)
 
-        # With symbolic map (after fix)
+        prob2 = remake(jprob; u0 = [5.0, 2.0])
+        sol2 = solve(prob2, Tsit5(); rng = StableRNG(99))
+        @test SciMLBase.successful_retcode(sol2)
+        # Different RNG seeds → different jump_u thresholds after init
+        @test sol1.u[2].jump_u != sol2.u[2].jump_u
+
+        # With symbolic map
         prob3 = remake(jprob; u0 = [:X => 8.0])
-        sol3 = solve(prob3, Tsit5())
+        sol3 = solve(prob3, Tsit5(); rng = StableRNG(77))
         @test SciMLBase.successful_retcode(sol3)
+        @test sol1.u[2].jump_u != sol3.u[2].jump_u
     end
 end

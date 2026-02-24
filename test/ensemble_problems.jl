@@ -168,14 +168,14 @@ end
     @test allunique(thresholds)
 
     # From a full ensemble solve, check both first event times and the
-    # post-event jump_u thresholds (u[3] is the post-event save where
-    # jump_u has been reset to a new -randexp() value).
+    # initial jump_u thresholds (u[2] is the initialization save where
+    # jump_u has been set to -randexp() by the callback).
     sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
         trajectories = 3, rng = StableRNG(12345))
     event_times = [first_jump_time(sol.u[i]) for i in 1:3]
     @test allunique(event_times)
-    post_event_thresholds = [sol.u[i].u[3].jump_u[1] for i in 1:3]
-    @test allunique(post_event_thresholds)
+    init_thresholds = [sol.u[i].u[2].jump_u[1] for i in 1:3]
+    @test allunique(init_thresholds)
 end
 
 # ==========================================================================

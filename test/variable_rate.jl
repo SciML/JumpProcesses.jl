@@ -273,9 +273,9 @@ end
 # https://github.com/SciML/JumpProcesses.jl/issues/320
 # note that even with the seeded StableRNG this test is not 
 # deterministic for some reason.
-function getmean(Nsims, prob, alg, tsave, seed)
+function getmean(Nsims, prob, alg, tsave, rng)
     umean = zeros(length(tsave))
-    integrator = init(prob, alg; saveat = tsave, seed)
+    integrator = init(prob, alg; saveat = tsave, rng)
     solve!(integrator)
     for j in eachindex(umean)
         umean[j] += integrator.sol.u[j][1]
@@ -292,7 +292,7 @@ function getmean(Nsims, prob, alg, tsave, seed)
 end
 
 let
-    seed = 12345
+    rng_seed = 12345
     b = 2.0
     d = 1.0
     n0 = 1.0
@@ -327,9 +327,9 @@ let
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
-            umean = getmean(Nsims, sjm_prob, alg, tsave, seed)
+            umean = getmean(Nsims, sjm_prob, alg, tsave, StableRNG(rng_seed))
             @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
-            seed += Nsims
+            rng_seed += Nsims
         end
     end
 end

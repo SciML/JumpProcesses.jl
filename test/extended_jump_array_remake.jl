@@ -17,20 +17,21 @@ using StableRNGs
     vr_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
     vrj = VariableRateJump(vr_rate, vr_affect!)
 
-    jprob = JumpProblem(oprob, vrj; rng)
+    jprob = JumpProblem(oprob, vrj)
 
     # Verify we have ExtendedJumpArray
     @test jprob.prob.u0 isa ExtendedJumpArray
     @test jprob.prob.u0.u == [10.0, 5.0]
 
     @testset "remake with numeric Vector{Float64}" begin
-        original_jump_u = copy(jprob.prob.u0.jump_u)
-
         prob2 = remake(jprob; u0 = [20.0, 10.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u == [20.0, 10.0]
-        # jump_u should be resampled (different from original)
-        @test prob2.prob.u0.jump_u != original_jump_u
+        # jump_u is zeroed at construction; callback initializes it at solve time
+        @test all(iszero, prob2.prob.u0.jump_u)
+        # After init the callback should set jump_u to non-zero thresholds
+        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        @test any(!iszero, integrator.u.jump_u)
     end
 
     @testset "remake with ExtendedJumpArray (no resample)" begin
@@ -47,34 +48,34 @@ using StableRNGs
     end
 
     @testset "remake with Symbol pairs" begin
-        original_jump_u = copy(jprob.prob.u0.jump_u)
-
         # This was the FAILING case - should work after fix
         prob2 = remake(jprob; u0 = [:X => 25.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u[1] == 25.0
-        # jump_u should be resampled
-        @test prob2.prob.u0.jump_u != original_jump_u
+        # jump_u zeroed at construction, initialized by callback at solve time
+        @test all(iszero, prob2.prob.u0.jump_u)
+        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        @test any(!iszero, integrator.u.jump_u)
     end
 
     @testset "remake with multiple Symbol pairs" begin
-        original_jump_u = copy(jprob.prob.u0.jump_u)
-
         prob2 = remake(jprob; u0 = [:X => 35.0, :Y => 15.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u == [35.0, 15.0]
-        # jump_u should be resampled
-        @test prob2.prob.u0.jump_u != original_jump_u
+        # jump_u zeroed at construction, initialized by callback at solve time
+        @test all(iszero, prob2.prob.u0.jump_u)
+        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        @test any(!iszero, integrator.u.jump_u)
     end
 
     @testset "remake with Dict" begin
-        original_jump_u = copy(jprob.prob.u0.jump_u)
-
         prob2 = remake(jprob; u0 = Dict(:X => 40.0))
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u[1] == 40.0
-        # jump_u should be resampled
-        @test prob2.prob.u0.jump_u != original_jump_u
+        # jump_u zeroed at construction, initialized by callback at solve time
+        @test all(iszero, prob2.prob.u0.jump_u)
+        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        @test any(!iszero, integrator.u.jump_u)
     end
 
     @testset "remake with parameters only (u0 unchanged)" begin
@@ -88,14 +89,14 @@ using StableRNGs
     end
 
     @testset "remake with both u0 and p" begin
-        original_jump_u = copy(jprob.prob.u0.jump_u)
-
         prob2 = remake(jprob; u0 = [:X => 50.0], p = [:k1 => 3.0])
         @test prob2.prob.u0 isa ExtendedJumpArray
         @test prob2.prob.u0.u[1] == 50.0
         @test prob2.prob.p[1] == 3.0
-        # jump_u should be resampled
-        @test prob2.prob.u0.jump_u != original_jump_u
+        # jump_u zeroed at construction, initialized by callback at solve time
+        @test all(iszero, prob2.prob.u0.jump_u)
+        integrator = init(prob2, Tsit5(); rng = StableRNG(42))
+        @test any(!iszero, integrator.u.jump_u)
     end
 
     @testset "remake preserves problem solvability" begin

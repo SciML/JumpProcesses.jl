@@ -1,8 +1,8 @@
 # Implementation the original Next Reaction Method
 # Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
 
-mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct NRMJumpAggregation{T, S, F1, F2, DEPGR, PQ} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -13,15 +13,14 @@ mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    rng::RNG
     dep_gr::DEPGR
     pq::PQ
 end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-        rng::RNG; num_specs, dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        num_specs, dep_graph = nothing,
+        kwargs...) where {T, S, F1, F2}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -40,29 +39,30 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     pq = MutableBinaryMinHeap{T}()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    NRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(pq)}(nj, nj, njt, et,
+    NRMJumpAggregation{T, S, F1, affecttype, typeof(dg), typeof(pq)}(nj, nj, njt, et,
         crs, sr, maj,
         rs, affs!, sps,
-        rng, dg, pq)
+        dg, pq)
 end
 
-+############################# Required Functions ##############################
+############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(NRMJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions, rng; num_specs = length(u),
+        rates, affects!, save_positions; num_specs = length(u),
         kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NRMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
-    fill_rates_and_get_times!(p, u, params, t)
+    rng = get_rng(integrator)
+    fill_rates_and_get_times!(p, u, params, t, rng)
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -73,7 +73,8 @@ function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t, affects
     u = update_state!(p, integrator, u, affects!)
 
     # update current jump rates and times
-    update_dependent_rates!(p, u, params, t)
+    rng = get_rng(integrator)
+    update_dependent_rates!(p, u, params, t, rng)
     nothing
 end
 
@@ -87,7 +88,7 @@ end
 ######################## SSA specific helper routines ########################
 
 # recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
-function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
+function update_dependent_rates!(p::NRMJumpAggregation, u, params, t, rng)
     @inbounds dep_rxs = p.dep_gr[p.next_jump]
     (; cur_rates, rates, ma_jumps) = p
     num_majumps = get_num_majumps(ma_jumps)
@@ -108,7 +109,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(p.pq, rx, t + randexp(p.rng) / cur_rates[rx])
+                update!(p.pq, rx, t + randexp(rng) / cur_rates[rx])
             else
                 update!(p.pq, rx, typemax(t))
             end
@@ -118,7 +119,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t)
 end
 
 # reevaluate all rates, recalculate all jump times, and reinit the priority queue
-function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
+function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t, rng)
 
     # mass action jumps
     majumps = p.ma_jumps
@@ -126,7 +127,7 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     pqdata = Vector{typeof(t)}(undef, length(cur_rates))
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps)
-        pqdata[i] = t + randexp(p.rng) / cur_rates[i]
+        pqdata[i] = t + randexp(rng) / cur_rates[i]
     end
 
     # constant rates
@@ -134,7 +135,7 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t)
     idx = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
         cur_rates[idx] = rate(u, params, t)
-        pqdata[idx] = t + randexp(p.rng) / cur_rates[idx]
+        pqdata[idx] = t + randexp(rng) / cur_rates[idx]
         idx += 1
     end
 

@@ -55,21 +55,35 @@ jset = JumpSet(; constant_jumps = cjvec, variable_jumps = vjtuple,
 
 ## How can I set the random number generator used in the jump process sampling algorithms (SSAs)?
 
-Random number generators can be passed to `JumpProblem` via the `rng` keyword
+Random number generators can be passed to `solve` or `init` via the `rng` keyword
 argument. Continuing the previous example:
 
 ```julia
-#] add RandomNumbers
-using RandomNumbers
-jprob = JumpProblem(dprob, Direct(), maj,
-    rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
+using Random
+jprob = JumpProblem(dprob, Direct(), maj)
+sol = solve(jprob, SSAStepper(); rng = Xoshiro(1234))
 ```
 
-uses the `Xoroshiro128Star` generator from
-[RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
+Any `AbstractRNG` can be used. For example, to use a generator from
+[StableRNGs.jl](https://github.com/JuliaRandom/StableRNGs.jl):
 
-On version 1.7 and up, JumpProcesses uses Julia's built-in random number generator by
-default. On versions below 1.7 it uses `Xoroshiro128Star`.
+```julia
+using StableRNGs
+sol = solve(jprob, SSAStepper(); rng = StableRNG(1234))
+```
+
+A `seed` keyword argument is also supported as a shorthand for creating a `Xoshiro`
+generator: `solve(jprob, SSAStepper(); seed = 1234)`.
+
+Alternatively, `rng` can be passed to `JumpProblem` where it will be forwarded to the
+solver automatically:
+
+```julia
+jprob = JumpProblem(dprob, Direct(), maj; rng = Xoshiro(1234))
+sol = solve(jprob, SSAStepper())  # uses Xoshiro(1234)
+```
+
+By default, JumpProcesses uses Julia's built-in `Random.default_rng()`.
 
 ## What are these aggregators and aggregations in JumpProcesses?
 

@@ -11,9 +11,9 @@ end
 jump = ConstantRateJump(rate, affect!)
 
 prob = DiscreteProblem([0.0, 0.0], (0.0, 10.0))
-jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
+jump_prob = JumpProblem(prob, Direct(), jump)
 
-sol = solve(jump_prob, SSAStepper())
+sol = solve(jump_prob, SSAStepper(); rng)
 
 @test sol.t == [0.0, 10.0]
 @test sol.u == [[0.0, 0.0], [0.0, 0.0]]
@@ -25,13 +25,13 @@ function fuel_affect!(integrator)
 end
 cb = DiscreteCallback(condition, fuel_affect!, save_positions = (false, true))
 
-sol = solve(jump_prob, SSAStepper(); callback = cb, tstops = [5])
+sol = solve(jump_prob, SSAStepper(); rng, callback = cb, tstops = [5])
 @test sol.t[1:2] == [0.0, 5.0] # no jumps between t=0 and t=5
 @test sol(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
 
 # test can pass callbacks via JumpProblem
-jump_prob2 = JumpProblem(prob, Direct(), jump; rng = rng, callback = cb)
-sol2 = solve(jump_prob2, SSAStepper(); tstops = [5])
+jump_prob2 = JumpProblem(prob, Direct(), jump; callback = cb)
+sol2 = solve(jump_prob2, SSAStepper(); rng, tstops = [5])
 @test sol2.t[1:2] == [0.0, 5.0] # no jumps between t=0 and t=5
 @test sol2(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
 
@@ -48,7 +48,7 @@ finalizer_called = 0
 fuel_finalize(cb, u, t, integrator) = global finalizer_called += 1
 
 cb2 = DiscreteCallback(condition, fuel_affect!, initialize = fuel_init!, finalize = fuel_finalize)
-sol = solve(jump_prob, SSAStepper(), callback = cb2)
+sol = solve(jump_prob, SSAStepper(); rng, callback = cb2)
 for tstop in random_tstops
     @test tstop ∈ sol.t
 end
@@ -62,37 +62,37 @@ maj = MassActionJump(rs, ns; param_idxs = [1, 2])
 u₀ = [100, 0]
 tspan = (0.0, 2000.0)
 dprob = DiscreteProblem(u₀, tspan, p)
-jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false), rng = rng)
+jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false))
 pcondit(u, t, integrator) = t == 1000.0
 function paffect!(integrator)
     integrator.p[1] = 0.0
     integrator.p[2] = 1.0
     reset_aggregated_jumps!(integrator)
 end
-sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
+sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
 p .= [1.0, 0.0]
 maj1 = MassActionJump([1 => 1], [1 => -1, 2 => 1]; param_idxs = 1)
 maj2 = MassActionJump([2 => 1], [1 => 1, 2 => -1]; param_idxs = 2)
-jprob = JumpProblem(dprob, Direct(), maj1, maj2, save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
+jprob = JumpProblem(dprob, Direct(), maj1, maj2, save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
 p2 = [1.0, 0.0, 0.0]
 maj3 = MassActionJump([1 => 1], [1 => -1, 2 => 1]; param_idxs = 3)
 dprob = DiscreteProblem(u₀, tspan, p2)
-jprob = JumpProblem(dprob, Direct(), maj1, maj2, maj3, save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
+jprob = JumpProblem(dprob, Direct(), maj1, maj2, maj3, save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p2 .== [0.0, 1.0, 0.0])
 @test sol[1, end] == 100
 
 p2 .= [1.0, 0.0, 0.0]
 jprob = JumpProblem(dprob, Direct(), JumpSet(; massaction_jumps = [maj1, maj2, maj3]),
-    save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
+    save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p2 .== [0.0, 1.0, 0.0])
 @test sol[1, end] == 100
 
@@ -100,8 +100,8 @@ p .= [1.0, 0.0]
 dprob = DiscreteProblem(u₀, tspan, p)
 maj4 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
     param_idxs = [1, 2])
-jprob = JumpProblem(dprob, Direct(), maj4, save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
+jprob = JumpProblem(dprob, Direct(), maj4, save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
@@ -109,9 +109,9 @@ sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(
 p .= [1.0]
 dprob = DiscreteProblem(u₀, tspan, p)
 maj5 = MassActionJump([[1 => 2]], [[1 => -1, 2 => 1]]; param_idxs = [1])
-jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng = rng)
+jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false))
 @test all(jprob.massaction_jump.scaled_rates .== [0.5])
-jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng = rng, scale_rates = false)
+jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), scale_rates = false)
 @test all(jprob.massaction_jump.scaled_rates .== [1.0])
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/239
@@ -119,11 +119,11 @@ maj6 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1
     param_idxs = [1, 2])
 p = (0.1, 0.1)
 dprob = DiscreteProblem([10, 0], (0.0, 100.0), p)
-jprob = JumpProblem(dprob, Direct(), maj6; save_positions = (false, false), rng = rng)
+jprob = JumpProblem(dprob, Direct(), maj6; save_positions = (false, false))
 cbtimes = [20.0, 30.0]
 affectpresets!(integrator) = integrator.u[1] += 10
 cb = PresetTimeCallback(cbtimes, affectpresets!)
-jsol = solve(jprob, SSAStepper(), saveat = 0.1, callback = cb)
+jsol = solve(jprob, SSAStepper(); rng, saveat = 0.1, callback = cb)
 @test (jsol(20.00000000001) - jsol(19.9999999999))[1] == 10
 
 # test periodic callbacks working, i.e. #417
@@ -134,18 +134,18 @@ let
     dprob = DiscreteProblem([0], (0.0, 10.0))
     cbfun(integ) = (integ.u[1] += 1; nothing)
     cb = PeriodicCallback(cbfun, 1.0)
-    jprob = JumpProblem(dprob, crj; rng)
-    sol = solve(jprob; callback = cb)
+    jprob = JumpProblem(dprob, crj)
+    sol = solve(jprob; rng, callback = cb)
     @test sol[1, end] == 9
 
     cb = PeriodicCallback(cbfun, 1.0; initial_affect = true)
-    jprob = JumpProblem(dprob, crj; rng)
-    sol = solve(jprob; callback = cb)
+    jprob = JumpProblem(dprob, crj)
+    sol = solve(jprob; rng, callback = cb)
     @test sol[1, end] == 10
 
     cb = PeriodicCallback(cbfun, 1.0; initial_affect = true, final_affect = true)
-    jprob = JumpProblem(dprob, crj; rng)
-    sol = solve(jprob; callback = cb)
+    jprob = JumpProblem(dprob, crj)
+    sol = solve(jprob; rng, callback = cb)
     @test sol[1, end] == 11
 end
 
@@ -157,22 +157,22 @@ let
     dprob = DiscreteProblem([0], (0.0, 10.0))
     cbfun(integ) = (integ.u[1] += 1; nothing)
     cb = PeriodicCallback(cbfun, 1.0)
-    jprob = JumpProblem(dprob, crj; rng)
+    jprob = JumpProblem(dprob, crj)
     tstops = Float64[]
     # tests for when aliasing system is in place
-    #sol = solve(jprob; callback = cb, tstops, alias_tstops = true) 
+    #sol = solve(jprob; callback = cb, tstops, alias_tstops = true)
     # @test sol[1, end] == 9
-    #@test tstops == 1.0:9.0    
+    #@test tstops == 1.0:9.0
     # empty!(tstops)
     # sol = solve(jprob; callback = cb, tstops, alias_tstops = false)
     # @test sol[1, end] == 9
     # @test isempty(tstops)
-    sol = solve(jprob; callback = cb, tstops)
+    sol = solve(jprob; rng, callback = cb, tstops)
     @test sol[1, end] == 9
     @test isempty(tstops)
 
     empty!(tstops)
-    integ = init(jprob, SSAStepper(); callback = cb, tstops)
+    integ = init(jprob, SSAStepper(); rng, callback = cb, tstops)
     solve!(integ)
     @test integ.tstops !== tstops
     @test isempty(tstops)
@@ -184,18 +184,18 @@ let
     affect!(integrator) = (integrator.u[1] += 1)
     crj = ConstantRateJump(rate, affect!)
     prob = DiscreteProblem([0], (0.0, 10.0), [10.0])
-    jprob = JumpProblem(prob, Direct(), crj; rng)
+    jprob = JumpProblem(prob, Direct(), crj)
 
     # basic callable tstops
     my_tstops = (p, tspan) -> [3.0, 6.0]
-    sol = solve(jprob, SSAStepper(); tstops = my_tstops)
+    sol = solve(jprob, SSAStepper(); rng, tstops = my_tstops)
     @test sol.t[end] == 10.0
     @test 3.0 ∈ sol.t
     @test 6.0 ∈ sol.t
 
     # parameter-dependent callable tstops
     param_tstops = (p, tspan) -> [p[1] / 5.0, p[1] / 2.0]
-    sol2 = solve(jprob, SSAStepper(); tstops = param_tstops)
+    sol2 = solve(jprob, SSAStepper(); rng, tstops = param_tstops)
     @test sol2.t[end] == 10.0
     @test 2.0 ∈ sol2.t   # 10.0 / 5.0
     @test 5.0 ∈ sol2.t   # 10.0 / 2.0
@@ -204,7 +204,7 @@ let
     condition(u, t, integrator) = t == 3.0
     cb_affect!(integrator) = (integrator.u[1] += 1000)
     cb = DiscreteCallback(condition, cb_affect!)
-    sol3 = solve(jprob, SSAStepper(); tstops = my_tstops, callback = cb)
+    sol3 = solve(jprob, SSAStepper(); rng, tstops = my_tstops, callback = cb)
     @test sol3.t[end] == 10.0
     @test 3.0 ∈ sol3.t
     # verify the callback fired: use findlast to get post-callback state at t=3.0
@@ -213,15 +213,15 @@ let
 
     # callable returning a tuple
     tuple_tstops = (p, tspan) -> (2.0, 7.0)
-    sol4 = solve(jprob, SSAStepper(); tstops = tuple_tstops)
+    sol4 = solve(jprob, SSAStepper(); rng, tstops = tuple_tstops)
     @test sol4.t[end] == 10.0
     @test 2.0 ∈ sol4.t
     @test 7.0 ∈ sol4.t
 
     # callable tstops stored in JumpProblem via constructor kwarg
-    jprob2 = JumpProblem(prob, Direct(), crj; rng, tstops = my_tstops)
+    jprob2 = JumpProblem(prob, Direct(), crj; tstops = my_tstops)
     @test haskey(jprob2.kwargs, :tstops)
-    sol5 = solve(jprob2, SSAStepper())
+    sol5 = solve(jprob2, SSAStepper(); rng)
     @test sol5.t[end] == 10.0
     @test 3.0 ∈ sol5.t
     @test 6.0 ∈ sol5.t

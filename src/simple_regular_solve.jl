@@ -70,13 +70,14 @@ function _process_saveat(saveat, tspan, save_start, save_end)
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
-        seed = nothing, dt = error("dt is required for SimpleTauLeaping."),
+        seed = nothing, rng = nothing,
+        dt = error("dt is required for SimpleTauLeaping."),
         saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
 
-    (; prob, rng) = jump_prob
-    (seed !== nothing) && seed!(rng, seed)
+    prob = jump_prob.prob
+    _rng = resolve_rng(rng, seed, get(jump_prob.kwargs, :rng, nothing))
 
     rj = jump_prob.regular_jump
     rate = rj.rate # rate function rate(out,u,p,t)
@@ -117,7 +118,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         t_new = tprev + dt
         rate(rate_cache, uprev, p, tprev)
         rate_cache .*= dt
-        counts .= pois_rand.((rng,), rate_cache)
+        counts .= pois_rand.((_rng,), rate_cache)
         c(du, uprev, p, tprev, counts, mark)
         u_new .= du .+ uprev
 
@@ -335,21 +336,19 @@ function simple_explicit_tau_leaping_loop!(
 end
 
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
-        seed = nothing,
+        seed = nothing, rng = nothing,
         dtmin = nothing,
         saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleExplicitTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
     prob = jump_prob.prob
-    rng = jump_prob.rng
+    _rng = resolve_rng(rng, seed, get(jump_prob.kwargs, :rng, nothing))
     tspan = prob.tspan
 
     if dtmin === nothing
         dtmin = 1e-10 * one(typeof(tspan[2]))
     end
-
-    (seed !== nothing) && seed!(rng, seed)
 
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
@@ -394,7 +393,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         reactant_stoch, hor, length(u0), numjumps)
 
     simple_explicit_tau_leaping_loop!(
-        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        prob, alg, u_current, u_new, t_current, t_end, p, _rng,
         rate, c, nu, hor, max_hor, max_stoich, numjumps, epsilon,
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj,
         save_end)

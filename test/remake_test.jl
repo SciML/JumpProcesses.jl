@@ -1,4 +1,4 @@
-using JumpProcesses, DiffEqBase, OrdinaryDiffEq
+using JumpProcesses, DiffEqBase, OrdinaryDiffEq, Test
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -21,21 +21,20 @@ p = (0.1 / 1000, 0.01)
 tspan = (0.0, 2500.0)
 
 dprob = DiscreteProblem(u0, tspan, p)
-jprob = JumpProblem(dprob, Direct(), jump, jump2, save_positions = (false, false),
-    rng = rng)
-sol = solve(jprob, SSAStepper())
+jprob = JumpProblem(dprob, Direct(), jump, jump2, save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); rng)
 @test sol[3, end] == 1000
 
 u02 = [1000, 1, 0]
 p2 = (0.1 / 1000, 0.0)
 dprob2 = remake(dprob, u0 = u02, p = p2)
 jprob2 = remake(jprob, prob = dprob2)
-sol2 = solve(jprob2, SSAStepper())
+sol2 = solve(jprob2, SSAStepper(); rng)
 @test sol2[2, end] == 1001
 
 tspan2 = (0.0, 25000.0)
 jprob3 = remake(jprob, p = p2, tspan = tspan2)
-sol3 = solve(jprob3, SSAStepper())
+sol3 = solve(jprob3, SSAStepper(); rng)
 @test sol3[2, end] == 1000
 @test sol3.t[end] == 25000.0
 
@@ -46,19 +45,19 @@ ns = [[2 => -1, 3 => 1], [1 => -1, 2 => 1]]
 pidxs = [2, 1]
 maj = MassActionJump(rs, ns; param_idxs = pidxs)
 dprob = DiscreteProblem(u0, tspan, p)
-jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper())
+jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); rng)
 @test sol[3, end] == 1000
 
 # update the MassActionJump
 dprob2 = remake(dprob, u0 = u02, p = p2)
 jprob2 = remake(jprob, prob = dprob2)
-sol2 = solve(jprob2, SSAStepper())
+sol2 = solve(jprob2, SSAStepper(); rng)
 @test sol2[2, end] == 1001
 
 tspan2 = (0.0, 25000.0)
 jprob3 = remake(jprob, p = p2, tspan = tspan2)
-sol3 = solve(jprob3, SSAStepper())
+sol3 = solve(jprob3, SSAStepper(); rng)
 @test sol3[2, end] == 1000
 @test sol3.t[end] == 25000.0
 
@@ -75,27 +74,27 @@ let
     rrate(u, p, t) = u[1]
     aaffect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rrate, aaffect!)
-    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_Direct(), rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_Direct())
+    sol = solve(jprob, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
-    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_DirectFW(), rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_DirectFW())
+    sol = solve(jprob, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
-    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_FRM(), rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_FRM())
+    sol = solve(jprob, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
     u0 = [4.0]
     jprob2 = remake(jprob; u0)
     @test jprob2.prob.u0 isa ExtendedJumpArray
     @test jprob2.prob.u0.u === u0
-    sol = solve(jprob2, Tsit5())
+    sol = solve(jprob2, Tsit5(); rng)
     u = sol[1, :]
     @test length(u) > 2
     @test all(>(u0[1]), u[3:end])
     u0 = deepcopy(jprob2.prob.u0)
     u0.u .= 0
     jprob3 = remake(jprob2; u0)
-    sol = solve(jprob3, Tsit5())
+    sol = solve(jprob3, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
     @test_throws ErrorException jprob4=remake(jprob, u0 = 1)
 end
@@ -107,24 +106,24 @@ let
     rrate(u, p, t) = u[1]
     aaffect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rrate, aaffect!)
-    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_Direct(), rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_Direct())
+    sol = solve(jprob, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
-    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_DirectFW(), rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_DirectFW())
+    sol = solve(jprob, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
-    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_FRM(), rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, vrj; vr_aggregator = VR_FRM())
+    sol = solve(jprob, Tsit5(); rng)
     @test all(==(0.0), sol[1, :])
     u0 = [4.0]
     prob2 = remake(jprob.prob; u0)
     @test_throws ErrorException jprob2=remake(jprob; prob = prob2)
-    u0eja = JumpProcesses.remake_extended_u0(jprob.prob, u0, rng)
+    u0eja = JumpProcesses.remake_extended_u0(jprob.prob, u0)
     prob3 = remake(jprob.prob; u0 = u0eja)
     jprob3 = remake(jprob; prob = prob3)
     @test jprob3.prob.u0 isa ExtendedJumpArray
     @test jprob3.prob.u0 === u0eja
-    sol = solve(jprob3, Tsit5())
+    sol = solve(jprob3, Tsit5(); rng)
     u = sol[1, :]
     @test length(u) > 2
     @test all(>(u0[1]), u[3:end])

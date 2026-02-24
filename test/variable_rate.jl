@@ -293,7 +293,6 @@ end
 
 let
     seed = 12345
-    rng = StableRNG(seed)
     b = 2.0
     d = 1.0
     n0 = 1.0
@@ -325,7 +324,7 @@ let
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     tsave = range(tspan[1], tspan[2]; step = 0.1)
     for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
-        sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
+        sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
             umean = getmean(Nsims, sjm_prob, alg, tsave, seed)

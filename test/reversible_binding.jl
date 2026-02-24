@@ -23,7 +23,7 @@ majumps = MassActionJump(rates, reactstoch, netstoch)
 function getmean(jprob, Nsims; rng = nothing)
     Amean = 0
     for i in 1:Nsims
-        sol = isnothing(rng) ? solve(jprob, SSAStepper()) : solve(jprob, SSAStepper(); rng)
+        sol = solve(jprob, SSAStepper(); rng)
         Amean += sol[1, end]
     end
     Amean /= Nsims

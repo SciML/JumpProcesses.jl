@@ -26,10 +26,9 @@ function runSSAs(jump_prob; use_stepper = true, rng = nothing)
     Psamp = zeros(Int, Nsims)
     for i in 1:Nsims
         sol = if use_stepper
-            isnothing(rng) ? solve(jump_prob, SSAStepper()) :
             solve(jump_prob, SSAStepper(); rng)
         else
-            isnothing(rng) ? solve(jump_prob) : solve(jump_prob; rng)
+            solve(jump_prob; rng)
         end
         Psamp[i] = sol[3, end]
     end

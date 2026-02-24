@@ -118,6 +118,14 @@ end
 SciMLBase.has_rng(::SSAIntegrator) = true
 SciMLBase.get_rng(integrator::SSAIntegrator) = integrator.rng
 function SciMLBase.set_rng!(integrator::SSAIntegrator, rng)
+    R = typeof(integrator.rng)
+    if !isa(rng, R)
+        throw(ArgumentError(
+            "Cannot set RNG of type $(typeof(rng)) on an integrator " *
+            "whose RNG type parameter is $R. " *
+            "Construct a new integrator via `init(prob, alg; rng = your_rng)` instead."
+        ))
+    end
     integrator.rng = rng
     nothing
 end

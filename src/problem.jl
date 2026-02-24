@@ -309,7 +309,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     jump_cbs = CallbackSet(constant_jump_callback, variable_jump_callback)
     iip = isinplace_jump(prob, jumps.regular_jump)
-    solkwargs = make_kwarg(; filter(!isnothing, (; callback, tstops))...)
+    solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
     JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(cvrjs), typeof(jumps.regular_jump),
@@ -355,7 +355,7 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     vrjs = jumps.variable_jumps
 
     iip = isinplace_jump(prob, jumps.regular_jump)
-    solkwargs = make_kwarg(; filter(!isnothing, (; callback, tstops))...)
+    solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
     JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(jumps.regular_jump),

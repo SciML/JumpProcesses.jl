@@ -53,8 +53,8 @@ end
     nothing
 end
 
-@inline function concretize_affects!(p::AbstractSSAJumpAggregator{<:Any, <:Any, <:Any, F2},
-        ::I) where {F2 <: Tuple, I <: SciMLBase.DEIntegrator}
+@inline function concretize_affects!(p::AbstractSSAJumpAggregator{T, S, F1, F2},
+        ::I) where {T, S, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     nothing
 end
 
@@ -86,8 +86,8 @@ function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: SciMLBase.DEI
 end
 
 function (p::AbstractSSAJumpAggregator{
-        <:Any, <:Any, <:Any, F2})(integrator::SciMLBase.DEIntegrator) where
-        {F2 <: Union{Tuple, Nothing}}
+        T, S, F1, F2})(integrator::SciMLBase.DEIntegrator) where
+        {T, S, F1, F2 <: Union{Tuple, Nothing}}
     execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)

@@ -12,7 +12,8 @@ jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
 monte_prob = EnsembleProblem(jump_prob)
 sol = solve(monte_prob, SRIW1(), EnsembleSerial(); trajectories = 3,
     save_everystep = false, dt = 0.001, adaptive = false, rng)
-@test sol.u[1].t[2] != sol.u[2].t[2] != sol.u[3].t[2]
+first_event(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
+@test first_event(sol.u[1]) != first_event(sol.u[2]) != first_event(sol.u[3])
 
 jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_Direct())
 monte_prob = EnsembleProblem(jump_prob)

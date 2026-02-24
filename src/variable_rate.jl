@@ -211,8 +211,7 @@ end
 function (c::VR_FRMEventCallback)(cb, u, t, integrator)
     rng = get_rng(integrator)
     integrator.u.jump_u[c.idx] = -randexp(rng, typeof(integrator.t))
-    integrator.uprev.jump_u[c.idx] = integrator.u.jump_u[c.idx]
-    u_modified!(integrator, false)
+    u_modified!(integrator, true)
     nothing
 end
 

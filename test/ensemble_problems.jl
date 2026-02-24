@@ -33,7 +33,8 @@ function make_sde_vr_jump_prob(agg)
 end
 
 # Helpers
-first_jump_time(traj) = traj.t[2]
+# First time strictly after t[1], robust to initialization saves at t=0.
+first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
 
 # ==========================================================================
 # 1. Serial ensemble: sequential trajectories get different RNG streams
@@ -206,7 +207,7 @@ end
     # jump_u has been reset to a new -randexp() value).
     sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
         trajectories = 3, rng = StableRNG(12345))
-    event_times = [sol.u[i].t[2] for i in 1:3]
+    event_times = [first_jump_time(sol.u[i]) for i in 1:3]
     @test allunique(event_times)
     post_event_thresholds = [sol.u[i].u[3].jump_u[1] for i in 1:3]
     @test allunique(post_event_thresholds)

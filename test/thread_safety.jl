@@ -1,4 +1,4 @@
-using DiffEqBase
+using DiffEqBase, Test
 using JumpProcesses, OrdinaryDiffEq
 using StableRNGs
 rng = StableRNG(12345)
@@ -30,7 +30,7 @@ let
         prob = EnsembleProblem(jump_prob, prob_func = prob_func)
         sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories = 400,
             save_everystep = false)
-        firstrx_time = [sol.u[i].t[2] for i in 1:length(sol)]
+        firstrx_time = [sol.u[i].t[findfirst(>(sol.u[i].t[1]), sol.u[i].t)] for i in 1:length(sol)]
         @test allunique(firstrx_time)
     end
 end

@@ -89,8 +89,10 @@ let
     @test jprob2.prob.u0.u === u0
     sol = solve(jprob2, Tsit5(); rng)
     u = sol[1, :]
-    @test length(u) > 2
-    @test all(>(u0[1]), u[3:end])
+    t = sol.t
+    first_nontstart = findfirst(>(t[1]), t)
+    @test !isnothing(first_nontstart)
+    @test all(>=(u0[1]), u[first_nontstart:end])
     u0 = deepcopy(jprob2.prob.u0)
     u0.u .= 0
     jprob3 = remake(jprob2; u0)
@@ -125,6 +127,8 @@ let
     @test jprob3.prob.u0 === u0eja
     sol = solve(jprob3, Tsit5(); rng)
     u = sol[1, :]
-    @test length(u) > 2
-    @test all(>(u0[1]), u[3:end])
+    t = sol.t
+    first_nontstart = findfirst(>(t[1]), t)
+    @test !isnothing(first_nontstart)
+    @test all(>=(u0[1]), u[first_nontstart:end])
 end

@@ -187,18 +187,29 @@ end
 #
 # For VR_FRM, each trajectory's first jump time is determined by the initial
 # jump_u threshold (set to -randexp() by the VR_FRMEventCallback initialize).
-# Distinct thresholds → distinct first event times, so we verify by checking
-# that the second time point (first event) differs across serial trajectories.
+# We verify both the thresholds (via init) and the resulting event times.
 # ==========================================================================
 
 @testset "VR_FRM: jump_u thresholds unique per trajectory (EnsembleSerial)" begin
     jprob = make_vr_jump_prob(VR_FRM())
+
+    # Check jump_u thresholds directly via init (callback sets them during initialization)
+    rng = StableRNG(12345)
+    thresholds = [begin
+            integrator = init(jprob, Tsit5(); rng)
+            integrator.u.jump_u[1]
+        end for _ in 1:3]
+    @test allunique(thresholds)
+
+    # From a full ensemble solve, check both first event times and the
+    # post-event jump_u thresholds (u[3] is the post-event save where
+    # jump_u has been reset to a new -randexp() value).
     sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
         trajectories = 3, rng = StableRNG(12345))
-    # The second time point is when the first variable-rate jump fires,
-    # directly reflecting the initial -randexp() threshold.
     event_times = [sol.u[i].t[2] for i in 1:3]
     @test allunique(event_times)
+    post_event_thresholds = [sol.u[i].u[3].jump_u[1] for i in 1:3]
+    @test allunique(post_event_thresholds)
 end
 
 # ==========================================================================

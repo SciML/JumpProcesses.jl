@@ -181,6 +181,9 @@ end
     new_rng = StableRNG(99)
     SciMLBase.set_rng!(integrator, new_rng)
     @test SciMLBase.get_rng(integrator) === new_rng
+
+    # mismatched RNG type should throw
+    @test_throws ArgumentError SciMLBase.set_rng!(integrator, Random.Xoshiro(123))
 end
 
 # ==========================================================================

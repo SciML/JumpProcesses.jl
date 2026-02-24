@@ -1,9 +1,6 @@
 using JumpProcesses, DiffEqBase
 using Test, LinearAlgebra, Statistics
 using KernelAbstractions, Adapt, CUDA
-using StableRNGs
-rng = StableRNG(12345)
-
 Nsims = 100_000
 
 # SIR model with influx

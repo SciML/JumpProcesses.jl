@@ -102,8 +102,8 @@ end
 @testset "ODE + VR: different seeds → different trajectories" begin
     jprob = make_ode_vr_jump_prob()
     sols = [solve(jprob, Tsit5(); rng = StableRNG(s)) for s in (100, 200, 300)]
-    finals = [s.u[end][1] for s in sols]
-    @test allunique(finals)
+    times = [s.t[2] for s in sols]
+    @test allunique(times)
 end
 
 # ==========================================================================

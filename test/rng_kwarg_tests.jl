@@ -168,7 +168,35 @@ end
 end
 
 # ==========================================================================
-# 13. has_rng / get_rng / set_rng! interface on SSAIntegrator
+# 13. SimpleTauLeaping: seed kwarg reproducibility
+# ==========================================================================
+@testset "SimpleTauLeaping: seed kwarg reproducibility" begin
+    rate(out, u, p, t) = (out .= max.(u, 0); nothing)
+    c(du, u, p, t, counts, mark) = (du .= counts; nothing)
+    rj = RegularJump(rate, c, 2)
+    dprob = DiscreteProblem([100, 100], (0.0, 1.0))
+    jprob = JumpProblem(dprob, PureLeaping(), rj)
+    sol1 = solve(jprob, SimpleTauLeaping(); dt = 0.01, seed = 42)
+    sol2 = solve(jprob, SimpleTauLeaping(); dt = 0.01, seed = 42)
+    @test sol1.u == sol2.u
+end
+
+# ==========================================================================
+# 14. SimpleTauLeaping: seed different seeds → different trajectories
+# ==========================================================================
+@testset "SimpleTauLeaping: seed different seeds → different trajectories" begin
+    rate(out, u, p, t) = (out .= max.(u, 0); nothing)
+    c(du, u, p, t, counts, mark) = (du .= counts; nothing)
+    rj = RegularJump(rate, c, 2)
+    dprob = DiscreteProblem([100, 100], (0.0, 1.0))
+    jprob = JumpProblem(dprob, PureLeaping(), rj)
+    sol1 = solve(jprob, SimpleTauLeaping(); dt = 0.01, seed = 42)
+    sol2 = solve(jprob, SimpleTauLeaping(); dt = 0.01, seed = 99)
+    @test sol1.u != sol2.u
+end
+
+# ==========================================================================
+# 15. has_rng / get_rng / set_rng! interface on SSAIntegrator
 # ==========================================================================
 @testset "SSAIntegrator RNG interface" begin
     jprob = make_ssa_jump_prob()
@@ -187,7 +215,7 @@ end
 end
 
 # ==========================================================================
-# 14. No rng kwarg: uses default_rng (non-reproducible but functional)
+# 16. No rng kwarg: uses default_rng (non-reproducible but functional)
 # ==========================================================================
 @testset "No rng kwarg: functional solve" begin
     @testset "SSAStepper" begin
@@ -210,7 +238,7 @@ end
 end
 
 # ==========================================================================
-# 15. seed kwarg: creates Xoshiro from integer seed
+# 17. seed kwarg: creates Xoshiro from integer seed
 # ==========================================================================
 @testset "seed kwarg creates Xoshiro" begin
     @testset "SSAStepper" begin
@@ -233,7 +261,7 @@ end
 end
 
 # ==========================================================================
-# 16. seed kwarg reproducibility: same seed → same trajectory
+# 18. seed kwarg reproducibility: same seed → same trajectory
 # ==========================================================================
 @testset "seed kwarg reproducibility" begin
     @testset "SSAStepper" begin
@@ -261,7 +289,7 @@ end
 end
 
 # ==========================================================================
-# 17. seed kwarg: different seeds → different trajectories
+# 19. seed kwarg: different seeds → different trajectories
 # ==========================================================================
 @testset "seed kwarg: different seeds → different trajectories" begin
     @testset "SSAStepper" begin
@@ -290,7 +318,7 @@ end
 end
 
 # ==========================================================================
-# 18. rng takes priority over seed
+# 20. rng takes priority over seed
 # ==========================================================================
 @testset "rng takes priority over seed" begin
     jprob = make_ssa_jump_prob()

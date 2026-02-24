@@ -10,9 +10,19 @@ tspan = (0.0, 4.0)
 u0 = [5]
 dprob = DiscreteProblem(u0, tspan, params)
 jprob = JumpProblem(dprob, Direct(), maj)
-solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads(); trajectories = 10, rng)
-solve(EnsembleProblem(jprob; safetycopy = true), SSAStepper(), EnsembleThreads();
-    trajectories = 10, rng)
+
+# Verify threaded solves complete and produce distinct trajectories
+sol = solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads();
+    trajectories = 400, rng)
+@test length(sol) == 400
+firstrx_time = [sol.u[i].t[findfirst(>(sol.u[i].t[1]), sol.u[i].t)] for i in 1:length(sol)]
+@test allunique(firstrx_time)
+
+sol2 = solve(EnsembleProblem(jprob; safetycopy = true), SSAStepper(), EnsembleThreads();
+    trajectories = 400, rng)
+@test length(sol2) == 400
+firstrx_time2 = [sol2.u[i].t[findfirst(>(sol2.u[i].t[1]), sol2.u[i].t)] for i in 1:length(sol2)]
+@test allunique(firstrx_time2)
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/472
 let

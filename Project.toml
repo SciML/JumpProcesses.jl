@@ -1,6 +1,6 @@
 name = "JumpProcesses"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
-version = "9.23.0"
+version = "9.22.1"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 
 [deps]

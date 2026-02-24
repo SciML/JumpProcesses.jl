@@ -1,5 +1,17 @@
 struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
 
+# Define solver type hierarchy
+abstract type AbstractImplicitSolver end
+struct NewtonImplicitSolver <: AbstractImplicitSolver end
+struct TrapezoidalImplicitSolver <: AbstractImplicitSolver end
+
+struct SimpleImplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
+    epsilon::T  # Error control parameter for tau selection
+    solver::AbstractImplicitSolver  # Solver type: Newton or Trapezoidal
+end
+
+SimpleImplicitTauLeaping(; epsilon=0.05, solver=NewtonImplicitSolver()) = SimpleImplicitTauLeaping(epsilon, solver)
+
 struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
     epsilon::T  # Error control parameter
 end
@@ -31,6 +43,19 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplici
         isempty(jump_prob.constant_jumps) &&
         isempty(jump_prob.variable_jumps) &&
         jump_prob.massaction_jump !== nothing
+end
+
+function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping)
+    if !(jump_prob.aggregator isa PureLeaping)
+        @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
+        JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
+        Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
+    end
+    isempty(jump_prob.jump_callback.continuous_callbacks) &&
+    isempty(jump_prob.jump_callback.discrete_callbacks) &&
+    isempty(jump_prob.constant_jumps) &&
+    isempty(jump_prob.variable_jumps) &&
+    jump_prob.massaction_jump !== nothing
 end
 
 """
@@ -153,10 +178,10 @@ end
 function compute_hor(reactant_stoch, numjumps)
     stoch_type = eltype(first(first(reactant_stoch)))
     hor = zeros(stoch_type, numjumps)
+    max_order = 3 * one(stoch_type)  # Maximum supported reaction order (type-aware)
     for j in 1:numjumps
-        order = sum(
-            stoch for (spec_idx, stoch) in reactant_stoch[j]; init = zero(stoch_type))
-        if order > 3
+        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=zero(stoch_type))
+        if order > max_order
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end
         hor[j] = order
@@ -255,6 +280,40 @@ function compute_tau(
         tau = min(tau, mu_term, sigma_term) # Equation (8)
     end
     return max(tau, dtmin)
+end
+
+# Define residual for implicit equation
+# Newton: u_new = u_current + sum_j nu_j * a_j(u_new) * tau (Cao et al., 2004)
+# Trapezoidal: u_new = u_current + sum_j nu_j * (a_j(u_current) + a_j(u_new))/2 * tau
+function implicit_equation!(resid, u_new, params)
+    u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver = params
+    rate(rate_cache, u_new, p, t + tau)
+    resid .= u_new .- u_current
+    if isa(solver, NewtonImplicitSolver)
+        for j in 1:numjumps
+            for spec_idx in 1:size(nu, 1)
+                resid[spec_idx] -= nu[spec_idx, j] * rate_cache[j] * tau  # Cao et al. (2004)
+            end
+        end
+    else  # TrapezoidalImplicitSolver
+        rate_current = similar(rate_cache)
+        rate(rate_current, u_current, p, t)
+        half = one(eltype(rate_cache)) / 2
+        for j in 1:numjumps
+            for spec_idx in 1:size(nu, 1)
+                resid[spec_idx] -= nu[spec_idx, j] * half * (rate_cache[j] + rate_current[j]) * tau
+            end
+        end
+    end
+    resid .= max.(resid, -u_new)  # Ensure non-negative solution
+end
+
+# Solve implicit equation using SimpleNonlinearSolve
+function solve_implicit(u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver)
+    u_new = convert(Vector{float(eltype(u_current))}, u_current)
+    prob = NonlinearProblem(implicit_equation!, u_new, (u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver))
+    sol = solve(prob, SimpleNewtonRaphson(autodiff=AutoFiniteDiff()); abstol=1e-6, reltol=1e-6)
+    return sol.u, sol.retcode == ReturnCode.Success
 end
 
 # Function to generate a mass action rate function
@@ -402,6 +461,134 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,
         interp = DiffEqBase.ConstantInterpolation(tsave, usave))
+    return sol
+end
+
+function simple_implicit_tau_leaping_loop!(
+        prob, alg, u_current, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache,
+        maj, solver, save_end)
+    save_idx = 1
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+        tau = min(tau, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
+        end
+
+        u_new_float, converged = solve_implicit(u_current, rate_cache, nu, p, t_current, tau, rate, numjumps, solver)
+        if !converged
+            tau /= 2
+            continue
+        end
+
+        rate(rate_cache, u_new_float, p, t_current + tau)
+        zero_rate = zero(eltype(rate_cache))
+        counts .= pois_rand.(rng, max.(rate_cache * tau, zero_rate))
+        du .= zero(eltype(du))
+        for j in 1:numjumps
+            for (spec_idx, stoch) in maj.net_stoch[j]
+                du[spec_idx] += stoch * counts[j]
+            end
+        end
+        u_new = u_current + du
+
+        zero_pop = zero(eltype(u_new))
+        if any(<(zero_pop), u_new)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
+            tau /= 2
+            continue
+        end
+        # Ensure non-negativity, as per Cao et al. (2006), Section 3.3
+        for i in eachindex(u_new)
+            u_new[i] = max(u_new[i], zero_pop)
+        end
+        t_new = t_current + tau
+
+        if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
+        end
+
+        u_current = u_new
+        t_current = t_new
+    end
+
+    # Save endpoint if requested and not already saved
+    if save_end && (isempty(tsave) || tsave[end] != t_end)
+        push!(usave, copy(u_current))
+        push!(tsave, t_end)
+    end
+end
+
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping; 
+        seed = nothing,
+        dtmin = nothing,
+        saveat = nothing, save_start = nothing, save_end = nothing)
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("SimpleImplicitTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
+
+    (; prob, rng) = jump_prob
+    (seed !== nothing) && seed!(rng, seed)
+
+    maj = jump_prob.massaction_jump
+    numjumps = get_num_majumps(maj)
+    rj = jump_prob.regular_jump
+    # Extract rates
+    rate = rj !== nothing ? rj.rate : massaction_rate(maj, numjumps)
+    c = rj !== nothing ? rj.c : nothing
+    u0 = copy(prob.u0)
+    tspan = prob.tspan
+    p = prob.p
+
+    if dtmin === nothing
+        dtmin = 1e-10 * one(typeof(tspan[2]))
+    end
+
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
+
+    # Initialize current state and saved history
+    u_current = copy(u0)
+    t_current = tspan[1]
+    if save_start
+        usave = [copy(u0)]
+        tsave = [tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
+    rate_cache = zeros(float(eltype(u0)), numjumps)
+    counts = zero(rate_cache)
+    du = similar(u0)
+    t_end = tspan[2]
+    epsilon = alg.epsilon
+    solver = alg.solver
+
+    nu = zeros(float(eltype(u0)), length(u0), numjumps)
+    for j in 1:numjumps
+        for (spec_idx, stoch) in maj.net_stoch[j]
+            nu[spec_idx, j] = stoch
+        end
+    end
+    reactant_stoch = maj.reactant_stoch
+    hor = compute_hor(reactant_stoch, numjumps)
+    max_hor, max_stoich = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
+
+    simple_implicit_tau_leaping_loop!(
+        prob, alg, u_current, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache,
+        maj, solver, save_end)
+
+    sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
+        calculate_error=false,
+        interp=DiffEqBase.ConstantInterpolation(tsave, usave))
     return sol
 end
 

@@ -18,6 +18,9 @@ using StaticArrays: StaticArrays, SVector, setindex
 using Base.Threads: Threads
 using Base.FastMath: add_fast
 
+using SimpleNonlinearSolve: SimpleNonlinearSolve, SimpleNewtonRaphson
+using ADTypes: ADTypes, AutoFiniteDiff
+
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 
@@ -40,7 +43,7 @@ using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
                   ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
                   deleteat!, isinplace, remake, savevalues!, step!,
                   u_modified!
-using SciMLBase: SciMLBase, DEIntegrator
+using SciMLBase: SciMLBase, DEIntegrator, NonlinearProblem
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
@@ -131,7 +134,7 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleExplicitTauLeaping, SimpleImplicitTauLeaping, NewtonImplicitSolver, TrapezoidalImplicitSolver, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

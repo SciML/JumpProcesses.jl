@@ -29,6 +29,7 @@ jobs:
         group:
           - InterfaceI
           - InterfaceII
+          - ThreadSafety
           - QA
         exclude:
           - version: "pre"

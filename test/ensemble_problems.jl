@@ -90,42 +90,7 @@ end
 end
 
 # ==========================================================================
-# 3. Threaded ensemble: no data race on the shared JumpProblem
-#
-# With integrator-owned RNGs, each thread's integrator gets its own
-# default_rng(). We only assert completion here — uniqueness is tested
-# via explicit rng kwarg in section 4.
-# ==========================================================================
-
-@testset "EnsembleThreads: no data race" begin
-    @testset "SSAStepper" begin
-        jprob = make_ssa_jump_prob()
-        sol = solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads();
-            trajectories = 4)
-        @test length(sol) == 4
-    end
-
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
-        jprob = make_vr_jump_prob(agg)
-        sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleThreads();
-            trajectories = 4, save_everystep = false)
-        @test length(sol) == 4
-    end
-
-    @testset "SDE + VR (VR_FRM): unique trajectories" begin
-        jprob = make_sde_vr_jump_prob(VR_FRM())
-        # StochasticDiffEq generates per-trajectory seeds, so trajectories
-        # should be distinct.
-        sol = solve(EnsembleProblem(jprob), EM(), EnsembleThreads();
-            trajectories = 4, dt = 0.01, save_everystep = false)
-        @test length(sol) == 4
-        finals = [sol.u[i].u[end][1] for i in 1:4]
-        @test length(unique(finals)) > 1
-    end
-end
-
-# ==========================================================================
-# 4. rng kwarg reproducibility: same rng seed → identical trajectory,
+# 3. rng kwarg reproducibility: same rng seed → identical trajectory,
 #    different rng seeds → different trajectories
 # ==========================================================================
 
@@ -164,7 +129,7 @@ end
 end
 
 # ==========================================================================
-# 5. has_rng / get_rng / set_rng! interface on SSAIntegrator
+# 4. has_rng / get_rng / set_rng! interface on SSAIntegrator
 # ==========================================================================
 
 @testset "SSAIntegrator RNG interface" begin
@@ -184,7 +149,7 @@ end
 end
 
 # ==========================================================================
-# 6. Variable-rate: jump_u thresholds are unique per trajectory
+# 5. Variable-rate: jump_u thresholds are unique per trajectory
 #
 # For VR_FRM, each trajectory's first jump time is determined by the initial
 # jump_u threshold (set to -randexp() by the VR_FRMEventCallback initialize).
@@ -214,7 +179,7 @@ end
 end
 
 # ==========================================================================
-# 7. JumpProblem rng kwarg forwarded to solver
+# 6. JumpProblem rng kwarg throws ArgumentError
 # ==========================================================================
 
 @testset "JumpProblem rng kwarg throws ArgumentError" begin

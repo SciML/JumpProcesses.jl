@@ -1,5 +1,5 @@
 using DiffEqBase, Test
-using JumpProcesses, OrdinaryDiffEq
+using JumpProcesses, OrdinaryDiffEq, StochasticDiffEq
 using StableRNGs
 rng = StableRNG(12345)
 
@@ -30,6 +30,25 @@ let
         prob = EnsembleProblem(jump_prob, prob_func = prob_func)
         sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories = 400,
             save_everystep = false)
+        firstrx_time = [sol.u[i].t[findfirst(>(sol.u[i].t[1]), sol.u[i].t)] for i in 1:length(sol)]
+        @test allunique(firstrx_time)
+    end
+end
+
+# SDE + variable-rate jumps with EnsembleThreads
+let
+    f!(du, u, p, t) = (du[1] = -0.1 * u[1]; nothing)
+    g!(du, u, p, t) = (du[1] = 0.1 * u[1]; nothing)
+    sde_prob = SDEProblem(f!, g!, [100.0], (0.0, 10.0))
+    vrj = VariableRateJump((u, p, t) -> 0.5 * u[1],
+        integrator -> (integrator.u[1] -= 1.0))
+
+    for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+        jump_prob = JumpProblem(sde_prob, Direct(), vrj; vr_aggregator = agg)
+        prob_func(prob, i, repeat) = deepcopy(prob)
+        prob = EnsembleProblem(jump_prob; prob_func)
+        sol = solve(prob, SRIW1(), EnsembleThreads();
+            trajectories = 400, save_everystep = false)
         firstrx_time = [sol.u[i].t[findfirst(>(sol.u[i].t[1]), sol.u[i].t)] for i in 1:length(sol)]
         @test allunique(firstrx_time)
     end

@@ -6,6 +6,9 @@ end
 
 SimpleExplicitTauLeaping(; epsilon = 0.05) = SimpleExplicitTauLeaping(epsilon)
 
+SciMLBase.supports_solve_rng(::JumpProblem, ::SimpleTauLeaping) = true
+SciMLBase.supports_solve_rng(::JumpProblem, ::SimpleExplicitTauLeaping) = true
+
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     if !(jump_prob.aggregator isa PureLeaping)
         @warn "When using $alg, please pass PureLeaping() as the aggregator to the \

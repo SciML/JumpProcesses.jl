@@ -61,6 +61,7 @@ for details.
 """
 struct SSAStepper <: DiffEqBase.DEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
+SciMLBase.supports_solve_rng(::JumpProblem, ::SSAStepper) = true
 
 """
 $(TYPEDEF)

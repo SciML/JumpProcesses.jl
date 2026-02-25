@@ -15,6 +15,9 @@ function resolve_rng(rng, seed)
     end
 end
 
+SciMLBase.supports_solve_rng(jprob::JumpProblem, alg::DiffEqBase.DEAlgorithm) =
+    SciMLBase.supports_solve_rng(jprob.prob, alg)
+
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
         merge_callbacks = true, kwargs...) where {P}
@@ -37,6 +40,9 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
     solve!(integrator)
     integrator.sol
 end
+
+SciMLBase.supports_solve_rng(jprob::JumpProblem, ::Nothing) =
+    jprob.prob isa DiffEqBase.DiscreteProblem
 
 # if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
 # SSAStepper

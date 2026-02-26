@@ -6,7 +6,13 @@ using JumpProcesses, OrdinaryDiffEq, Test
 reactant_stoch = [[1 => 3]]
 net_stoch = [[1 => -3, 2 => 1]]
 
-# Custom mapper: returns pre-scaled rates (like MTKBase's JumpSysMajParamMapper)
+# Custom mapper mimicking MTKBase's JumpSysMajParamMapper.
+# The initial rates callable always pre-scales (simulating symbolic expressions that
+# already contain the combinatoric factor, e.g. k/3! for 3X → Y).
+# The update callable also pre-scales, then conditionally applies scalerates! based on
+# scale_rates — matching MTKBase's behavior. This is what makes the test an actual
+# regression test: with the old default of scale_rates=true, the second scalerates!
+# would double-scale.
 struct PreScaledMapper
     param_idxs::Vector{Int}
     reactant_stoch::Vector{Vector{Pair{Int, Int}}}
@@ -20,7 +26,8 @@ function (m::PreScaledMapper)(maj::MassActionJump, newparams; scale_rates, kwarg
     for i in 1:JumpProcesses.get_num_majumps(maj)
         maj.scaled_rates[i] = newparams[m.param_idxs[i]]
     end
-    JumpProcesses.scalerates!(maj.scaled_rates, maj.reactant_stoch)
+    JumpProcesses.scalerates!(maj.scaled_rates, m.reactant_stoch)
+    scale_rates && JumpProcesses.scalerates!(maj.scaled_rates, maj.reactant_stoch)
     nothing
 end
 JumpProcesses.to_collection(m::PreScaledMapper) = m

@@ -61,26 +61,26 @@ non_uniform_majumps = [non_uniform_majumps_1, non_uniform_majumps_2, non_uniform
 uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
                                         hopping_constants = hopping_constants,
                                         spatial_system = grid,
-                                        save_positions = (false, false), rng = rng)
+                                        save_positions = (false, false))
                                     for majump in uniform_majumps]
 # flattenned
 append!(uniform_jump_problems,
     JumpProblem[JumpProblem(prob, NRM(), majump, hopping_constants = hopping_constants,
-                    spatial_system = grid, save_positions = (false, false), rng = rng)
+                    spatial_system = grid, save_positions = (false, false))
                 for majump in uniform_majumps])
 
 # non-uniform
 non_uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
                                             hopping_constants = hopping_constants,
                                             spatial_system = grid,
-                                            save_positions = (false, false), rng = rng)
+                                            save_positions = (false, false))
                                         for majump in non_uniform_majumps]
 
 # testing
-function get_mean_end_state(jump_prob, Nsims)
+function get_mean_end_state(jump_prob, Nsims; rng = nothing)
     end_state = zeros(size(jump_prob.prob.u0))
     for i in 1:Nsims
-        sol = solve(jump_prob, SSAStepper())
+        sol = solve(jump_prob, SSAStepper(); rng)
         end_state .+= sol.u[end]
     end
     end_state / Nsims
@@ -106,8 +106,8 @@ ode_prob = ODEProblem(f, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
 for spatial_jump_prob in uniform_jump_problems
-    solution = solve(spatial_jump_prob, SSAStepper())
-    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+    solution = solve(spatial_jump_prob, SSAStepper(); rng)
+    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims; rng)
     mean_end_state = reshape(mean_end_state, num_nodes)
     diff = mean_end_state - sol.u[end]
     for (i, d) in enumerate(diff)
@@ -122,8 +122,8 @@ end
 ode_prob = ODEProblem(f2, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
-solution = solve(non_uniform_jump_problems[1], SSAStepper())
-mean_end_state = get_mean_end_state(non_uniform_jump_problems[1], Nsims)
+solution = solve(non_uniform_jump_problems[1], SSAStepper(); rng)
+mean_end_state = get_mean_end_state(non_uniform_jump_problems[1], Nsims; rng)
 mean_end_state = reshape(mean_end_state, num_nodes)
 diff = mean_end_state - sol.u[end]
 for (i, d) in enumerate(diff)
@@ -135,8 +135,8 @@ f3(u, p, t) = L * u - diagm([0.0, 0.0, death_rate, 0.0, 0.0]) * u + ones(num_nod
 ode_prob = ODEProblem(f3, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
-solution = solve(non_uniform_jump_problems[2], SSAStepper())
-mean_end_state = get_mean_end_state(non_uniform_jump_problems[2], Nsims)
+solution = solve(non_uniform_jump_problems[2], SSAStepper(); rng)
+mean_end_state = get_mean_end_state(non_uniform_jump_problems[2], Nsims; rng)
 mean_end_state = reshape(mean_end_state, num_nodes)
 diff = mean_end_state - sol.u[end]
 for (i, d) in enumerate(diff)
@@ -150,8 +150,8 @@ end
 ode_prob = ODEProblem(f4, zeros(num_nodes), tspan)
 sol = solve(ode_prob, Tsit5())
 
-solution = solve(non_uniform_jump_problems[3], SSAStepper())
-mean_end_state = get_mean_end_state(non_uniform_jump_problems[3], Nsims)
+solution = solve(non_uniform_jump_problems[3], SSAStepper(); rng)
+mean_end_state = get_mean_end_state(non_uniform_jump_problems[3], Nsims; rng)
 mean_end_state = reshape(mean_end_state, num_nodes)
 diff = mean_end_state - sol.u[end]
 for (i, d) in enumerate(diff)

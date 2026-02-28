@@ -1,5 +1,5 @@
-mutable struct FRMJumpAggregation{T, S, F1, F2, RNG} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct FRMJumpAggregation{T, S, F1, F2} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -10,40 +10,39 @@ mutable struct FRMJumpAggregation{T, S, F1, F2, RNG} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    rng::RNG
 end
 function FRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1,
-        affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
-        kwargs...) where {T, S, F1, F2, RNG}
+        affs!::F2, sps::Tuple{Bool, Bool};
+        kwargs...) where {T, S, F1, F2}
     affecttype = F2 <: Tuple ? F2 : Any
-    FRMJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr, maj, rs,
-        affs!, sps, rng)
+    FRMJumpAggregation{T, S, F1, affecttype}(nj, nj, njt, et, crs, sr, maj, rs,
+        affs!, sps)
 end
 
 ############################# Required Functions #############################
 
 # creating the JumpAggregation structure (tuple-based constant jumps)
 function aggregate(aggregator::FRM, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions; kwargs...)
 
     # handle constant jumps using tuples
     rates, affects! = get_jump_info_tuples(constant_jumps)
 
     build_jump_aggregation(
         FRMJumpAggregation, u, p, t, end_time, ma_jumps, rates, affects!,
-        save_positions, rng; kwargs...)
+        save_positions; kwargs...)
 end
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::FRMFW, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(
         FRMJumpAggregation, u, p, t, end_time, ma_jumps, rates, affects!,
-        save_positions, rng; kwargs...)
+        save_positions; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -62,8 +61,9 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::FRMJumpAggregation, integrator, u, params, t)
-    nextmaj, ttnmaj = next_ma_jump(p, u, params, t)
-    nextcrj, ttncrj = next_constant_rate_jump(p, u, params, t)
+    rng = get_rng(integrator)
+    nextmaj, ttnmaj = next_ma_jump(p, u, params, t, rng)
+    nextcrj, ttncrj = next_constant_rate_jump(p, u, params, t, rng)
 
     # execute reaction with minimal time
     if ttnmaj < ttncrj
@@ -79,13 +79,13 @@ end
 ######################## SSA specific helper routines ########################
 
 # mass action jumps
-function next_ma_jump(p::FRMJumpAggregation, u, params, t)
+function next_ma_jump(p::FRMJumpAggregation, u, params, t, rng)
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     majumps = p.ma_jumps
     @inbounds for i in 1:get_num_majumps(majumps)
         p.cur_rates[i] = evalrxrate(u, i, majumps)
-        dt = randexp(p.rng) / p.cur_rates[i]
+        dt = randexp(rng) / p.cur_rates[i]
         if dt < ttnj
             ttnj = dt
             nextrx = i
@@ -95,15 +95,15 @@ function next_ma_jump(p::FRMJumpAggregation, u, params, t)
 end
 
 # tuple-based constant jumps
-function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, params,
-        t) where {T, S, F1 <: Tuple, F2 <: Tuple, RNG}
+function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2}, u, params,
+        t, rng) where {T, S, F1 <: Tuple, F2 <: Tuple}
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)
         idx = get_num_majumps(p.ma_jumps) + 1
         fill_cur_rates(u, params, t, p.cur_rates, idx, p.rates...)
         @inbounds for i in idx:length(p.cur_rates)
-            dt = randexp(p.rng) / p.cur_rates[i]
+            dt = randexp(rng) / p.cur_rates[i]
             if dt < ttnj
                 ttnj = dt
                 nextrx = i
@@ -115,14 +115,14 @@ end
 
 # function wrapper-based constant jumps
 function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1}, u, params,
-        t) where {T, S, F1 <: AbstractArray}
+        t, rng) where {T, S, F1 <: AbstractArray}
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     if !isempty(p.rates)
         idx = get_num_majumps(p.ma_jumps) + 1
         @inbounds for i in 1:length(p.rates)
             p.cur_rates[idx] = p.rates[i](u, params, t)
-            dt = randexp(p.rng) / p.cur_rates[idx]
+            dt = randexp(rng) / p.cur_rates[idx]
             if dt < ttnj
                 ttnj = dt
                 nextrx = idx

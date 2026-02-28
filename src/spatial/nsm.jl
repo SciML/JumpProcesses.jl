@@ -3,9 +3,9 @@
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, JVMAP,
+mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR, VJMAP, JVMAP,
     PQ, SS} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -15,7 +15,6 @@ mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, J
     rates::F1 # legacy, not used
     affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
-    rng::RNG
     dep_gr::DEPGR #dep graph is same for each site
     vartojumps_map::VJMAP #vartojumps_map is same for each site
     jumptovars_map::JVMAP #jumptovars_map is same for each site
@@ -27,9 +26,9 @@ end
 function NSMJumpAggregation(
         nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP,
         sps::Tuple{Bool, Bool},
-        rng::RNG, spatial_system::SS; num_specs,
+        spatial_system::SS; num_specs,
         vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing, kwargs...) where {J, T, RX, HOP, RNG, SS}
+        dep_graph = nothing, kwargs...) where {J, T, RX, HOP, SS}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -55,13 +54,13 @@ function NSMJumpAggregation(
 
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{T, Nothing, Nothing, Nothing, RNG, J, RX, HOP, typeof(dg),
+    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dg),
         typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS}(nj, nj, njt, et,
         rx_rates,
         hop_rates,
         nothing,
         nothing,
-        sps, rng, dg,
+        sps, dg,
         vtoj_map,
         jtov_map,
         pq,
@@ -72,7 +71,7 @@ end
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; hopping_constants, spatial_system,
+        ma_jumps, save_positions; hopping_constants, spatial_system,
         kwargs...)
     num_species = size(starting_state, 1)
     majumps = ma_jumps
@@ -88,7 +87,7 @@ function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jum
     hop_rates = HopRates(hopping_constants, spatial_system)
 
     NSMJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates,
-        save_positions, rng, spatial_system; num_specs = num_species,
+        save_positions, spatial_system; num_specs = num_species,
         kwargs...)
 end
 
@@ -104,7 +103,8 @@ end
 function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     p.next_jump_time >= p.end_time && return nothing
-    p.next_jump = sample_jump_direct(p, site)
+    rng = get_rng(integrator)
+    p.next_jump = sample_jump_direct(p, site, rng)
     nothing
 end
 
@@ -125,7 +125,8 @@ end
 reset all structs, reevaluate all rates, recalculate tentative site firing times, and reinit the priority queue
 """
 function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, integrator, t)
-    (; spatial_system, rx_rates, hop_rates, rng) = aggregation
+    (; spatial_system, rx_rates, hop_rates) = aggregation
+    rng = get_rng(integrator)
     u = integrator.u
 
     reset!(rx_rates)
@@ -153,30 +154,31 @@ recalculate jump rates for jumps that depend on the just executed jump (p.prev_j
 """
 function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, integrator, t)
     u = integrator.u
+    rng = get_rng(integrator)
     jump = p.prev_jump
     if is_hop(p, jump)
         source_site = jump.src
         target_site = jump.dst
         update_rates_after_hop!(p, integrator, source_site, target_site, jump.jidx)
-        update_site_time!(p, source_site, t)
-        update_site_time!(p, target_site, t)
+        update_site_time!(p, source_site, t, rng)
+        update_site_time!(p, target_site, t, rng)
     else
         site = jump.src
         update_rates_after_reaction!(p, integrator, site, reaction_id_from_jump(p, jump))
-        update_site_time!(p, site, t)
+        update_site_time!(p, site, t, rng)
     end
     nothing
 end
 
 """
-    update_site_time!(p::NSMJumpAggregation, site, t)
+    update_site_time!(p::NSMJumpAggregation, site, t, rng)
 
 update the time of site in the priority queue
 """
-function update_site_time!(p::NSMJumpAggregation, site, t)
+function update_site_time!(p::NSMJumpAggregation, site, t, rng)
     site_rate = (total_site_rate(p.rx_rates, p.hop_rates, site))
     if site_rate > zero(typeof(site_rate))
-        update!(p.pq, site, t + randexp(p.rng) / site_rate)
+        update!(p.pq, site, t + randexp(rng) / site_rate)
     else
         update!(p.pq, site, typemax(t))
     end

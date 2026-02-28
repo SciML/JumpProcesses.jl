@@ -13,6 +13,9 @@ Highly efficient integrator for pure jump problems that involve only `ConstantRa
     `SSAStepper`.
   - Only supports a limited subset of the output controls from the common solver interface,
     specifically `save_start`, `save_end`, and `saveat`.
+  - Supports `rng` and `seed` keyword arguments in `solve`/`init` to control the random
+    number generator used for jump sampling. `rng` accepts any `AbstractRNG`, while `seed`
+    creates a `Xoshiro` generator. `rng` takes priority over `seed`.
   - As when using jumps with ODEs and SDEs, saving controls for whether to save each time a
     jump occurs are via the `save_positions` keyword argument to `JumpProblem`. Note that when
     choosing `SSAStepper` as the timestepper, `save_positions = (true,true)`, `(true,false)`,
@@ -58,17 +61,18 @@ for details.
 """
 struct SSAStepper <: DiffEqBase.DEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
+SciMLBase.supports_solve_rng(::JumpProblem, ::SSAStepper) = true
 
 """
 $(TYPEDEF)
 
-Solution objects for pure jump problems solved via `SSAStepper`.
+Integrator for pure jump problems solved via `SSAStepper`.
 
 ## Fields
 
 $(FIELDS)
 """
-mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <:
+mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS, R} <:
                AbstractSSAIntegrator{SSAStepper, Nothing, uType, tType}
     """The underlying `prob.f` function. Not currently used."""
     f::F
@@ -108,6 +112,23 @@ mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <
     alias_tstops::Bool
     """If true indicates we have already allocated the tstops array"""
     copied_tstops::Bool
+    """The random number generator."""
+    rng::R
+end
+
+SciMLBase.has_rng(::SSAIntegrator) = true
+SciMLBase.get_rng(integrator::SSAIntegrator) = integrator.rng
+function SciMLBase.set_rng!(integrator::SSAIntegrator, rng)
+    R = typeof(integrator.rng)
+    if !isa(rng, R)
+        throw(ArgumentError(
+            "Cannot set RNG of type $(typeof(rng)) on an integrator " *
+            "whose RNG type parameter is $R. " *
+            "Construct a new integrator via `init(prob, alg; rng = your_rng)` instead."
+        ))
+    end
+    integrator.rng = rng
+    nothing
 end
 
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
@@ -198,6 +219,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
         save_start = true,
         save_end = true,
         seed = nothing,
+        rng = nothing,
         alias_jump = Threads.threadid() == 1,
         saveat = nothing,
         callback = nothing,
@@ -219,19 +241,13 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
 
     # Check for continuous callbacks passed via kwargs (from JumpProblem constructor or solve)
     check_continuous_callback_error(callback)
+
+    _rng = resolve_rng(rng, seed)
+
     if alias_jump
         cb = jump_prob.jump_callback.discrete_callbacks[end]
-        if seed !== nothing
-            Random.seed!(cb.condition.rng, seed)
-        end
     else
         cb = deepcopy(jump_prob.jump_callback.discrete_callbacks[end])
-        # Only reseed if an explicit seed is provided. This respects the user's RNG choice
-        # and enables reproducibility. For EnsembleProblems, use prob_func to set unique seeds
-        # for each trajectory if different results are needed.
-        if seed !== nothing
-            Random.seed!(cb.condition.rng, seed)
-        end
     end
     opts = (callback = CallbackSet(callback),)
 
@@ -286,7 +302,7 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
 
     integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
         prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
-        save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false)
+        save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false, _rng)
     cb.initialize(cb, integrator.u, prob.tspan[1], integrator)
     DiffEqBase.initialize!(opts.callback, integrator.u, prob.tspan[1], integrator)
     if save_start

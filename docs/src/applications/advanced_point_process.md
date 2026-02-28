@@ -387,10 +387,10 @@ function Base.rand(rng::AbstractRNG,
     out = Array{History, 1}(undef, n)
     p = params(pp)
     dprob = DiscreteProblem([0], tspan, p)
-    jprob = JumpProblem(dprob, Coevolve(), jumps...; dep_graph = pp.g, save_positions, rng)
+    jprob = JumpProblem(dprob, Coevolve(), jumps...; dep_graph = pp.g, save_positions)
     for i in 1:n
         params!(pp, p)
-        solve(jprob, SSAStepper())
+        solve(jprob, SSAStepper(); rng)
         out[i] = deepcopy(p.h)
     end
     return out

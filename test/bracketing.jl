@@ -49,7 +49,7 @@ t = 0.0
 
 ### Aggregator ###
 mutable struct DummyAggregator{T, M, R, BD} <:
-               JP.AbstractSSAJumpAggregator{T, M, R, Nothing, Nothing}
+               JP.AbstractSSAJumpAggregator{T, M, R, Nothing}
     ulow::Vector{Int}
     uhigh::Vector{Int}
     cur_rate_low::Vector{T}

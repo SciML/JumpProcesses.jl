@@ -51,7 +51,6 @@ $(FIELDS)
 
 ## Keyword Arguments
 
-  - `rng`, the random number generator to use. Defaults to Julia's built-in generator.
   - `save_positions=(true,true)` when including variable rates and `(false,true)` for constant
     rates, specifies whether to save the system's state (before, after) the jump occurs.
   - `spatial_system`, for spatial problems the underlying spatial structure.
@@ -61,14 +60,25 @@ $(FIELDS)
     integration interface, and treated like general `VariableRateJump`s.
   - `vr_aggregator`, indicates the aggregator to use for sampling variable rate jumps. Current
     default is `VR_FRM`.
+  - `tstops`, time stops to pass through to the solver. Can be an `AbstractVector` of times
+    or a callable `(p, tspan) -> times`.
 
 Please see the [tutorial
 page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in
 the DifferentialEquations.jl [docs](https://docs.sciml.ai/JumpProcesses/stable/) for usage
 examples and commonly asked questions.
+
+!!! warning "Thread Safety"
+    `JumpProblem` contains mutable state (aggregator data, callbacks) and is **not
+    thread-safe**. A single `JumpProblem` instance must not be solved concurrently from
+    multiple threads or tasks without first creating independent copies via `deepcopy`.
+    When running ensemble simulations via `EnsembleProblem`, this is handled automatically
+    — the `SciMLBase` ensemble layer provides per-task isolation and per-trajectory RNG
+    seeding. This warning only applies to manually parallelized `solve` calls outside the
+    ensemble interface.
 """
-mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J1, 
-        J2, J3, J4, R, K} <: DiffEqBase.AbstractJumpProblem{P, J}
+mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J1,
+        J2, J3, J4, K} <: DiffEqBase.AbstractJumpProblem{P, J}
     """The type of problem to couple the jumps to. For a pure jump process use `DiscreteProblem`, to couple to ODEs, `ODEProblem`, etc."""
     prob::P
     """The aggregator algorithm that determines the next jump times and types for `ConstantRateJump`s and `MassActionJump`s. Examples include `Direct`."""
@@ -85,26 +95,24 @@ mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggrega
     regular_jump::J3
     """The `MassActionJump`s."""
     massaction_jump::J4
-    """The random number generator to use."""
-    rng::R
     """kwargs to pass on to solve call."""
     kwargs::K
 end
 function JumpProblem(p::P, a::A, dj::J, jc::C, cj::J1, vj::J2, rj::J3, mj::J4,
-        rng::R, kwargs::K) where {P, A, J, C, J1, J2, J3, J4, R, K}
+        kwargs::K) where {P, A, J, C, J1, J2, J3, J4, K}
     iip = isinplace_jump(p, rj)
-    JumpProblem{iip, P, A, C, J, J1, J2, J3, J4, R, K}(p, a, dj, jc, cj, vj, rj, mj, 
-        rng, kwargs)
+    JumpProblem{iip, P, A, C, J, J1, J2, J3, J4, K}(p, a, dj, jc, cj, vj, rj, mj,
+        kwargs)
 end
 
 ######## remaking ######
 
 # for a problem where prob.u0 is an ExtendedJumpArray, create an ExtendedJumpArray that 
 # aliases and resets prob.u0.jump_u while having newu0 as the new u component.
-function remake_extended_u0(prob, newu0, rng)
+function remake_extended_u0(prob, newu0)
     jump_u = prob.u0.jump_u
     ttype = eltype(prob.tspan)
-    @. jump_u = -randexp(rng, ttype)
+    @. jump_u = zero(ttype)
     ExtendedJumpArray(newu0, jump_u)
 end
 
@@ -142,7 +150,7 @@ function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
                     error("Passed in u0 is incompatible with current u0 which has type: $(typeof(prob.u0.u)).")
                 end
 
-                final_u0 = remake_extended_u0(prob, state_vals, jprob.rng)
+                final_u0 = remake_extended_u0(prob, state_vals)
             end
             newprob = DiffEqBase.remake(prob; u0 = final_u0, p, interpret_symbolicmap, use_defaults, kwargs...)
         else
@@ -169,8 +177,8 @@ function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
     end
 
     T(newprob, jprob.aggregator, jprob.discrete_jump_aggregation, jprob.jump_callback,
-        jprob.constant_jumps, jprob.variable_jumps, jprob.regular_jump, 
-        jprob.massaction_jump, jprob.rng, jprob.kwargs)
+        jprob.constant_jumps, jprob.variable_jumps, jprob.regular_jump,
+        jprob.massaction_jump, jprob.kwargs)
 end
 
 # for updating parameters in JumpProblems to update MassActionJumps
@@ -239,9 +247,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         vr_aggregator::VariableRateAggregator = VR_FRM(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
+        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, use_vrj_bounds = true, kwargs...)
+
+    if haskey(kwargs, :rng)
+        throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
+    end
 
     # initialize the MassActionJump rate constants with the user parameters
     if using_params(jumps.massaction_jump)
@@ -289,15 +301,15 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         constant_jump_callback = CallbackSet()
     else
         disc_agg = aggregate(aggregator, u, prob.p, t, end_time, crjs, maj,
-            save_positions, rng; kwargs...)
+            save_positions; kwargs...)
         constant_jump_callback = DiscreteCallback(disc_agg)
     end
 
     # handle any remaining vrjs
     if length(cvrjs) > 0
         # Handle variable rate jumps based on vr_aggregator
-        new_prob, variable_jump_callback = configure_jump_problem(prob, vr_aggregator, 
-            jumps, cvrjs; rng)
+        new_prob, variable_jump_callback = configure_jump_problem(prob, vr_aggregator,
+            jumps, cvrjs)
     else
         new_prob = prob
         variable_jump_callback = CallbackSet()
@@ -310,17 +322,21 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     JumpProblem{iip, typeof(new_prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(cvrjs), typeof(jumps.regular_jump),
-        typeof(maj), typeof(rng), typeof(solkwargs)}(new_prob, aggregator, disc_agg,
-        jump_cbs, crjs, cvrjs, jumps.regular_jump, maj, rng, solkwargs)
+        typeof(maj), typeof(solkwargs)}(new_prob, aggregator, disc_agg,
+        jump_cbs, crjs, cvrjs, jumps.regular_jump, maj, solkwargs)
 end
 
 # Special dispatch for PureLeaping aggregator - bypasses all aggregation
 function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
+        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, kwargs...)
+
+    if haskey(kwargs, :rng)
+        throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
+    end
 
     # Validate no spatial systems (not currently supported)
     (spatial_system !== nothing || hopping_constants !== nothing) &&
@@ -342,18 +358,18 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     # No discrete jump aggregation or variable rate callbacks are created
     disc_agg = nothing
     jump_cbs = CallbackSet()
-    
+
     # Store all jump types for access by tau-leaping solver
     crjs = jumps.constant_jumps
     vrjs = jumps.variable_jumps
-    
+
     iip = isinplace_jump(prob, jumps.regular_jump)
     solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
     JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs),
         typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(jumps.regular_jump),
-        typeof(maj), typeof(rng), typeof(solkwargs)}(prob, aggregator, disc_agg,
-        jump_cbs, crjs, vrjs, jumps.regular_jump, maj, rng, solkwargs)
+        typeof(maj), typeof(solkwargs)}(prob, aggregator, disc_agg,
+        jump_cbs, crjs, vrjs, jumps.regular_jump, maj, solkwargs)
 end
 
 aggregator(jp::JumpProblem{iip, P, A}) where {iip, P, A} = A

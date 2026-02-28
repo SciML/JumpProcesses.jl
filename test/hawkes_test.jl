@@ -65,7 +65,7 @@ function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
         save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, kwargs...)
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
-    jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
+    jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions)
     return jprob
 end
 
@@ -78,7 +78,7 @@ function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
         save_positions = (false, true), g = [[1]], h = [[]], vr_aggregator = VR_FRM(), kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
-    jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator, save_positions, rng)
+    jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator, save_positions)
     return jprob
 end
 
@@ -119,7 +119,7 @@ for (i, alg) in enumerate(algs)
     sols = Vector{ODESolution}(undef, Nsims)
     for n in 1:Nsims
         reset_history!(h)
-        sols[n] = solve(jump_prob, stepper)
+        sols[n] = solve(jump_prob, stepper; rng)
     end
 
     if alg isa Coevolve
@@ -137,12 +137,12 @@ let alg = Coevolve()
     for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
-        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g)
         @test ((jprob.variable_jumps === nothing) || isempty(jprob.variable_jumps))
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims
             reset_history!(h)
-            sols[n] = solve(jprob, Tsit5())
+            sols[n] = solve(jprob, Tsit5(); rng)
         end
         λs = permutedims(mapreduce((sol) -> empirical_rate(sol), hcat, sols))
         @test isapprox(mean(λs), Eλ; atol = 0.01)
@@ -156,12 +156,12 @@ let alg = Coevolve()
     for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
-        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, rng, use_vrj_bounds = false)
+        jprob = JumpProblem(oprob, alg, jumps...; vr_aggregator, dep_graph = g, use_vrj_bounds = false)
         @test length(jprob.variable_jumps) == 1
         sols = Vector{ODESolution}(undef, Nsims)
         for n in 1:Nsims
             reset_history!(h)
-            sols[n] = solve(jprob, Tsit5())
+            sols[n] = solve(jprob, Tsit5(); rng)
         end
 
         cols = length(u0)

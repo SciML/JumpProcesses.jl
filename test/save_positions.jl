@@ -15,8 +15,8 @@ let
         jump = VariableRateJump((u, p, t) -> 0, (integrator) -> integrator.u[1] += 1;
             urate = (u, p, t) -> 1.0, rateinterval = (u, p, t) -> 5.0)
         jumpproblem = JumpProblem(dprob, alg, jump; dep_graph = [[1]],
-            save_positions = (false, true), rng)
-        sol = solve(jumpproblem, SSAStepper())
+            save_positions = (false, true))
+        sol = solve(jumpproblem, SSAStepper(); rng)
         @test sol.t == [0.0, 30.0]
 
         oprob = ODEProblem((du, u, p, t) -> 0, u0, tspan)
@@ -26,8 +26,8 @@ let
         for vr_agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
             jumpproblem = JumpProblem(
                 oprob, alg, jump; vr_aggregator = vr_agg, dep_graph = [[1]],
-                save_positions = (false, true), rng)
-            sol = solve(jumpproblem, Tsit5(); save_everystep = false)
+                save_positions = (false, true))
+            sol = solve(jumpproblem, Tsit5(); rng, save_everystep = false)
             @test sol.t == [0.0, 30.0]
         end
     end
@@ -46,20 +46,20 @@ let
     # for pure jump problems dense = save_everystep
     vals = (true, true, true, false)
     for (sp, val) in zip(sps, vals)
-        jprob = JumpProblem(dprob, Direct(), crj; save_positions = sp, rng)
-        sol = solve(jprob, SSAStepper())
+        jprob = JumpProblem(dprob, Direct(), crj; save_positions = sp)
+        sol = solve(jprob, SSAStepper(); rng)
         @test SciMLBase.isdenseplot(sol) == val
     end
 
     # for mixed problems sol.dense currently ignores save_positions
     oprob = ODEProblem((du, u, p, t) -> du[1] = 0.1, u0, tspan)
     for sp in sps
-        jprob = JumpProblem(oprob, Direct(), crj; save_positions = sp, rng)
-        sol = solve(jprob, Tsit5())
+        jprob = JumpProblem(oprob, Direct(), crj; save_positions = sp)
+        sol = solve(jprob, Tsit5(); rng)
         @test sol.dense == true
         @test SciMLBase.isdenseplot(sol) == true
 
-        sol = solve(jprob, Tsit5(); dense = false)
+        sol = solve(jprob, Tsit5(); rng, dense = false)
         @test sol.dense == false
         @test SciMLBase.isdenseplot(sol) == false
     end

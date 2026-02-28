@@ -1,6 +1,26 @@
 # Breaking updates and feature summaries across releases
 
-## JumpProcesses unreleased (master branch)
+## 10.0 (Breaking)
+
+  - **Breaking**: The `rng` keyword argument has been removed from
+    `JumpProblem`. Pass `rng` to `solve` or `init` instead:
+    ```julia
+    # Before (no longer works):
+    jprob = JumpProblem(dprob, Direct(), jump; rng = Xoshiro(1234))
+    sol = solve(jprob, SSAStepper())
+
+    # After:
+    jprob = JumpProblem(dprob, Direct(), jump)
+    sol = solve(jprob, SSAStepper(); rng = Xoshiro(1234))
+    ```
+  - RNG state is now owned by the integrator, not the aggregator. This
+    eliminates data races when sharing a `JumpProblem` across threads and
+    ensures a single, consistent RNG priority across all solver pathways:
+    `rng` > `seed` > `Random.default_rng()`.
+  - `rng` and `seed` kwargs are fully supported on `solve`/`init` for all
+    solver pathways (SSAStepper, ODE, SDE, tau-leaping).
+  - `SSAIntegrator` now supports the `SciMLBase` RNG interface (`has_rng`,
+    `get_rng`, `set_rng!`).
 
 ## 9.14
 

@@ -67,6 +67,15 @@ Please see the [tutorial
 page](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/) in
 the DifferentialEquations.jl [docs](https://docs.sciml.ai/JumpProcesses/stable/) for usage
 examples and commonly asked questions.
+
+!!! warning "Thread Safety"
+    `JumpProblem` contains mutable state (aggregator data, callbacks) and is **not
+    thread-safe**. A single `JumpProblem` instance must not be solved concurrently from
+    multiple threads or tasks without first creating independent copies via `deepcopy`.
+    When running ensemble simulations via `EnsembleProblem`, this is handled automatically
+    — the `SciMLBase` ensemble layer provides per-task isolation and per-trajectory RNG
+    seeding. This warning only applies to manually parallelized `solve` calls outside the
+    ensemble interface.
 """
 mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J1,
         J2, J3, J4, K} <: DiffEqBase.AbstractJumpProblem{P, J}

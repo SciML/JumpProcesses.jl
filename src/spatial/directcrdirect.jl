@@ -142,6 +142,7 @@ function fill_rates_and_get_times!(
     (; spatial_system, rx_rates, hop_rates, site_rates, rt) = aggregation
     u = integrator.u
 
+    fill_scaled_rates!(rx_rates.maj_rates, rx_rates.ma_jumps, integrator.p)
     reset!(rx_rates)
     reset!(hop_rates)
     site_rates .= zero(typeof(t))

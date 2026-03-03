@@ -82,6 +82,11 @@ function SpatialMassActionJump(urates::A, rs, ns; scale_rates = true, useiszero 
         useiszero = useiszero, nocopy = nocopy)
 end
 
+function SpatialMassActionJump(ma_jumps::MassActionJump{Nothing}; kwargs...)
+    error("Cannot construct SpatialMassActionJump from a parameter-mapped MassActionJump. " *
+          "Provide explicit rate vectors or use a SpatialMassActionJump directly.")
+end
+
 # scale_rates defaults to false since ma_jumps.scaled_rates are already scaled;
 # passing true would double-scale.
 function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates = false,

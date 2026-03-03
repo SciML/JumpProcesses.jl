@@ -4,7 +4,7 @@
 ###############################################################################
 
 @inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
+        majump::MassActionJump, maj_rates::AbstractVector{R})::R where {T <: Integer, R}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -15,11 +15,11 @@
         end
     end
 
-    @inbounds return val * majump.scaled_rates[rxidx]
+    @inbounds return val * maj_rates[rxidx]
 end
 
 @inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Real, R, U <: AbstractVector{R}}
+        majump::MassActionJump, maj_rates::AbstractVector{R})::R where {T <: Real, R}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -29,11 +29,11 @@ end
             val *= specpop
         end
         # we need to check the smallest rate law term is positive
-        # i.e. for an order k reaction: x - k + 1 > 0 
+        # i.e. for an order k reaction: x - k + 1 > 0
         (specpop <= 0) && return zero(R)
     end
 
-    @inbounds return val * majump.scaled_rates[rxidx]
+    @inbounds return val * maj_rates[rxidx]
 end
 
 @inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,

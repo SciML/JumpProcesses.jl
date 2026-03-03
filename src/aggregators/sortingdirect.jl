@@ -11,6 +11,7 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
     cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
@@ -21,6 +22,7 @@ end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         num_specs, dep_graph = nothing,
         kwargs...) where {T, S, F1, F2}
 
@@ -42,7 +44,7 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
     SortingDirectJumpAggregation{T, S, F1, affecttype, typeof(dg)}(nj, nj, njt, et,
-        crs, sr, maj, rs,
+        crs, sr, maj, maj_rates, rs,
         affs!, sps,
         dg, jtoidx,
         zero(Int))
@@ -65,6 +67,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     fill_rates_and_sum!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing

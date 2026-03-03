@@ -129,6 +129,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, integrator, 
     rng = get_rng(integrator)
     u = integrator.u
 
+    fill_scaled_rates!(rx_rates.maj_rates, rx_rates.ma_jumps, integrator.p)
     reset!(rx_rates)
     reset!(hop_rates)
 

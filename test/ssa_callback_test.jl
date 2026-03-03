@@ -105,14 +105,19 @@ sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCall
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
-# test scale_rates kwarg
+# test scale_rates / rescale_rates_on_update behavior
 p .= [1.0]
 dprob = DiscreteProblem(u₀, tspan, p)
 maj5 = MassActionJump([[1 => 2]], [[1 => -1, 2 => 1]]; param_idxs = [1])
 jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false))
-@test all(jprob.massaction_jump.scaled_rates .== [0.5])
-jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), scale_rates = false)
-@test all(jprob.massaction_jump.scaled_rates .== [1.0])
+@test jprob.massaction_jump.scaled_rates === nothing  # parameterized MAJ
+integ = init(jprob, SSAStepper())
+@test all(jprob.discrete_jump_aggregation.maj_rates .== [0.5])
+# with scale_rates = false on the MAJ itself
+maj5_noscale = MassActionJump([[1 => 2]], [[1 => -1, 2 => 1]]; param_idxs = [1], scale_rates = false)
+jprob = JumpProblem(dprob, Direct(), maj5_noscale, save_positions = (false, false))
+integ = init(jprob, SSAStepper())
+@test all(jprob.discrete_jump_aggregation.maj_rates .== [1.0])
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/239
 maj6 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];

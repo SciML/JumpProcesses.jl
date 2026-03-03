@@ -128,8 +128,7 @@ end
 end
 
 # Test 5: rescale_rates_on_update propagated through JumpSet merge and JumpProblem varargs
-# Use explicit-rate MAJs since the JumpSet vector merge path doesn't support
-# parameterized (Nothing-rated) MAJs.
+# Uses explicit-rate MAJs to test rescale_rates_on_update propagation and mismatch errors.
 @testset "rescale_rates_on_update propagated through merge paths" begin
     reactant_stoch2 = [[2 => 3]]
     net_stoch2 = [[2 => -3, 1 => 1]]
@@ -173,14 +172,25 @@ end
     @test_throws ErrorException JumpProblem(dprob, Direct(), maj_true, maj_false)
 end
 
-# Test 6: Mapper-backed MAJ merge raises error
-@testset "Parameterized MAJ merge error" begin
+# Test 6: Custom mapper-backed MAJ merge raises error; built-in mapper merge works
+@testset "MAJ merge behavior" begin
+    # Built-in MassActionJumpParamMapper merges should succeed
     maj_p1 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
     maj_p2 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
-    @test_throws ErrorException JumpSet(; massaction_jumps = [maj_p1, maj_p2])
+    merged = JumpSet(; massaction_jumps = [maj_p1, maj_p2])
+    @test JumpProcesses.get_num_majumps(merged.massaction_jump) == 2
 
     dprob = DiscreteProblem([100, 0], (0.0, 1.0), [1.0])
-    @test_throws ErrorException JumpProblem(dprob, Direct(), maj_p1, maj_p2)
+    jprob = JumpProblem(dprob, Direct(), maj_p1, maj_p2)
+    @test JumpProcesses.get_num_majumps(jprob.massaction_jump) == 2
+
+    # Custom mapper merge should error
+    mapper1 = PreScaledMapper([1], reactant_stoch)
+    mapper2 = PreScaledMapper([1], reactant_stoch)
+    maj_c1 = MassActionJump(reactant_stoch, net_stoch; param_mapper = mapper1, scale_rates = false)
+    maj_c2 = MassActionJump(reactant_stoch, net_stoch; param_mapper = mapper2, scale_rates = false)
+    @test_throws ErrorException JumpSet(; massaction_jumps = [maj_c1, maj_c2])
+    @test_throws ErrorException JumpProblem(dprob, Direct(), maj_c1, maj_c2)
 end
 
 # Test 7: Immutability and aliasing

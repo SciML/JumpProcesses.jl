@@ -568,8 +568,8 @@ function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
         error("JumpSets do not accept empty mass action jump collections; use \"nothing\" instead.")
     end
 
-    if any(using_params, majv)
-        error("Cannot merge MassActionJumps backed by parameter mappers. " *
+    if any(m -> using_params(m) && !(m.param_mapper isa MassActionJumpParamMapper), majv)
+        error("Cannot merge MassActionJumps backed by custom parameter mappers. " *
               "Construct a single MassActionJump with all reactions instead.")
     end
 
@@ -731,9 +731,11 @@ massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1
 massaction_jump_combine(maj1::Nothing, maj2::MassActionJump) = maj2
 massaction_jump_combine(maj1::Nothing, maj2::Nothing) = maj1
 function massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump)
-    (using_params(maj1) || using_params(maj2)) &&
-        error("Cannot merge MassActionJumps backed by parameter mappers. " *
-              "Construct a single MassActionJump with all reactions instead.")
+    for m in (maj1, maj2)
+        (using_params(m) && !(m.param_mapper isa MassActionJumpParamMapper)) &&
+            error("Cannot merge MassActionJumps backed by custom parameter mappers. " *
+                  "Construct a single MassActionJump with all reactions instead.")
+    end
     (maj1.rescale_rates_on_update == maj2.rescale_rates_on_update) ||
         error("Cannot merge MassActionJumps with different rescale_rates_on_update settings.")
     majump_merge!(maj1, maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch,

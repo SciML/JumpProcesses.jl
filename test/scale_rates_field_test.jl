@@ -80,7 +80,7 @@ end
 
     maj = MassActionJump(reactant_stoch, net_stoch; param_mapper = mapper, scale_rates = false)
     dprob = DiscreteProblem([100, 0], (0.0, 100.0), p)
-    jprob = JumpProblem(dprob, Direct(), maj; scale_rates = false)
+    jprob = JumpProblem(dprob, Direct(), maj)
 
     expected_scaled = k / factorial(3)  # 1.0
 
@@ -159,7 +159,7 @@ end
     # Two MAJs with matching rescale_rates_on_update = false via JumpProblem varargs
     maj_f1 = MassActionJump([1.0], reactant_stoch, net_stoch; scale_rates = false)
     maj_f2 = MassActionJump([2.0], reactant_stoch2, net_stoch2; scale_rates = false)
-    jprob_f = JumpProblem(dprob, Direct(), maj_f1, maj_f2; scale_rates = false)
+    jprob_f = JumpProblem(dprob, Direct(), maj_f1, maj_f2)
     @test jprob_f.massaction_jump.rescale_rates_on_update == false
 
     # Two MAJs with matching rescale_rates_on_update = true via JumpProblem varargs
@@ -181,7 +181,9 @@ end
     @test JumpProcesses.get_num_majumps(merged.massaction_jump) == 2
 
     dprob = DiscreteProblem([100, 0], (0.0, 1.0), [1.0])
-    jprob = JumpProblem(dprob, Direct(), maj_p1, maj_p2)
+    maj_p3 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    maj_p4 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    jprob = JumpProblem(dprob, Direct(), maj_p3, maj_p4)
     @test JumpProcesses.get_num_majumps(jprob.massaction_jump) == 2
 
     # Custom mapper merge should error

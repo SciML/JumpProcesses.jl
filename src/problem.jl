@@ -230,12 +230,17 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         vr_aggregator::VariableRateAggregator = VR_FRM(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, use_vrj_bounds = true, kwargs...)
 
     if haskey(kwargs, :rng)
         throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
+    end
+    if haskey(kwargs, :scale_rates)
+        throw(ArgumentError("`scale_rates` is no longer a keyword argument for `JumpProblem`. Set `scale_rates` on the `MassActionJump` directly instead."))
+    end
+    if haskey(kwargs, :useiszero)
+        throw(ArgumentError("`useiszero` is no longer a keyword argument for `JumpProblem`. Set `useiszero` on the `MassActionJump` directly instead."))
     end
 
     # keep the original MAJ (including {Nothing} parameterized MAJs);

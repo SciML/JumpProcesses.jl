@@ -460,6 +460,7 @@ end
 function to_collection(ratemap::MassActionJumpParamMapper{Int})
     MassActionJumpParamMapper([ratemap.param_idxs])
 end
+to_collection(ratemap::MassActionJumpParamMapper{<:AbstractVector}) = ratemap
 
 function Base.merge!(pmap1::MassActionJumpParamMapper{U},
         pmap2::MassActionJumpParamMapper{U}) where {U <: AbstractVector}
@@ -647,10 +648,12 @@ function check_majump_type(maj::MassActionJump{Nothing, T, U, V}) where {T, U, V
 end
 
 # if given containers of rates and stoichiometry directly create a jump
+# copy arrays since majump_merge! will mutate them in-place
 function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{U}, pmapper,
         rescale_rates_on_update::Bool) where {T <: AbstractVector, S <: AbstractArray,
         U <: AbstractArray}
-    MassActionJump(sr, rs, ns, pmapper; scale_rates = false, rescale_rates_on_update)
+    MassActionJump(copy(sr), copy(rs), copy(ns), pmapper;
+        scale_rates = false, nocopy = true, rescale_rates_on_update)
 end
 
 # if just given the data for one jump (and not in a container) wrap in a vector
@@ -662,7 +665,17 @@ function setup_majump_to_merge(sr::S, rs::T, ns::U, pmapper,
         scale_rates = false, rescale_rates_on_update)
 end
 
-# if no rate field setup yet
+# if no rate field setup yet — collection case (rs is already Vector{<:AbstractArray})
+# copy arrays and mapper since majump_merge! will mutate them in-place
+function setup_majump_to_merge(::Nothing, rs::AbstractVector{S}, ns::AbstractVector{U},
+        pmapper,
+        rescale_rates_on_update::Bool) where {S <: AbstractArray, U <: AbstractArray}
+    pm = (pmapper === nothing) ? nothing : deepcopy(pmapper)
+    MassActionJump(nothing, copy(rs), copy(ns), pm;
+        scale_rates = false, nocopy = true, rescale_rates_on_update)
+end
+
+# if no rate field setup yet — single reaction case (wrap in a vector)
 function setup_majump_to_merge(::Nothing, rs::T, ns::U, pmapper,
         rescale_rates_on_update::Bool) where {T <: AbstractArray, U <: AbstractArray}
     MassActionJump(nothing, [rs], [ns],
@@ -728,8 +741,12 @@ function majump_merge!(maj::MassActionJump{T, S, U, V}, sr::T, rs::S, ns::U,
 end
 
 massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1
-massaction_jump_combine(maj1::Nothing, maj2::MassActionJump) = maj2
 massaction_jump_combine(maj1::Nothing, maj2::Nothing) = maj1
+# copy the MAJ so it is safe to mutate during subsequent merges
+function massaction_jump_combine(maj1::Nothing, maj2::MassActionJump)
+    setup_majump_to_merge(maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch,
+        maj2.param_mapper, maj2.rescale_rates_on_update)
+end
 function massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump)
     for m in (maj1, maj2)
         (using_params(m) && !(m.param_mapper isa MassActionJumpParamMapper)) &&

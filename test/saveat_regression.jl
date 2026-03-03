@@ -10,12 +10,12 @@ maj = MassActionJump(rate_consts, reactant_stoich, net_stoich)
 n0 = [1, 1, 0]
 tspan = (0, 0.2)
 dprob = DiscreteProblem(n0, tspan)
-jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false), rng = rng)
+jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false))
 ts = collect(0:0.002:tspan[2])
 NA = zeros(length(ts))
 Nsims = 10_000
-sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(), saveat = ts,
-    trajectories = Nsims)
+sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(); saveat = ts,
+    trajectories = Nsims, rng)
 
 for i in 1:length(sol)
     NA .+= sol.u[i][1, :]
@@ -26,10 +26,10 @@ for i in 1:length(ts)
 end
 
 NA = zeros(length(ts))
-jprob = JumpProblem(dprob, Direct(), maj; rng = rng)
+jprob = JumpProblem(dprob, Direct(), maj)
 sol = nothing;
 GC.gc();
-sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(), trajectories = Nsims)
+sol = JumpProcesses.solve(EnsembleProblem(jprob), SSAStepper(); trajectories = Nsims, rng)
 
 for i in 1:Nsims
     for n in 1:length(ts)

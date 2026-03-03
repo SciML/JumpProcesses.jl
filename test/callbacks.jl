@@ -25,8 +25,8 @@ rng = StableRNG(12345)
     affect_cb!(integrator) = (cb_called[] = true)
     cb = ContinuousCallback(condition, affect_cb!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb)
+    sol = solve(jprob, Tsit5(); rng)
 
     @test cb_called[]
     @test sol.t[end] ≈ 10.0
@@ -37,8 +37,8 @@ rng = StableRNG(12345)
     affect_dcb!(integrator) = (dcb_called[] += 1)
     dcb = DiscreteCallback(condition_d, affect_dcb!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = dcb)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = dcb)
+    sol = solve(jprob, Tsit5(); rng)
 
     @test dcb_called[] > 0  # Should have fired multiple times
 
@@ -47,8 +47,8 @@ rng = StableRNG(12345)
     affect_term!(integrator) = terminate!(integrator)
     cb_term = ContinuousCallback(condition_term, affect_term!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb_term)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb_term)
+    sol = solve(jprob, Tsit5(); rng)
 
     @test sol.t[end] ≈ 3.0  # Should terminate at t=3
 
@@ -57,8 +57,8 @@ rng = StableRNG(12345)
     affect_mod!(integrator) = (integrator.u[1] *= 2.0)
     cb_mod = ContinuousCallback(condition_mod, affect_mod!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb_mod)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb_mod)
+    sol = solve(jprob, Tsit5(); rng)
 
     # Check that state was modified at t=5
     idx = findfirst(t -> t >= 5.0, sol.t)
@@ -95,8 +95,8 @@ end
     # Test 1: Both callbacks should fire (default merge_callbacks = true)
     cb1_count[] = 0
     cb2_count[] = 0
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb1)
-    sol = solve(jprob, Tsit5(); callback = cb2)
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb1)
+    sol = solve(jprob, Tsit5(); callback = cb2, rng)
 
     @test cb1_count[] > 0
     @test cb2_count[] > 0
@@ -110,8 +110,8 @@ end
     # Test 2: Only solve callback should fire (merge_callbacks = false)
     cb1_count[] = 0
     cb2_count[] = 0
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb1)
-    sol = solve(jprob, Tsit5(); callback = cb2, merge_callbacks = false)
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb1)
+    sol = solve(jprob, Tsit5(); callback = cb2, merge_callbacks = false, rng)
 
     @test cb1_count[] == 0  # Should not fire
     @test cb2_count[] == 1  # Should fire exactly once
@@ -139,8 +139,8 @@ end
     cb = ContinuousCallback(condition, affect_cb!)
 
     # Callback in JumpProblem constructor
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb)
-    integrator = init(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb)
+    integrator = init(jprob, Tsit5(); rng)
     solve!(integrator)
 
     @test cb_called[]
@@ -175,8 +175,8 @@ end
     # Create CallbackSet with both types
     cbset = CallbackSet(ccb, dcb)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cbset)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = cbset)
+    sol = solve(jprob, Tsit5(); rng)
 
     @test ccb_called[]
     @test dcb_called[] > 0
@@ -202,8 +202,8 @@ end
     affect_term!(integrator) = (cb_called[] = true; terminate!(integrator))
     dcb_term = DiscreteCallback(condition_term, affect_term!)
 
-    jprob = JumpProblem(dprob, Direct(), jump1; rng, callback = dcb_term)
-    sol = solve(jprob, SSAStepper())
+    jprob = JumpProblem(dprob, Direct(), jump1; callback = dcb_term)
+    sol = solve(jprob, SSAStepper(); rng)
 
     @test cb_called[]  # Should have fired
     @test sol.u[end][1] >= 5  # Should have reached threshold
@@ -215,8 +215,8 @@ end
     affect_count!(integrator) = (dcb_counter[] += 1)
     dcb_count = DiscreteCallback(condition_count, affect_count!)
 
-    jprob2 = JumpProblem(dprob, Direct(), jump1; rng)
-    sol2 = solve(jprob2, SSAStepper(); callback = dcb_count)
+    jprob2 = JumpProblem(dprob, Direct(), jump1)
+    sol2 = solve(jprob2, SSAStepper(); callback = dcb_count, rng)
 
     @test dcb_counter[] > 0  # Should have fired at least once
 
@@ -232,8 +232,8 @@ end
     affect_cb2!(integrator) = (cb2_count[] += 1)
     dcb2 = DiscreteCallback(condition2, affect_cb2!)
 
-    jprob3 = JumpProblem(dprob, Direct(), jump1; rng, callback = dcb1)
-    sol3 = solve(jprob3, SSAStepper(); callback = dcb2)
+    jprob3 = JumpProblem(dprob, Direct(), jump1; callback = dcb1)
+    sol3 = solve(jprob3, SSAStepper(); callback = dcb2, rng)
 
     @test cb1_count[] > 0  # First callback should fire
     @test cb2_count[] > 0  # Second callback should fire
@@ -257,8 +257,8 @@ end
     affect_cb4!(integrator) = (cb4_called[] = true)
     dcb4 = DiscreteCallback(condition4, affect_cb4!)
 
-    jprob4 = JumpProblem(dprob, Direct(), jump1; rng, callback = dcb3)
-    sol4 = solve(jprob4, SSAStepper(); callback = dcb4, merge_callbacks = false)
+    jprob4 = JumpProblem(dprob, Direct(), jump1; callback = dcb3)
+    sol4 = solve(jprob4, SSAStepper(); callback = dcb4, merge_callbacks = false, rng)
 
     @test !cb3_called[]  # First callback should NOT fire
     @test cb4_called[]   # Second callback should fire
@@ -288,8 +288,8 @@ end
     cb = ContinuousCallback(condition, affect_cb!)
 
     # This was broken in v9.17.0 - callback wouldn't fire
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cb)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), jump; callback = cb)
+    sol = solve(jprob, Tsit5(); rng)
 
     @test cb_called[]
     @test sol.t[end] ≈ 0.5  # Should terminate at 0.5, not run to 1.0
@@ -323,8 +323,8 @@ end
     affect_d!(integrator) = (dcb_called[] += 1)
     dcb = DiscreteCallback(condition_d, affect_d!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = ccb)
-    sol = solve(jprob, Tsit5(); callback = dcb)
+    jprob = JumpProblem(prob, Direct(), jump; callback = ccb)
+    sol = solve(jprob, Tsit5(); callback = dcb, rng)
 
     @test ccb_called[]  # Continuous callback should fire
     @test dcb_called[] > 0  # Discrete callback should fire multiple times
@@ -357,8 +357,8 @@ end
     affect_c!(integrator) = (ccb_called[] = true)
     ccb = ContinuousCallback(condition_c, affect_c!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = dcb)
-    sol = solve(jprob, Tsit5(); callback = ccb)
+    jprob = JumpProblem(prob, Direct(), jump; callback = dcb)
+    sol = solve(jprob, Tsit5(); callback = ccb, rng)
 
     @test dcb_called[] > 0  # Discrete callback should fire
     @test ccb_called[]  # Continuous callback should fire
@@ -398,8 +398,8 @@ end
     affect3!(integrator) = (cb3_called[] = true)
     ccb2 = ContinuousCallback(condition3, affect3!)
 
-    jprob = JumpProblem(prob, Direct(), jump; rng, callback = cbset)
-    sol = solve(jprob, Tsit5(); callback = ccb2)
+    jprob = JumpProblem(prob, Direct(), jump; callback = cbset)
+    sol = solve(jprob, Tsit5(); callback = ccb2, rng)
 
     @test cb1_called[]  # First continuous callback should fire
     @test cb2_called[] > 0  # Discrete callback should fire
@@ -421,12 +421,12 @@ end
     affect_cb!(integrator) = nothing
     ccb = ContinuousCallback(condition, affect_cb!)
 
-    jprob_ccb = JumpProblem(dprob, Direct(), jump; rng, callback = ccb)
-    @test_throws ErrorException solve(jprob_ccb, SSAStepper())
+    jprob_ccb = JumpProblem(dprob, Direct(), jump; callback = ccb)
+    @test_throws ErrorException solve(jprob_ccb, SSAStepper(); rng)
 
     # Test 2: ContinuousCallback passed to solve should error
-    jprob = JumpProblem(dprob, Direct(), jump; rng)
-    @test_throws ErrorException solve(jprob, SSAStepper(); callback = ccb)
+    jprob = JumpProblem(dprob, Direct(), jump)
+    @test_throws ErrorException solve(jprob, SSAStepper(); callback = ccb, rng)
 
     # Test 3: CallbackSet with continuous callbacks passed to JumpProblem should error on solve
     condition_d(u, t, integrator) = true
@@ -434,19 +434,19 @@ end
     dcb = DiscreteCallback(condition_d, affect_dcb!)
 
     cbset_with_continuous = CallbackSet(ccb, dcb)
-    jprob_cbset = JumpProblem(dprob, Direct(), jump; rng, callback = cbset_with_continuous)
-    @test_throws ErrorException solve(jprob_cbset, SSAStepper())
+    jprob_cbset = JumpProblem(dprob, Direct(), jump; callback = cbset_with_continuous)
+    @test_throws ErrorException solve(jprob_cbset, SSAStepper(); rng)
 
     # Test 4: CallbackSet with continuous callbacks passed to solve should error
-    @test_throws ErrorException solve(jprob, SSAStepper(); callback = cbset_with_continuous)
+    @test_throws ErrorException solve(jprob, SSAStepper(); callback = cbset_with_continuous, rng)
 
     # Test 5: CallbackSet with multiple continuous callbacks should error with correct count
     ccb2 = ContinuousCallback(condition, affect_cb!)
     cbset_multi = CallbackSet(ccb, ccb2, dcb)
 
-    jprob_multi = JumpProblem(dprob, Direct(), jump; rng, callback = cbset_multi)
+    jprob_multi = JumpProblem(dprob, Direct(), jump; callback = cbset_multi)
     err = try
-        solve(jprob_multi, SSAStepper())
+        solve(jprob_multi, SSAStepper(); rng)
         nothing
     catch e
         e
@@ -457,18 +457,18 @@ end
 
     # Test 6: DiscreteCallbacks should work fine (no error)
     dcb_only = DiscreteCallback(condition_d, affect_dcb!)
-    jprob_dcb = JumpProblem(dprob, Direct(), jump; rng, callback = dcb_only)
-    sol = solve(jprob_dcb, SSAStepper())
+    jprob_dcb = JumpProblem(dprob, Direct(), jump; callback = dcb_only)
+    sol = solve(jprob_dcb, SSAStepper(); rng)
     @test sol.retcode == ReturnCode.Success
 
     # Test 7: CallbackSet with only discrete callbacks should work
     dcb2 = DiscreteCallback(condition_d, affect_dcb!)
     cbset_discrete = CallbackSet(dcb_only, dcb2)
-    jprob_dcb2 = JumpProblem(dprob, Direct(), jump; rng, callback = cbset_discrete)
-    sol2 = solve(jprob_dcb2, SSAStepper())
+    jprob_dcb2 = JumpProblem(dprob, Direct(), jump; callback = cbset_discrete)
+    sol2 = solve(jprob_dcb2, SSAStepper(); rng)
     @test sol2.retcode == ReturnCode.Success
 
     # Test 8: Error should also be thrown with init
-    @test_throws ErrorException init(jprob_ccb, SSAStepper())
-    @test_throws ErrorException init(jprob, SSAStepper(); callback = ccb)
+    @test_throws ErrorException init(jprob_ccb, SSAStepper(); rng)
+    @test_throws ErrorException init(jprob, SSAStepper(); callback = ccb, rng)
 end

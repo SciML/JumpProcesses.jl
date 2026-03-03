@@ -2,8 +2,8 @@
 Direct with rejection sampling
 """
 
-mutable struct RDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct RDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -14,7 +14,6 @@ mutable struct RDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    rng::RNG
     dep_gr::DEPGR
     max_rate::T
     counter::Int
@@ -22,10 +21,10 @@ mutable struct RDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
 end
 
 function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
-        rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
+        rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         num_specs, counter_threshold = length(crs),
         dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        kwargs...) where {T, S, F1, F2}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
@@ -42,9 +41,9 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
 
     max_rate = maximum(crs)
     affecttype = F2 <: Tuple ? F2 : Any
-    return RDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
+    return RDirectJumpAggregation{T, S, F1, affecttype, typeof(dg)}(nj, nj, njt, et,
         crs, sr, maj, rs,
-        affs!, sps, rng,
+        affs!, sps,
         dg, max_rate, 0,
         counter_threshold)
 end
@@ -53,13 +52,13 @@ end
 
 # creating the JumpAggregation structure (tuple-based constant jumps)
 function aggregate(aggregator::RDirect, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(RDirectJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions, rng; num_specs = length(u),
+        rates, affects!, save_positions; num_specs = length(u),
         kwargs...)
 end
 
@@ -93,7 +92,8 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
     if nomorejumps!(p, sum_rate)
         return nothing
     end
-    (; rng, cur_rates, max_rate) = p
+    rng = get_rng(integrator)
+    (; cur_rates, max_rate) = p
 
     num_rxs = length(cur_rates)
     counter = 0
@@ -105,7 +105,7 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
 
     p.counter = counter
     p.next_jump = rx
-    p.next_jump_time = t + randexp(p.rng) / sum_rate
+    p.next_jump_time = t + randexp(rng) / sum_rate
     nothing
 end
 

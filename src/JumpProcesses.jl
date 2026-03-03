@@ -40,7 +40,7 @@ using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
                   ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
                   deleteat!, isinplace, remake, savevalues!, step!,
                   u_modified!
-using SciMLBase: SciMLBase, DEIntegrator
+using SciMLBase: SciMLBase, DEIntegrator, has_rng, get_rng, set_rng!
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end

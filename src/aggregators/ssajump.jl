@@ -13,13 +13,11 @@ An aggregator interface for SSA-like algorithms.
   - `rates`              # vector of rate functions for ConstantRateJumps
   - `affects!`           # vector of affect functions for ConstantRateJumps
   - `save_positions`     # tuple for whether to save the jumps before and/or after event
-  - `rng`                # random number generator
-
 ### Optional fields:
 
   - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should be updated when rx i occurs.
 """
-abstract type AbstractSSAJumpAggregator{T, S, F1, F2, RNG} <: AbstractJumpAggregator end
+abstract type AbstractSSAJumpAggregator{T, S, F1, F2} <: AbstractJumpAggregator end
 
 function DiscreteCallback(c::AbstractSSAJumpAggregator)
     DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
@@ -112,12 +110,12 @@ end
 
 """
     build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
-                           affects!, save_positions, rng; kwargs...)
+                           affects!, save_positions; kwargs...)
 
 Helper routine for setting up standard fields of SSA jump aggregations.
 """
 function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
-        affects!, save_positions, rng; kwargs...)
+        affects!, save_positions; kwargs...)
 
     # mass action jumps
     majumps = ma_jumps
@@ -134,7 +132,7 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
     next_jump = 0
     next_jump_time = typemax(typeof(t))
     jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-        majumps, rates, affects!, save_positions, rng; kwargs...)
+        majumps, rates, affects!, save_positions; kwargs...)
 end
 
 """

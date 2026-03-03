@@ -20,8 +20,8 @@ rs = [[0 => 1]]
 ns = [[1 => 1]]
 jump = MassActionJump(rate, rs, ns)
 prob = DiscreteProblem([100], (0.0, 100.0))
-jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
-sol = solve(jump_prob, SSAStepper())
+jump_prob = JumpProblem(prob, Direct(), jump)
+sol = solve(jump_prob, SSAStepper(); rng)
 if doprint
     println("mass act jump using vectors of data: last val = ", sol[end, end])
 end
@@ -35,8 +35,8 @@ rate = 2.0
 rs = [0 => 3]                   # stoich power should be ignored
 ns = [1 => 1]
 jump = MassActionJump(rate, rs, ns)
-jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
-sol = solve(jump_prob, SSAStepper())
+jump_prob = JumpProblem(prob, Direct(), jump)
+sol = solve(jump_prob, SSAStepper(); rng)
 if doprint
     println("mass act jump using scalar data: last val = ", sol[end, end])
 end
@@ -51,8 +51,8 @@ rs = [Vector{Pair{Int, Int}}()]
 ns = [[1 => 1]]
 jump = MassActionJump(rate, rs, ns)
 prob = DiscreteProblem([100], (0.0, 100.0))
-jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
-sol = solve(jump_prob, SSAStepper())
+jump_prob = JumpProblem(prob, Direct(), jump)
+sol = solve(jump_prob, SSAStepper(); rng)
 if doprint
     println("mass act jump using vector of Pair{Int,Int}: last val = ", sol[end, end])
 end
@@ -66,8 +66,8 @@ rate = 2.0
 rs = Vector{Pair{Int, Int}}()
 ns = [1 => 1]
 jump = MassActionJump(rate, rs, ns)
-jump_prob = JumpProblem(prob, Direct(), jump; rng = rng)
-sol = solve(jump_prob, SSAStepper())
+jump_prob = JumpProblem(prob, Direct(), jump)
+sol = solve(jump_prob, SSAStepper(); rng)
 if doprint
     println("mass act jump using scalar Pair{Int,Int}: last val = ", sol[end, end])
 end
@@ -100,8 +100,8 @@ jump_to_dep_specs = [[1], [1]]
 namedpars = (dep_graph = dep_graph, vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs)
 
 for method in methods
-    local jump_prob = JumpProblem(prob, method, jump, jump2; rng = rng, namedpars...)
-    local sol = solve(jump_prob, SSAStepper())
+    local jump_prob = JumpProblem(prob, method, jump, jump2; namedpars...)
+    local sol = solve(jump_prob, SSAStepper(); rng)
 
     if doplot
         plot!(plothand2, sol, label = ("A <-> 0, " * string(method)))

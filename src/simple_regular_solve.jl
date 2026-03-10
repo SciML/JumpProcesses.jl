@@ -441,13 +441,16 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     return sol
 end
 
-# Compute highest order of reaction (HOR)
-# Reference: Cao et al. (2006), J. Chem. Phys. 124, 044109, Section IV
+# Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
+# HOR is the sum of stoichiometric coefficients of reactants in reaction j.
+# Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
 function compute_hor(reactant_stoch, numjumps)
-    hor = zeros(Int, numjumps)
+    stoch_type = eltype(first(first(reactant_stoch)))
+    hor = zeros(stoch_type, numjumps)
+    max_order = 3 * one(stoch_type)  # Maximum supported reaction order (type-aware)
     for j in 1:numjumps
-        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=0)
-        if order > 3
+        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=zero(stoch_type))
+        if order > max_order
             error("Reaction $j has order $order, which is not supported (maximum order is 3).")
         end
         hor[j] = order
@@ -455,14 +458,17 @@ function compute_hor(reactant_stoch, numjumps)
     return hor
 end
 
-# Precompute max_hor and max_stoich for g_i calculation
-# Reference: Cao et al. (2006), Section IV, equation (27)
+# Precompute reaction conditions for each species i, including:
+# - max_hor: the highest order of reaction (HOR) where species i is a reactant.
+# - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
+# Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
 function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    max_hor = zeros(Int, numspecies)
-    max_stoich = zeros(Int, numspecies)
+    hor_type = eltype(hor)
+    max_hor = zeros(hor_type, numspecies)
+    max_stoich = zeros(hor_type, numspecies)
     for j in 1:numjumps
         for (spec_idx, stoch) in reactant_stoch[j]
-            if stoch > 0
+            if stoch > 0  # Species is a reactant
                 if hor[j] > max_hor[spec_idx]
                     max_hor[spec_idx] = hor[j]
                     max_stoich[spec_idx] = stoch
@@ -475,117 +481,80 @@ function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjump
     return max_hor, max_stoich
 end
 
-# Compute g_i to bound propensity changes
-# Reference: Cao et al. (2006), Section IV, equation (27)
-function compute_gi(u, max_hor, max_stoich, i, t)
-    if max_hor[i] == 0
-        return 1.0
-    elseif max_hor[i] == 1
-        return 1.0
-    elseif max_hor[i] == 2
-        if max_stoich[i] == 1
-            return 2.0
-        elseif max_stoich[i] == 2
-            return u[i] > 1 ? 2.0 + 1.0 / (u[i] - 1) : 2.0
-        end
-    elseif max_hor[i] == 3
-        if max_stoich[i] == 1
-            return 3.0
-        elseif max_stoich[i] == 2
-            return u[i] > 1 ? 1.5 * (2.0 + 1.0 / (u[i] - 1)) : 3.0
-        elseif max_stoich[i] == 3
-            return u[i] > 2 ? 3.0 + 1.0 / (u[i] - 1) + 2.0 / (u[i] - 2) : 3.0
-        end
-    end
-    return 1.0
-end
-
-# Compute tau for explicit tau-leaping
-# Reference: Cao et al. (2006), equation (8), using equations (9a) and (9b)
-function compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-    rate(rate_cache, u, p, t)
-    if all(==(0.0), rate_cache)
-        return dtmin
-    end
-    tau = Inf
-    for i in 1:length(u)
-        mu = zero(eltype(rate_cache))  # Equation (9a): mu_i(x) = sum_j nu_ij * a_j(x)
-        sigma2 = zero(eltype(rate_cache))  # Equation (9b): sigma_i^2(x) = sum_j nu_ij^2 * a_j(x)
-        for j in 1:size(nu, 2)
-            mu += nu[i, j] * rate_cache[j]
-            sigma2 += nu[i, j]^2 * rate_cache[j]
-        end
-        gi = compute_gi(u, max_hor, max_stoich, i, t)  # Equation (27)
-        bound = max(epsilon * max(u[i], 0.0) / gi, 1.0)
-        mu_term = abs(mu) > 0 ? bound / abs(mu) : Inf  # First term in equation (8)
-        sigma_term = sigma2 > 0 ? bound^2 / sigma2 : Inf  # Second term in equation (8)
-        tau = min(tau, mu_term, sigma_term)  # Equation (8)
-    end
-    return max(tau, dtmin)
-end
 
 # Compute tau for implicit tau-leaping with relaxed error control
-# Reference: Cao et al. (2007), J. Chem. Phys. 126, 224101, Section III.A, using relaxed epsilon for larger steps
-function compute_tau_implicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps, implicit_epsilon_factor)
-    tau_explicit = compute_tau(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-    u_predict = float.(copy(u))  # Initialize as Float64 to handle fractional updates
+# Reference: Cao et al. (2007), J. Chem. Phys. 126, 224101, Section III.A
+function compute_tau_implicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin,
+        max_hor, max_stoich, numjumps, implicit_epsilon_factor)
+    tau_explicit = compute_tau(
+        u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+    u_predict = float.(u)
     rate(rate_cache, u, p, t)
     for j in 1:numjumps
         for spec_idx in 1:size(nu, 1)
             u_predict[spec_idx] += nu[spec_idx, j] * rate_cache[j] * tau_explicit
         end
     end
-    u_predict = max.(u_predict, 0.0)
-    
+    u_predict .= max.(u_predict, zero(eltype(u_predict)))
     relaxed_epsilon = epsilon * implicit_epsilon_factor
-    # Reuse compute_tau with predicted state, time, and relaxed epsilon
-    tau = compute_tau(u_predict, rate_cache, nu, hor, p, t + tau_explicit, relaxed_epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+    tau = compute_tau(u_predict, rate_cache, nu, hor, p, t + tau_explicit,
+        relaxed_epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
     return max(tau, dtmin)
 end
 
 # Define residual for implicit equation
-# Reference: Cao et al. (2004), J. Chem. Phys. 121, 4059
+# Newton: u_new = u_current + sum_j nu_j * a_j(u_new) * tau (Cao et al., 2004)
+# Trapezoidal: u_new = u_current + sum_j nu_j * (a_j(u_current) + a_j(u_new))/2 * tau
 function implicit_equation!(resid, u_new, params)
     u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver = params
     rate(rate_cache, u_new, p, t + tau)
     resid .= u_new .- u_current
-    for j in 1:numjumps
-        for spec_idx in 1:size(nu, 1)
-            if isa(solver, NewtonImplicitSolver)
+    if isa(solver, NewtonImplicitSolver)
+        for j in 1:numjumps
+            for spec_idx in 1:size(nu, 1)
                 resid[spec_idx] -= nu[spec_idx, j] * rate_cache[j] * tau  # Cao et al. (2004)
-            else  # TrapezoidalImplicitSolver
-                rate_current = similar(rate_cache)
-                rate(rate_current, u_current, p, t)
-                resid[spec_idx] -= nu[spec_idx, j] * 0.5 * (rate_cache[j] + rate_current[j]) * tau
+            end
+        end
+    else  # TrapezoidalImplicitSolver
+        rate_current = similar(rate_cache)
+        rate(rate_current, u_current, p, t)
+        half = one(eltype(rate_cache)) / 2
+        for j in 1:numjumps
+            for spec_idx in 1:size(nu, 1)
+                resid[spec_idx] -= nu[spec_idx, j] * half * (rate_cache[j] + rate_current[j]) * tau
             end
         end
     end
     resid .= max.(resid, -u_new)  # Ensure non-negative solution
 end
 
-# Solve implicit equation
+# Solve implicit equation using SimpleNonlinearSolve
 function solve_implicit(u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver)
-    u_new = float.(copy(u_current))
+    u_new = convert(Vector{float(eltype(u_current))}, u_current)
     prob = NonlinearProblem(implicit_equation!, u_new, (u_current, rate_cache, nu, p, t, tau, rate, numjumps, solver))
     sol = solve(prob, SimpleNewtonRaphson(autodiff=AutoFiniteDiff()); abstol=1e-6, reltol=1e-6)
     return sol.u, sol.retcode == ReturnCode.Success
 end
 
+
 # Compute Jacobian for eigenvalue-based stiffness detection
 # Reference: Cao et al. (2007), Section III.B
 function compute_jacobian(u, rate, numjumps, numspecies, p, t)
-    J = zeros(numjumps, numspecies)
-    rate_cache = zeros(numjumps)
+    T = float(eltype(u))
+    sqrteps = sqrt(eps(T))
+    J = zeros(T, numjumps, numspecies)
+    rate_cache = zeros(T, numjumps)
     rate(rate_cache, u, p, t)
-    h = 1e-6
+    rate_plus = zeros(T, numjumps)
+    u_plus = float.(copy(u))
     for i in 1:numspecies
-        u_plus = float.(copy(u))
-        u_plus[i] += h
-        rate_plus = zeros(numjumps)
+        h_i = sqrteps * max(abs(u[i]), one(T))
+        u_plus[i] = u[i] + h_i
         rate(rate_plus, u_plus, p, t)
         for j in 1:numjumps
-            J[j, i] = (rate_plus[j] - rate_cache[j]) / h
+            J[j, i] = (rate_plus[j] - rate_cache[j]) / h_i
         end
+        u_plus[i] = u[i]
     end
     return J
 end
@@ -615,31 +584,125 @@ function is_stiff(rate_cache, u, epsilon, eigenvalue_check, stiffness_ratio_thre
     end
 end
 
+function simple_adaptive_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, numspecies, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj,
+        solver, eigenvalue_check, stiffness_ratio_threshold, implicit_epsilon_factor,
+        save_end)
+    save_idx = 1
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        if all(<=(0), rate_cache)
+            t_current = t_end
+            break
+        end
+        use_implicit = is_stiff(rate_cache, u_current, epsilon, eigenvalue_check,
+            stiffness_ratio_threshold, p, t_current, rate, numjumps, numspecies)
+        tau = if use_implicit
+            compute_tau_implicit(u_current, rate_cache, nu, hor, p, t_current,
+                epsilon, rate, dtmin, max_hor, max_stoich, numjumps,
+                implicit_epsilon_factor)
+        else
+            compute_tau(u_current, rate_cache, nu, hor, p, t_current,
+                epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+        end
+        tau = min(tau, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) &&
+           t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
+        end
+
+        if use_implicit
+            u_new_float, converged = solve_implicit(u_current, rate_cache, nu, p,
+                t_current, tau, rate, numjumps, solver)
+            if !converged
+                tau /= 2
+                continue
+            end
+            rate(rate_cache, u_new_float, p, t_current + tau)
+        end
+
+        rate_effective .= max.(rate_cache .* tau, zero(eltype(rate_cache)))
+        for j in eachindex(counts)
+            if rate_effective[j] <= zero(eltype(rate_effective))
+                counts[j] = zero(eltype(counts))
+            else
+                counts[j] = pois_rand(rng, rate_effective[j])
+            end
+        end
+        du .= zero(eltype(du))
+        for j in 1:numjumps
+            for (spec_idx, stoch) in maj.net_stoch[j]
+                du[spec_idx] += stoch * counts[j]
+            end
+        end
+        u_new .= u_current .+ du
+        if any(<(0), u_new)
+            tau /= 2
+            continue
+        end
+        t_new = t_current + tau
+
+        if isempty(saveat_times) ||
+           (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
+        end
+
+        u_current .= u_new
+        t_current = t_new
+    end
+
+    if save_end && (isempty(tsave) || tsave[end] != t_end)
+        push!(usave, copy(u_current))
+        push!(tsave, t_end)
+    end
+end
+
 # Adaptive tau-leaping solver
 # Reference: Cao et al. (2007), Cao et al. (2004), Cao et al. (2006)
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping; seed=nothing, dtmin=1e-10, saveat=nothing)
-    validate_pure_leaping_inputs(jump_prob, alg) || error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
+        seed = nothing,
+        dtmin = nothing,
+        saveat = nothing, save_start = nothing, save_end = nothing)
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
-    @unpack prob, rng = jump_prob
+    (; prob, rng) = jump_prob
     (seed !== nothing) && seed!(rng, seed)
 
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
-    rate = (out, u, p, t) -> begin
-        for j in 1:numjumps
-            out[j] = evalrxrate(u, j, maj)
-        end
-    end
+    rj = jump_prob.regular_jump
+    rate = rj !== nothing ? rj.rate : massaction_rate(maj, numjumps)
     u0 = copy(prob.u0)
     tspan = prob.tspan
     p = prob.p
 
+    if dtmin === nothing
+        dtmin = 1e-10 * one(typeof(tspan[2]))
+    end
+
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
+
     u_current = copy(u0)
+    u_new = similar(u0)
     t_current = tspan[1]
-    usave = [copy(u0)]
-    tsave = [tspan[1]]
-    rate_cache = zeros(Float64, numjumps)
-    counts = zeros(Int64, numjumps)
+    if save_start
+        usave = [copy(u0)]
+        tsave = [tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
+    rate_cache = zeros(float(eltype(u0)), numjumps)
+    rate_effective = similar(rate_cache)
+    counts = zero(rate_cache)
     du = similar(u0)
     t_end = tspan[2]
     epsilon = alg.epsilon
@@ -647,8 +710,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     eigenvalue_check = alg.eigenvalue_check
     stiffness_ratio_threshold = alg.stiffness_ratio_threshold
     implicit_epsilon_factor = alg.implicit_epsilon_factor
+    numspecies = length(u0)
 
-    nu = zeros(Int64, length(u0), numjumps)
+    nu = zeros(float(eltype(u0)), length(u0), numjumps)
     for j in 1:numjumps
         for (spec_idx, stoch) in maj.net_stoch[j]
             nu[spec_idx, j] = stoch
@@ -656,75 +720,19 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
     end
     reactant_stoch = maj.reactant_stoch
     hor = compute_hor(reactant_stoch, numjumps)
-    max_hor, max_stoich = precompute_reaction_conditions(reactant_stoch, hor, length(u0), numjumps)
-    numspecies = length(u0)
+    max_hor, max_stoich = precompute_reaction_conditions(
+        reactant_stoch, hor, numspecies, numjumps)
 
-    saveat_times = isnothing(saveat) ? Vector{Float64}() : 
-                   (saveat isa Number ? collect(range(tspan[1], tspan[2], step=saveat)) : collect(saveat))
-    save_idx = 1
-
-    while t_current < t_end
-        rate(rate_cache, u_current, p, t_current)
-        use_implicit = is_stiff(rate_cache, u_current, epsilon, eigenvalue_check, stiffness_ratio_threshold, p, t_current, rate, numjumps, numspecies)
-        tau = use_implicit ? 
-              compute_tau_implicit(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps, implicit_epsilon_factor) :
-              compute_tau(u_current, rate_cache, nu, hor, p, t_current, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
-        tau = min(tau, t_end - t_current)
-        if !isempty(saveat_times) && save_idx <= length(saveat_times) && t_current + tau > saveat_times[save_idx]
-            tau = saveat_times[save_idx] - t_current
-        end
-
-        if use_implicit
-            u_new_float, converged = solve_implicit(u_current, rate_cache, nu, p, t_current, tau, rate, numjumps, solver)
-            if !converged
-                tau /= 2
-                continue
-            end
-            rate(rate_cache, u_new_float, p, t_current + tau)
-            counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))  # Cao et al. (2004)
-            du .= zero(eltype(u_current))
-            for j in 1:numjumps
-                for spec_idx in 1:size(nu, 1)
-                    if nu[spec_idx, j] != 0
-                        du[spec_idx] += nu[spec_idx, j] * counts[j]
-                    end
-                end
-            end
-            u_new = u_current + du  # Cao et al. (2004)
-        else
-            counts .= pois_rand.(rng, max.(rate_cache * tau, 0.0))  # Cao et al. (2006), equation (8)
-            du .= zero(eltype(u_current))
-            for j in 1:numjumps
-                for spec_idx in 1:size(nu, 1)
-                    if nu[spec_idx, j] != 0
-                        du[spec_idx] += nu[spec_idx, j] * counts[j]
-                    end
-                end
-            end
-            u_new = u_current + du
-        end
-
-        if any(<(0), u_new)
-            tau /= 2
-            continue
-        end
-        t_new = t_current + tau
-
-        if isempty(saveat_times) || (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
-            push!(usave, copy(u_new))  # Ensure integer solutions
-            push!(tsave, t_new)
-            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
-                save_idx += 1
-            end
-        end
-
-        u_current = u_new
-        t_current = t_new
-    end
+    simple_adaptive_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, numspecies, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj,
+        solver, eigenvalue_check, stiffness_ratio_threshold, implicit_epsilon_factor,
+        save_end)
 
     sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
-        calculate_error=false,
-        interp=DiffEqBase.ConstantInterpolation(tsave, usave))
+        calculate_error = false,
+        interp = DiffEqBase.ConstantInterpolation(tsave, usave))
     return sol
 end
 

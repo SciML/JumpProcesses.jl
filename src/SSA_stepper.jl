@@ -424,8 +424,10 @@ function should_continue_solve(integrator::SSAIntegrator)
     integrator.keep_stepping && (has_jump || has_tstop)
 end
 
-function reset_aggregated_jumps!(integrator::SSAIntegrator, uprev = nothing)
-    reset_aggregated_jumps!(integrator, uprev, integrator.cb)
+function reset_aggregated_jumps!(integrator::SSAIntegrator, uprev = nothing;
+        update_jump_params = true, kwargs...)
+    reset_aggregated_jumps!(integrator, uprev, integrator.cb;
+        update_jump_params, kwargs...)
     nothing
 end
 

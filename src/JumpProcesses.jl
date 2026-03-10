@@ -18,17 +18,14 @@ using StaticArrays: StaticArrays, SVector, setindex
 using Base.Threads: Threads
 using Base.FastMath: add_fast
 
-using SimpleNonlinearSolve
+using SimpleNonlinearSolve: SimpleNonlinearSolve, SimpleNewtonRaphson
+using ADTypes: ADTypes, AutoFiniteDiff
 
 # Import functions we extend from Base
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 
 # Import functions we extend from packages
 import DiffEqCallbacks: gauss_points, gauss_weights
-# Cache gauss quadrature data at module load to avoid type instability from
-# non-const gauss_points/gauss_weights globals in DiffEqCallbacks.
-const _GAUSS_POINTS = gauss_points[4]
-const _GAUSS_WEIGHTS = gauss_weights[4]
 import DiffEqBase: DiscreteCallback, init, solve, solve!, initialize!
 import SciMLBase: plot_indices
 import DataStructures: update!
@@ -42,7 +39,7 @@ using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
                   ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
                   deleteat!, isinplace, remake, savevalues!, step!,
                   u_modified!
-using SciMLBase: SciMLBase, DEIntegrator
+using SciMLBase: SciMLBase, DEIntegrator, NonlinearProblem
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end

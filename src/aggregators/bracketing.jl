@@ -75,7 +75,7 @@ end
 
 # Update species i brackets in the aggregator.
 @inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::AbstractVector)
-    @unpack ulow, uhigh = p
+    (; ulow, uhigh) = p
     @inbounds for (i, uval) in enumerate(u)
         ulow[i], uhigh[i] = get_spec_brackets(p.bracket_data, i, uval)
     end
@@ -89,6 +89,11 @@ end
         p.uhigh = setindex(p.uhigh, uhigh, i)
     end
     nothing
+end
+
+# For ExtendedJumpArray, only iterate over the species portion (u.u), not the jump tracking portion
+@inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::ExtendedJumpArray)
+    update_u_brackets!(p, u.u)
 end
 
 # Set up bracketing. The aggregator must have fields

@@ -89,9 +89,17 @@ function Base.similar(A::ExtendedJumpArray, ::Type{S}) where {S}
 end
 Base.zero(A::ExtendedJumpArray) = fill!(similar(A), 0)
 
-# Required for non-diagonal noise
+# Required for non-diagonal noise; also handles full-state matrices from LinearSolve
 function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector)
-    mul!(c.u, A, u)
+    Nu = length(c.u)
+    if size(A, 1) == Nu
+        mul!(c.u, A, u)
+    elseif size(A, 1) == length(c)
+        mul!(c.u, @view(A[1:Nu, :]), u)
+        mul!(c.jump_u, @view(A[(Nu + 1):end, :]), u)
+    else
+        throw(DimensionMismatch("first dimension of A, $(size(A,1)), does not match length of c.u, $Nu, or length of c, $(length(c))"))
+    end
 end
 
 # Ignore axes

@@ -1,4 +1,4 @@
-# [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses] (@id tpp_advanced)
+# [Temporal Point Processes (TPP) with JumpProcesses and PointProcesses](@id tpp_advanced)
 
 JumpProcesses was initially developed to simulate the trajectory of jump
 processes. Therefore, those with a background in point process might find the
@@ -7,7 +7,7 @@ processes share many things in common, but diverge in scope. This tutorial will
 cover JumpProcesses from the perspective of point process theory.
 
 In this application tutorial, we show how to interface JumpProcesses and the
-[PointProcesses.jl](https://github.com/gdalle/PointProcesses.jl) library, and
+[PointProcesses.jl](https://github.com/JoseKling/PointProcesses.jl) library, and
 leverage this interface to then illustrate many different aspects usually
 discussed in point process theory. PointProcesses.jl offers an interface for
 defining marked temporal point processes (TPPs). We will show how to link

@@ -1,6 +1,9 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
-        kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
+
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -9,7 +12,10 @@ end
 #Ambiguity Fix
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
-        kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
+
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
     integrator.sol
@@ -27,8 +33,11 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm; kwargs...) where {P}
-                __jump_init(_jump_prob, alg; kwargs...)
+        alg::DiffEqBase.DEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+    # Merge jump_prob.kwargs with passed kwargs
+    kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
+
+    __jump_init(_jump_prob, alg; kwargs...)
 end 
 
 function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
@@ -56,31 +65,26 @@ function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
     end
 end
 
+# Derive an independent seed from the caller's seed. When a caller (e.g. StochasticDiffEq)
+# passes the same seed used for its noise process, we must produce a distinct seed for the
+# jump aggregator's RNG. We cannot assume the JumpProblem's stored RNG is any particular
+# type, so we pass the seed through `hash` (to decorrelate from the input) and then through
+# a Xoshiro draw (to ensure strong mixing regardless of the target RNG's seeding quality).
+const _JUMP_SEED_SALT = 0x4a756d7050726f63  # "JumPProc" in ASCII
+_derive_jump_seed(seed) = rand(Random.Xoshiro(hash(seed, _JUMP_SEED_SALT)), UInt64)
+
 function resetted_jump_problem(_jump_prob, seed)
     jump_prob = deepcopy(_jump_prob)
-    if !isempty(jump_prob.jump_callback.discrete_callbacks)
+    if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
         rng = jump_prob.jump_callback.discrete_callbacks[1].condition.rng
-        if seed === nothing
-            Random.seed!(rng, rand(UInt64))
-        else
-            Random.seed!(rng, seed)
-        end
-    end
-
-    if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray
-        randexp!(_jump_prob.rng, jump_prob.prob.u0.jump_u)
-        jump_prob.prob.u0.jump_u .*= -1
+        Random.seed!(rng, _derive_jump_seed(seed))
     end
     jump_prob
 end
 
 function reset_jump_problem!(jump_prob, seed)
     if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
-        Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng, seed)
-    end
-
-    if !isempty(jump_prob.variable_jumps) && jump_prob.prob.u0 isa ExtendedJumpArray
-        randexp!(jump_prob.rng, jump_prob.prob.u0.jump_u)
-        jump_prob.prob.u0.jump_u .*= -1
+        Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,
+            _derive_jump_seed(seed))
     end
 end

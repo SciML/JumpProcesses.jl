@@ -82,7 +82,9 @@ function SpatialMassActionJump(urates::A, rs, ns; scale_rates = true, useiszero 
         useiszero = useiszero, nocopy = nocopy)
 end
 
-function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates = true,
+# scale_rates defaults to false since ma_jumps.scaled_rates are already scaled;
+# passing true would double-scale.
+function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates = false,
         useiszero = true, nocopy = false) where {T, S, U, V}
     SpatialMassActionJump(ma_jumps.scaled_rates, ma_jumps.reactant_stoch,
         ma_jumps.net_stoch, ma_jumps.param_mapper;

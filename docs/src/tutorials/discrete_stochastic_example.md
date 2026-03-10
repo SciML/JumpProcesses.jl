@@ -935,15 +935,15 @@ From there we build a `JumpProblem`
 ```@example tut2
 u₀ = [1000.0, 50.0, 0.0]
 prob = DiscreteProblem(u₀, tspan, p)
-jump_prob = JumpProblem(prob, Direct(), rj)
+jump_prob = JumpProblem(prob, PureLeaping(), rj)
 ```
-
+We pass the `PureLeaping` aggregator to indicate we will use a τ-leaping algorithm to simulate the process.
 Note that when a `JumpProblem` has a `RegularJump`, τ-leaping algorithms are
 required for simulating it. This is detailed on the [jump solvers page](@ref
-jump_solve). One such algorithm is `TauLeaping` from StochasticDiffEq.jl, which
+jump_solve). One such algorithm is `SimpleTauLeaping`, which
 we use as follows:
 
 ```@example tut2
-sol = solve(jump_prob, TauLeaping(); dt = 0.001)
+sol = solve(jump_prob, SimpleTauLeaping(); dt = 0.001)
 plot(sol; label = ["S(t)" "I(t)" "R(t)"])
 ```

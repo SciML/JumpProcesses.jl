@@ -1,4 +1,4 @@
-# [Simple Poisson Processes in JumpProcesses] (@id poisson_proc_tutorial)
+# [Simple Poisson Processes in JumpProcesses](@id poisson_proc_tutorial)
 
 In this tutorial, we show how to simulate several Poisson jump processes, for
 several types of intensities and jump distributions.

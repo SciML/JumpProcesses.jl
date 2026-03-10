@@ -172,13 +172,13 @@ end
 
 ######################## SSA specific helper routines ########################
 function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
-    @unpack next_jump, ma_jumps = p
+    (; next_jump, ma_jumps) = p
 
     num_majumps = get_num_majumps(ma_jumps)
 
     (next_jump <= num_majumps) && return true
 
-    @unpack cur_rates, rates, rng, urates, cur_lrates = p
+    (; cur_rates, rates, rng, urates, cur_lrates) = p
     num_cjumps = length(urates) - length(rates)
     uidx = next_jump - num_majumps
     lidx = uidx - num_cjumps
@@ -227,7 +227,7 @@ end
 
 function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
     @inbounds deps = p.dep_gr[p.next_jump]
-    @unpack cur_rates, pq = p
+    (; cur_rates, pq) = p
     for (ix, i) in enumerate(deps)
         ti, urate_i = next_time(p, u, params, t, i)
         update!(pq, i, ti)
@@ -257,7 +257,7 @@ end
 end
 
 function next_time(p::CoevolveJumpAggregation, u, params, t, i)
-    @unpack next_jump, cur_rates, ma_jumps, rates, rng, pq, urates = p
+    (; next_jump, cur_rates, ma_jumps, rates, rng, pq, urates) = p
     num_majumps = get_num_majumps(ma_jumps)
     num_cjumps = length(urates) - length(rates)
     uidx = i - num_majumps
@@ -280,7 +280,7 @@ function next_candidate_time!(p::CoevolveJumpAggregation, u, params, t, s, lidx)
     if lidx <= 0
         return t + s
     end
-    @unpack end_time, haslratevec, cur_lrates = p
+    (; end_time, haslratevec, cur_lrates) = p
     rateinterval = get_rateinterval(p, lidx, u, params, t)
     if s > rateinterval
         t = t + rateinterval

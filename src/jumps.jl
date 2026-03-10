@@ -333,10 +333,13 @@ struct MassActionJump{T, S, U, V} <: AbstractMassActionJump
     net_stoch::U
     """Parameter mapping functor to identify reaction rate constants with parameters in `p` vectors."""
     param_mapper::V
+    """Whether `update_parameters!` should apply stoichiometric scaling to rates."""
+    rescale_rates_on_update::Bool
 
     function MassActionJump{T, S, U, V}(rates::T, rs_in::S, ns::U, pmapper::V,
             scale_rates::Bool, useiszero::Bool,
-            nocopy::Bool) where {T <: AbstractVector, S, U, V}
+            nocopy::Bool,
+            rescale_rates_on_update::Bool = scale_rates) where {T <: AbstractVector, S, U, V}
         sr = nocopy ? rates : copy(rates)
         rs = nocopy ? rs_in : copy(rs_in)
         for i in eachindex(rs)
@@ -348,14 +351,15 @@ struct MassActionJump{T, S, U, V} <: AbstractMassActionJump
         if scale_rates && !isempty(sr)
             scalerates!(sr, rs)
         end
-        new(sr, rs, ns, pmapper)
+        new(sr, rs, ns, pmapper, rescale_rates_on_update)
     end
     function MassActionJump{Nothing, Vector{S},
             Vector{U}, V}(::Nothing, rs_in::Vector{S},
             ns::Vector{U}, pmapper::V,
             scale_rates::Bool,
             useiszero::Bool,
-            nocopy::Bool) where {S <: AbstractVector,
+            nocopy::Bool,
+            rescale_rates_on_update::Bool = scale_rates) where {S <: AbstractVector,
             U <: AbstractVector, V}
         rs = nocopy ? rs_in : copy(rs_in)
         for i in eachindex(rs)
@@ -363,46 +367,51 @@ struct MassActionJump{T, S, U, V} <: AbstractMassActionJump
                 rs[i] = typeof(rs[i])()
             end
         end
-        new(nothing, rs, ns, pmapper)
+        new(nothing, rs, ns, pmapper, rescale_rates_on_update)
     end
     function MassActionJump{T, S, U, V}(rate::T, rs_in::S, ns::U, pmapper::V,
             scale_rates::Bool, useiszero::Bool,
-            nocopy::Bool) where {T <: Number, S, U, V}
+            nocopy::Bool,
+            rescale_rates_on_update::Bool = scale_rates) where {T <: Number, S, U, V}
         rs = rs_in
         if useiszero && (length(rs) == 1) && iszero(rs[1][1])
             rs = typeof(rs)()
         end
         sr = scale_rates ? scalerate(rate, rs) : rate
-        new(sr, rs, ns, pmapper)
+        new(sr, rs, ns, pmapper, rescale_rates_on_update)
     end
     function MassActionJump{Nothing, S, U, V}(::Nothing, rs_in::S, ns::U, pmapper::V,
             scale_rates::Bool, useiszero::Bool,
-            nocopy::Bool) where {S, U, V}
+            nocopy::Bool,
+            rescale_rates_on_update::Bool = scale_rates) where {S, U, V}
         rs = rs_in
         if useiszero && (length(rs) == 1) && iszero(rs[1][1])
             rs = typeof(rs)()
         end
-        new(nothing, rs, ns, pmapper)
+        new(nothing, rs, ns, pmapper, rescale_rates_on_update)
     end
 end
 function MassActionJump(usr::T, rs::S, ns::U, pmapper::V; scale_rates = true,
-        useiszero = true, nocopy = false) where {T, S, U, V}
-    MassActionJump{T, S, U, V}(usr, rs, ns, pmapper, scale_rates, useiszero, nocopy)
+        useiszero = true, nocopy = false,
+        rescale_rates_on_update = scale_rates) where {T, S, U, V}
+    MassActionJump{T, S, U, V}(usr, rs, ns, pmapper, scale_rates, useiszero, nocopy,
+        rescale_rates_on_update)
 end
 function MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true,
-        nocopy = false) where {T <: AbstractVector}
-    MassActionJump(usr, rs, ns, nothing; scale_rates = scale_rates, useiszero = useiszero,
-        nocopy = nocopy)
+        nocopy = false, rescale_rates_on_update = scale_rates) where {T <: AbstractVector}
+    MassActionJump(usr, rs, ns, nothing; scale_rates, useiszero, nocopy,
+        rescale_rates_on_update)
 end
 function MassActionJump(usr::T, rs, ns; scale_rates = true, useiszero = true,
-        nocopy = false) where {T <: Number}
-    MassActionJump(usr, rs, ns, nothing; scale_rates = scale_rates, useiszero = useiszero,
-        nocopy = nocopy)
+        nocopy = false, rescale_rates_on_update = scale_rates) where {T <: Number}
+    MassActionJump(usr, rs, ns, nothing; scale_rates, useiszero, nocopy,
+        rescale_rates_on_update)
 end
 
 # with parameter indices or mapping, multiple jump case
 function MassActionJump(rs, ns; param_idxs = nothing, param_mapper = nothing,
-        scale_rates = true, useiszero = true, nocopy = false)
+        scale_rates = true, useiszero = true, nocopy = false,
+        rescale_rates_on_update = scale_rates)
     if param_mapper === nothing
         (param_idxs === nothing) &&
             error("If no parameter indices are given via param_idxs, an explicit parameter mapping must be passed in via param_mapper.")
@@ -413,8 +422,8 @@ function MassActionJump(rs, ns; param_idxs = nothing, param_mapper = nothing,
         pmapper = param_mapper
     end
 
-    MassActionJump(nothing, nocopy ? rs : copy(rs), ns, pmapper; scale_rates = scale_rates,
-        useiszero = useiszero, nocopy = true)
+    MassActionJump(nothing, nocopy ? rs : copy(rs), ns, pmapper; scale_rates, useiszero,
+        nocopy = true, rescale_rates_on_update)
 end
 
 using_params(maj::MassActionJump{T, S, U, Nothing}) where {T, S, U} = false
@@ -470,18 +479,19 @@ function Base.merge(pmap1::MassActionJumpParamMapper{Int},
 end
 
 """
-update_parameters!(maj::MassActionJump, newparams; scale_rates=true)
+update_parameters!(maj::MassActionJump, newparams; scale_rates=maj.rescale_rates_on_update)
 
 Updates the passed in MassActionJump with the parameter values in `newparams`.
 
 Notes:
 
   - Requires the jump to have been constructed with a user-passed `param_idxs` or `param_mapper`.
-  - `scale_rates=true` will scale the parameter representing the jump rate by an
-    appropriate combinatoric factor. i.e for 3A --> B at rate k it will scale
-    k --> k/3!.
+  - `scale_rates` defaults to `maj.rescale_rates_on_update`, which itself defaults to the
+    `scale_rates` value used when constructing the jump. When `true`, the parameter
+    representing the jump rate will be scaled by an appropriate combinatoric factor, i.e.
+    for 3A --> B at rate k it will scale k --> k/3!.
 """
-function update_parameters!(maj::MassActionJump, newparams; scale_rates = true, kwargs...)
+function update_parameters!(maj::MassActionJump, newparams; scale_rates = maj.rescale_rates_on_update, kwargs...)
     (maj.param_mapper === nothing) &&
         error("MassActionJumps must be constructed with param_idxs or a param_mapper to be updateable.")
     maj.param_mapper(maj, newparams; scale_rates, kwargs)
@@ -556,8 +566,12 @@ function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
         error("JumpSets do not accept empty mass action jump collections; use \"nothing\" instead.")
     end
 
+    sr_val = majv[1].rescale_rates_on_update
+    if !all(m -> m.rescale_rates_on_update == sr_val, majv)
+        error("Cannot merge MassActionJumps with different rescale_rates_on_update settings.")
+    end
     maj = setup_majump_to_merge(majv[1].scaled_rates, majv[1].reactant_stoch,
-        majv[1].net_stoch, majv[1].param_mapper)
+        majv[1].net_stoch, majv[1].param_mapper, sr_val)
     for i in 2:length(majv)
         massaction_jump_combine(maj, majv[i])
     end
@@ -618,35 +632,35 @@ end
 # functionality to merge two mass action jumps together
 function check_majump_type(maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
     setup_majump_to_merge(maj.scaled_rates, maj.reactant_stoch, maj.net_stoch,
-        maj.param_mapper)
+        maj.param_mapper, maj.rescale_rates_on_update)
 end
 function check_majump_type(maj::MassActionJump{Nothing, T, U, V}) where {T, U, V}
     setup_majump_to_merge(maj.scaled_rates, maj.reactant_stoch, maj.net_stoch,
-        maj.param_mapper)
+        maj.param_mapper, maj.rescale_rates_on_update)
 end
 
 # if given containers of rates and stoichiometry directly create a jump
-function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{U},
-        pmapper) where {T <: AbstractVector, S <: AbstractArray,
+function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{U}, pmapper,
+        rescale_rates_on_update::Bool) where {T <: AbstractVector, S <: AbstractArray,
         U <: AbstractArray}
-    MassActionJump(sr, rs, ns, pmapper; scale_rates = false)
+    MassActionJump(sr, rs, ns, pmapper; scale_rates = false, rescale_rates_on_update)
 end
 
 # if just given the data for one jump (and not in a container) wrap in a vector
-function setup_majump_to_merge(sr::S, rs::T, ns::U,
-        pmapper) where {S <: Number, T <: AbstractArray,
+function setup_majump_to_merge(sr::S, rs::T, ns::U, pmapper,
+        rescale_rates_on_update::Bool) where {S <: Number, T <: AbstractArray,
         U <: AbstractArray}
     MassActionJump([sr], [rs], [ns],
         (pmapper === nothing) ? pmapper : to_collection(pmapper);
-        scale_rates = false)
+        scale_rates = false, rescale_rates_on_update)
 end
 
 # if no rate field setup yet
-function setup_majump_to_merge(::Nothing, rs::T, ns::U,
-        pmapper) where {T <: AbstractArray, U <: AbstractArray}
+function setup_majump_to_merge(::Nothing, rs::T, ns::U, pmapper,
+        rescale_rates_on_update::Bool) where {T <: AbstractArray, U <: AbstractArray}
     MassActionJump(nothing, [rs], [ns],
         (pmapper === nothing) ? pmapper : to_collection(pmapper);
-        scale_rates = false)
+        scale_rates = false, rescale_rates_on_update)
 end
 
 # when given a collection of reactions to add to maj
@@ -697,10 +711,12 @@ function majump_merge!(maj::MassActionJump{T, S, U, V}, sr::T, rs::S, ns::U,
         (param_mapper === nothing) ||
             error("Error, trying to merge a MassActionJump with a parameter mapping to one without a parameter mapping.")
         return MassActionJump(rates, [maj.reactant_stoch, rs], [maj.net_stoch, ns],
-            param_mapper; scale_rates = false)
+            param_mapper; scale_rates = false,
+            rescale_rates_on_update = maj.rescale_rates_on_update)
     else
         return MassActionJump(rates, [maj.reactant_stoch, rs], [maj.net_stoch, ns],
-            merge(maj.param_mapper, param_mapper); scale_rates = false)
+            merge(maj.param_mapper, param_mapper); scale_rates = false,
+            rescale_rates_on_update = maj.rescale_rates_on_update)
     end
 end
 
@@ -708,6 +724,8 @@ massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1
 massaction_jump_combine(maj1::Nothing, maj2::MassActionJump) = maj2
 massaction_jump_combine(maj1::Nothing, maj2::Nothing) = maj1
 function massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump)
+    (maj1.rescale_rates_on_update == maj2.rescale_rates_on_update) ||
+        error("Cannot merge MassActionJumps with different rescale_rates_on_update settings.")
     majump_merge!(maj1, maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch,
         maj2.param_mapper)
 end

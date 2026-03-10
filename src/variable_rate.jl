@@ -192,23 +192,39 @@ function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAUL
     remake(prob; f, u0)
 end
 
+struct VR_FRMEventCallback{F, RNG}
+    idx::Int
+    affect!::F
+    rng::RNG
+end
+
+# condition: (u, t, integrator)
+@inline (c::VR_FRMEventCallback)(u, t, integrator) = u.jump_u[c.idx]
+
+# affect: (integrator)
+function (c::VR_FRMEventCallback)(integrator)
+    c.affect!(integrator)
+    integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
+    nothing
+end
+
+# initialize: (cb, u, t, integrator)
+function (c::VR_FRMEventCallback)(cb, u, t, integrator)
+    integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
+    u_modified!(integrator, true)
+    nothing
+end
+
 function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
-    condition = function (u, t, integrator)
-        u.jump_u[idx]
-    end
-    affect! = function (integrator)
-        jump.affect!(integrator)
-        integrator.u.jump_u[idx] = -randexp(rng, typeof(integrator.t))
-        nothing
-    end
-    new_cb = ContinuousCallback(condition, affect!;
+    cb_functor = VR_FRMEventCallback(idx, jump.affect!, rng)
+    ContinuousCallback(cb_functor, cb_functor;
+        initialize = cb_functor,
         idxs = jump.idxs,
         rootfind = jump.rootfind,
         interp_points = jump.interp_points,
         save_positions = jump.save_positions,
         abstol = jump.abstol,
         reltol = jump.reltol)
-    return new_cb
 end
 
 function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
@@ -390,10 +406,20 @@ function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs; rng = DEFAULT
     return new_prob, variable_jump_callback
 end
 
-# recursively evaluate the cumulative sum of the rates for type stability 
-@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates)
+# recursively evaluate the cumulative sum of the rates for type stability
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates::Tuple)
     cur_sum = zero(eltype(cum_rate_sum))
     cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
+end
+
+# loop-based version for Vector rate_funcs (avoids dynamic splatting)
+@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates::AbstractVector)
+    cur_sum = zero(eltype(cum_rate_sum))
+    @inbounds for (idx, rate) in enumerate(rates)
+        cur_sum += rate(u, p, t)
+        cum_rate_sum[idx] = cur_sum
+    end
+    return cur_sum
 end
 
 @inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate, rates...)
@@ -410,7 +436,7 @@ end
 function total_variable_rate(
         cache::VR_DirectEventCache{
             T, RNG, F1, F2}, u, p, t) where {T, RNG, F1, F2}
-    @unpack cum_rate_sum, rate_funcs = cache
+    (; cum_rate_sum, rate_funcs) = cache
     sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
     return sum_rate
 end
@@ -437,8 +463,8 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
 
     p = integrator.p
     rate_increment = zero(t)
-    gps = gauss_points[NUM_GAUSS_QUAD_NODES]
-    weights = gauss_weights[NUM_GAUSS_QUAD_NODES]
+    gps = _GAUSS_POINTS
+    weights = _GAUSS_WEIGHTS
     tmid = (t + cache.prev_time) / 2
     halfdt = dt / 2
     u_τ = first(SciMLBase.get_tmp_cache(integrator))
@@ -457,14 +483,14 @@ end
 @generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2},
         integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     quote
-        @unpack affect_funcs = cache
+        (; affect_funcs) = cache
         Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds affect_funcs[i](integrator)) i -> (@inbounds affect_funcs[fieldcount(F2)](integrator))
     end
 end
 
 @inline function execute_affect!(cache::VR_DirectEventCache,
         integrator::I, idx) where {I <: SciMLBase.DEIntegrator}
-    @unpack affect_funcs = cache
+    (; affect_funcs) = cache
     if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
         @inbounds affect_funcs[idx](integrator)
     else
@@ -474,7 +500,7 @@ end
 
 # Affect functor defined directly on the cache
 function (cache::VR_DirectEventCache)(integrator)
-    @unpack t, u, p = integrator
+    (; t, u, p) = integrator
     total_variable_rate_sum = total_variable_rate(cache, u, p, t)
     if total_variable_rate_sum <= 0
         cache.total_rate = 0

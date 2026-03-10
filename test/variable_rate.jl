@@ -22,7 +22,7 @@ a .= b .+ c .+ d
 
 rate = (u, p, t) -> u[1]
 affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
-jump = VariableRateJump(rate, affect!, interp_points = 1000)
+jump = VariableRateJump(rate, affect!)
 jump2 = deepcopy(jump)
 
 f = function (du, u, p, t)
@@ -96,8 +96,8 @@ sol(4.0)
 sol.u[4]
 
 rate2b(u, p, t) = u[1]
-affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
-jump = VariableRateJump(rate2b, affect2!)
+affect2b!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
+jump = VariableRateJump(rate2b, affect2b!)
 jump2 = deepcopy(jump)
 jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
 jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
@@ -257,13 +257,15 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VR_FRM(), rng)
-    @test allunique(sjm_prob.prob.u0.jump_u)
-    u0old = copy(sjm_prob.prob.u0.jump_u)
+    # After callback initialize, integrator.u.jump_u should have unique thresholds
+    # that differ between sequential solves (RNG advances each time).
+    jump_u_old = zeros(length(sjm_prob.prob.u0.jump_u))
     for i in 1:Nsims
-        sol = solve(sjm_prob, Tsit5(); saveat = tspan[2])
-        @test allunique(sjm_prob.prob.u0.jump_u)
-        @test all(u0old != sjm_prob.prob.u0.jump_u)
-        u0old .= sjm_prob.prob.u0.jump_u
+        integrator = init(sjm_prob, Tsit5(); saveat = tspan[2])
+        @test allunique(integrator.u.jump_u)
+        @test integrator.u.jump_u != jump_u_old
+        jump_u_old .= integrator.u.jump_u
+        solve!(integrator)
     end
 end
 
@@ -271,12 +273,19 @@ end
 # https://github.com/SciML/JumpProcesses.jl/issues/320
 # note that even with the seeded StableRNG this test is not 
 # deterministic for some reason.
-function getmean(Nsims, prob, alg, dt, tsave, seed)
+function getmean(Nsims, prob, alg, tsave, seed)
     umean = zeros(length(tsave))
-    for i in 1:Nsims
-        sol = solve(prob, alg; saveat = dt, seed)
-        umean .+= Array(sol(tsave; idxs = 1))
-        seed += 1
+    integrator = init(prob, alg; saveat = tsave, seed)
+    solve!(integrator)
+    for j in eachindex(umean)
+        umean[j] += integrator.sol.u[j][1]
+    end
+    for i in 2:Nsims
+        reinit!(integrator)
+        solve!(integrator)
+        for j in eachindex(umean)
+            umean[j] += integrator.sol.u[j][1]
+        end
     end
     umean ./= Nsims
     return umean
@@ -304,23 +313,22 @@ let
         integrator.u[1] += 1
         nothing
     end
-    b_jump = VariableRateJump(b_rate, birth!)
+    b_jump = VariableRateJump(b_rate, birth!; save_positions = (false, false))
 
     d_rate(u, p, t) = (u[1] * p[2])
     function death!(integrator)
         integrator.u[1] -= 1
         nothing
     end
-    d_jump = VariableRateJump(d_rate, death!)
+    d_jump = VariableRateJump(d_rate, death!; save_positions = (false, false))
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    dt = 0.1
-    tsave = range(tspan[1], tspan[2]; step = dt)
+    tsave = range(tspan[1], tspan[2]; step = 0.1)
     for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
-            umean = getmean(Nsims, sjm_prob, alg, dt, tsave, seed)
+            umean = getmean(Nsims, sjm_prob, alg, tsave, seed)
             @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
             seed += Nsims
         end
@@ -333,16 +341,19 @@ end
 function run_ensemble(prob, alg, jumps...; vr_aggregator = VR_FRM(), Nsims = 8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator, rng)
-    ensemble = EnsembleProblem(jump_prob)
-    sol = solve(ensemble, alg, trajectories = Nsims, save_everystep = false)
-    return mean(sol.u[i][1, end] for i in 1:Nsims)
+    total = 0.0
+    for i in 1:Nsims
+        sol = solve(jump_prob, alg; save_everystep = false)
+        total += sol.u[end][1]
+    end
+    return total / Nsims
 end
 
 # Test 1: Simple ODE with two variable rate jumps
 let
     rate = (u, p, t) -> u[1]
     affect! = (integrator) -> (integrator.u[1] = integrator.u[1] / 2)
-    jump = VariableRateJump(rate, affect!, interp_points = 1000)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
     jump2 = deepcopy(jump)
 
     f = (du, u, p, t) -> (du[1] = u[1])
@@ -362,7 +373,7 @@ let
     g = (du, u, p, t) -> (du[1] = -u[1] / 10.0)
     rate = (u, p, t) -> u[1] / 10.0
     affect! = (integrator) -> (integrator.u[1] = integrator.u[1] + 1)
-    jump = VariableRateJump(rate, affect!)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
     jump2 = deepcopy(jump)
 
     prob = SDEProblem(f, g, [10.0], (0.0, 10.0))
@@ -381,7 +392,7 @@ let
     f = (du, u, p, t) -> (du[1] = -u[1]; nothing)
     rate = (u, p, t) -> λ
     affect! = (integrator) -> (integrator.u[1] += 1; nothing)
-    jump = VariableRateJump(rate, affect!)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
 
     prob = ODEProblem(f, [0.2], (0.0, 10.0))
 
@@ -409,7 +420,7 @@ let
         integrator.p[3] += 1
         nothing
     end
-    birth_jump = VariableRateJump(birth_rate, birth_affect!)
+    birth_jump = VariableRateJump(birth_rate, birth_affect!; save_positions = (false, false))
 
     # Define death jump: X → ∅
     death_rate(u, p, t) = 0.5 * u[1]
@@ -418,7 +429,7 @@ let
         integrator.p[3] += 1
         nothing
     end
-    death_jump = VariableRateJump(death_rate, death_affect!)
+    death_jump = VariableRateJump(death_rate, death_affect!; save_positions = (false, false))
 
     Nsims = 100
     results = Dict()
@@ -431,7 +442,7 @@ let
         jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator, rng)
 
         for i in 1:Nsims
-            sol = solve(jump_prob, Tsit5())
+            sol = solve(jump_prob, Tsit5(); save_everystep = false)
             jump_counts[i] = jump_prob.prob.p[3]
             jump_prob.prob.p[3] = 0
         end
@@ -446,4 +457,112 @@ let
 
     @test isapprox(mean_jumps_vrfr, mean_jumps_vrcb, rtol = 0.1)
     @test isapprox(mean_jumps_vrcb, mean_jumps_vrcbfw, rtol = 0.1)
+end
+
+# Test combining MassActionJump with VariableRateJump for all aggregators
+# This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
+# where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to
+# update_u_brackets! iterating over the full array instead of just species
+let
+    rng = StableRNG(12345)
+
+    function f!(du, u, p, t)
+        du .= 0
+    end
+
+    # VariableRateJump (rate depends on time)
+    vrj_rate(u, p, t) = p[1] * (1 + sin(t)) * u[1]
+    vrj_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    vrj = VariableRateJump(vrj_rate, vrj_affect!)
+
+    # MassActionJump: X2 -> X1 with rate k2
+    maj = MassActionJump([0.5], [[2 => 1]], [[1 => 1, 2 => -1]])
+
+    u0 = [10.0, 5.0]
+    tspan = (0.0, 1.0)
+    p = [0.1]
+    prob = ODEProblem(f!, u0, tspan, p)
+
+    # Test all aggregators that support MassActionJump
+    # Note: Coevolve requires dependency graphs for non-bounded VRJs so we skip it here
+    aggregators = [
+        Direct(),
+        FRM(),
+        NRM(),
+        SortingDirect(),
+        DirectCR(),
+        RDirect(),
+        RSSA(),
+        RSSACR()
+    ]
+
+    for agg in aggregators
+        local jprob = JumpProblem(prob, agg, maj, vrj; rng)
+        local sol = solve(jprob, Tsit5())
+        @test SciMLBase.successful_retcode(sol)
+        # Verify conservation: total population should be conserved
+        @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
+    end
+end
+
+# Test with ConstantRateJump + VariableRateJump (no MassActionJump)
+let
+    rng = StableRNG(12345)
+
+    function f!(du, u, p, t)
+        du .= 0
+    end
+
+    # VariableRateJump
+    vrj_rate(u, p, t) = 0.1 * (1 + sin(t)) * u[1]
+    vrj_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    vrj = VariableRateJump(vrj_rate, vrj_affect!)
+
+    # ConstantRateJump: X2 -> X1
+    crj_rate(u, p, t) = 0.5 * u[2]
+    crj_affect!(integrator) = (integrator.u[1] += 1; integrator.u[2] -= 1)
+    crj = ConstantRateJump(crj_rate, crj_affect!)
+
+    u0 = [10.0, 5.0]
+    tspan = (0.0, 1.0)
+    prob = ODEProblem(f!, u0, tspan)
+
+    # Test with Direct aggregator (most common case)
+    jprob = JumpProblem(prob, Direct(), crj, vrj; rng)
+    sol = solve(jprob, Tsit5())
+    @test SciMLBase.successful_retcode(sol)
+    @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
+end
+
+# Test with multiple VariableRateJumps + MassActionJump
+let
+    rng = StableRNG(12345)
+
+    function f!(du, u, p, t)
+        du .= 0
+    end
+
+    # Two VariableRateJumps
+    vrj1_rate(u, p, t) = 0.1 * u[1]
+    vrj1_affect!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    vrj1 = VariableRateJump(vrj1_rate, vrj1_affect!)
+
+    vrj2_rate(u, p, t) = 0.05 * u[2]
+    vrj2_affect!(integrator) = (integrator.u[2] -= 1; integrator.u[1] += 1)
+    vrj2 = VariableRateJump(vrj2_rate, vrj2_affect!)
+
+    # MassActionJump
+    maj = MassActionJump([0.2], [[1 => 1]], [[1 => -1, 2 => 1]])
+
+    u0 = [20.0, 10.0]
+    tspan = (0.0, 2.0)
+    prob = ODEProblem(f!, u0, tspan)
+
+    # Test RSSA and RSSACR specifically (the aggregators that had the bug)
+    for agg in [RSSA(), RSSACR()]
+        local jprob = JumpProblem(prob, agg, maj, vrj1, vrj2; rng)
+        local sol = solve(jprob, Tsit5())
+        @test SciMLBase.successful_retcode(sol)
+        @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
+    end
 end

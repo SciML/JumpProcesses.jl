@@ -5,7 +5,7 @@ using Reexport: Reexport, @reexport
 
 # Explicit imports from standard libraries
 using LinearAlgebra: LinearAlgebra, I, mul!, eigvals
-using Random: Random, randexp, randexp!
+using Random: Random, randexp, randexp!, seed!
 
 # Explicit imports from external packages
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
@@ -13,12 +13,10 @@ using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_
 using PoissonRandom: PoissonRandom, pois_rand
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
-using UnPack: UnPack, @unpack
 using Graphs: Graphs, AbstractGraph, dst, grid, src
-using StaticArrays: StaticArrays, SA, SVector, @SVector, setindex
-using Base.Threads: Threads, @threads
+using StaticArrays: StaticArrays, SVector, setindex
+using Base.Threads: Threads
 using Base.FastMath: add_fast
-using Setfield: @set, @set!
 
 using SimpleNonlinearSolve
 
@@ -27,6 +25,10 @@ import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 
 # Import functions we extend from packages
 import DiffEqCallbacks: gauss_points, gauss_weights
+# Cache gauss quadrature data at module load to avoid type instability from
+# non-const gauss_points/gauss_weights globals in DiffEqCallbacks.
+const _GAUSS_POINTS = gauss_points[4]
+const _GAUSS_WEIGHTS = gauss_weights[4]
 import DiffEqBase: DiscreteCallback, init, solve, solve!, initialize!
 import SciMLBase: plot_indices
 import DataStructures: update!
@@ -61,6 +63,9 @@ include("jumps.jl")
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, JumpSet
 
 include("massaction_rates.jl")
+
+include("extended_jump_array.jl")
+export ExtendedJumpArray
 
 # constant rate aggregators (i.e. SSAs)
 include("aggregators/aggregators.jl")
@@ -106,9 +111,6 @@ export CCNRM
 include("aggregators/aggregated_api.jl")
 
 # variable rate aggregators (i.e. SSAs)
-include("extended_jump_array.jl")
-export ExtendedJumpArray
-
 include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
@@ -131,7 +133,7 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, SimpleAdaptiveTauLeaping, NewtonImplicitSolver, TrapezoidalImplicitSolver, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleExplicitTauLeaping, SimpleAdaptiveTauLeaping, NewtonImplicitSolver, TrapezoidalImplicitSolver, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

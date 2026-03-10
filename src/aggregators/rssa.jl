@@ -108,7 +108,7 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         return nothing
     end
     # next jump type
-    @unpack ma_jumps, rates, cur_rate_high, cur_rate_low, rng = p
+    (; ma_jumps, rates, cur_rate_high, cur_rate_low, rng) = p
     num_majumps = get_num_majumps(ma_jumps)
     rerl = zero(sum_rate)
 
@@ -144,7 +144,7 @@ Update rates
 """
 @inline function update_rates!(p::RSSAJumpAggregation, u::AbstractVector, params, t)
     # update bracketing intervals
-    @unpack ulow, uhigh = p
+    (; ulow, uhigh) = p
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
 

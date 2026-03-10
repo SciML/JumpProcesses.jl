@@ -441,46 +441,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     return sol
 end
 
-# Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
-# HOR is the sum of stoichiometric coefficients of reactants in reaction j.
-# Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
-function compute_hor(reactant_stoch, numjumps)
-    stoch_type = eltype(first(first(reactant_stoch)))
-    hor = zeros(stoch_type, numjumps)
-    max_order = 3 * one(stoch_type)  # Maximum supported reaction order (type-aware)
-    for j in 1:numjumps
-        order = sum(stoch for (spec_idx, stoch) in reactant_stoch[j]; init=zero(stoch_type))
-        if order > max_order
-            error("Reaction $j has order $order, which is not supported (maximum order is 3).")
-        end
-        hor[j] = order
-    end
-    return hor
-end
-
-# Precompute reaction conditions for each species i, including:
-# - max_hor: the highest order of reaction (HOR) where species i is a reactant.
-# - max_stoich: the maximum stoichiometry (nu_ij) in reactions with max_hor.
-# Used to optimize compute_gi, as per Cao et al. (2006), Section IV, equation (27).
-function precompute_reaction_conditions(reactant_stoch, hor, numspecies, numjumps)
-    hor_type = eltype(hor)
-    max_hor = zeros(hor_type, numspecies)
-    max_stoich = zeros(hor_type, numspecies)
-    for j in 1:numjumps
-        for (spec_idx, stoch) in reactant_stoch[j]
-            if stoch > 0  # Species is a reactant
-                if hor[j] > max_hor[spec_idx]
-                    max_hor[spec_idx] = hor[j]
-                    max_stoich[spec_idx] = stoch
-                elseif hor[j] == max_hor[spec_idx]
-                    max_stoich[spec_idx] = max(max_stoich[spec_idx], stoch)
-                end
-            end
-        end
-    end
-    return max_hor, max_stoich
-end
-
 
 # Compute tau for implicit tau-leaping with relaxed error control
 # Reference: Cao et al. (2007), J. Chem. Phys. 126, 224101, Section III.A

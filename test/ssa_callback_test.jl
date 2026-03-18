@@ -226,3 +226,33 @@ let
     @test 3.0 ∈ sol5.t
     @test 6.0 ∈ sol5.t
 end
+
+# test that reset_aggregated_jumps! with update_jump_params kwarg dispatches correctly
+# for SSAIntegrator (https://github.com/SciML/JumpProcesses.jl/issues/562)
+let
+    rate1(u, p, t) = p[1] * u[1] * u[2]
+    affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1)
+    jump1 = ConstantRateJump(rate1, affect1!)
+
+    rate2(u, p, t) = p[2] * u[2]
+    affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1)
+    jump2 = ConstantRateJump(rate2, affect2!)
+
+    p = (1.0, 1.0)
+    prob = DiscreteProblem([990, 0, 0], (0.0, 250.0), p)
+    jump_prob = JumpProblem(prob, Direct(), jump1, jump2; rng)
+
+    # with update_jump_params = true, should behave same as without kwarg
+    int = init(jump_prob, SSAStepper())
+    int[2] = 10
+    reset_aggregated_jumps!(int; update_jump_params = true)
+    step!(int, 1000.0, true)
+    @test int.u[3] > 0  # at least some recovered, confirming jumps fired
+
+    # with update_jump_params = false, should also reset jump aggregation
+    int2 = init(jump_prob, SSAStepper())
+    int2[2] = 10
+    reset_aggregated_jumps!(int2; update_jump_params = false)
+    step!(int2, 1000.0, true)
+    @test int2.u[3] > 0
+end

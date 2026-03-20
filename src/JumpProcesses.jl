@@ -5,7 +5,7 @@ using Reexport: Reexport, @reexport
 
 # Explicit imports from standard libraries
 using LinearAlgebra: LinearAlgebra, mul!
-using Random: Random, randexp, seed!
+using Random: Random, randexp
 
 # Explicit imports from external packages
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF

@@ -490,9 +490,9 @@ end
     crj = ConstantRateJump(rate, affect!)
 
     sde_prob = SDEProblem(f, g, 1.0, (0.0, 1.0))
-    jprob = JumpProblem(sde_prob, Direct(), crj; rng)
+    jprob = JumpProblem(sde_prob, Direct(), crj)
 
-    integrator = init(jprob, EM(); dt = 0.01)
+    integrator = init(jprob, EM(); dt = 0.01, rng)
 
     # Count discrete callbacks — the jump should appear exactly once.
     # If both JumpProcesses and StochasticDiffEq add it, we'd see duplicates.
@@ -508,8 +508,8 @@ end
     vaffect!(integrator) = (integrator.u[1] += 0.5)
     vrj = VariableRateJump(vrate, vaffect!)
 
-    jprob_vr = JumpProblem(sde_prob_vr, Direct(), vrj; vr_aggregator = VR_FRM(), rng)
-    integrator_vr = init(jprob_vr, EM(); dt = 0.01)
+    jprob_vr = JumpProblem(sde_prob_vr, Direct(), vrj; vr_aggregator = VR_FRM())
+    integrator_vr = init(jprob_vr, EM(); dt = 0.01, rng)
 
     # VariableRateJumps produce continuous callbacks
     n_continuous = length(integrator_vr.opts.callback.continuous_callbacks)

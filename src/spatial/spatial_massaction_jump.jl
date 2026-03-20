@@ -96,6 +96,10 @@ function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates
         scale_rates = scale_rates, useiszero = useiszero, nocopy = nocopy)
 end
 
+# SpatialMassActionJump stores rates in the struct itself (uniform_rates/spatial_rates),
+# so fill_scaled_rates! is a no-op.
+fill_scaled_rates!(dest, maj::SpatialMassActionJump, params) = nothing
+
 ##############################################
 
 function get_num_majumps(smaj::SpatialMassActionJump{

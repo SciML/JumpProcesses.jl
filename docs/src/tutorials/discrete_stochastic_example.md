@@ -190,36 +190,25 @@ sir_model = @reaction_network begin
 end
 ```
 
-To build a pure jump process model of the reaction system, where the state is
-constant between jumps, we will use a
-[`DiscreteProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/discrete_types/).
-This encodes that the state only changes at the jump times. We do this by giving
-the constructor `u₀`, the initial condition, and `tspan`, the timespan. Here, we
-will start with ``990`` susceptible people, ``10`` infected person, and `0` recovered
-people, and solve the problem from `t=0.0` to `t=250.0`. We use the parameters
-`β = 0.1/1000` and `ν = 0.01`. Thus, we build the problem via:
+To build a pure jump process model of the reaction system we construct a
+[`JumpProblem`](@ref) directly from the Catalyst `ReactionSystem`. We specify
+`u₀`, the initial condition, `tspan`, the timespan, and `p`, the parameters.
+Here, we will start with ``990`` susceptible people, ``10`` infected person, and
+`0` recovered people, and solve the problem from `t=0.0` to `t=250.0`. We use
+the parameters `β = 0.1/1000` and `ν = 0.01`.
 
 ```@example tut2
 p = (:β => 0.1 / 1000, :ν => 0.01)
 u₀ = [:S => 990, :I => 10, :R => 0]
 tspan = (0.0, 250.0)
-prob = DiscreteProblem(sir_model, u₀, tspan, p)
+jump_prob = JumpProblem(sir_model, u₀, tspan, p)
 ```
 
 *Notice, the initial populations are integers, since we want the exact number of
 people in the different states.*
 
-The Catalyst reaction network can be converted into various
-DifferentialEquations.jl problem types, including `JumpProblem`s, `ODEProblem`s,
-or `SDEProblem`s. To turn it into a [`JumpProblem`](@ref) representing the SIR jump
-process model, we simply write
-
-```@example tut2
-jump_prob = JumpProblem(sir_model, prob, Direct())
-```
-
-Here `Direct()` indicates that we will determine the random times and types of
-reactions using [Gillespie's Direct stochastic simulation algorithm
+Here `Direct()` is the default aggregator, which determines the random times and
+types of reactions using [Gillespie's Direct stochastic simulation algorithm
 (SSA)](https://doi.org/10.1016/0021-9991(76)90041-3), also known as Doob's
 method or Kinetic Monte Carlo. See [Jump Aggregators for Exact Simulation](@ref) for
 other supported SSAs.

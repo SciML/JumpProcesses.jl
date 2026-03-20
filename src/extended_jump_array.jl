@@ -121,8 +121,23 @@ function ArrayInterface.zeromatrix(A::ExtendedJumpArray)
     u = [vec(A.u); vec(A.jump_u)]
     u .* u' .* false
 end
+
+# Helper: concatenate fields into a flat vector, apply op, scatter back
+function _eja_flat_apply_and_scatter!(op!, A, b::ExtendedJumpArray)
+    N = length(b.u)
+    tmp = [vec(b.u); vec(b.jump_u)]
+    op!(A, tmp)
+    copyto!(vec(b.u), 1, tmp, 1, N)
+    copyto!(vec(b.jump_u), 1, tmp, N + 1, length(b.jump_u))
+    b
+end
+
 function LinearAlgebra.ldiv!(A::LinearAlgebra.LU, b::ExtendedJumpArray)
-    LinearAlgebra.ldiv!(A, [vec(b.u); vec(b.jump_u)])
+    _eja_flat_apply_and_scatter!(LinearAlgebra.ldiv!, A, b)
+end
+
+function LinearAlgebra.lmul!(A::LinearAlgebra.AbstractQ, b::ExtendedJumpArray)
+    _eja_flat_apply_and_scatter!(LinearAlgebra.lmul!, A, b)
 end
 
 function recursivecopy!(dest::T, src::T) where {T <: ExtendedJumpArray}

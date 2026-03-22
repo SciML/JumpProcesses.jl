@@ -421,7 +421,7 @@ function MassActionJump(rs, ns; param_idxs = nothing, param_mapper = nothing,
     if param_mapper === nothing
         (param_idxs === nothing) &&
             error("If no parameter indices are given via param_idxs, an explicit parameter mapping must be passed in via param_mapper.")
-        pmapper = MassActionJumpParamMapper(param_idxs)
+        pmapper = MassActionJumpParamMapper(param_idxs isa Integer ? [param_idxs] : param_idxs)
     else
         (param_idxs !== nothing) &&
             error("Only one of param_idxs and param_mapper should be passed.")
@@ -442,12 +442,21 @@ struct MassActionJumpParamMapper{U}
     param_idxs::U
 end
 
-# In-place mapper callable API: `(mapper)(dest, maj, params)`
-#
-# Fill `dest` with the scaled rates for the mass action jump given `params`.
-# Custom mappers (e.g. MTK's JumpSysMajParamMapper) should implement this
-# 3-arg callable. Use `maj.rescale_rates_on_update` to decide whether to
-# apply stoichiometric scaling via `scalerates!`.
+"""
+    (mapper)(dest::AbstractVector, maj::MassActionJump, params)
+
+In-place mapper callable API for parameterized `MassActionJump`s (those with
+`scaled_rates = nothing`). Called by [`fill_scaled_rates!`](@ref) during
+aggregator initialization and reinitialization to populate the working rate
+vector from parameters.
+
+`dest` should be filled with the current rates for each reaction. If
+`maj.rescale_rates_on_update` is `true`, the mapper should also apply
+stoichiometric scaling via [`scalerates!`](@ref).
+
+Custom mappers (e.g. ModelingToolkitBase's `JumpSysMajParamMapper`) should
+implement this 3-arg callable to support immutable `MassActionJump`s.
+"""
 function (mapper::MassActionJumpParamMapper{U})(dest::AbstractVector,
         maj::MassActionJump, params) where {U <: AbstractArray}
     @inbounds for i in eachindex(dest)
@@ -457,25 +466,11 @@ function (mapper::MassActionJumpParamMapper{U})(dest::AbstractVector,
     nothing
 end
 
-function to_collection(ratemap::MassActionJumpParamMapper{Int})
-    MassActionJumpParamMapper([ratemap.param_idxs])
-end
-to_collection(ratemap::MassActionJumpParamMapper{<:AbstractVector}) = ratemap
+to_collection(ratemap::MassActionJumpParamMapper) = MassActionJumpParamMapper(copy(ratemap.param_idxs))
 
 function Base.merge!(pmap1::MassActionJumpParamMapper{U},
         pmap2::MassActionJumpParamMapper{U}) where {U <: AbstractVector}
     append!(pmap1.param_idxs, pmap2.param_idxs)
-end
-
-function Base.merge!(pmap1::MassActionJumpParamMapper{U},
-        pmap2::MassActionJumpParamMapper{V}) where {U <: AbstractVector,
-        V <: Int}
-    push!(pmap1.param_idxs, pmap2.param_idxs)
-end
-
-function Base.merge(pmap1::MassActionJumpParamMapper{Int},
-        pmap2::MassActionJumpParamMapper{Int})
-    MassActionJumpParamMapper([pmap1.param_idxs, pmap2.param_idxs])
 end
 
 """
@@ -545,6 +540,11 @@ struct JumpSet{T1, T2, T3, T4} <: AbstractJump
     massaction_jump::T4
 end
 function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
+    JumpSet(vj, cj, rj, check_majump_type(maj))
+end
+function JumpSet(vj, cj, rj,
+        maj::MassActionJump{Nothing, T, U, V}) where {
+        T <: AbstractArray{<:Pair}, U <: AbstractArray{<:Pair}, V}
     JumpSet(vj, cj, rj, check_majump_type(maj))
 end
 

@@ -231,3 +231,28 @@ let
     @test 3.0 ∈ sol5.t
     @test 6.0 ∈ sol5.t
 end
+
+# test that a single parameterized MAJ with scalar param_idxs works without merging
+@testset "Single parameterized MAJ with scalar param_idxs" begin
+    maj = MassActionJump([1 => 1, 2 => 1], [1 => -1, 2 => -1, 3 => 1];
+        param_idxs = 1)
+    p = [0.1]
+    u0 = [100, 100, 0]
+    dprob = DiscreteProblem(u0, (0.0, 10.0), p)
+    jprob = JumpProblem(dprob, Direct(), maj)
+    sol = solve(jprob, SSAStepper(); rng = StableRNG(12345))
+    @test sol.retcode == ReturnCode.Success
+    @test sol[3, end] > 0
+end
+
+# test that merging MAJs does not mutate the input MAJs' param_mapper
+@testset "Merging MAJs does not mutate inputs" begin
+    maj1 = MassActionJump([1 => 1], [1 => -1]; param_idxs = [1])
+    maj2 = MassActionJump([2 => 1], [2 => -1]; param_idxs = [2])
+    orig1 = copy(maj1.param_mapper.param_idxs)
+    orig2 = copy(maj2.param_mapper.param_idxs)
+    dprob = DiscreteProblem([100, 100], (0.0, 1.0), [0.1, 0.2])
+    jprob = JumpProblem(dprob, Direct(), maj1, maj2)
+    @test maj1.param_mapper.param_idxs == orig1
+    @test maj2.param_mapper.param_idxs == orig2
+end

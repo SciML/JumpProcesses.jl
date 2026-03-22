@@ -438,25 +438,31 @@ using_params(maj::Nothing) = false
 @inline get_num_majumps(maj::MassActionJump) = length(maj.net_stoch)
 @inline get_num_majumps(maj::Nothing) = 0
 
-struct MassActionJumpParamMapper{U}
-    param_idxs::U
-end
-
 """
+    MassActionJumpParamMapper{U}
+
+Default parameter mapper for parameterized `MassActionJump`s (those constructed
+with `param_idxs` instead of explicit `scaled_rates`). Stores the indices into
+the parameter vector `p` that correspond to each reaction's rate constant.
+
+Implements the in-place mapper callable API:
+
     (mapper)(dest::AbstractVector, maj::MassActionJump, params)
 
-In-place mapper callable API for parameterized `MassActionJump`s (those with
-`scaled_rates = nothing`). Called by [`fill_scaled_rates!`](@ref) during
-aggregator initialization and reinitialization to populate the working rate
-vector from parameters.
+which is called by [`fill_scaled_rates!`](@ref) during aggregator initialization
+and reinitialization to populate the working rate vector from parameters.
 
 `dest` should be filled with the current rates for each reaction. If
 `maj.rescale_rates_on_update` is `true`, the mapper should also apply
 stoichiometric scaling via [`scalerates!`](@ref).
 
 Custom mappers (e.g. ModelingToolkitBase's `JumpSysMajParamMapper`) should
-implement this 3-arg callable to support immutable `MassActionJump`s.
+implement this 3-arg callable to support parameterized `MassActionJump`s.
 """
+struct MassActionJumpParamMapper{U}
+    param_idxs::U
+end
+
 function (mapper::MassActionJumpParamMapper{U})(dest::AbstractVector,
         maj::MassActionJump, params) where {U <: AbstractArray}
     @inbounds for i in eachindex(dest)

@@ -20,6 +20,7 @@ mutable struct DirectCRJumpAggregation{T, S, F1, F2, DEPGR, U <: PriorityTable,
     cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
@@ -32,6 +33,7 @@ end
 
 function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         num_specs, dep_graph = nothing,
         minrate = convert(T, MINJUMPRATE),
         maxrate = convert(T, Inf),
@@ -64,7 +66,7 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     affecttype = F2 <: Tuple ? F2 : Any
     DirectCRJumpAggregation{T, S, F1, affecttype, typeof(dg),
         typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
-        rs, affs!, sps, dg,
+        maj_rates, rs, affs!, sps, dg,
         minrate, maxrate, rt,
         ratetogroup)
 end
@@ -86,6 +88,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
 
     # initialize rates
     fill_rates_and_sum!(p, u, params, t)
@@ -134,7 +137,8 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
         oldrate = cur_rates[rx]
 
         # update rate
-        cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
+        cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx,
+            p.maj_rates)
 
         # update table
         update!(rt, rx, oldrate, cur_rates[rx])

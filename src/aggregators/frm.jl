@@ -7,16 +7,18 @@ mutable struct FRMJumpAggregation{T, S, F1, F2} <:
     cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
 end
 function FRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S, rs::F1,
         affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         kwargs...) where {T, S, F1, F2}
     affecttype = F2 <: Tuple ? F2 : Any
-    FRMJumpAggregation{T, S, F1, affecttype}(nj, nj, njt, et, crs, sr, maj, rs,
-        affs!, sps)
+    FRMJumpAggregation{T, S, F1, affecttype}(nj, nj, njt, et, crs, sr, maj, maj_rates,
+        rs, affs!, sps)
 end
 
 ############################# Required Functions #############################
@@ -48,6 +50,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::FRMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -83,8 +86,9 @@ function next_ma_jump(p::FRMJumpAggregation, u, params, t, rng)
     ttnj = typemax(typeof(t))
     nextrx = zero(Int)
     majumps = p.ma_jumps
+    maj_rates = p.maj_rates
     @inbounds for i in 1:get_num_majumps(majumps)
-        p.cur_rates[i] = evalrxrate(u, i, majumps)
+        p.cur_rates[i] = evalrxrate(u, i, majumps, maj_rates)
         dt = randexp(rng) / p.cur_rates[i]
         if dt < ttnj
             ttnj = dt

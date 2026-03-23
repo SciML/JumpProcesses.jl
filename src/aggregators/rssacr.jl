@@ -15,6 +15,7 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, U, VJMAP, JVMAP, BD,
     cur_rate_high::Vector{F}
     sum_rate::F
     ma_jumps::S
+    maj_rates::Vector{F}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
@@ -30,8 +31,9 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, U, VJMAP, JVMAP, BD,
 end
 
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
-        rs::F1, affs!::F2, sps::Tuple{Bool, Bool}; u::U,
-        vartojumps_map = nothing, jumptovars_map = nothing,
+        rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{F}(undef, get_num_majumps(maj)),
+        u::U, vartojumps_map = nothing, jumptovars_map = nothing,
         bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
         maxrate = convert(F, Inf),
         kwargs...) where {F, S, F1, F2, U}
@@ -82,7 +84,7 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, U, typeof(vtoj_map),
         typeof(jtov_map), typeof(bd), typeof(rt),
         typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
-        sum_rate, maj, rs, affs!, sps, vtoj_map,
+        sum_rate, maj, maj_rates, rs, affs!, sps, vtoj_map,
         jtov_map, bd, ulow, uhigh, minrate, maxrate,
         rt, ratetogroup)
 end
@@ -103,6 +105,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     set_bracketing!(p, u, params, t)
 
     # setup PriorityTable
@@ -145,7 +148,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     end
     rerl += randexp(rng)
     while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
-        params, t)
+        params, t, p.maj_rates)
         # sample candidate reaction
         jidx = sample(rt, cur_rate_high, rng)
         rerl += randexp(rng)

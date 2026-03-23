@@ -105,14 +105,19 @@ sol = solve(jprob, SSAStepper(); rng, tstops = [1000.0], callback = DiscreteCall
 @test all(p .== [0.0, 1.0])
 @test sol[1, end] == 100
 
-# test scale_rates kwarg
+# test scale_rates / rescale_rates_on_update behavior
 p .= [1.0]
 dprob = DiscreteProblem(u₀, tspan, p)
 maj5 = MassActionJump([[1 => 2]], [[1 => -1, 2 => 1]]; param_idxs = [1])
 jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false))
-@test all(jprob.massaction_jump.scaled_rates .== [0.5])
-jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), scale_rates = false)
-@test all(jprob.massaction_jump.scaled_rates .== [1.0])
+@test jprob.massaction_jump.scaled_rates === nothing  # parameterized MAJ
+integ = init(jprob, SSAStepper())
+@test all(jprob.discrete_jump_aggregation.maj_rates .== [0.5])
+# with scale_rates = false on the MAJ itself
+maj5_noscale = MassActionJump([[1 => 2]], [[1 => -1, 2 => 1]]; param_idxs = [1], scale_rates = false)
+jprob = JumpProblem(dprob, Direct(), maj5_noscale, save_positions = (false, false))
+integ = init(jprob, SSAStepper())
+@test all(jprob.discrete_jump_aggregation.maj_rates .== [1.0])
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/239
 maj6 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
@@ -225,4 +230,29 @@ let
     @test sol5.t[end] == 10.0
     @test 3.0 ∈ sol5.t
     @test 6.0 ∈ sol5.t
+end
+
+# test that a single parameterized MAJ with scalar param_idxs works without merging
+@testset "Single parameterized MAJ with scalar param_idxs" begin
+    maj = MassActionJump([1 => 1, 2 => 1], [1 => -1, 2 => -1, 3 => 1];
+        param_idxs = 1)
+    p = [0.1]
+    u0 = [100, 100, 0]
+    dprob = DiscreteProblem(u0, (0.0, 10.0), p)
+    jprob = JumpProblem(dprob, Direct(), maj)
+    sol = solve(jprob, SSAStepper(); rng = StableRNG(12345))
+    @test sol.retcode == ReturnCode.Success
+    @test sol[3, end] > 0
+end
+
+# test that merging MAJs does not mutate the input MAJs' param_mapper
+@testset "Merging MAJs does not mutate inputs" begin
+    maj1 = MassActionJump([1 => 1], [1 => -1]; param_idxs = [1])
+    maj2 = MassActionJump([2 => 1], [2 => -1]; param_idxs = [2])
+    orig1 = copy(maj1.param_mapper.param_idxs)
+    orig2 = copy(maj2.param_mapper.param_idxs)
+    dprob = DiscreteProblem([100, 100], (0.0, 1.0), [0.1, 0.2])
+    jprob = JumpProblem(dprob, Direct(), maj1, maj2)
+    @test maj1.param_mapper.param_idxs == orig1
+    @test maj2.param_mapper.param_idxs == orig2
 end

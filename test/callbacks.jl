@@ -472,3 +472,46 @@ end
     @test_throws ErrorException init(jprob_ccb, SSAStepper(); rng)
     @test_throws ErrorException init(jprob, SSAStepper(); callback = ccb, rng)
 end
+
+@testset "SDE + jump callback not duplicated" begin
+    # Regression test for PR #567: verify that when using an SDE algorithm with a
+    # JumpProblem, the jump callback is added exactly once (not duplicated by both
+    # JumpProcesses and StochasticDiffEq). See:
+    # https://github.com/SciML/JumpProcesses.jl/pull/567#issuecomment-4092662794
+    using StochasticDiffEq
+
+    # SDE: dX = -X dt + 0.1 dW
+    f(u, p, t) = -u
+    g(u, p, t) = 0.1
+
+    # Constant rate jump
+    rate(u, p, t) = 1.0
+    affect!(integrator) = (integrator.u += 0.5)
+    crj = ConstantRateJump(rate, affect!)
+
+    sde_prob = SDEProblem(f, g, 1.0, (0.0, 1.0))
+    jprob = JumpProblem(sde_prob, Direct(), crj)
+
+    integrator = init(jprob, EM(); dt = 0.01, rng)
+
+    # Count discrete callbacks — the jump should appear exactly once.
+    # If both JumpProcesses and StochasticDiffEq add it, we'd see duplicates.
+    n_discrete = length(integrator.opts.callback.discrete_callbacks)
+    @test n_discrete == 1
+
+    # Also test with a VariableRateJump (needs array u0 for ExtendedJumpArray)
+    f_vr(du, u, p, t) = (du[1] = -u[1])
+    g_vr(du, u, p, t) = (du[1] = 0.1)
+    sde_prob_vr = SDEProblem(f_vr, g_vr, [1.0], (0.0, 1.0))
+
+    vrate(u, p, t) = 1.0
+    vaffect!(integrator) = (integrator.u[1] += 0.5)
+    vrj = VariableRateJump(vrate, vaffect!)
+
+    jprob_vr = JumpProblem(sde_prob_vr, Direct(), vrj; vr_aggregator = VR_FRM())
+    integrator_vr = init(jprob_vr, EM(); dt = 0.01, rng)
+
+    # VariableRateJumps produce continuous callbacks
+    n_continuous = length(integrator_vr.opts.callback.continuous_callbacks)
+    @test n_continuous == 1
+end

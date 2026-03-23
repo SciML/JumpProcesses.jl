@@ -262,10 +262,10 @@ function compute_tau(
 end
 
 # Function to generate a mass action rate function
-function massaction_rate(maj, numjumps)
+function massaction_rate(maj, maj_rates, numjumps)
     return (out, u, p, t) -> begin
         for j in 1:numjumps
-            out[j] = evalrxrate(u, j, maj)
+            out[j] = evalrxrate(u, j, maj, maj_rates)
         end
     end
 end
@@ -355,9 +355,11 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
 
     maj = jump_prob.massaction_jump
     numjumps = get_num_majumps(maj)
+    maj_rates = Vector{typeof(tspan[2])}(undef, numjumps)
+    fill_scaled_rates!(maj_rates, maj, prob.p)
     rj = jump_prob.regular_jump
     # Extract rates
-    rate = rj !== nothing ? rj.rate : massaction_rate(maj, numjumps)
+    rate = rj !== nothing ? rj.rate : massaction_rate(maj, maj_rates, numjumps)
     c = rj !== nothing ? rj.c : nothing
     u0 = copy(prob.u0)
     p = prob.p

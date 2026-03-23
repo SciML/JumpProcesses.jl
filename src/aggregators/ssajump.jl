@@ -127,12 +127,13 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
 
     # current jump rates, allows mass action rates and constant jumps
     cur_rates = Vector{typeof(t)}(undef, get_num_majumps(majumps) + length(rates))
+    maj_rates = Vector{typeof(t)}(undef, get_num_majumps(majumps))
 
     sum_rate = zero(typeof(t))
     next_jump = 0
     next_jump_time = typemax(typeof(t))
     jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-        majumps, rates, affects!, save_positions; kwargs...)
+        majumps, rates, affects!, save_positions; maj_rates, kwargs...)
 end
 
 """
@@ -146,8 +147,9 @@ function fill_rates_and_sum!(p::AbstractSSAJumpAggregator, u, params, t)
     # mass action jumps
     majumps = p.ma_jumps
     cur_rates = p.cur_rates
+    maj_rates = p.maj_rates
     @inbounds for i in 1:get_num_majumps(majumps)
-        cur_rates[i] = evalrxrate(u, i, majumps)
+        cur_rates[i] = evalrxrate(u, i, majumps, maj_rates)
         sum_rate += cur_rates[i]
     end
 
@@ -169,9 +171,10 @@ end
 
 Recalculate the rate for the jump with index `rx`.
 """
-@inline function calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx)
+@inline function calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx,
+        maj_rates)
     if rx <= num_majumps
-        return evalrxrate(u, rx, ma_jumps)
+        return evalrxrate(u, rx, ma_jumps, maj_rates)
     else
         @inbounds return rates[rx - num_majumps](u, params, t)
     end
@@ -194,7 +197,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
     @inbounds for rx in dep_rxs
         sum_rate -= cur_rates[rx]
         @inbounds cur_rates[rx] = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u,
-            params, t, rx)
+            params, t, rx, p.maj_rates)
         sum_rate += cur_rates[rx]
     end
 
@@ -296,7 +299,7 @@ Perform rejection sampling test (used in RSSA methods).
 """
 @inline function rejectrx(
         ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u,
-        jidx, params, t)
+        jidx, params, t, maj_rates)
     # rejection test
     @inbounds r2 = rand(rng) * cur_rate_high[jidx]
     @inbounds crlow = cur_rate_low[jidx]
@@ -305,7 +308,8 @@ Perform rejection sampling test (used in RSSA methods).
         return false
     else
         # calculate actual propensity, split up for type stability
-        crate = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, jidx)
+        crate = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, jidx,
+            maj_rates)
         if crate > zero(crate) && r2 <= crate
             return false
         end

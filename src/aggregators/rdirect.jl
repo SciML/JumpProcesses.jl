@@ -11,6 +11,7 @@ mutable struct RDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
     cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
@@ -22,6 +23,7 @@ end
 
 function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         num_specs, counter_threshold = length(crs),
         dep_graph = nothing,
         kwargs...) where {T, S, F1, F2}
@@ -42,7 +44,7 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
     max_rate = maximum(crs)
     affecttype = F2 <: Tuple ? F2 : Any
     return RDirectJumpAggregation{T, S, F1, affecttype, typeof(dg)}(nj, nj, njt, et,
-        crs, sr, maj, rs,
+        crs, sr, maj, maj_rates, rs,
         affs!, sps,
         dg, max_rate, 0,
         counter_threshold)
@@ -65,6 +67,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RDirectJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     fill_rates_and_sum!(p, u, params, t)
     p.max_rate = maximum(p.cur_rates)
     generate_jumps!(p, integrator, u, params, t)
@@ -118,7 +121,7 @@ function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
     @inbounds for rx in dep_rxs
         @inbounds new_rate = calculate_jump_rate(
             ma_jumps, num_majumps, rates, u, params, t,
-            rx)
+            rx, p.maj_rates)
         sum_rate += new_rate - cur_rates[rx]
         if new_rate > p.max_rate
             p.max_rate = new_rate

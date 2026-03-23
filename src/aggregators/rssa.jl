@@ -14,6 +14,7 @@ mutable struct RSSAJumpAggregation{T, S, F1, F2, VJMAP, JVMAP, BD, U} <:
     cur_rate_high::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
@@ -26,6 +27,7 @@ end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         u::U, vartojumps_map = nothing,
         jumptovars_map = nothing,
         bracket_data = nothing, kwargs...) where {T, S, F1, F2, U}
@@ -64,7 +66,7 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     affecttype = F2 <: Tuple ? F2 : Any
     RSSAJumpAggregation{T, S, F1, affecttype, typeof(vtoj_map),
         typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
-        crh_bnds, sr, maj, rs, affs!, sps,
+        crh_bnds, sr, maj, maj_rates, rs, affs!, sps,
         vtoj_map, jtov_map, bd, ulow,
         uhigh)
 end
@@ -86,6 +88,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::RSSAJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     set_bracketing!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -120,7 +123,7 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     end
     rerl += randexp(rng)
     @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high,
-        cur_rate_low, rng, u, jidx, params, t)
+        cur_rate_low, rng, u, jidx, params, t, p.maj_rates)
         # sample candidate reaction
         r = rand(rng) * sum_rate
         jidx = linear_search(cur_rate_high, r)

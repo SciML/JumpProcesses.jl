@@ -1,4 +1,4 @@
-using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase
+using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
 using FastBroadcast
 using StableRNGs
 
@@ -117,4 +117,45 @@ let
     sol = solve(jprob, Tsit5())
     @test eltype(sol.u) <: ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}
     @test SciMLBase.plottable_indices(sol.u[1]) == 1:length(u₀)
+end
+
+# Test ldiv! and lmul! for stiff solver support
+let rng = StableRNG(456)
+    u = rand(rng, 3)
+    jump_u = rand(rng, 2)
+    flat = [u; jump_u]
+
+    # ldiv! with LU should modify eja in place and match plain vector result
+    eja = ExtendedJumpArray(copy(u), copy(jump_u))
+    A = rand(rng, 5, 5) + 5I
+    F = lu(A)
+    expected = F \ flat
+    ldiv!(F, eja)
+    @test vcat(eja.u, eja.jump_u) ≈ expected
+
+    # lmul! with Q from QR
+    eja2 = ExtendedJumpArray(copy(u), copy(jump_u))
+    Q = qr(rand(rng, 5, 5)).Q
+    expected_q = Q * flat
+    lmul!(Q, eja2)
+    @test vcat(eja2.u, eja2.jump_u) ≈ expected_q
+
+    # lmul! with AdjointQ from QR (the actual CI failure case)
+    eja3 = ExtendedJumpArray(copy(u), copy(jump_u))
+    expected_qt = Q' * flat
+    lmul!(Q', eja3)
+    @test vcat(eja3.u, eja3.jump_u) ≈ expected_qt
+end
+
+# Integration test: stiff solver with QRFactorization and ExtendedJumpArray
+let
+    f!(du, u, p, t) = (du .= 0; nothing)
+    rate(u, p, t) = 0.5
+    affect!(integrator) = (integrator.u[1] += 1; nothing)
+    vrj = VariableRateJump(rate, affect!)
+    oprob = ODEProblem(f!, [0.0], (0.0, 1.0))
+    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM())
+    sol = solve(jprob, Rodas5P(linsolve = QRFactorization());
+        rng = StableRNG(789))
+    @test sol.retcode == ReturnCode.Success
 end

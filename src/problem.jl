@@ -157,10 +157,6 @@ function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
             newprob = DiffEqBase.remake(prob; u0, p, interpret_symbolicmap, use_defaults, kwargs...)
         end
 
-        # if the parameters were changed we must remake the MassActionJump too
-        if (p !== missing) && using_params(jprob.massaction_jump)
-            update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
-        end
     else
         ((u0 !== missing) || (p !== missing) || (:tspan ∈ keys(kwargs))) &&
             error("If remaking a JumpProblem you can not pass both prob and any of u0, p, or tspan.")
@@ -169,24 +165,11 @@ function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
         # when passing a new wrapped problem directly we require u0 has the correct type
         (typeof(newprob.u0) == typeof(jprob.prob.u0)) ||
             error("The new u0 within the passed prob does not have the same type as the existing u0. Please pass a u0 of type $(typeof(jprob.prob.u0)).")
-
-        # we can't know if p was changed, so we must remake the MassActionJump
-        if using_params(jprob.massaction_jump)
-            update_parameters!(jprob.massaction_jump, newprob.p; kwargs...)
-        end
     end
 
     T(newprob, jprob.aggregator, jprob.discrete_jump_aggregation, jprob.jump_callback,
         jprob.constant_jumps, jprob.variable_jumps, jprob.regular_jump,
         jprob.massaction_jump, jprob.kwargs)
-end
-
-# for updating parameters in JumpProblems to update MassActionJumps
-function SII.finalize_parameters_hook!(prob::JumpProblem, p)
-    if using_params(prob.massaction_jump)
-        update_parameters!(prob.massaction_jump, SII.parameter_values(prob))
-    end
-    nothing
 end
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
@@ -247,25 +230,22 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         vr_aggregator::VariableRateAggregator = VR_FRM(),
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, use_vrj_bounds = true, kwargs...)
 
     if haskey(kwargs, :rng)
         throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
     end
-
-    # initialize the MassActionJump rate constants with the user parameters
-    if using_params(jumps.massaction_jump)
-        rates = jumps.massaction_jump.param_mapper(prob.p)
-        maj = MassActionJump(rates, jumps.massaction_jump.reactant_stoch,
-            jumps.massaction_jump.net_stoch,
-            jumps.massaction_jump.param_mapper; scale_rates = scale_rates,
-            useiszero = useiszero,
-            nocopy = true)
-    else
-        maj = jumps.massaction_jump
+    if haskey(kwargs, :scale_rates)
+        throw(ArgumentError("`scale_rates` is no longer a keyword argument for `JumpProblem`. Set `scale_rates` on the `MassActionJump` directly instead."))
     end
+    if haskey(kwargs, :useiszero)
+        throw(ArgumentError("`useiszero` is no longer a keyword argument for `JumpProblem`. Set `useiszero` on the `MassActionJump` directly instead."))
+    end
+
+    # keep the original MAJ (including {Nothing} parameterized MAJs);
+    # fill_scaled_rates! in each aggregator's initialize! handles rate setup
+    maj = jumps.massaction_jump
 
     ## Spatial jumps handling
     if spatial_system !== nothing && hopping_constants !== nothing
@@ -330,7 +310,6 @@ end
 function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
         save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
-        scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, kwargs...)
 
@@ -342,17 +321,9 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     (spatial_system !== nothing || hopping_constants !== nothing) &&
         error("PureLeaping does not currently support spatial problems.")
 
-    # Initialize the MassActionJump rate constants with the user parameters
-    if using_params(jumps.massaction_jump)
-        rates = jumps.massaction_jump.param_mapper(prob.p)
-        maj = MassActionJump(rates, jumps.massaction_jump.reactant_stoch,
-            jumps.massaction_jump.net_stoch,
-            jumps.massaction_jump.param_mapper; scale_rates = scale_rates,
-            useiszero = useiszero,
-            nocopy = true)
-    else
-        maj = jumps.massaction_jump
-    end
+    # keep the original MAJ (including {Nothing} parameterized MAJs);
+    # fill_scaled_rates! in the tau-leaping solver handles rate setup
+    maj = jumps.massaction_jump
 
     # For PureLeaping, all jumps are handled by the tau-leaping solver
     # No discrete jump aggregation or variable rate callbacks are created

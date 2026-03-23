@@ -36,10 +36,13 @@ rx_rates_list = [JP.RxRates(num_nodes, ma_jumps), JP.RxRates(num_nodes, spatial_
 for rx_rates in rx_rates_list
     @test JP.num_rxs(rx_rates) == length(rates)
     show(io, "text/plain", rx_rates)
+    if rx_rates.ma_jumps isa MassActionJump
+        JP.fill_scaled_rates!(rx_rates.maj_rates, rx_rates.ma_jumps, nothing)
+    end
     for site in 1:num_nodes
         JP.update_rx_rates!(rx_rates, 1:num_rxs, integrator, site)
         @test JP.total_site_rx_rate(rx_rates, site) == 1.1
-        rx_props = [JP.evalrxrate(u[:, site], rx, ma_jumps) for rx in 1:num_rxs]
+        rx_props = [JP.eval_massaction_rate(u, rx, rx_rates.ma_jumps, site, rx_rates.maj_rates) for rx in 1:num_rxs]
         rx_probs = rx_props / sum(rx_props)
         d = Dict{Int, Int}()
         for i in 1:num_samples

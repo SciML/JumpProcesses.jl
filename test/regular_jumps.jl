@@ -251,8 +251,10 @@ end
     # Test MassActionJump with parameter mapping
     maj_params = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1, 2])
     jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params))
-    scaled_rates = [p[1], p[2]/2]
-    @test jp_params.massaction_jump.scaled_rates == scaled_rates
+    @test jp_params.massaction_jump.scaled_rates === nothing
+    dest = zeros(2)
+    JumpProcesses.fill_scaled_rates!(dest, jp_params.massaction_jump, p)
+    @test dest == [p[1], p[2] / 2]
 end
 
 # Test that saveat/save_start/save_end control which times are stored in solutions

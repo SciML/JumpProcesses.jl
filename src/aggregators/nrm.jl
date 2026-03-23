@@ -10,6 +10,7 @@ mutable struct NRMJumpAggregation{T, S, F1, F2, DEPGR, PQ} <:
     cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
@@ -19,6 +20,7 @@ end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         num_specs, dep_graph = nothing,
         kwargs...) where {T, S, F1, F2}
 
@@ -40,7 +42,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     affecttype = F2 <: Tuple ? F2 : Any
     NRMJumpAggregation{T, S, F1, affecttype, typeof(dg), typeof(pq)}(nj, nj, njt, et,
-        crs, sr, maj,
+        crs, sr, maj, maj_rates,
         rs, affs!, sps,
         dg, pq)
 end
@@ -61,6 +63,7 @@ end
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::NRMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     rng = get_rng(integrator)
     fill_rates_and_get_times!(p, u, params, t, rng)
     generate_jumps!(p, integrator, u, params, t)
@@ -98,7 +101,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t, rng)
 
         # update the jump rate
         @inbounds cur_rates[rx] = calculate_jump_rate(ma_jumps, num_majumps, rates, u,
-            params, t, rx)
+            params, t, rx, p.maj_rates)
 
         # calculate new jump times for dependent jumps
         if rx != p.next_jump && oldrate > zero(oldrate)
@@ -125,8 +128,9 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t, rng)
     majumps = p.ma_jumps
     cur_rates = p.cur_rates
     pqdata = Vector{typeof(t)}(undef, length(cur_rates))
+    maj_rates = p.maj_rates
     @inbounds for i in 1:get_num_majumps(majumps)
-        cur_rates[i] = evalrxrate(u, i, majumps)
+        cur_rates[i] = evalrxrate(u, i, majumps, maj_rates)
         pqdata[i] = t + randexp(rng) / cur_rates[i]
     end
 

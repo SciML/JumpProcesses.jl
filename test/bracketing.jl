@@ -36,9 +36,11 @@ reactstoch = [[1 => 1]]
 netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
     netstoch)
+maj_rates_work = Vector{Float64}(undef, JP.get_num_majumps(majump))
+JP.fill_scaled_rates!(maj_rates_work, majump, nothing)
 reaction_index = 1
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] == majump_rates[1] * ulow[1] # low
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[2] == majump_rates[1] * uhigh[1] # high
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump, maj_rates_work)[1] == majump_rates[1] * ulow[1] # low
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump, maj_rates_work)[2] == majump_rates[1] * uhigh[1] # high
 
 # constant rate
 rate(u, params, t) = 1 / u[1]
@@ -49,13 +51,14 @@ t = 0.0
 
 ### Aggregator ###
 mutable struct DummyAggregator{T, M, R, BD} <:
-               JP.AbstractSSAJumpAggregator{T, M, R, Nothing, Nothing}
+               JP.AbstractSSAJumpAggregator{T, M, R, Nothing}
     ulow::Vector{Int}
     uhigh::Vector{Int}
     cur_rate_low::Vector{T}
     cur_rate_high::Vector{T}
     sum_rate::T
     ma_jumps::M
+    maj_rates::Vector{T}
     rates::R
     bracket_data::BD
 end
@@ -63,7 +66,7 @@ end
 cur_rate_low = [0.0, 0.0]
 cur_rate_high = [0.0, 0.0]
 sum_rate = 0.0
-p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, [rate], bd)
+p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, maj_rates_work, [rate], bd)
 
 u = [100]
 JP.update_u_brackets!(p, u)
@@ -77,7 +80,7 @@ reaction_index = 2
 @test JP.get_jump_brackets(reaction_index, p, params, t)[1] == rate(p.uhigh, params, t)
 @test JP.get_jump_brackets(reaction_index, p, params, t)[2] == rate(p.ulow, params, t)
 
-p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, [rate], bd)
+p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, maj_rates_work, [rate], bd)
 JP.set_bracketing!(p, u, params, t)
 @test p.ulow[1]≈u[1] * (1 - fluctuation_rate) atol=1
 @test p.uhigh[1]≈u[1] * (1 + fluctuation_rate) atol=1

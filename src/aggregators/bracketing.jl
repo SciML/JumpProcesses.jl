@@ -47,8 +47,8 @@ end
 @inline get_spec_brackets(bd, i, u::AbstractVector) = get_spec_brackets(bd, i, u[i])
 
 # Get propensity brackets of massaction jump k.
-@inline function get_majump_brackets(ulow, uhigh, k, majumps)
-    evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
+@inline function get_majump_brackets(ulow, uhigh, k, majumps, maj_rates)
+    evalrxrate(ulow, k, majumps, maj_rates), evalrxrate(uhigh, k, majumps, maj_rates)
 end
 
 # for constant rate jumps we must check the ordering of the bracket values
@@ -66,7 +66,7 @@ get brackets for the rate of reaction rx by first checking if the reaction is a 
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
-        return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
+        return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps, p.maj_rates)
     else
         @inbounds return get_cjump_brackets(p.ulow, p.uhigh, p.rates[rx - num_majumps],
             params, t)
@@ -108,8 +108,9 @@ function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     majumps = p.ma_jumps
     crlow = p.cur_rate_low
     crhigh = p.cur_rate_high
+    maj_rates = p.maj_rates
     @inbounds for k in 1:get_num_majumps(majumps)
-        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps)
+        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps, maj_rates)
         sum_rate += crhigh[k]
     end
 

@@ -12,6 +12,9 @@ struct RxRates{F, M}
 
     "AbstractMassActionJump"
     ma_jumps::M
+
+    "working copy of scaled mass action jump rates"
+    maj_rates::Vector{F}
 end
 
 """
@@ -22,7 +25,8 @@ initializes RxRates with zero rates
 function RxRates(num_sites::Int, ma_jumps::M) where {M}
     numrxjumps = get_num_majumps(ma_jumps)
     rates = zeros(Float64, numrxjumps, num_sites)
-    RxRates{Float64, M}(rates, vec(sum(rates, dims = 1)), ma_jumps)
+    maj_rates = Vector{Float64}(undef, numrxjumps)
+    RxRates{Float64, M}(rates, vec(sum(rates, dims = 1)), ma_jumps, maj_rates)
 end
 
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)
@@ -55,8 +59,9 @@ update rates of all reactions in rxs at site
 function update_rx_rates!(rx_rates::RxRates, rxs, u::AbstractMatrix, integrator,
         site)
     ma_jumps = rx_rates.ma_jumps
+    maj_rates = rx_rates.maj_rates
     @inbounds for rx in rxs
-        rate = eval_massaction_rate(u, rx, ma_jumps, site)
+        rate = eval_massaction_rate(u, rx, ma_jumps, site, maj_rates)
         set_rx_rate_at_site!(rx_rates, site, rx, rate)
     end
 end
@@ -90,9 +95,9 @@ function Base.show(io::IO, ::MIME"text/plain", rx_rates::RxRates)
     println(io, "RxRates with $num_rxs reactions and $num_sites sites")
 end
 
-function eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: SpatialMassActionJump}
+function eval_massaction_rate(u, rx, ma_jumps::M, site, maj_rates) where {M <: SpatialMassActionJump}
     evalrxrate(u, rx, ma_jumps, site)
 end
-function eval_massaction_rate(u, rx, ma_jumps::M, site) where {M <: MassActionJump}
-    evalrxrate((@view u[:, site]), rx, ma_jumps)
+function eval_massaction_rate(u, rx, ma_jumps::M, site, maj_rates) where {M <: MassActionJump}
+    evalrxrate((@view u[:, site]), rx, ma_jumps, maj_rates)
 end

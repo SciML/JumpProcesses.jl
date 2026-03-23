@@ -1,3 +1,23 @@
+"""
+    resolve_rng(rng, seed)
+
+Resolve which RNG to use for a jump simulation.
+
+Priority: `rng` > `seed` (creates `Xoshiro`) > `Random.default_rng()`.
+"""
+function resolve_rng(rng, seed)
+    if rng !== nothing
+        rng
+    elseif seed !== nothing
+        Random.Xoshiro(seed)
+    else
+        Random.default_rng()
+    end
+end
+
+SciMLBase.supports_solve_rng(jprob::JumpProblem, alg::DiffEqBase.DEAlgorithm) =
+    SciMLBase.supports_solve_rng(jprob.prob, alg)
+
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
         alg::DiffEqBase.DEAlgorithm;
         merge_callbacks = true, kwargs...) where {P}
@@ -21,6 +41,9 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
     integrator.sol
 end
 
+SciMLBase.supports_solve_rng(jprob::JumpProblem, ::Nothing) =
+    jprob.prob isa DiffEqBase.DiscreteProblem
+
 # if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
 # SSAStepper
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P};
@@ -38,53 +61,33 @@ function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
     kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
 
     __jump_init(_jump_prob, alg; kwargs...)
-end 
+end
 
 function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
-        callback = nothing, seed = nothing,
+        callback = nothing, seed = nothing, rng = nothing,
         alias_jump = Threads.threadid() == 1,
         kwargs...) where {P}
+
+    _rng = resolve_rng(rng, seed)
+
     if alias_jump
         jump_prob = _jump_prob
-        reset_jump_problem!(jump_prob, seed)
     else
-        jump_prob = resetted_jump_problem(_jump_prob, seed)
+        jump_prob = resetted_jump_problem(_jump_prob)
     end
 
-    # DDEProblems do not have a recompile_flag argument
-    if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
-        # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg;
-            callback = CallbackSet(jump_prob.jump_callback, callback),
-            kwargs...)
-    else
-        # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg;
-            callback = CallbackSet(jump_prob.jump_callback, callback),
-            kwargs...)
-    end
+    init(jump_prob.prob, alg;
+        callback = CallbackSet(jump_prob.jump_callback, callback),
+        rng = _rng, kwargs...)
 end
 
-# Derive an independent seed from the caller's seed. When a caller (e.g. StochasticDiffEq)
-# passes the same seed used for its noise process, we must produce a distinct seed for the
-# jump aggregator's RNG. We cannot assume the JumpProblem's stored RNG is any particular
-# type, so we pass the seed through `hash` (to decorrelate from the input) and then through
-# a Xoshiro draw (to ensure strong mixing regardless of the target RNG's seeding quality).
-const _JUMP_SEED_SALT = 0x4a756d7050726f63  # "JumPProc" in ASCII
-_derive_jump_seed(seed) = rand(Random.Xoshiro(hash(seed, _JUMP_SEED_SALT)), UInt64)
-
-function resetted_jump_problem(_jump_prob, seed)
-    jump_prob = deepcopy(_jump_prob)
-    if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
-        rng = jump_prob.jump_callback.discrete_callbacks[1].condition.rng
-        Random.seed!(rng, _derive_jump_seed(seed))
-    end
-    jump_prob
+# Keep function signatures for StochasticDiffEq backward compatibility.
+# The seed argument is accepted but no longer used to reseed aggregator RNGs
+# (RNG state is now managed by the integrator).
+function resetted_jump_problem(_jump_prob, seed = nothing)
+    deepcopy(_jump_prob)
 end
 
-function reset_jump_problem!(jump_prob, seed)
-    if seed !== nothing && !isempty(jump_prob.jump_callback.discrete_callbacks)
-        Random.seed!(jump_prob.jump_callback.discrete_callbacks[1].condition.rng,
-            _derive_jump_seed(seed))
-    end
+function reset_jump_problem!(jump_prob, seed = nothing)
+    nothing
 end

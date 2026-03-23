@@ -371,11 +371,10 @@ with ``N(t)`` a Poisson counting process with constant transition rate
 ``\lambda``, and the ``C_i`` independent and identical samples from a uniform
 distribution over ``\{-1,1\}``. We can simulate such a process as follows.
 
-We first ensure that we use the same random number generator as JumpProcesses. We
-can either pass one as an input to [`JumpProblem`](@ref) via the `rng` keyword
-argument, and make sure it is the same one we use in our `affect!` function, or
-we can just use the default generator chosen by JumpProcesses if one is not
-specified, `JumpProcesses.DEFAULT_RNG`. Let's do the latter
+We first ensure that we use the same random number generator as JumpProcesses.
+Custom RNGs can be passed to `solve` or `init` via the `rng` keyword argument.
+If no RNG is specified, JumpProcesses uses `Random.default_rng()`, which is also
+available as `JumpProcesses.DEFAULT_RNG`. Let's use the default
 
 ```@example tut1
 rng = JumpProcesses.DEFAULT_RNG

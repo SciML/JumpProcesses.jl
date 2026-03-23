@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - master
+      - v10_working
     paths-ignore:
       - 'docs/**'
 
@@ -29,6 +30,7 @@ jobs:
         group:
           - InterfaceI
           - InterfaceII
+          - ThreadSafety
           - QA
         exclude:
           - version: "pre"

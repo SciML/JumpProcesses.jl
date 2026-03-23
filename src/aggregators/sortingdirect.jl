@@ -2,8 +2,8 @@
 # "The sorting direct method for stochastic simulation of biochemical systems with varying reaction execution behavior"
 # Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
-mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct SortingDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -11,19 +11,20 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
     cur_rates::Vector{T}
     sum_rate::T
     ma_jumps::S
+    maj_rates::Vector{T}
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    rng::RNG
     dep_gr::DEPGR
     jump_search_order::Vector{Int}
     jump_search_idx::Int
 end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
-        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-        rng::RNG; num_specs, dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
+        num_specs, dep_graph = nothing,
+        kwargs...) where {T, S, F1, F2}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -42,9 +43,9 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
-    SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
-        crs, sr, maj, rs,
-        affs!, sps, rng,
+    SortingDirectJumpAggregation{T, S, F1, affecttype, typeof(dg)}(nj, nj, njt, et,
+        crs, sr, maj, maj_rates, rs,
+        affs!, sps,
         dg, jtoidx,
         zero(Int))
 end
@@ -53,19 +54,20 @@ end
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+        ma_jumps, save_positions; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions, rng; num_specs = length(u),
+        rates, affects!, save_positions; num_specs = length(u),
         kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     fill_rates_and_sum!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -92,14 +94,15 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
-    p.next_jump_time = t + randexp(p.rng) / p.sum_rate
+    rng = get_rng(integrator)
+    p.next_jump_time = t + randexp(rng) / p.sum_rate
 
     # search for next jump
     if p.next_jump_time < p.end_time
         cur_rates = p.cur_rates
         numjumps = length(cur_rates)
         jso = p.jump_search_order
-        rn = p.sum_rate * rand(p.rng)
+        rn = p.sum_rate * rand(rng)
         @inbounds for idx in 1:numjumps
             rn -= cur_rates[jso[idx]]
             if rn < zero(rn)

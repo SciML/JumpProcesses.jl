@@ -34,11 +34,11 @@ function test(rng)
     Xmeans = zeros(length(SSAalgs))
     Ymeans = zeros(length(SSAalgs))
     for (j, agg) in enumerate(SSAalgs)
-        jprob = JumpProblem(dprob, agg, maj; save_positions = (false, false), rng,
+        jprob = JumpProblem(dprob, agg, maj; save_positions = (false, false),
             vartojumps_map = vtoj, jumptovars_map = jtov, dep_graph = dg,
             scale_rates = false)
         for i in 1:Nsims
-            sol = solve(jprob, SSAStepper())
+            sol = solve(jprob, SSAStepper(); rng)
             Xmeans[j] += sol[1, end]
             Ymeans[j] += sol[2, end]
         end

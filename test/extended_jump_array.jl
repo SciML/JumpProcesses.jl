@@ -154,8 +154,8 @@ let
     affect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rate, affect!)
     oprob = ODEProblem(f!, [0.0], (0.0, 1.0))
-    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM(),
+    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM())
+    sol = solve(jprob, Rodas5P(linsolve = QRFactorization());
         rng = StableRNG(789))
-    sol = solve(jprob, Rodas5P(linsolve = QRFactorization()))
     @test sol.retcode == ReturnCode.Success
 end

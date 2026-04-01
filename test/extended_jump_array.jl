@@ -1,4 +1,5 @@
 using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
+using FastBroadcast
 using StableRNGs
 
 rng = StableRNG(123)
@@ -52,6 +53,10 @@ out_result = ExtendedJumpArray(zeros(10), zeros(2))
 out_result .= bc_dtype_1 .+ bc_dtype_2 .* 2
 @test eltype(result.jump_u) == Int64
 @test out_result ≈ result
+
+# Test that fast broadcasting also gives the correct results
+@.. bc_out = 3.14 * bc_eja_1 + 2.7 * bc_eja_2
+@test bc_out ≈ 3.14 * bc_eja_1 + 2.7 * bc_eja_2
 
 # Test both the in-place and allocating problems (https://github.com/SciML/JumpProcesses.jl/issues/321)
 # to check that an ExtendedJumpArray is not getting downgraded into a Vector

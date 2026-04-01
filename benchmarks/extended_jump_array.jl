@@ -1,6 +1,6 @@
 # This file is not directly included in a test case, but is used to
 # benchmark and compare changes to the broadcsting
-using JumpProcesses, StableRNGs, FastBroadcast, BenchmarkTools
+using JumpProcesses, StableRNGs, BenchmarkTools
 
 rng = StableRNG(123)
 
@@ -13,15 +13,7 @@ function test_single_dot(out, array)
     @inbounds @. out = array + 1.23 * array
 end
 
-function test_double_dot(out, array)
-    @inbounds @.. out = array + 1.23 * array
-end
-
 println("Base-case normal broadcasting")
 @benchmark test_single_dot(base_case_out, base_case_in)
 println("EJA normal broadcasting")
 @benchmark test_single_dot(benchmark_out, benchmark_in)
-println("Base-case fast broadcasting")
-@benchmark test_double_dot(base_case_out, base_case_in)
-println("EJA fast broadcasting")
-@benchmark test_double_dot(benchmark_out, benchmark_in)

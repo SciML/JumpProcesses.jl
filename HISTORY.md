@@ -1,6 +1,51 @@
 # Breaking updates and feature summaries across releases
 
-## JumpProcesses unreleased (master branch)
+## 10.0 (Breaking)
+
+  - **Breaking**: The `rng` keyword argument has been removed from
+    `JumpProblem`. Pass `rng` to `solve` or `init` instead:
+    ```julia
+    # Before (no longer works):
+    jprob = JumpProblem(dprob, Direct(), jump; rng = Xoshiro(1234))
+    sol = solve(jprob, SSAStepper())
+
+    # After:
+    jprob = JumpProblem(dprob, Direct(), jump)
+    sol = solve(jprob, SSAStepper(); rng = Xoshiro(1234))
+    ```
+  - RNG state is now owned by the integrator, not the aggregator. This
+    eliminates data races when sharing a `JumpProblem` across threads and
+    ensures a single, consistent RNG priority across all solver pathways:
+    `rng` > `seed` > `Random.default_rng()`.
+  - `rng` and `seed` kwargs are fully supported on `solve`/`init` for all
+    solver pathways (SSAStepper, ODE, SDE, tau-leaping).
+  - `SSAIntegrator` now supports the `SciMLBase` RNG interface (`has_rng`,
+    `get_rng`, `set_rng!`).
+  - **Breaking**: The `scale_rates` and `useiszero` keyword arguments have been
+    removed from `JumpProblem`. Set them on the `MassActionJump` directly:
+    ```julia
+    # Before (no longer works):
+    jprob = JumpProblem(dprob, Direct(), maj; scale_rates = false)
+
+    # After:
+    maj = MassActionJump(rates, reactant_stoch, net_stoch; scale_rates = false)
+    jprob = JumpProblem(dprob, Direct(), maj)
+    ```
+  - **Breaking**: Parameterized `MassActionJump`s (those constructed with
+    `param_idxs` or a custom `param_mapper`) are now immutable — rates are
+    computed from parameters at aggregator initialization rather than being
+    materialized into the jump at `JumpProblem` construction time. This means:
+      - `update_parameters!` has been removed. Mass action rates are now
+        automatically recomputed from the current parameter values whenever the
+        aggregator reinitializes. After modifying parameters (e.g. in a
+        callback), call `reset_aggregated_jumps!(integrator)` to trigger
+        reinitialization with the updated parameter values.
+      - Custom parameter mappers (e.g. ModelingToolkitBase's
+        `JumpSysMajParamMapper`) must implement the 3-arg callable API:
+        `(mapper)(dest::AbstractVector, maj::MassActionJump, params)`.
+        See [`MassActionJumpParamMapper`](@ref) for details.
+  - Scalar `param_idxs` (e.g. `param_idxs = 1`) is now internally converted to
+    a one-element vector. The scalar form continues to work as before.
 
 ## 9.14
 

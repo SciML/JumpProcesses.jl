@@ -82,6 +82,11 @@ function SpatialMassActionJump(urates::A, rs, ns; scale_rates = true, useiszero 
         useiszero = useiszero, nocopy = nocopy)
 end
 
+function SpatialMassActionJump(ma_jumps::MassActionJump{Nothing}; kwargs...)
+    error("Cannot construct SpatialMassActionJump from a parameter-mapped MassActionJump. " *
+          "Provide explicit rate vectors or use a SpatialMassActionJump directly.")
+end
+
 # scale_rates defaults to false since ma_jumps.scaled_rates are already scaled;
 # passing true would double-scale.
 function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates = false,
@@ -90,6 +95,10 @@ function SpatialMassActionJump(ma_jumps::MassActionJump{T, S, U, V}; scale_rates
         ma_jumps.net_stoch, ma_jumps.param_mapper;
         scale_rates = scale_rates, useiszero = useiszero, nocopy = nocopy)
 end
+
+# SpatialMassActionJump stores rates in the struct itself (uniform_rates/spatial_rates),
+# so fill_scaled_rates! is a no-op.
+fill_scaled_rates!(dest, maj::SpatialMassActionJump, params) = nothing
 
 ##############################################
 

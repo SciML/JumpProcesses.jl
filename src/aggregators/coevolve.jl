@@ -1,8 +1,8 @@
 """
 Queue method. This method handles variable intensity rates.
 """
-mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct CoevolveJumpAggregation{T, S, F1, F2, GR, PQ} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
     next_jump_time::T                 # the time of the next jump
@@ -10,10 +10,10 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
     cur_rates::Vector{T}              # the last computed upper bound for each rate
     sum_rate::Nothing                 # not used
     ma_jumps::S                       # MassActionJumps
+    maj_rates::Vector{T}              # working copy of mass action jump rates
     rates::F1                         # vector of rate functions
     affects!::F2                      # vector of affect functions for VariableRateJumps
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
-    rng::RNG                          # random number generator
     dep_gr::GR                        # map from jumps to jumps depending on it
     pq::PQ                            # priority queue of next time
     lrates::F1                        # vector of rate lower bound functions
@@ -24,10 +24,11 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, RNG, GR, PQ} <:
 end
 
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
-        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-        rng::RNG; u::U, dep_graph = nothing, lrates, urates,
+        maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
+        maj_rates = Vector{T}(undef, get_num_majumps(maj)),
+        u::U, dep_graph = nothing, lrates, urates,
         rateintervals, haslratevec,
-        cur_lrates::Vector{T}) where {T, S, F1, F2, RNG, U}
+        cur_lrates::Vector{T}) where {T, S, F1, F2, U}
     if dep_graph === nothing
         if (get_num_majumps(maj) == 0) || !isempty(urates)
             error("To use Coevolve a dependency graph between jumps must be supplied.")
@@ -49,9 +50,9 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
 
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
-    CoevolveJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
-        typeof(pq)}(nj, nj, njt, et, crs, sr, maj,
-        rs, affs!, sps, rng, dg, pq,
+    CoevolveJumpAggregation{T, S, F1, affecttype, typeof(dg),
+        typeof(pq)}(nj, nj, njt, et, crs, sr, maj, maj_rates,
+        rs, affs!, sps, dg, pq,
         lrates, urates, rateintervals,
         haslratevec, cur_lrates)
 end
@@ -98,7 +99,7 @@ end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; dep_graph = nothing,
+        ma_jumps, save_positions; dep_graph = nothing,
         variable_jumps = nothing, kwargs...)
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
         Tuple{typeof(u), typeof(p), typeof(t)}}
@@ -136,20 +137,23 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
 
     num_jumps = get_num_majumps(ma_jumps) + nrjs
     cur_rates = Vector{typeof(t)}(undef, num_jumps)
+    maj_rates = Vector{typeof(t)}(undef, get_num_majumps(ma_jumps))
     cur_lrates = zeros(typeof(t), nvrjs)
     sum_rate = nothing
     next_jump = 0
     next_jump_time = typemax(t)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
-        ma_jumps, rates, affects!, save_positions, rng;
-        u, dep_graph, lrates, urates, rateintervals, haslratevec,
+        ma_jumps, rates, affects!, save_positions;
+        maj_rates, u, dep_graph, lrates, urates, rateintervals, haslratevec,
         cur_lrates)
 end
 
 # set up a new simulation and calculate the first jump / jump time
 function initialize!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
-    fill_rates_and_get_times!(p, u, params, t)
+    fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
+    rng = get_rng(integrator)
+    fill_rates_and_get_times!(p, u, params, t, rng)
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -160,7 +164,8 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t,
     # execute jump
     update_state!(p, integrator, u, affects!)
     # update current jump rates and times
-    update_dependent_rates!(p, integrator.u, integrator.p, t)
+    rng = get_rng(integrator)
+    update_dependent_rates!(p, integrator.u, integrator.p, t, rng)
     nothing
 end
 
@@ -178,7 +183,8 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
 
     (next_jump <= num_majumps) && return true
 
-    (; cur_rates, rates, rng, urates, cur_lrates) = p
+    (; cur_rates, rates, urates, cur_lrates) = p
+    rng = get_rng(integrator)
     num_cjumps = length(urates) - length(rates)
     uidx = next_jump - num_majumps
     lidx = uidx - num_cjumps
@@ -225,11 +231,11 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     return false
 end
 
-function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
+function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t, rng)
     @inbounds deps = p.dep_gr[p.next_jump]
     (; cur_rates, pq) = p
     for (ix, i) in enumerate(deps)
-        ti, urate_i = next_time(p, u, params, t, i)
+        ti, urate_i = next_time(p, u, params, t, i, rng)
         update!(pq, i, ti)
         @inbounds cur_rates[i] = urate_i
     end
@@ -237,7 +243,7 @@ function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t)
 end
 
 @inline function get_ma_urate(p::CoevolveJumpAggregation, i, u, params, t)
-    return evalrxrate(u, i, p.ma_jumps)
+    return evalrxrate(u, i, p.ma_jumps, p.maj_rates)
 end
 
 @inline function get_urate(p::CoevolveJumpAggregation, uidx, u, params, t)
@@ -256,8 +262,8 @@ end
     @inbounds return p.rates[lidx](u, params, t)
 end
 
-function next_time(p::CoevolveJumpAggregation, u, params, t, i)
-    (; next_jump, cur_rates, ma_jumps, rates, rng, pq, urates) = p
+function next_time(p::CoevolveJumpAggregation, u, params, t, i, rng)
+    (; next_jump, cur_rates, ma_jumps, rates, pq, urates) = p
     num_majumps = get_num_majumps(ma_jumps)
     num_cjumps = length(urates) - length(rates)
     uidx = i - num_majumps
@@ -300,12 +306,12 @@ function next_candidate_time!(p::CoevolveJumpAggregation, u, params, t, s, lidx)
 end
 
 # re-evaluates all rates, recalculate all jump times, and reinit the priority queue
-function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t)
+function fill_rates_and_get_times!(p::CoevolveJumpAggregation, u, params, t, rng)
     num_jumps = get_num_majumps(p.ma_jumps) + length(p.urates)
     p.cur_rates = zeros(typeof(t), num_jumps)
     jump_times = Vector{typeof(t)}(undef, num_jumps)
     @inbounds for i in 1:num_jumps
-        jump_times[i], p.cur_rates[i] = next_time(p, u, params, t, i)
+        jump_times[i], p.cur_rates[i] = next_time(p, u, params, t, i, rng)
     end
     p.pq = MutableBinaryMinHeap(jump_times)
     nothing

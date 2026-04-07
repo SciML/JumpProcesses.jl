@@ -40,15 +40,15 @@ end
     if GROUP == "All" || GROUP == "InterfaceII"
         @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
         @time @safetestset "Save_positions test" begin include("save_positions.jl") end
+        @time @safetestset "RNG kwarg tests" begin include("rng_kwarg_tests.jl") end
         @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
-        @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
         @time @safetestset "Ensemble Problem Tests" begin include("ensemble_problems.jl") end
         @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
         @time @safetestset "Remake tests" begin include("remake_test.jl") end
         @time @safetestset "ExtendedJumpArray remake tests" begin include("extended_jump_array_remake.jl") end
         @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
         @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
-        @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end
+        @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end        
         @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
         @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
         @time @safetestset "Topology" begin include("spatial/topology.jl") end
@@ -56,6 +56,10 @@ end
         @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
         @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
         @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
+    end
+
+    if GROUP == "All" || GROUP == "ThreadSafety"
+        @time @safetestset "Thread Safety test (threaded)" begin include("thread_safety.jl") end
     end
 
     if GROUP == "CUDA"

@@ -56,7 +56,7 @@ see the
 [tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 for details.
 """
-struct SSAStepper <: DiffEqBase.DEAlgorithm end
+struct SSAStepper <: DiffEqBase.AbstractDEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
 
 """

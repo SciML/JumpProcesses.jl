@@ -1,5 +1,5 @@
 function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm;
+        alg::DiffEqBase.AbstractDEAlgorithm;
         merge_callbacks = true, kwargs...) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
@@ -33,7 +33,7 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...
 end
 
 function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.DEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+        alg::DiffEqBase.AbstractDEAlgorithm; merge_callbacks = true, kwargs...) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
 

@@ -56,7 +56,7 @@ see the
 [tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 for details.
 """
-struct SSAStepper <: DiffEqBase.DEAlgorithm end
+struct SSAStepper <: DiffEqBase.AbstractDEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
 
 """
@@ -115,6 +115,15 @@ end
 
 function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
     integrator.u_modified = bool
+end
+
+# SciMLBase v3 renamed `u_modified!` to `derivative_discontinuity!` and internal
+# callback code now calls the new name. Define the method when available so
+# callbacks keep working on v3. Guarded so the file still loads on v2.
+@static if isdefined(SciMLBase, :derivative_discontinuity!)
+    function SciMLBase.derivative_discontinuity!(integrator::SSAIntegrator, bool::Bool)
+        integrator.u_modified = bool
+    end
 end
 
 function DiffEqBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)

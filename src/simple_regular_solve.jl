@@ -1,6 +1,6 @@
-struct SimpleTauLeaping <: DiffEqBase.DEAlgorithm end
+struct SimpleTauLeaping <: DiffEqBase.AbstractDEAlgorithm end
 
-struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.DEAlgorithm
+struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.AbstractDEAlgorithm
     epsilon::T  # Error control parameter
 end
 

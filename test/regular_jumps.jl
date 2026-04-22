@@ -61,7 +61,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
         trajectories = Nsims, dt = 0.1, saveat = t_compare)
 
-    # MassActionJump formulation for SimpleExplicitTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping / SimpleImplicitTauLeaping
     reactant_stoich = [[1 => 1, 2 => 1], [2 => 1], Pair{Int, Int}[]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [1 => 1]]
     param_idxs = [1, 2, 3]
@@ -72,14 +72,26 @@ end
     sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial();
         trajectories = Nsims, saveat = t_compare)
 
+    # Solve with SimpleImplicitTauLeaping (Newton and Trapezoidal)
+    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = NewtonImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+    sol_implicit_trap = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = TrapezoidalImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+
     # Compute mean I trajectories via direct indexing (I is index 2 in SIR)
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 2)
     mean_I_simple = compute_mean_at_saves(sol_simple, Nsims, npts, 2)
     mean_I_explicit = compute_mean_at_saves(sol_adaptive, Nsims, npts, 2)
+    mean_I_implicit_newton = compute_mean_at_saves(sol_implicit_newton, Nsims, npts, 2)
+    mean_I_implicit_trap = compute_mean_at_saves(sol_implicit_trap, Nsims, npts, 2)
 
     # Compare full mean trajectories across all saved timepoints
     @test all(isapprox.(mean_I_direct, mean_I_simple, rtol = 0.1))
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_newton, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_trap, rtol = 0.1))
 end
 
 # SEIR model with exposed compartment
@@ -127,7 +139,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
         trajectories = Nsims, dt = 0.1, saveat = t_compare)
 
-    # MassActionJump formulation for SimpleExplicitTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping / SimpleImplicitTauLeaping
     reactant_stoich = [[1 => 1, 3 => 1], [2 => 1], [3 => 1]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [3 => -1, 4 => 1]]
     param_idxs = [1, 2, 3]
@@ -138,14 +150,26 @@ end
     sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial();
         trajectories = Nsims, saveat = t_compare)
 
+    # Solve with SimpleImplicitTauLeaping (Newton and Trapezoidal)
+    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = NewtonImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+    sol_implicit_trap = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = TrapezoidalImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+
     # Compute mean I trajectories via direct indexing (I is index 3 in SEIR)
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 3)
     mean_I_simple = compute_mean_at_saves(sol_simple, Nsims, npts, 3)
     mean_I_explicit = compute_mean_at_saves(sol_adaptive, Nsims, npts, 3)
+    mean_I_implicit_newton = compute_mean_at_saves(sol_implicit_newton, Nsims, npts, 3)
+    mean_I_implicit_trap = compute_mean_at_saves(sol_implicit_trap, Nsims, npts, 3)
 
     # Compare full mean trajectories across all saved timepoints
     @test all(isapprox.(mean_I_direct, mean_I_simple, rtol = 0.1))
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_newton, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_trap, rtol = 0.1))
 end
 
 # Test zero-rate case for SimpleExplicitTauLeaping
@@ -175,62 +199,62 @@ end
     tspan = (0.0, 10.0)
     p = [0.1, 0.2]
     prob = DiscreteProblem(u0, tspan, p)
-    
+
     # Create MassActionJump
     reactant_stoich = [[1 => 1], [1 => 2]]
     net_stoich = [[1 => -1, 2 => 1], [1 => -2, 3 => 1]]
     rates = [0.1, 0.05]
     maj = MassActionJump(rates, reactant_stoich, net_stoich)
-    
+
     # Test PureLeaping JumpProblem creation
     jp_pure = JumpProblem(prob, PureLeaping(), JumpSet(maj); rng)
     @test jp_pure.aggregator isa PureLeaping
     @test jp_pure.discrete_jump_aggregation === nothing
     @test jp_pure.massaction_jump !== nothing
     @test length(jp_pure.jump_callback.discrete_callbacks) == 0
-    
+
     # Test with ConstantRateJump
     rate(u, p, t) = p[1] * u[1]
     affect!(integrator) = (integrator.u[1] -= 1; integrator.u[3] += 1)
     crj = ConstantRateJump(rate, affect!)
-    
+
     jp_pure_crj = JumpProblem(prob, PureLeaping(), JumpSet(crj); rng)
     @test jp_pure_crj.aggregator isa PureLeaping
     @test jp_pure_crj.discrete_jump_aggregation === nothing
     @test length(jp_pure_crj.constant_jumps) == 1
-    
+
     # Test with VariableRateJump
     vrate(u, p, t) = t * p[1] * u[1]
     vaffect!(integrator) = (integrator.u[1] -= 1; integrator.u[3] += 1)
     vrj = VariableRateJump(vrate, vaffect!)
-    
+
     jp_pure_vrj = JumpProblem(prob, PureLeaping(), JumpSet(vrj); rng)
     @test jp_pure_vrj.aggregator isa PureLeaping
     @test jp_pure_vrj.discrete_jump_aggregation === nothing
     @test length(jp_pure_vrj.variable_jumps) == 1
-    
+
     # Test with RegularJump
     function rj_rate(out, u, p, t)
         out[1] = p[1] * u[1]
     end
-    
+
     rj_dc = zeros(3, 1)
     rj_dc[1, 1] = -1
     rj_dc[3, 1] = 1
-    
+
     function rj_c(du, u, p, t, counts, mark)
         mul!(du, rj_dc, counts)
     end
-    
+
     regj = RegularJump(rj_rate, rj_c, 1)
-    
+
     jp_pure_regj = JumpProblem(prob, PureLeaping(), JumpSet(regj); rng)
     @test jp_pure_regj.aggregator isa PureLeaping
     @test jp_pure_regj.discrete_jump_aggregation === nothing
     @test jp_pure_regj.regular_jump !== nothing
-    
+
     # Test mixed jump types
-    mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = (crj,), 
+    mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = (crj,),
         variable_jumps = (vrj,), regular_jumps = regj)
     jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps; rng)
     @test jp_pure_mixed.aggregator isa PureLeaping
@@ -239,7 +263,7 @@ end
     @test length(jp_pure_mixed.constant_jumps) == 1
     @test length(jp_pure_mixed.variable_jumps) == 1
     @test jp_pure_mixed.regular_jump !== nothing
-    
+
     # Test spatial system error
     spatial_sys = CartesianGrid((2, 2))
     hopping_consts = [1.0]
@@ -247,12 +271,62 @@ end
                                           spatial_system = spatial_sys)
     @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
                                           hopping_constants = hopping_consts)
-    
+
     # Test MassActionJump with parameter mapping
     maj_params = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1, 2])
     jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params); rng)
     scaled_rates = [p[1], p[2]/2]
     @test jp_params.massaction_jump.scaled_rates == scaled_rates
+end
+
+# Test implicit solvers on stiff system (Cao et al. 2007)
+@testset "Stiff System with Implicit Solvers" begin
+    # Reactions: S1 -> S2, S2 -> S1, S2 -> S3
+    c = (1000.0, 1000.0, 1.0)
+    reactant_stoich1 = [Pair(1, 1)]
+    net_stoich1 = [Pair(1, -1), Pair(2, 1)]
+    reactant_stoich2 = [Pair(2, 1)]
+    net_stoich2 = [Pair(1, 1), Pair(2, -1)]
+    reactant_stoich3 = [Pair(2, 1)]
+    net_stoich3 = [Pair(2, -1), Pair(3, 1)]
+
+    maj = MassActionJump([c[1], c[2], c[3]],
+        [reactant_stoich1, reactant_stoich2, reactant_stoich3],
+        [net_stoich1, net_stoich2, net_stoich3])
+
+    u0 = [100, 0, 0]  # Initial: S1=100, S2=0, S3=0
+    tspan = (0.0, 1.0)
+    prob = DiscreteProblem(u0, tspan)
+    jump_prob = JumpProblem(prob, PureLeaping(), maj; rng = rng)
+
+    # Solve with SimpleExplicitTauLeaping
+    sol_explicit = solve(jump_prob, SimpleExplicitTauLeaping(); dtmin = 1e-6, saveat = 0.1)
+
+    # Solve with SimpleImplicitTauLeaping (Newton and Trapezoidal)
+    sol_implicit_newton = solve(jump_prob, SimpleImplicitTauLeaping(solver = NewtonImplicitSolver());
+        dtmin = 1e-6, saveat = 0.1)
+    sol_implicit_trap = solve(jump_prob, SimpleImplicitTauLeaping(solver = TrapezoidalImplicitSolver());
+        dtmin = 1e-6, saveat = 0.1)
+
+    # Check that all solvers completed successfully
+    @test sol_explicit.t[end] ≈ 1.0 atol = 1e-3
+    @test sol_implicit_newton.t[end] ≈ 1.0 atol = 1e-3
+    @test sol_implicit_trap.t[end] ≈ 1.0 atol = 1e-3
+
+    # Check conservation: S1 + S2 + S3 should equal initial total
+    @test all(sum(u) ≈ 100 for u in sol_explicit.u)
+    @test all(sum(u) ≈ 100 for u in sol_implicit_newton.u)
+    @test all(sum(u) ≈ 100 for u in sol_implicit_trap.u)
+
+    # Check that solutions are non-negative
+    @test all(all(x >= 0 for x in u) for u in sol_explicit.u)
+    @test all(all(x >= 0 for x in u) for u in sol_implicit_newton.u)
+    @test all(all(x >= 0 for x in u) for u in sol_implicit_trap.u)
+
+    # S3 should increase monotonically (it only has an influx reaction)
+    @test sol_explicit.u[end][3] >= sol_explicit.u[1][3]
+    @test sol_implicit_newton.u[end][3] >= sol_implicit_newton.u[1][3]
+    @test sol_implicit_trap.u[end][3] >= sol_implicit_trap.u[1][3]
 end
 
 # Test that saveat/save_start/save_end control which times are stored in solutions
@@ -353,4 +427,38 @@ end
     sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = [2.0, 8.0],
         save_start = true, save_end = true)
     @test sol.t == [0.0, 2.0, 8.0, 10.0]
+
+    # --- SimpleImplicitTauLeaping save_start/save_end/saveat tests ---
+    u0_implicit = [100.0]
+    prob_implicit = DiscreteProblem(u0_implicit, tspan)
+    reactant_stoich_implicit = [[1 => 1]]
+    net_stoich_implicit = [[1 => -1]]
+    maj_implicit = MassActionJump([0.1], reactant_stoich_implicit, net_stoich_implicit)
+    jp_implicit = JumpProblem(prob_implicit, PureLeaping(), maj_implicit; rng)
+
+    # saveat as Number: defaults save_start=true, save_end=true
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0)
+    @test sol.t == collect(0.0:2.0:10.0)
+
+    # saveat as Number + save_start=false + save_end=false
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0,
+        save_start = false, save_end = false)
+    @test sol.t == collect(2.0:2.0:8.0)
+
+    # saveat collection including endpoints
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = [0.0, 5.0, 10.0])
+    @test sol.t == [0.0, 5.0, 10.0]
+
+    # saveat collection without endpoints + explicit save_start=true, save_end=true
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = [2.0, 8.0],
+        save_start = true, save_end = true)
+    @test sol.t == [0.0, 2.0, 8.0, 10.0]
+
+    # Test with save_start=false
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0, save_start = false)
+    @test sol.t == collect(2.0:2.0:10.0)
+
+    # Test with save_end=false
+    sol = solve(jp_implicit, SimpleImplicitTauLeaping(); saveat = 2.0, save_end = false)
+    @test sol.t == collect(0.0:2.0:8.0)
 end

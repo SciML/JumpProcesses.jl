@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, JumpProcesses, Test
+using OrdinaryDiffEq, OrdinaryDiffEqFunctionMap, JumpProcesses, Test
 using StableRNGs, Random
 
 j1 = ConstantRateJump((u, p, t) -> 10, (integrator) -> integrator.u[1] += 1)

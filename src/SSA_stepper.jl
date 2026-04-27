@@ -113,6 +113,28 @@ end
 (integrator::SSAIntegrator)(t) = copy(integrator.u)
 (integrator::SSAIntegrator)(out, t) = (out .= integrator.u)
 
+# SciMLBase v3 / DiffEqBase v7 renamed the integrator's `u_modified` field to
+# `derivative_discontinuity` and internal callback code now reads/writes the
+# field directly (e.g. `integrator.derivative_discontinuity`, not via a
+# method). Aliasing here so both names access the same underlying storage —
+# v6-era callbacks that look for `:u_modified` and v7-era callbacks that look
+# for `:derivative_discontinuity` both keep working without renaming the
+# struct field (which would be a breaking ABI change).
+@inline function Base.getproperty(integrator::SSAIntegrator, sym::Symbol)
+    sym === :derivative_discontinuity && return getfield(integrator, :u_modified)
+    return getfield(integrator, sym)
+end
+
+@inline function Base.setproperty!(integrator::SSAIntegrator, sym::Symbol, val)
+    sym === :derivative_discontinuity &&
+        return setfield!(integrator, :u_modified, convert(Bool, val))
+    return setfield!(integrator, sym, convert(fieldtype(typeof(integrator), sym), val))
+end
+
+function Base.propertynames(integrator::SSAIntegrator, private::Bool = false)
+    return (fieldnames(SSAIntegrator)..., :derivative_discontinuity)
+end
+
 function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
     integrator.u_modified = bool
 end

@@ -1,7 +1,7 @@
 name = "JumpProcesses"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "9.26.0"
+version = "9.26.1"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
@@ -46,7 +46,7 @@ KernelAbstractions = "0.9"
 LinearAlgebra = "1"
 LinearSolve = "3"
 OrdinaryDiffEq = "6"
-OrdinaryDiffEqCore = "3, 4"
+OrdinaryDiffEqCore = "3.17, 4"
 Pkg = "1"
 PoissonRandom = "0.4"
 Random = "1"

@@ -26,11 +26,11 @@ let
 
     for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jump_prob = JumpProblem(ode_prob, Direct(), vrj; vr_aggregator = agg)
-        prob_func(prob, i, repeat) = deepcopy(prob)
+        prob_func(prob, ctx) = deepcopy(prob)
         prob = EnsembleProblem(jump_prob, prob_func = prob_func)
         sol = solve(prob, Tsit5(), EnsembleThreads(), trajectories = 400,
             save_everystep = false)
-        firstrx_time = [sol.u[i].t[findfirst(>(sol.u[i].t[1]), sol.u[i].t)] for i in 1:length(sol)]
+        firstrx_time = [sol.u[i].t[findfirst(>(sol.u[i].t[1]), sol.u[i].t)] for i in 1:length(sol.u)]
         @test allunique(firstrx_time)
     end
 end

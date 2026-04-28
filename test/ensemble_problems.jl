@@ -108,7 +108,7 @@ end
         jprob = make_ssa_jump_prob()
         sol = solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads();
             trajectories = 4)
-        @test length(sol) == 4
+        @test length(sol.u) == 4
     end
 
     @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
@@ -117,7 +117,7 @@ end
         # randexp!(_jump_prob.rng, ...) on the shared original problem.
         sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleThreads();
             trajectories = 4, save_everystep = false)
-        @test length(sol) == 4
+        @test length(sol.u) == 4
     end
 
     @testset "SDE + VR (VR_FRM): unique trajectories" begin
@@ -126,7 +126,7 @@ end
         # resetted_jump_problem, so trajectories should be distinct.
         sol = solve(EnsembleProblem(jprob), EM(), EnsembleThreads();
             trajectories = 4, dt = 0.01, save_everystep = false)
-        @test length(sol) == 4
+        @test length(sol.u) == 4
         finals = [sol.u[i].u[end][1] for i in 1:4]
         @test length(unique(finals)) > 1
     end

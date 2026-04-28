@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, JumpProcesses, Test
+using OrdinaryDiffEq, OrdinaryDiffEqFunctionMap, JumpProcesses, Test
 using StableRNGs, Random
 
 j1 = ConstantRateJump((u, p, t) -> 10, (integrator) -> integrator.u[1] += 1)
@@ -11,7 +11,7 @@ dprob = DiscreteProblem(u0, (0.0, 100.0))
 # This ensures different trajectories while maintaining reproducibility.
 # Generate seeds from a seeded RNG for reproducibility of ensemble results.
 function make_seeded_prob_func(dprob, aggregator, jumps, base_rng)
-    return function prob_func(prob, i, repeat)
+    return function prob_func(prob, ctx)
         seed = rand(base_rng, UInt64)
         JumpProblem(dprob, aggregator, jumps...; rng = StableRNG(seed))
     end

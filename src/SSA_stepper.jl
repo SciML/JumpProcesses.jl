@@ -122,6 +122,7 @@ end
 # struct field (which would be a breaking ABI change).
 @inline function Base.getproperty(integrator::SSAIntegrator, sym::Symbol)
     sym === :derivative_discontinuity && return getfield(integrator, :u_modified)
+    sym === :ps && return SII.ParameterIndexingProxy(integrator)
     return getfield(integrator, sym)
 end
 

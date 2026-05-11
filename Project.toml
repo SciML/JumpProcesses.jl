@@ -81,3 +81,8 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["ADTypes", "Aqua", "ExplicitImports", "FastBroadcast", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "StableRNGs", "Statistics", "StochasticDiffEq", "Test"]
+
+# TEMPORARY: pin PoissonRandom to the fix branch from SciML/PoissonRandom.jl#72
+# until that PR merges + a 0.4.8 release lands in General. REMOVE BEFORE MERGE.
+[sources]
+PoissonRandom = {url = "https://github.com/ChrisRackauckas-Claude/PoissonRandom.jl.git", rev = "fix-passthroughrng-overlay-shadowing"}

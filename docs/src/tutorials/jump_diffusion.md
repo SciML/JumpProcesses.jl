@@ -30,17 +30,16 @@ not already installed
 
 ```julia
 using Pkg
-Pkg.add("DifferentialEquations")
+Pkg.add("JumpProcesses")
+Pkg.add("OrdinaryDiffEq")
+Pkg.add("StochasticDiffEq")
 Pkg.add("Plots")
 ```
-
-DifferentialEquations.jl will install JumpProcesses, along with the needed ODE and
-SDE solvers.
 
 We then load these packages, and set some plotting defaults, as
 
 ```@example tut3
-using DifferentialEquations, Plots
+using JumpProcesses, StochasticDiffEq, OrdinaryDiffEq, Plots
 default(; lw = 2)
 ```
 

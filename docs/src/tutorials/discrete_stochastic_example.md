@@ -42,15 +42,15 @@ Catalyst, which should ensure optimal jump types are selected to represent each
 reaction, and necessary data structures for the simulation algorithms, such as
 dependency graphs, are automatically calculated.
 
-We'll make use of the
-[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/)
-meta package, which includes JumpProcesses and ODE/SDE solvers, Plots.jl, and
-(optionally) Catalyst.jl in this tutorial. If not already installed, they can be
-added as follows:
+We'll make use of [JumpProcesses.jl](https://docs.sciml.ai/JumpProcesses/stable/)
+together with [OrdinaryDiffEq.jl](https://docs.sciml.ai/OrdinaryDiffEq/stable/)
+(for ODE solvers), Plots.jl, and (optionally) Catalyst.jl in this tutorial. If
+not already installed, they can be added as follows:
 
 ```julia
 using Pkg
-Pkg.add("DifferentialEquations")
+Pkg.add("JumpProcesses")
+Pkg.add("OrdinaryDiffEq")
 Pkg.add("Plots")
 Pkg.add("Catalyst")                # optional
 ```
@@ -58,12 +58,12 @@ Pkg.add("Catalyst")                # optional
 Let's now load the required packages and set some default plot settings
 
 ```julia
-using DifferentialEquations, Plots, LinearAlgebra
+using JumpProcesses, OrdinaryDiffEq, Plots, LinearAlgebra
 default(; lw = 2)
 ```
 
 ```@setup tut2
-using DifferentialEquations, Plots, LinearAlgebra
+using JumpProcesses, OrdinaryDiffEq, Plots, LinearAlgebra
 default(; lw = 2)
 ```
 

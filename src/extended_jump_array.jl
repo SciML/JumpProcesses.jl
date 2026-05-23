@@ -94,6 +94,10 @@ function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::Abstra
     Nu = length(c.u)
     if size(A, 1) == Nu
         mul!(c.u, A, u)
+        # zero c.jump_u so callers (e.g. adaptive SDE step caches that reuse `c`
+        # as a scratchpad) do not see stale values as a noise contribution on
+        # the jump-rate-integral state
+        fill!(c.jump_u, zero(eltype(c.jump_u)))
     elseif size(A, 1) == length(c)
         mul!(c.u, @view(A[1:Nu, :]), u)
         mul!(c.jump_u, @view(A[(Nu + 1):end, :]), u)

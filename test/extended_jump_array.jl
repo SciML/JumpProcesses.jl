@@ -7,7 +7,8 @@ rng = StableRNG(123)
 # Check that the new broadcast norm gives the same result as the old one
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}(rand(rng, 5),
     rand(rng, 2))
-old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) / max(DiffEqBase.recursive_length(rand_array), 1))
+old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
+                                   max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 @test old_norm ≈ new_norm
 
@@ -15,7 +16,8 @@ new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Int64}}(rand(rng, 5),
     rand(rng, 1:1000,
         2))
-old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) / max(DiffEqBase.recursive_length(rand_array), 1))
+old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
+                                   max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 @test old_norm ≈ new_norm
 
@@ -117,6 +119,31 @@ let
     sol = solve(jprob, Tsit5())
     @test eltype(sol.u) <: ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Float64}}
     @test SciMLBase.plottable_indices(sol.u[1]) == 1:length(u₀)
+end
+
+# Regression for https://github.com/SciML/JumpProcesses.jl/issues/592:
+# mul!(c::ExtendedJumpArray, A, u) must clear c.jump_u when A only addresses
+# the c.u portion. Otherwise stale scratchpad values pollute the jump-rate
+# integral state in adaptive SDE solvers.
+let rng = StableRNG(592)
+    c = ExtendedJumpArray(rand(rng, 3), [1.0, 2.0, -3.0])   # pre-populated jump_u
+    A = rand(rng, 3, 4)                                      # noise-rate-prototype-sized
+    u = rand(rng, 4)
+    expected_u = A * u
+    mul!(c, A, u)
+    @test c.u ≈ expected_u
+    @test all(iszero, c.jump_u)                              # jump_u zeroed
+end
+
+# Full-state matrix case still scatters into both halves.
+let rng = StableRNG(593)
+    c = ExtendedJumpArray(zeros(3), [9.0, 9.0, 9.0])
+    A = rand(rng, 6, 4)
+    u = rand(rng, 4)
+    full = A * u
+    mul!(c, A, u)
+    @test c.u ≈ full[1:3]
+    @test c.jump_u ≈ full[4:6]
 end
 
 # Test ldiv! and lmul! for stiff solver support

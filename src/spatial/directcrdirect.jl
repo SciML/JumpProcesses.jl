@@ -1,14 +1,16 @@
 # site chosen with DirectCR, rx or hop chosen with Direct
 
 ############################ DirectCRDirect ###################################
-const MINJUMPRATE = 2.0^exponent(1e-12)
+const MINJUMPRATE = 2.0^exponent(1.0e-12)
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR,
-    VJMAP, JVMAP, SS, U <: PriorityTable,
-    W <: Function} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct DirectCRDirectJumpAggregation{
+        T, S, F1, F2, RNG, J, RX, HOP, DEPGR,
+        VJMAP, JVMAP, SS, U <: PriorityTable,
+        W <: Function,
+    } <:
+    AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -29,13 +31,15 @@ mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPG
     ratetogroup::W
 end
 
-function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX,
+function DirectCRDirectJumpAggregation(
+        nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX,
         hop_rates::HOP, site_rates::Vector{T},
         sps::Tuple{Bool, Bool}, rng::RNG, spatial_system::SS;
         num_specs, minrate = convert(T, MINJUMPRATE),
         vartojumps_map = nothing, jumptovars_map = nothing,
         dep_graph = nothing,
-        kwargs...) where {J, T, RX, HOP, RNG, SS}
+        kwargs...
+    ) where {J, T, RX, HOP, RNG, SS}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -69,27 +73,35 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    DirectCRDirectJumpAggregation{T, Nothing, Nothing, Nothing, RNG, J, RX, HOP,
+    return DirectCRDirectJumpAggregation{
+        T, Nothing, Nothing, Nothing, RNG, J, RX, HOP,
         typeof(dg), typeof(vtoj_map),
         typeof(jtov_map), SS, typeof(rt),
-        typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
+        typeof(ratetogroup),
+    }(
+        nj, nj, njt, et, rx_rates, hop_rates,
         site_rates, nothing, nothing, sps,
         rng, dg, vtoj_map,
         jtov_map, spatial_system, num_specs,
-        rt, ratetogroup)
+        rt, ratetogroup
+    )
 end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
+function aggregate(
+        aggregator::DirectCRDirect, starting_state, p, t, end_time,
         constant_jumps, ma_jumps, save_positions, rng; hopping_constants,
-        spatial_system, kwargs...)
+        spatial_system, kwargs...
+    )
     num_species = size(starting_state, 1)
     majumps = ma_jumps
     if majumps === nothing
-        majumps = MassActionJump(Vector{typeof(end_time)}(),
+        majumps = MassActionJump(
+            Vector{typeof(end_time)}(),
             Vector{Vector{Pair{Int, Int}}}(),
-            Vector{Vector{Pair{Int, Int}}}())
+            Vector{Vector{Pair{Int, Int}}}()
+        )
     end
 
     next_jump = SpatialJump{Int}(typemax(Int), typemax(Int), typemax(Int)) #a placeholder
@@ -98,9 +110,11 @@ function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
     hop_rates = HopRates(hopping_constants, spatial_system)
     site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 
-    DirectCRDirectJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates,
+    return DirectCRDirectJumpAggregation(
+        next_jump, next_jump_time, end_time, rx_rates, hop_rates,
         site_rates, save_positions, rng, spatial_system;
-        num_specs = num_species, kwargs...)
+        num_specs = num_species, kwargs...
+    )
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -108,7 +122,7 @@ function initialize!(p::DirectCRDirectJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, integrator, t)
     generate_jumps!(p, integrator, params, u, t)
-    nothing
+    return nothing
 end
 
 # calculate the next jump / jump time
@@ -117,18 +131,20 @@ function generate_jumps!(p::DirectCRDirectJumpAggregation, integrator, params, u
     p.next_jump_time >= p.end_time && return nothing
     site = sample(p.rt, p.site_rates, p.rng)
     p.next_jump = sample_jump_direct(p, site)
-    nothing
+    return nothing
 end
 
 # execute one jump, changing the system state
-function execute_jumps!(p::DirectCRDirectJumpAggregation, integrator, u, params, t,
-        affects!)
+function execute_jumps!(
+        p::DirectCRDirectJumpAggregation, integrator, u, params, t,
+        affects!
+    )
     # execute jump
     update_state!(p, integrator)
 
     # update current jump rates and times
     update_dependent_rates_and_firing_times!(p, integrator, t)
-    nothing
+    return nothing
 end
 
 ######################## SSA specific helper routines ########################
@@ -138,7 +154,8 @@ end
 reset all structs, reevaluate all rates, repopulate the priority table
 """
 function fill_rates_and_get_times!(
-        aggregation::DirectCRDirectJumpAggregation, integrator, t)
+        aggregation::DirectCRDirectJumpAggregation, integrator, t
+    )
     (; spatial_system, rx_rates, hop_rates, site_rates, rt) = aggregation
     u = integrator.u
 
@@ -159,7 +176,7 @@ function fill_rates_and_get_times!(
     for (pid, priority) in enumerate(site_rates)
         insert!(rt, pid, priority)
     end
-    nothing
+    return nothing
 end
 
 """
@@ -168,11 +185,12 @@ end
 recalculate jump rates for jumps that depend on the just executed jump (p.prev_jump)
 """
 function update_dependent_rates_and_firing_times!(
-        p::DirectCRDirectJumpAggregation, integrator, t)
+        p::DirectCRDirectJumpAggregation, integrator, t
+    )
     u = integrator.u
     site_rates = p.site_rates
     jump = p.prev_jump
-    if is_hop(p, jump)
+    return if is_hop(p, jump)
         source_site = jump.src
         target_site = jump.dst
         update_rates_after_hop!(p, integrator, source_site, target_site, jump.jidx)

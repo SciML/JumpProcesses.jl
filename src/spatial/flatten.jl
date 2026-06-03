@@ -3,14 +3,18 @@ using JumpProcesses, DiffEqBase, Graphs
 """
 prob.u0 must be a Matrix with prob.u0[i,j] being the number of species i at site j
 """
-function flatten(ma_jump, prob::DiscreteProblem, spatial_system, hopping_constants;
-        kwargs...)
+function flatten(
+        ma_jump, prob::DiscreteProblem, spatial_system, hopping_constants;
+        kwargs...
+    )
     tspan = prob.tspan
     u0 = prob.u0
     if ma_jump === nothing
-        ma_jump = MassActionJump(Vector{typeof(tspan[1])}(),
+        ma_jump = MassActionJump(
+            Vector{typeof(tspan[1])}(),
             Vector{Vector{Pair{Int, eltype(u0)}}}(),
-            Vector{Vector{Pair{Int, eltype(u0)}}}())
+            Vector{Vector{Pair{Int, eltype(u0)}}}()
+        )
     end
     netstoch = ma_jump.net_stoch
     reactstoch = ma_jump.reactant_stoch
@@ -23,57 +27,75 @@ function flatten(ma_jump, prob::DiscreteProblem, spatial_system, hopping_constan
         elseif isnothing(ma_jump.uniform_rates)
             ma_jump.spatial_rates
         elseif isnothing(ma_jump.spatial_rates)
-            reshape(repeat(ma_jump.uniform_rates, num_nodes),
-                length(ma_jump.uniform_rates), num_nodes)
+            reshape(
+                repeat(ma_jump.uniform_rates, num_nodes),
+                length(ma_jump.uniform_rates), num_nodes
+            )
         else
             @assert size(ma_jump.spatial_rates, 2) == num_nodes
-            cat(dims = 1,
-                reshape(repeat(ma_jump.uniform_rates, num_nodes),
-                    length(ma_jump.uniform_rates), num_nodes),
-                ma_jump.spatial_rates)
+            cat(
+                dims = 1,
+                reshape(
+                    repeat(ma_jump.uniform_rates, num_nodes),
+                    length(ma_jump.uniform_rates), num_nodes
+                ),
+                ma_jump.spatial_rates
+            )
         end
     else
         error("flatten: unsupported jump type $(typeof(ma_jump))")
     end
-    flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hopping_constants;
-        scale_rates = false, kwargs...)
+    return flatten(
+        netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hopping_constants;
+        scale_rates = false, kwargs...
+    )
 end
 
 """
 if hopping_constants is a matrix, assume hopping_constants[i,j] is the hopping constant of species i from site j to any neighbor
 """
-function flatten(netstoch::AbstractArray, reactstoch::AbstractArray,
+function flatten(
+        netstoch::AbstractArray, reactstoch::AbstractArray,
         rx_rates::AbstractArray, spatial_system, u0::Matrix{Int}, tspan,
-        hopping_constants::Matrix{F}; kwargs...) where {F <: Number}
+        hopping_constants::Matrix{F}; kwargs...
+    ) where {F <: Number}
     @assert size(hopping_constants) == size(u0)
     hop_constants = Matrix{Vector{F}}(undef, size(hopping_constants))
     for ci in CartesianIndices(hop_constants)
         (species, site) = Tuple(ci)
         hop_constants[ci] = hopping_constants[species, site] * ones(outdegree(spatial_system, site))
     end
-    flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants;
-        kwargs...)
+    return flatten(
+        netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants;
+        kwargs...
+    )
 end
 
 """
 if reaction rates is a vector, assume reaction rates are equal across sites
 """
-function flatten(netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector,
+function flatten(
+        netstoch::AbstractArray, reactstoch::AbstractArray, rx_rates::Vector,
         spatial_system, u0::Matrix{Int}, tspan,
-        hopping_constants::Matrix{Vector{F}}; kwargs...) where {F <: Number}
+        hopping_constants::Matrix{Vector{F}}; kwargs...
+    ) where {F <: Number}
     num_nodes = num_sites(spatial_system)
     rates = reshape(repeat(rx_rates, num_nodes), length(rx_rates), num_nodes)
-    flatten(netstoch, reactstoch, rates, spatial_system, u0, tspan, hopping_constants;
-        kwargs...)
+    return flatten(
+        netstoch, reactstoch, rates, spatial_system, u0, tspan, hopping_constants;
+        kwargs...
+    )
 end
 
 """
 "flatten" the spatial jump problem. Return flattened DiscreteProblem and MassActionJump.
 """
-function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F},
+function flatten(
+        netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F},
         spatial_system, u0::Matrix{Int}, tspan,
         hopping_constants::Matrix{Vector{F}}; scale_rates = true,
-        kwargs...) where {R, F <: Number}
+        kwargs...
+    ) where {R, F <: Number}
     num_species = size(u0, 1)
     num_nodes = num_sites(spatial_system)
     num_rxs = length(reactstoch)
@@ -119,9 +141,11 @@ function flatten(netstoch::Vector{R}, reactstoch::Vector{R}, rx_rates::Matrix{F}
     append!(total_rates, vec(rx_rates)) # assuming rx_rates isa Matrix where rx_rates[rx, site] is the rate of rx at site
 
     # put everything together
-    ma_jump = MassActionJump(total_rates, total_reactstoch, total_netstoch; nocopy = true,
-        scale_rates = scale_rates)
+    ma_jump = MassActionJump(
+        total_rates, total_reactstoch, total_netstoch; nocopy = true,
+        scale_rates = scale_rates
+    )
     flattened_u0 = vec(u0)
     prob = DiscreteProblem(flattened_u0, tspan, total_rates)
-    prob, ma_jump
+    return prob, ma_jump
 end

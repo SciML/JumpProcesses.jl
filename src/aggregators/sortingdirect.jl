@@ -3,7 +3,7 @@
 # Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
 mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+    AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -20,10 +20,12 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
     jump_search_idx::Int
 end
 
-function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function SortingDirectJumpAggregation(
+        nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; num_specs, dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        kwargs...
+    ) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -42,25 +44,31 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
-    SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
+    return SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(
+        nj, nj, njt, et,
         crs, sr, maj, rs,
         affs!, sps, rng,
         dg, jtoidx,
-        zero(Int))
+        zero(Int)
+    )
 end
 
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...)
+function aggregate(
+        aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
+        ma_jumps, save_positions, rng; kwargs...
+    )
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
+    return build_jump_aggregation(
+        SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
         rates, affects!, save_positions, rng; num_specs = length(u),
-        kwargs...)
+        kwargs...
+    )
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -68,7 +76,7 @@ function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_sum!(p, u, params, t)
     generate_jumps!(p, integrator, u, params, t)
-    nothing
+    return nothing
 end
 
 # execute one jump, changing the system state
@@ -87,7 +95,7 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
 
     # update current jump rates
     update_dependent_rates!(p, u, params, t)
-    nothing
+    return nothing
 end
 
 # calculate the next jump / jump time
@@ -110,5 +118,5 @@ function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params,
         @inbounds p.next_jump = jso[p.jump_search_idx]
     end
 
-    nothing
+    return nothing
 end

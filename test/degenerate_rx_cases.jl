@@ -84,7 +84,7 @@ ns = [1 => 1]
 jump = MassActionJump(rate, rs, ns)
 ratefun = (u, p, t) -> 2.0 * u[1]
 affect! = function (integrator)
-    integrator.u[1] -= 1
+    return integrator.u[1] -= 1
 end
 jump2 = ConstantRateJump(ratefun, affect!)
 if doplot
@@ -93,7 +93,7 @@ end
 
 dep_graph = [
     [1, 2],
-    [1, 2]
+    [1, 2],
 ]
 spec_to_dep_jumps = [[2]]
 jump_to_dep_specs = [[1], [1]]
@@ -128,12 +128,16 @@ maj1 = MassActionJump(rs1, ns1; param_idxs = 1)
 maj2 = MassActionJump(rs2, ns2; param_idxs = 2)
 js = JumpSet(maj1, maj2)
 maj = MassActionJump([rs1, rs2], [ns1, ns2]; param_idxs = [1, 2])
-@test all(getfield(maj, fn) == getfield(js.massaction_jump, fn)
-for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
+@test all(
+    getfield(maj, fn) == getfield(js.massaction_jump, fn)
+        for fn in [:scaled_rates, :reactant_stoch, :net_stoch]
+)
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)
 maj1 = MassActionJump([rs1], [ns1]; param_idxs = [1])
 maj2 = MassActionJump([rs2], [ns2]; param_idxs = [2])
 js = JumpSet(maj1, maj2)
-@test all(getfield(maj, fn) == getfield(js.massaction_jump, fn)
-for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
+@test all(
+    getfield(maj, fn) == getfield(js.massaction_jump, fn)
+        for fn in [:scaled_rates, :reactant_stoch, :net_stoch]
+)
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)

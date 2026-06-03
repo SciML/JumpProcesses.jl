@@ -13,7 +13,7 @@ dprob = DiscreteProblem(u0, (0.0, 100.0))
 function make_seeded_prob_func(dprob, aggregator, jumps, base_rng)
     return function prob_func(prob, ctx)
         seed = rand(base_rng, UInt64)
-        JumpProblem(dprob, aggregator, jumps...; rng = StableRNG(seed))
+        return JumpProblem(dprob, aggregator, jumps...; rng = StableRNG(seed))
     end
 end
 
@@ -21,8 +21,10 @@ end
 rng1 = StableRNG(12345)
 jump_prob = JumpProblem(dprob, Direct(), j1, j2; rng = rng1)
 ensemble_rng = StableRNG(99999)  # separate RNG for generating trajectory seeds
-ensemble_prob = EnsembleProblem(jump_prob;
-    prob_func = make_seeded_prob_func(dprob, Direct(), (j1, j2), ensemble_rng))
+ensemble_prob = EnsembleProblem(
+    jump_prob;
+    prob_func = make_seeded_prob_func(dprob, Direct(), (j1, j2), ensemble_rng)
+)
 sol = solve(ensemble_prob, FunctionMap(), trajectories = 3)
 @test Array(sol.u[1]) !== Array(sol.u[2])
 @test Array(sol.u[1]) !== Array(sol.u[3])
@@ -33,8 +35,10 @@ sol = solve(ensemble_prob, FunctionMap(), trajectories = 3)
 rng2 = StableRNG(12345)
 jump_prob = JumpProblem(dprob, Direct(), j1, j2; rng = rng2)
 ensemble_rng2 = StableRNG(99999)  # separate RNG for generating trajectory seeds
-ensemble_prob2 = EnsembleProblem(jump_prob;
-    prob_func = make_seeded_prob_func(dprob, Direct(), (j1, j2), ensemble_rng2))
+ensemble_prob2 = EnsembleProblem(
+    jump_prob;
+    prob_func = make_seeded_prob_func(dprob, Direct(), (j1, j2), ensemble_rng2)
+)
 sol = solve(ensemble_prob2, SSAStepper(), trajectories = 3)
 @test Array(sol.u[1]) !== Array(sol.u[2])
 @test Array(sol.u[1]) !== Array(sol.u[3])

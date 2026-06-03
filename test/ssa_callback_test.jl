@@ -6,7 +6,7 @@ rng = StableRNG(12345)
 rate = (u, p, t) -> u[1]
 affect! = function (integrator)
     integrator.u[1] -= 1
-    integrator.u[2] += 1
+    return integrator.u[2] += 1
 end
 jump = ConstantRateJump(rate, affect!)
 
@@ -21,19 +21,19 @@ sol = solve(jump_prob, SSAStepper())
 condition(u, t, integrator) = t == 5
 function fuel_affect!(integrator)
     integrator.u[1] += 100
-    reset_aggregated_jumps!(integrator)
+    return reset_aggregated_jumps!(integrator)
 end
 cb = DiscreteCallback(condition, fuel_affect!, save_positions = (false, true))
 
 sol = solve(jump_prob, SSAStepper(); callback = cb, tstops = [5])
 @test sol.t[1:2] == [0.0, 5.0] # no jumps between t=0 and t=5
-@test sol(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
+@test sol(5 + 1.0e-10) == [100, 0] # state just after fueling before any decays can happen
 
 # test can pass callbacks via JumpProblem
 jump_prob2 = JumpProblem(prob, Direct(), jump; rng = rng, callback = cb)
 sol2 = solve(jump_prob2, SSAStepper(); tstops = [5])
 @test sol2.t[1:2] == [0.0, 5.0] # no jumps between t=0 and t=5
-@test sol2(5 + 1e-10) == [100, 0] # state just after fueling before any decays can happen
+@test sol2(5 + 1.0e-10) == [100, 0] # state just after fueling before any decays can happen
 
 # test that callback initializer/finalizer is called and add_tstop! works as expected
 random_tstops = rand(rng, 100) .* 10 # 100 random Float64 between 0.0 and 10.0
@@ -42,7 +42,7 @@ function fuel_init!(cb, u, t, integrator)
     for tstop in random_tstops
         add_tstop!(integrator, tstop)
     end
-    @test issorted(integrator.tstops)
+    return @test issorted(integrator.tstops)
 end
 finalizer_called = 0
 fuel_finalize(cb, u, t, integrator) = global finalizer_called += 1
@@ -67,7 +67,7 @@ pcondit(u, t, integrator) = t == 1000.0
 function paffect!(integrator)
     integrator.p[1] = 0.0
     integrator.p[2] = 1.0
-    reset_aggregated_jumps!(integrator)
+    return reset_aggregated_jumps!(integrator)
 end
 sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
@@ -90,16 +90,20 @@ sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(
 @test sol[1, end] == 100
 
 p2 .= [1.0, 0.0, 0.0]
-jprob = JumpProblem(dprob, Direct(), JumpSet(; massaction_jumps = [maj1, maj2, maj3]),
-    save_positions = (false, false), rng = rng)
+jprob = JumpProblem(
+    dprob, Direct(), JumpSet(; massaction_jumps = [maj1, maj2, maj3]),
+    save_positions = (false, false), rng = rng
+)
 sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p2 .== [0.0, 1.0, 0.0])
 @test sol[1, end] == 100
 
 p .= [1.0, 0.0]
 dprob = DiscreteProblem(u₀, tspan, p)
-maj4 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
-    param_idxs = [1, 2])
+maj4 = MassActionJump(
+    [[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
+    param_idxs = [1, 2]
+)
 jprob = JumpProblem(dprob, Direct(), maj4, save_positions = (false, false), rng = rng)
 sol = solve(jprob, SSAStepper(), tstops = [1000.0], callback = DiscreteCallback(pcondit, paffect!))
 @test all(p .== [0.0, 1.0])
@@ -115,8 +119,10 @@ jprob = JumpProblem(dprob, Direct(), maj5, save_positions = (false, false), rng 
 @test all(jprob.massaction_jump.scaled_rates .== [1.0])
 
 # test for https://github.com/SciML/JumpProcesses.jl/issues/239
-maj6 = MassActionJump([[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
-    param_idxs = [1, 2])
+maj6 = MassActionJump(
+    [[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]];
+    param_idxs = [1, 2]
+)
 p = (0.1, 0.1)
 dprob = DiscreteProblem([10, 0], (0.0, 100.0), p)
 jprob = JumpProblem(dprob, Direct(), maj6; save_positions = (false, false), rng = rng)
@@ -160,9 +166,9 @@ let
     jprob = JumpProblem(dprob, crj; rng)
     tstops = Float64[]
     # tests for when aliasing system is in place
-    #sol = solve(jprob; callback = cb, tstops, alias_tstops = true) 
+    #sol = solve(jprob; callback = cb, tstops, alias_tstops = true)
     # @test sol[1, end] == 9
-    #@test tstops == 1.0:9.0    
+    #@test tstops == 1.0:9.0
     # empty!(tstops)
     # sol = solve(jprob; callback = cb, tstops, alias_tstops = false)
     # @test sol[1, end] == 9

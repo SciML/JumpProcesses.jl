@@ -10,7 +10,7 @@ benchmark_out = ExtendedJumpArray(zeros(500000), zeros(500000))
 benchmark_in = ExtendedJumpArray(rand(rng, 500000), rand(rng, 500000))
 
 function test_single_dot(out, array)
-    @inbounds @. out = array + 1.23 * array
+    return @inbounds @. out = array + 1.23 * array
 end
 
 println("Base-case normal broadcasting")

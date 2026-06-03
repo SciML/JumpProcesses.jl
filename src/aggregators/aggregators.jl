@@ -172,8 +172,10 @@ algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 """
 struct DirectCRDirect <: AbstractAggregatorAlgorithm end
 
-const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
-    FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CCNRM())
+const JUMP_AGGREGATORS = (
+    Direct(), DirectFW(), DirectCR(), SortingDirect(), RSSA(), FRM(),
+    FRMFW(), NRM(), RSSACR(), RDirect(), Coevolve(), CCNRM(),
+)
 
 # For JumpProblem construction without an aggregator
 struct NullAggregator <: AbstractAggregatorAlgorithm end
@@ -204,9 +206,11 @@ is_spatial(aggregator::NSM) = true
 is_spatial(aggregator::DirectCRDirect) = true
 
 # return the fastest aggregator out of the available ones
-function select_aggregator(jumps::JumpSet; vartojumps_map = nothing,
+function select_aggregator(
+        jumps::JumpSet; vartojumps_map = nothing,
         jumptovars_map = nothing, dep_graph = nothing, spatial_system = nothing,
-        hopping_constants = nothing)
+        hopping_constants = nothing
+    )
 
     # detect if a spatial SSA should be used
     !isnothing(spatial_system) && !isnothing(hopping_constants) && return DirectCRDirect

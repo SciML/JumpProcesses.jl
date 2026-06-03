@@ -8,7 +8,7 @@ ns = [[1 => 1], [1 => -1], [1 => 1]]
 rs = [[1 => 1], [1 => 1], Pair{Int64, Int64}[]]
 maj = MassActionJump(p, rs, ns)
 u0 = [5]
-tspan = (0.0, 2e6)
+tspan = (0.0, 2.0e6)
 dt = tspan[2] / 1000
 dprob = DiscreteProblem(u0, tspan, p)
 jprob = JumpProblem(dprob, Direct(), maj, save_positions = (false, false), rng = rng)

@@ -16,11 +16,14 @@ import OrdinaryDiffEqCore: OrdinaryDiffEqAlgorithm, DAEAlgorithm,
 # the exact algorithm union from OrdinaryDiffEqCore.
 function DiffEqBase.__init(
         _jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::Union{OrdinaryDiffEqAlgorithm, DAEAlgorithm,
-            StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm};
-        merge_callbacks = true, kwargs...) where {P}
+        alg::Union{
+            OrdinaryDiffEqAlgorithm, DAEAlgorithm,
+            StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm,
+        };
+        merge_callbacks = true, kwargs...
+    ) where {P}
     kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
-    JumpProcesses.__jump_init(_jump_prob, alg; kwargs...)
+    return JumpProcesses.__jump_init(_jump_prob, alg; kwargs...)
 end
 
 end

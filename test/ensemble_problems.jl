@@ -10,16 +10,18 @@ function make_ssa_jump_prob(; rng = StableRNG(12345))
     j1 = ConstantRateJump((u, p, t) -> 10.0, integrator -> (integrator.u[1] += 1))
     j2 = ConstantRateJump((u, p, t) -> 0.5 * u[1], integrator -> (integrator.u[1] -= 1))
     dprob = DiscreteProblem([10], (0.0, 20.0))
-    JumpProblem(dprob, Direct(), j1, j2; rng)
+    return JumpProblem(dprob, Direct(), j1, j2; rng)
 end
 
 # ODE + variable-rate jump
 function make_vr_jump_prob(agg; rng = StableRNG(12345))
     f!(du, u, p, t) = (du[1] = -0.1 * u[1]; nothing)
     oprob = ODEProblem(f!, [100.0], (0.0, 10.0))
-    vrj = VariableRateJump((u, p, t) -> 0.5 * u[1],
-        integrator -> (integrator.u[1] -= 1.0))
-    JumpProblem(oprob, Direct(), vrj; vr_aggregator = agg, rng)
+    vrj = VariableRateJump(
+        (u, p, t) -> 0.5 * u[1],
+        integrator -> (integrator.u[1] -= 1.0)
+    )
+    return JumpProblem(oprob, Direct(), vrj; vr_aggregator = agg, rng)
 end
 
 # SDE + variable-rate jump
@@ -27,9 +29,11 @@ function make_sde_vr_jump_prob(agg; rng = StableRNG(12345))
     f!(du, u, p, t) = (du[1] = -0.1 * u[1]; nothing)
     g!(du, u, p, t) = (du[1] = 0.1 * u[1]; nothing)
     sprob = SDEProblem(f!, g!, [100.0], (0.0, 10.0))
-    vrj = VariableRateJump((u, p, t) -> 0.5 * u[1],
-        integrator -> (integrator.u[1] -= 1.0))
-    JumpProblem(sprob, Direct(), vrj; vr_aggregator = agg, rng)
+    vrj = VariableRateJump(
+        (u, p, t) -> 0.5 * u[1],
+        integrator -> (integrator.u[1] -= 1.0)
+    )
+    return JumpProblem(sprob, Direct(), vrj; vr_aggregator = agg, rng)
 end
 
 # Helpers
@@ -43,16 +47,20 @@ first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
 @testset "EnsembleSerial: distinct streams" begin
     @testset "SSAStepper" begin
         jprob = make_ssa_jump_prob()
-        sol = solve(EnsembleProblem(jprob), SSAStepper(), EnsembleSerial();
-            trajectories = 3)
+        sol = solve(
+            EnsembleProblem(jprob), SSAStepper(), EnsembleSerial();
+            trajectories = 3
+        )
         times = [first_jump_time(sol.u[i]) for i in 1:3]
         @test allunique(times)
     end
 
     @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
-        sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
-            trajectories = 3)
+        sol = solve(
+            EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
+            trajectories = 3
+        )
         times = [first_jump_time(sol.u[i]) for i in 1:3]
         @test allunique(times)
         finals = [sol.u[i].u[end][1] for i in 1:3]
@@ -63,8 +71,10 @@ first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
     # in t[2]; we check final values instead.
     @testset "SDE + VR (VR_FRM)" begin
         jprob = make_sde_vr_jump_prob(VR_FRM())
-        sol = solve(EnsembleProblem(jprob), EM(), EnsembleSerial();
-            trajectories = 3, dt = 0.01, save_everystep = false)
+        sol = solve(
+            EnsembleProblem(jprob), EM(), EnsembleSerial();
+            trajectories = 3, dt = 0.01, save_everystep = false
+        )
         finals = [sol.u[i].u[end][1] for i in 1:3]
         @test allunique(finals)
     end
@@ -106,8 +116,10 @@ end
 @testset "EnsembleThreads: no data race" begin
     @testset "SSAStepper" begin
         jprob = make_ssa_jump_prob()
-        sol = solve(EnsembleProblem(jprob), SSAStepper(), EnsembleThreads();
-            trajectories = 4)
+        sol = solve(
+            EnsembleProblem(jprob), SSAStepper(), EnsembleThreads();
+            trajectories = 4
+        )
         @test length(sol.u) == 4
     end
 
@@ -115,8 +127,10 @@ end
         jprob = make_vr_jump_prob(agg)
         # This path previously had a data race: resetted_jump_problem called
         # randexp!(_jump_prob.rng, ...) on the shared original problem.
-        sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleThreads();
-            trajectories = 4, save_everystep = false)
+        sol = solve(
+            EnsembleProblem(jprob), Tsit5(), EnsembleThreads();
+            trajectories = 4, save_everystep = false
+        )
         @test length(sol.u) == 4
     end
 
@@ -124,8 +138,10 @@ end
         jprob = make_sde_vr_jump_prob(VR_FRM())
         # StochasticDiffEq generates per-trajectory seeds and passes them to
         # resetted_jump_problem, so trajectories should be distinct.
-        sol = solve(EnsembleProblem(jprob), EM(), EnsembleThreads();
-            trajectories = 4, dt = 0.01, save_everystep = false)
+        sol = solve(
+            EnsembleProblem(jprob), EM(), EnsembleThreads();
+            trajectories = 4, dt = 0.01, save_everystep = false
+        )
         @test length(sol.u) == 4
         finals = [sol.u[i].u[end][1] for i in 1:4]
         @test length(unique(finals)) > 1
@@ -192,8 +208,10 @@ end
 
 @testset "VR_FRM: jump_u thresholds unique per trajectory (EnsembleSerial)" begin
     jprob = make_vr_jump_prob(VR_FRM())
-    sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
-        trajectories = 3)
+    sol = solve(
+        EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
+        trajectories = 3
+    )
     event_times = [first_jump_time(sol.u[i]) for i in 1:3]
     @test allunique(event_times)
 end

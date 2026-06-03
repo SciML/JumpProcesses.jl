@@ -8,13 +8,11 @@ and
 by S. Mauch and M. Stalzer, ACM Trans. Comp. Biol. and Bioinf., 8, No. 1, 27-35 (2010).
 """
 
-const MINJUMPRATE = 2.0^exponent(1.0e-12)
+const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct DirectCRJumpAggregation{
-        T, S, F1, F2, RNG, DEPGR, U <: PriorityTable,
-        W <: Function,
-    } <:
-    AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct DirectCRJumpAggregation{T, S, F1, F2, RNG, DEPGR, U <: PriorityTable,
+    W <: Function} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
@@ -33,14 +31,12 @@ mutable struct DirectCRJumpAggregation{
     ratetogroup::W
 end
 
-function DirectCRJumpAggregation(
-        nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; num_specs, dep_graph = nothing,
         minrate = convert(T, MINJUMPRATE),
         maxrate = convert(T, Inf),
-        kwargs...
-    ) where {T, S, F1, F2, RNG}
+        kwargs...) where {T, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -67,33 +63,25 @@ function DirectCRJumpAggregation(
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    return DirectCRJumpAggregation{
-        T, S, F1, affecttype, RNG, typeof(dg),
-        typeof(rt), typeof(ratetogroup),
-    }(
-        nj, nj, njt, et, crs, sr, maj,
+    DirectCRJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
+        typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
         rs, affs!, sps, rng, dg,
         minrate, maxrate, rt,
-        ratetogroup
-    )
+        ratetogroup)
 end
 
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(
-        aggregator::DirectCR, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions, rng; kwargs...
-    )
+function aggregate(aggregator::DirectCR, u, p, t, end_time, constant_jumps,
+        ma_jumps, save_positions, rng; kwargs...)
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
-    return build_jump_aggregation(
-        DirectCRJumpAggregation, u, p, t, end_time, ma_jumps,
+    build_jump_aggregation(DirectCRJumpAggregation, u, p, t, end_time, ma_jumps,
         rates, affects!, save_positions, rng; num_specs = length(u),
-        kwargs...
-    )
+        kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -110,7 +98,7 @@ function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
     end
 
     generate_jumps!(p, integrator, u, params, t)
-    return nothing
+    nothing
 end
 
 # execute one jump, changing the system state
@@ -120,7 +108,7 @@ function execute_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t, af
 
     # update current jump rates
     update_dependent_rates!(p, u, params, t)
-    return nothing
+    nothing
 end
 
 # calculate the next jump / jump time
@@ -130,7 +118,7 @@ function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
     if p.next_jump_time < p.end_time
         p.next_jump = sample(p.rt, p.cur_rates, p.rng)
     end
-    return nothing
+    nothing
 end
 
 ######################## SSA specific helper routines #########################
@@ -153,5 +141,5 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
     end
 
     p.sum_rate = groupsum(rt)
-    return nothing
+    nothing
 end

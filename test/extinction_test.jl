@@ -4,11 +4,11 @@ using StableRNGs
 rng = StableRNG(12345)
 
 reactstoch = [
-    [1 => 1],
+    [1 => 1]
 ]
 
 netstoch = [
-    [1 => -1],
+    [1 => -1]
 ]
 
 Nsims = 10
@@ -16,15 +16,13 @@ rates = [1.0]
 dg = [[1]]
 majump = MassActionJump(rates, reactstoch, netstoch)
 u0 = [100000]
-dprob = DiscreteProblem(u0, (0.0, 1.0e5), rates)
+dprob = DiscreteProblem(u0, (0.0, 1e5), rates)
 algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 for n in 1:Nsims
     for ssa in algs
-        local jprob = JumpProblem(
-            dprob, ssa, majump, save_positions = (false, false),
-            rng = rng
-        )
+        local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
+            rng = rng)
         local sol = solve(jprob, SSAStepper())
         @test sol[1, end] == 0
         @test sol.t[end] < Inf
@@ -35,10 +33,8 @@ u0 = SA[10]
 dprob = DiscreteProblem(u0, (0.0, 100.0), rates)
 
 for ssa in algs
-    local jprob = JumpProblem(
-        dprob, ssa, majump, save_positions = (false, false),
-        rng = rng
-    )
+    local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
+        rng = rng)
     local sol = solve(jprob, SSAStepper(), saveat = 100.0)
     @test sol[1, end] == 0
     @test sol.t[end] < Inf
@@ -49,14 +45,14 @@ Base.@kwdef mutable struct ExtinctionTest
     cnt::Int = 0
 end
 function (e::ExtinctionTest)(u, t, integrator)
-    return (e.cnt == 0) && (integrator.cb.affect!.next_jump_time == Inf)
+    (e.cnt == 0) && (integrator.cb.affect!.next_jump_time == Inf)
 end
 function (e::ExtinctionTest)(integrator)
     (saved, savedexactly) = savevalues!(integrator, true)
     @test saved == true
     @test savedexactly == true
     e.cnt += 1
-    return nothing
+    nothing
 end
 et = ExtinctionTest()
 cb = DiscreteCallback(et, et, save_positions = (false, false))
@@ -67,17 +63,15 @@ sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
 
 # test terminate
 function extinction_condition2(u, t, integrator)
-    return u[1] == 1
+    u[1] == 1
 end
 function extinction_affect!2(integrator)
     (saved, savedexactly) = savevalues!(integrator, true)
     terminate!(integrator)
-    return nothing
+    nothing
 end
-cb = DiscreteCallback(
-    extinction_condition2, extinction_affect!2,
-    save_positions = (false, false)
-)
+cb = DiscreteCallback(extinction_condition2, extinction_affect!2,
+    save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
 jprob = JumpProblem(dprob, majump; save_positions = (false, false), rng)
 sol = solve(jprob; callback = cb, save_end = false)

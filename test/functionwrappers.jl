@@ -6,12 +6,10 @@ let
     rate(u, p, t; debug = true) = 5.0
     function affect!(integrator)
         integrator.u[1] += 1
-        return nothing
+        nothing
     end
-    jump = VariableRateJump(
-        rate, affect!; urate = (u, p, t) -> 10.0,
-        rateinterval = (u, p, t) -> 0.1
-    )
+    jump = VariableRateJump(rate, affect!; urate = (u, p, t) -> 10.0,
+        rateinterval = (u, p, t) -> 0.1)
 
     prob = DiscreteProblem([0.0], (0.0, 2.0), [1.0])
     jprob = JumpProblem(prob, Coevolve(), jump; dep_graph = [[1]], rng)

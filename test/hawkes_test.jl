@@ -7,7 +7,7 @@ function reset_history!(h; start_time = nothing)
     @inbounds for i in 1:length(h)
         h[i] = eltype(h)[]
     end
-    return nothing
+    nothing
 end
 
 function empirical_rate(sol)
@@ -38,8 +38,7 @@ function hawkes_jump(i::Int, g, h; uselrate = true)
     if uselrate
         lrate(u, p, t) = p[1]
         rateinterval = (
-            u, p, t,
-        ) -> begin
+            u, p, t) -> begin
             _lrate = lrate(u, p, t)
             _urate = urate(u, p, t)
             return _urate == _lrate ? typemax(t) : 1 / (2 * _urate)
@@ -53,7 +52,7 @@ function hawkes_jump(i::Int, g, h; uselrate = true)
     end
     function affect!(integrator)
         push!(h[i], integrator.t)
-        return integrator.u[i] += 1
+        integrator.u[i] += 1
     end
     return VariableRateJump(rate, affect!; lrate, urate, rateinterval)
 end
@@ -62,10 +61,8 @@ function hawkes_jump(u, g, h; uselrate = true)
     return [hawkes_jump(i, g, h; uselrate) for i in 1:length(u)]
 end
 
-function hawkes_problem(
-        p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, kwargs...
-    )
+function hawkes_problem(p, agg::Coevolve; u = [0.0], tspan = (0.0, 50.0),
+        save_positions = (false, true), g = [[1]], h = [[]], uselrate = true, kwargs...)
     dprob = DiscreteProblem(u, tspan, p)
     jumps = hawkes_jump(u, g, h; uselrate)
     jprob = JumpProblem(dprob, agg, jumps...; dep_graph = g, save_positions, rng)
@@ -74,13 +71,11 @@ end
 
 function f!(du, u, p, t)
     du .= 0
-    return nothing
+    nothing
 end
 
-function hawkes_problem(
-        p, agg; u = [0.0], tspan = (0.0, 50.0),
-        save_positions = (false, true), g = [[1]], h = [[]], vr_aggregator = VR_FRM(), kwargs...
-    )
+function hawkes_problem(p, agg; u = [0.0], tspan = (0.0, 50.0),
+        save_positions = (false, true), g = [[1]], h = [[]], vr_aggregator = VR_FRM(), kwargs...)
     oprob = ODEProblem(f!, u, tspan, p)
     jumps = hawkes_jump(u, g, h)
     jprob = JumpProblem(oprob, agg, jumps...; vr_aggregator, save_positions, rng)

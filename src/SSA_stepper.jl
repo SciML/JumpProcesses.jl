@@ -69,7 +69,7 @@ Solution objects for pure jump problems solved via `SSAStepper`.
 $(FIELDS)
 """
 mutable struct SSAIntegrator{F, uType, tType, tdirType, P, S, CB, SA, OPT, TS} <:
-    AbstractSSAIntegrator{SSAStepper, Nothing, uType, tType}
+               AbstractSSAIntegrator{SSAStepper, Nothing, uType, tType}
     """The underlying `prob.f` function. Not currently used."""
     f::F
     """The current solution values."""
@@ -137,7 +137,7 @@ function Base.propertynames(integrator::SSAIntegrator, private::Bool = false)
 end
 
 function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
-    return integrator.u_modified = bool
+    integrator.u_modified = bool
 end
 
 # SciMLBase v3 renamed `u_modified!` to `derivative_discontinuity!` and internal
@@ -153,7 +153,7 @@ function DiffEqBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)
     # init will handle kwargs merging via init_call
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
-    return integrator.sol
+    integrator.sol
 end
 
 function DiffEqBase.solve!(integrator::SSAIntegrator)
@@ -168,16 +168,14 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
 
         # check callbacks one last time
         if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
-            DiffEqBase.apply_discrete_callback!(
-                integrator,
-                integrator.opts.callback.discrete_callbacks...
-            )
+            DiffEqBase.apply_discrete_callback!(integrator,
+                integrator.opts.callback.discrete_callbacks...)
         end
 
         if integrator.saveat !== nothing && !isempty(integrator.saveat)
             # Split to help prediction
             while integrator.cur_saveat <= length(integrator.saveat) &&
-                    integrator.saveat[integrator.cur_saveat] < integrator.t
+                integrator.saveat[integrator.cur_saveat] < integrator.t
                 push!(integrator.sol.t, integrator.saveat[integrator.cur_saveat])
                 push!(integrator.sol.u, copy(integrator.u))
                 integrator.cur_saveat += 1
@@ -195,7 +193,7 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
         SciMLBase.save_final_discretes!(integrator, integrator.opts.callback)
     end
 
-    return if integrator.sol.retcode === ReturnCode.Default
+    if integrator.sol.retcode === ReturnCode.Default
         integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
     end
 end
@@ -212,27 +210,22 @@ function check_continuous_callback_error(callback)
     end
 
     if callback isa DiffEqBase.ContinuousCallback
-        error(
-            "SSAStepper does not support continuous callbacks. Only DiscreteCallbacks " *
-                "are supported for event detection with SSAStepper. Please use an ODE/SDE " *
-                "solver (e.g., Tsit5()) if you need continuous event detection."
-        )
+        error("SSAStepper does not support continuous callbacks. Only DiscreteCallbacks " *
+              "are supported for event detection with SSAStepper. Please use an ODE/SDE " *
+              "solver (e.g., Tsit5()) if you need continuous event detection.")
     elseif callback isa DiffEqBase.CallbackSet
         n_continuous = length(callback.continuous_callbacks)
         if n_continuous > 0
-            error(
-                "SSAStepper does not support continuous callbacks (found $n_continuous " *
-                    "continuous callback$(n_continuous > 1 ? "s" : "")). Only DiscreteCallbacks " *
-                    "are supported for event detection with SSAStepper. Please use an ODE/SDE " *
-                    "solver (e.g., Tsit5()) if you need continuous event detection."
-            )
+            error("SSAStepper does not support continuous callbacks (found $n_continuous " *
+                  "continuous callback$(n_continuous > 1 ? "s" : "")). Only DiscreteCallbacks " *
+                  "are supported for event detection with SSAStepper. Please use an ODE/SDE " *
+                  "solver (e.g., Tsit5()) if you need continuous event detection.")
         end
     end
     return nothing
 end
 
-function DiffEqBase.__init(
-        jump_prob::JumpProblem,
+function DiffEqBase.__init(jump_prob::JumpProblem,
         alg::SSAStepper;
         save_start = true,
         save_end = true,
@@ -241,8 +234,7 @@ function DiffEqBase.__init(
         saveat = nothing,
         callback = nothing,
         tstops = nothing,
-        numsteps_hint = 100
-    )
+        numsteps_hint = 100)
 
     # hack until alias system is in place
     alias_tstops = false
@@ -254,10 +246,8 @@ function DiffEqBase.__init(
 
     # Check for continuous callbacks in the jump system
     isempty(jump_prob.jump_callback.continuous_callbacks) ||
-        error(
-        "SSAStepper does not support continuous callbacks in the jump system. " *
-            "Please use an ODE/SDE solver over ODE or SDE problems instead."
-    )
+        error("SSAStepper does not support continuous callbacks in the jump system. " *
+              "Please use an ODE/SDE solver over ODE or SDE problems instead.")
 
     # Check for continuous callbacks passed via kwargs (from JumpProblem constructor or solve)
     check_continuous_callback_error(callback)
@@ -286,12 +276,10 @@ function DiffEqBase.__init(
     end
     save_everystep = any(cb.save_positions)
 
-    sol = DiffEqBase.build_solution(
-        prob, alg, t, u, dense = save_everystep,
+    sol = DiffEqBase.build_solution(prob, alg, t, u, dense = save_everystep,
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
-        interp = DiffEqBase.ConstantInterpolation(t, u)
-    )
+        interp = DiffEqBase.ConstantInterpolation(t, u))
 
     _saveat = (saveat isa Number) ? (prob.tspan[1]:saveat:prob.tspan[2]) : saveat
     if _saveat !== nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
@@ -328,11 +316,9 @@ function DiffEqBase.__init(
         _tstops = eltype(jump_prob.prob.tspan)[]
     end
 
-    integrator = SSAIntegrator(
-        prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
+    integrator = SSAIntegrator(prob.f, copy(prob.u0), prob.tspan[1], prob.tspan[1], tdir,
         prob.p, sol, 1, prob.tspan[1], cb, _saveat, save_everystep,
-        save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false
-    )
+        save_end, cur_saveat, opts, _tstops, 1, false, true, alias_tstops, false)
     cb.initialize(cb, integrator.u, prob.tspan[1], integrator)
     DiffEqBase.initialize!(opts.callback, integrator.u, prob.tspan[1], integrator)
     if save_start
@@ -346,11 +332,11 @@ function DiffEqBase.__init(
         end
     end
 
-    return integrator
+    integrator
 end
 
 function DiffEqBase.get_tstops(integrator::SSAIntegrator)
-    return @view integrator.tstops[(integrator.tstops_idx):end]
+    @view integrator.tstops[(integrator.tstops_idx):end]
 end
 DiffEqBase.get_tstops_array(integrator::SSAIntegrator) = DiffEqBase.get_tstops(integrator)
 
@@ -379,28 +365,26 @@ function DiffEqBase.add_tstop!(integrator::SSAIntegrator, tstop)
 
         Base.insert!(integrator.tstops, insert_index, tstop)
     end
-    return nothing
+    nothing
 end
 
 # The Jump aggregators should not register the next jump through add_tstop! for SSAIntegrator
 # such that we can achieve maximum performance
-@inline function register_next_jump_time!(
-        integrator::SSAIntegrator,
-        p::AbstractSSAJumpAggregator, t
-    )
+@inline function register_next_jump_time!(integrator::SSAIntegrator,
+        p::AbstractSSAJumpAggregator, t)
     integrator.tstop = p.next_jump_time
-    return nothing
+    nothing
 end
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
     integrator.tprev = integrator.t
     next_jump_time = integrator.tstop > integrator.t ? integrator.tstop :
-        typemax(integrator.tstop)
+                     typemax(integrator.tstop)
 
     doaffect = false
     if !isempty(integrator.tstops) &&
-            integrator.tstops_idx <= length(integrator.tstops) &&
-            integrator.tstops[integrator.tstops_idx] < next_jump_time
+       integrator.tstops_idx <= length(integrator.tstops) &&
+       integrator.tstops[integrator.tstops_idx] < next_jump_time
         integrator.t = integrator.tstops[integrator.tstops_idx]
         integrator.tstops_idx += 1
     else
@@ -411,7 +395,7 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
     @inbounds if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
         while integrator.cur_saveat < length(integrator.saveat) &&
-                integrator.saveat[integrator.cur_saveat] < integrator.t
+            integrator.saveat[integrator.cur_saveat] < integrator.t
             saved = true
             push!(integrator.sol.t, integrator.saveat[integrator.cur_saveat])
             push!(integrator.sol.u, copy(integrator.u))
@@ -431,17 +415,15 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
     if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
         discrete_modified,
-            saved_in_cb = DiffEqBase.apply_discrete_callback!(
-            integrator,
-            integrator.opts.callback.discrete_callbacks...
-        )
+        saved_in_cb = DiffEqBase.apply_discrete_callback!(integrator,
+            integrator.opts.callback.discrete_callbacks...)
     else
         saved_in_cb = false
     end
 
     !saved_in_cb && jump_modified_u && savevalues!(integrator)
 
-    return nothing
+    nothing
 end
 
 function DiffEqBase.savevalues!(integrator::SSAIntegrator, force = false)
@@ -457,7 +439,7 @@ function DiffEqBase.savevalues!(integrator::SSAIntegrator, force = false)
         push!(integrator.sol.u, copy(integrator.u))
     end
 
-    return saved, savedexactly
+    saved, savedexactly
 end
 
 function should_continue_solve(integrator::SSAIntegrator)
@@ -465,38 +447,31 @@ function should_continue_solve(integrator::SSAIntegrator)
 
     # we continue the solve if there is a tstop between now and end_time
     has_tstop = !isempty(integrator.tstops) &&
-        integrator.tstops_idx <= length(integrator.tstops) &&
-        integrator.tstops[integrator.tstops_idx] < end_time
+                integrator.tstops_idx <= length(integrator.tstops) &&
+                integrator.tstops[integrator.tstops_idx] < end_time
 
     # we continue the solve if there will be a jump between now and end_time
     has_jump = integrator.t < integrator.tstop < end_time
 
-    return integrator.keep_stepping && (has_jump || has_tstop)
+    integrator.keep_stepping && (has_jump || has_tstop)
 end
 
-function reset_aggregated_jumps!(
-        integrator::SSAIntegrator, uprev = nothing;
-        update_jump_params = true, kwargs...
-    )
-    reset_aggregated_jumps!(
-        integrator, uprev, integrator.cb;
-        update_jump_params, kwargs...
-    )
-    return nothing
+function reset_aggregated_jumps!(integrator::SSAIntegrator, uprev = nothing;
+        update_jump_params = true, kwargs...)
+    reset_aggregated_jumps!(integrator, uprev, integrator.cb;
+        update_jump_params, kwargs...)
+    nothing
 end
 
 function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = ReturnCode.Terminated)
     integrator.keep_stepping = false
     integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, retcode)
-    return nothing
+    nothing
 end
 
 
-function SciMLBase.isdenseplot(
-        sol::ODESolution{
-            T, N, uType, uType2, DType, tType, rateType, discType, P,
-            SSAStepper,
-        }
-    ) where {T, N, uType, uType2, DType, tType, rateType, discType, P}
-    return sol.dense
+function SciMLBase.isdenseplot(sol::ODESolution{
+        T, N, uType, uType2, DType, tType, rateType, discType, P,
+        SSAStepper}) where {T, N, uType, uType2, DType, tType, rateType, discType, P}
+    sol.dense
 end

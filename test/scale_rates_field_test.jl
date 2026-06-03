@@ -20,7 +20,7 @@ end
 function (m::PreScaledMapper)(params)
     rates = [params[i] for i in m.param_idxs]
     JumpProcesses.scalerates!(rates, m.reactant_stoch)
-    return rates
+    rates
 end
 function (m::PreScaledMapper)(maj::MassActionJump, newparams; scale_rates, kwargs...)
     for i in 1:JumpProcesses.get_num_majumps(maj)
@@ -28,12 +28,12 @@ function (m::PreScaledMapper)(maj::MassActionJump, newparams; scale_rates, kwarg
     end
     JumpProcesses.scalerates!(maj.scaled_rates, m.reactant_stoch)
     scale_rates && JumpProcesses.scalerates!(maj.scaled_rates, maj.reactant_stoch)
-    return nothing
+    nothing
 end
 JumpProcesses.to_collection(m::PreScaledMapper) = m
 function Base.merge!(m1::PreScaledMapper, m2::PreScaledMapper)
     append!(m1.param_idxs, m2.param_idxs)
-    return append!(m1.reactant_stoch, m2.reactant_stoch)
+    append!(m1.reactant_stoch, m2.reactant_stoch)
 end
 
 # Test 1: rescale_rates_on_update field is stored correctly

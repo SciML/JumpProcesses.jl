@@ -3,11 +3,9 @@
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{
-        T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, JVMAP,
-        PQ, SS,
-    } <:
-    AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+mutable struct NSMJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR, VJMAP, JVMAP,
+    PQ, SS} <:
+               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -31,8 +29,7 @@ function NSMJumpAggregation(
         sps::Tuple{Bool, Bool},
         rng::RNG, spatial_system::SS; num_specs,
         vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing, kwargs...
-    ) where {J, T, RX, HOP, RNG, SS}
+        dep_graph = nothing, kwargs...) where {J, T, RX, HOP, RNG, SS}
 
     # a dependency graph is needed
     if dep_graph === nothing
@@ -58,11 +55,8 @@ function NSMJumpAggregation(
 
     pq = MutableBinaryMinHeap{T}()
 
-    return NSMJumpAggregation{
-        T, Nothing, Nothing, Nothing, RNG, J, RX, HOP, typeof(dg),
-        typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS,
-    }(
-        nj, nj, njt, et,
+    NSMJumpAggregation{T, Nothing, Nothing, Nothing, RNG, J, RX, HOP, typeof(dg),
+        typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS}(nj, nj, njt, et,
         rx_rates,
         hop_rates,
         nothing,
@@ -72,25 +66,20 @@ function NSMJumpAggregation(
         jtov_map,
         pq,
         spatial_system,
-        num_specs
-    )
+        num_specs)
 end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
-function aggregate(
-        aggregator::NSM, starting_state, p, t, end_time, constant_jumps,
+function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps,
         ma_jumps, save_positions, rng; hopping_constants, spatial_system,
-        kwargs...
-    )
+        kwargs...)
     num_species = size(starting_state, 1)
     majumps = ma_jumps
     if majumps === nothing
-        majumps = MassActionJump(
-            Vector{typeof(end_time)}(),
+        majumps = MassActionJump(Vector{typeof(end_time)}(),
             Vector{Vector{Pair{Int, Int}}}(),
-            Vector{Vector{Pair{Int, Int}}}()
-        )
+            Vector{Vector{Pair{Int, Int}}}())
     end
 
     next_jump = SpatialJump{Int}(typemax(Int), typemax(Int), typemax(Int)) #a placeholder
@@ -98,11 +87,9 @@ function aggregate(
     rx_rates = RxRates(num_sites(spatial_system), majumps)
     hop_rates = HopRates(hopping_constants, spatial_system)
 
-    return NSMJumpAggregation(
-        next_jump, next_jump_time, end_time, rx_rates, hop_rates,
+    NSMJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates,
         save_positions, rng, spatial_system; num_specs = num_species,
-        kwargs...
-    )
+        kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -110,7 +97,7 @@ function initialize!(p::NSMJumpAggregation, integrator, u, params, t)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_get_times!(p, integrator, t)
     generate_jumps!(p, integrator, params, u, t)
-    return nothing
+    nothing
 end
 
 # calculate the next jump / jump time
@@ -118,7 +105,7 @@ function generate_jumps!(p::NSMJumpAggregation, integrator, params, u, t)
     p.next_jump_time, site = top_with_handle(p.pq)
     p.next_jump_time >= p.end_time && return nothing
     p.next_jump = sample_jump_direct(p, site)
-    return nothing
+    nothing
 end
 
 # execute one jump, changing the system state
@@ -128,7 +115,7 @@ function execute_jumps!(p::NSMJumpAggregation, integrator, u, params, t, affects
 
     # update current jump rates and times
     update_dependent_rates_and_firing_times!(p, integrator, t)
-    return nothing
+    nothing
 end
 
 ######################## SSA specific helper routines ########################
@@ -156,7 +143,7 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, integrator, 
     end
 
     aggregation.pq = MutableBinaryMinHeap(pqdata)
-    return nothing
+    nothing
 end
 
 """
@@ -178,7 +165,7 @@ function update_dependent_rates_and_firing_times!(p::NSMJumpAggregation, integra
         update_rates_after_reaction!(p, integrator, site, reaction_id_from_jump(p, jump))
         update_site_time!(p, site, t)
     end
-    return nothing
+    nothing
 end
 
 """
@@ -193,7 +180,7 @@ function update_site_time!(p::NSMJumpAggregation, site, t)
     else
         update!(p.pq, site, typemax(t))
     end
-    return nothing
+    nothing
 end
 
 """

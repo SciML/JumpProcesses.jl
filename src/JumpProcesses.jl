@@ -112,6 +112,14 @@ include("aggregators/aggregated_api.jl")
 include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
+# StochasticAD support. These are stubs; methods are provided by the package
+# extension `ext/JumpProcessesStochasticADExt.jl`, which loads only when both
+# StochasticAD and Distributions are available. No StochasticAD code lives in
+# `src/` -- the differentiable fixed-grid jump simulator is isolated in the ext.
+function fixedgrid_simulate end
+function fixedgrid_jump_observable end
+export fixedgrid_simulate, fixedgrid_jump_observable
+
 """
 Aggregator to indicate that individual jumps should also be handled via the leaping
 algorithm that is passed to solve.

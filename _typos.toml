@@ -1,0 +1,11 @@
+[default.extend-words]
+# Surname of an author cited in the SortingDirect references (McCollum et al.)
+Collum = "Collum"
+# Name of the LambaEM integrator from OrdinaryDiffEq
+Lamba = "Lamba"
+# Internal function name resetted_jump_problem
+resetted = "resetted"
+# "IMA J Numer Anal" journal abbreviation in a citation
+Numer = "Numer"
+# setp from SymbolicIndexingInterface
+setp = "setp"

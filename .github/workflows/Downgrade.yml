@@ -12,7 +12,6 @@ on:
       - 'docs/**'
 jobs:
   downgrade:
-    if: false  # Disabled: waiting on OrdinaryDiffEq updates. See issue for details.
     name: "Downgrade"
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:

@@ -13,24 +13,8 @@ on:
 jobs:
   downgrade:
     name: "Downgrade"
-    # Disabled: under strict (allow-reresolve:false) resolution the downgraded
-    # environment is unsatisfiable, and NO direct-dep [compat] floor can fix it.
-    # Mechanism: Pkg.test first resolves the package graph (deps only, no test
-    # extras), where ForwardDiff is absent and LogExpFunctions enters solely via
-    # NonlinearSolveBase (DiffEqBase -> BracketingNonlinearSolve -> NonlinearSolveBase).
-    # NonlinearSolveBase 2.29.0+ widened its LogExpFunctions compat to "[0.3, 1]",
-    # so with no ForwardDiff present the resolver locks LogExpFunctions to the latest
-    # 1.0.1. The test sandbox then adds the extras (OrdinaryDiffEqNonlinearSolve,
-    # LinearSolve, PreallocationTools) which require ForwardDiff >=0.10.38; but
-    # ForwardDiff >=0.10.23 restricts LogExpFunctions to 0.3, contradicting the
-    # already-locked 1.0.1 -> "Unsatisfiable requirements detected for package
-    # ForwardDiff" before any test runs. Verified locally: this reproduces even with
-    # every direct floor raised to its latest, so raising floors cannot help; the
-    # only fixes are forbidden (allow-reresolve:true, which defeats the test, or
-    # adding LogExpFunctions/NonlinearSolveBase to [deps] to pin a transitive).
-    # Re-enable once NonlinearSolveBase floors LogExpFunctions back to 0.3, or once
-    # ForwardDiff's LogExpFunctions compat is widened to allow 1.x.
-    if: false
+    # Runs strict (allow_reresolve=false); expected RED until the upstream fix
+    # ForwardDiff/LogExpFunctions — red until ForwardDiff 1.3.4 (#811). Auto-greens on upstream release.
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
       julia-version: "1.10"

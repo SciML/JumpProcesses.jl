@@ -13,16 +13,23 @@ on:
 jobs:
   downgrade:
     name: "Downgrade"
-    # Disabled: at the current [compat] lower bounds the downgraded environment is
-    # unsatisfiable under strict (allow-reresolve:false) resolution. The deps floor
-    # pins NonlinearSolveBase to 2.30.3, which pulls LogExpFunctions 1.0.1; that
-    # LogExpFunctions caps ForwardDiff at <=0.10.22, while NonlinearSolveBase 2.30.3
-    # and the OrdinaryDiffEq/StochasticDiffEq test stack require ForwardDiff >=0.10.38.
-    # No ForwardDiff version satisfies both, so Pkg.test errors with
-    # "Unsatisfiable requirements detected for package ForwardDiff" before any test runs.
-    # We do not relax this with allow-reresolve:true (that defeats the purpose of the
-    # downgrade test) nor lower any compat floors. Re-enable once the upstream floors
-    # move past the LogExpFunctions 1.0.1 / ForwardDiff wall.
+    # Disabled: under strict (allow-reresolve:false) resolution the downgraded
+    # environment is unsatisfiable, and NO direct-dep [compat] floor can fix it.
+    # Mechanism: Pkg.test first resolves the package graph (deps only, no test
+    # extras), where ForwardDiff is absent and LogExpFunctions enters solely via
+    # NonlinearSolveBase (DiffEqBase -> BracketingNonlinearSolve -> NonlinearSolveBase).
+    # NonlinearSolveBase 2.29.0+ widened its LogExpFunctions compat to "[0.3, 1]",
+    # so with no ForwardDiff present the resolver locks LogExpFunctions to the latest
+    # 1.0.1. The test sandbox then adds the extras (OrdinaryDiffEqNonlinearSolve,
+    # LinearSolve, PreallocationTools) which require ForwardDiff >=0.10.38; but
+    # ForwardDiff >=0.10.23 restricts LogExpFunctions to 0.3, contradicting the
+    # already-locked 1.0.1 -> "Unsatisfiable requirements detected for package
+    # ForwardDiff" before any test runs. Verified locally: this reproduces even with
+    # every direct floor raised to its latest, so raising floors cannot help; the
+    # only fixes are forbidden (allow-reresolve:true, which defeats the test, or
+    # adding LogExpFunctions/NonlinearSolveBase to [deps] to pin a transitive).
+    # Re-enable once NonlinearSolveBase floors LogExpFunctions back to 0.3, or once
+    # ForwardDiff's LogExpFunctions compat is widened to allow 1.x.
     if: false
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:

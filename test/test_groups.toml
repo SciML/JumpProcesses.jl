@@ -1,0 +1,8 @@
+[InterfaceI]
+versions = ["lts", "1", "pre"]
+
+[InterfaceII]
+versions = ["lts", "1", "pre"]
+
+[QA]
+versions = ["lts", "1"]

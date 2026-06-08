@@ -16,7 +16,4 @@ jobs:
     # Runs strict (allow_reresolve=false); expected RED until the upstream fix
     # ForwardDiff/LogExpFunctions — red until ForwardDiff 1.3.4 (#811). Auto-greens on upstream release.
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
-    with:
-      julia-version: "1.10"
-      skip: "Pkg,TOML"
     secrets: "inherit"

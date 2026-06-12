@@ -30,9 +30,12 @@ jobs:
           - InterfaceI
           - InterfaceII
           - QA
+          - StochasticAD
         exclude:
           - version: "pre"
             group: QA
+          - version: "pre"
+            group: StochasticAD
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
       julia-version: "${{ matrix.version }}"

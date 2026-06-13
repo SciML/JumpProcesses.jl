@@ -112,11 +112,12 @@ include("aggregators/aggregated_api.jl")
 include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
-# StochasticAD support. Stub; the method is provided by the package extension
+# StochasticAD support. Stubs; methods are provided by the package extension
 # `ext/JumpProcessesStochasticADExt.jl`, which loads only when StochasticAD and
 # Distributions are both available. No StochasticAD code lives in `src/`.
-function constant_rate_final_state end
-export constant_rate_final_state
+function constant_rate_ssa_final_state end
+function poisson_count_final_state end
+export constant_rate_ssa_final_state, poisson_count_final_state
 
 """
 Aggregator to indicate that individual jumps should also be handled via the leaping

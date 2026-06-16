@@ -363,6 +363,8 @@ to step through time one candidate at a time.
 
 ```@example tpp-advanced
 using OrdinaryDiffEq
+using OrdinaryDiffEqFunctionMap: FunctionMap
+using OrdinaryDiffEqRosenbrock: Rodas4P
 using Random
 
 function Base.rand(rng::AbstractRNG, pp::SciMLPointProcess)

@@ -11,22 +11,9 @@ on:
     paths-ignore:
       - 'docs/**'
 jobs:
-  test:
-    if: false  # Disabled: waiting on OrdinaryDiffEq updates. See issue for details.
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        downgrade_mode: ['alldeps']
-        julia-version: ['1.10']
-    steps:
-      - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: ${{ matrix.julia-version }}
-      - uses: julia-actions/julia-downgrade-compat@v2
-        with:
-          skip: Pkg,TOML
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-        with:
-          ALLOW_RERESOLVE: false
+  downgrade:
+    name: "Downgrade"
+    # Runs strict (allow_reresolve=false); expected RED until the upstream fix
+    # ForwardDiff/LogExpFunctions — red until ForwardDiff 1.3.4 (#811). Auto-greens on upstream release.
+    uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
+    secrets: "inherit"

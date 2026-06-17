@@ -96,7 +96,7 @@ jump = ConstantRateJump(rate, affect!)
 There are many types of jumps. Some of them allow for variable rates. You can
 read about [different jump types in this page](@ref jump_types).
 
-Once the jump is defined, we initialize the `JumpProblem`. _Aggegators_ are
+Once the jump is defined, we initialize the `JumpProblem`. _Aggregators_ are
 algorithms that determines jump times. We call them _aggregators_ because they
 aggregate all jump callbacks into a single callback. Alternatively, we can think
 of aggregators as the jump simulation algorithms. In this case we use the

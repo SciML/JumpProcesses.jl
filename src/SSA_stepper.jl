@@ -60,6 +60,57 @@ struct SSAStepper <: DiffEqBase.AbstractDEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
 
 """
+    BoundedSSA(; nmax)
+
+A StochasticAD-compatible SSA algorithm for **jump-only** `ConstantRateJump`
+`DiscreteProblem`s, enabling correct gradients via StochasticAD's
+`derivative_estimate`/`stochastic_triple`.
+
+The stock `SSAStepper` cannot be differentiated with StochasticAD: it decides the
+number of events with a `while integrator.t < integrator.tstop < end_time` loop,
+i.e. a boolean predicate on (triple-valued) time, which StochasticAD forbids by
+design — so the event-count derivative is dropped (a state-dependent rate yields
+a gradient of `0`). `BoundedSSA` instead runs a **fixed-length loop of at most
+`nmax` jump attempts**, replacing the data-dependent control flow with stochastic
+primitives (a tracked `Bernoulli` for "is there a next event before the end
+time?", a truncated exponential for the time, stick-breaking `Bernoulli`s for the
+channel, and multiplicative-select masking to freeze the trajectory once the
+event chain breaks). This is exact up to `P(N > nmax)`, the probability of more
+than `nmax` events.
+
+With ordinary `Float64` parameters `solve(jprob, BoundedSSA(; nmax))` is just a
+bounded SSA simulation; with StochasticAD triples it differentiates.
+
+# Keyword arguments
+
+  - `nmax` (required): the fixed upper bound on the number of jump events. If the
+    true count can exceed `nmax` the result is biased; size it from
+    [`saturation_probability`](@ref).
+
+# Scope / limitations
+
+  - `ConstantRateJump`s only (state-dependent rates are supported); jump-only, no
+    continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported
+    (`evalrxrate` is not triple-generic and mass-action rate constants flow
+    through `param_mapper`).
+  - Additive affects only (the net change is inferred from `affect!` and checked).
+  - The differentiation parameter must enter through `prob.p`.
+  - The implementation lives in the `JumpProcessesStochasticADExt` extension, so
+    `StochasticAD` and `Distributions` must both be loaded to `solve` with it.
+
+See also [`bounded_ssa_final_state`](@ref) (the differentiable core) and
+[`saturation_probability`](@ref).
+"""
+struct BoundedSSA{N} <: DiffEqBase.AbstractDEAlgorithm
+    nmax::N
+end
+function BoundedSSA(; nmax = nothing)
+    nmax === nothing && error("BoundedSSA requires the keyword argument `nmax` " *
+                              "(a fixed upper bound on the number of jump events).")
+    BoundedSSA{typeof(nmax)}(nmax)
+end
+
+"""
 $(TYPEDEF)
 
 Solution objects for pure jump problems solved via `SSAStepper`.

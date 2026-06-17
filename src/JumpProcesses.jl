@@ -114,10 +114,13 @@ export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
 # StochasticAD support. Stubs; methods are provided by the package extension
 # `ext/JumpProcessesStochasticADExt.jl`, which loads only when StochasticAD and
-# Distributions are both available. No StochasticAD code lives in `src/`.
-function constant_rate_ssa_final_state end
-function poisson_count_final_state end
-export constant_rate_ssa_final_state, poisson_count_final_state
+# Distributions are both available. No StochasticAD code lives in `src/`. The
+# `BoundedSSA` algorithm struct itself lives in `src` (see SSA_stepper.jl) so it
+# is always referenceable/documentable; only its `solve` implementation is in the
+# extension.
+function bounded_ssa_final_state end
+function saturation_probability end
+export bounded_ssa_final_state, saturation_probability
 
 """
 Aggregator to indicate that individual jumps should also be handled via the leaping
@@ -134,7 +137,7 @@ include("solve.jl")
 export init, solve, solve!
 
 include("SSA_stepper.jl")
-export SSAStepper
+export SSAStepper, BoundedSSA
 
 # leaping: 
 include("simple_regular_solve.jl")

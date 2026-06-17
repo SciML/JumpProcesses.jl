@@ -68,31 +68,45 @@ end
 
 ######################## SSA specific helper routines ########################
 
+# Fill `cur_rates` with the *raw* (non-cumulative) per-channel rates: mass-action
+# rates first (indices `1:get_num_majumps(majumps)`), then constant-jump rates.
+# Shared by `Direct`'s `time_to_next_jump` (which then forms the running
+# cumulative sum used for channel sampling) and by the StochasticAD bounded SSA
+# path (which uses the raw rates directly). Tuple rates use the type-stable
+# recursive `fill_cur_rates`; function-wrapper rates use a plain loop. This is the
+# one place per-channel rates are computed, so a generic (e.g. StochasticTriple)
+# rate type flows through it unchanged.
+@inline function fill_cur_rates!(cur_rates, u, p, t, majumps, rates::Tuple)
+    nma = get_num_majumps(majumps)
+    @inbounds for i in 1:nma
+        cur_rates[i] = evalrxrate(u, i, majumps)
+    end
+    isempty(rates) || fill_cur_rates(u, p, t, cur_rates, nma + 1, rates...)
+    nothing
+end
+
+@inline function fill_cur_rates!(cur_rates, u, p, t, majumps, rates::AbstractArray)
+    nma = get_num_majumps(majumps)
+    @inbounds for i in 1:nma
+        cur_rates[i] = evalrxrate(u, i, majumps)
+    end
+    @inbounds for k in eachindex(rates)
+        cur_rates[nma + k] = rates[k](u, p, t)
+    end
+    nothing
+end
+
 # tuple-based constant jumps
 function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
         t) where {T, S, F1 <: Tuple}
-    prev_rate = zero(t)
-    new_rate = zero(t)
     cur_rates = p.cur_rates
+    fill_cur_rates!(cur_rates, u, params, t, p.ma_jumps, p.rates)
 
-    # mass action rates
-    majumps = p.ma_jumps
-    idx = get_num_majumps(majumps)
-    @inbounds for i in 1:idx
-        new_rate = evalrxrate(u, i, majumps)
-        cur_rates[i] = add_fast(new_rate, prev_rate)
+    # form the running cumulative sum used by `generate_jumps!` for channel sampling
+    prev_rate = zero(t)
+    @inbounds for i in eachindex(cur_rates)
+        cur_rates[i] = add_fast(cur_rates[i], prev_rate)
         prev_rate = cur_rates[i]
-    end
-
-    # constant jump rates
-    rates = p.rates
-    if !isempty(rates)
-        idx += 1
-        fill_cur_rates(u, params, t, cur_rates, idx, rates...)
-        @inbounds for i in idx:length(cur_rates)
-            cur_rates[i] = add_fast(cur_rates[i], prev_rate)
-            prev_rate = cur_rates[i]
-        end
     end
 
     @inbounds sum_rate = cur_rates[end]
@@ -113,27 +127,14 @@ end
 # function wrapper-based constant jumps
 function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
         t) where {T, S, F1 <: AbstractArray}
-    prev_rate = zero(t)
-    new_rate = zero(t)
     cur_rates = p.cur_rates
+    fill_cur_rates!(cur_rates, u, params, t, p.ma_jumps, p.rates)
 
-    # mass action rates
-    majumps = p.ma_jumps
-    idx = get_num_majumps(majumps)
-    @inbounds for i in 1:idx
-        new_rate = evalrxrate(u, i, majumps)
-        cur_rates[i] = add_fast(new_rate, prev_rate)
+    # form the running cumulative sum used by `generate_jumps!` for channel sampling
+    prev_rate = zero(t)
+    @inbounds for i in eachindex(cur_rates)
+        cur_rates[i] = add_fast(cur_rates[i], prev_rate)
         prev_rate = cur_rates[i]
-    end
-
-    # constant jump rates
-    idx += 1
-    rates = p.rates
-    @inbounds for i in 1:length(p.rates)
-        new_rate = rates[i](u, params, t)
-        cur_rates[idx] = add_fast(new_rate, prev_rate)
-        prev_rate = cur_rates[idx]
-        idx += 1
     end
 
     @inbounds sum_rate = cur_rates[end]

@@ -14,7 +14,7 @@ end
 # OrdinaryDiffEq stack, so it is kept out of the main test target and run here
 # in its own project (no ODE solver needed -- the extension never calls `solve`).
 function activate_stochasticad_env()
-    Pkg.activate("stochasticad")
+    Pkg.activate(joinpath(@__DIR__, "stochasticad"))
     Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
     Pkg.instantiate()
 end
@@ -75,6 +75,9 @@ end
 
     if GROUP == "StochasticAD"
         activate_stochasticad_env()
+        # Guards the shared `fill_cur_rates!` refactor the bounded path depends on.
+        # JumpProcesses-only (no OrdinaryDiffEq), so it runs in this isolated env.
+        @time @safetestset "fill_cur_rates! Stock-Path Regression" begin include("fill_cur_rates_regression.jl") end
         @time @safetestset "StochasticAD Extension Tests" begin include("stochasticad_tests.jl") end
     end
 

@@ -110,24 +110,6 @@ Adds a `tstop` to the integrator at the next jump time.
     nothing
 end
 
-# Element type for the SSA rate cache: the time type promoted with the *inferred*
-# rate output type(s). Ordinary Float64 rates give Float64 (unchanged); a non-Float64
-# rate type (e.g. a StochasticAD StochasticTriple) is preserved rather than forced
-# into Float64. We use return-type inference (`Base.promote_op`) rather than calling
-# the rate, so this never executes the rate at build time (which could index a
-# `NullParameters` `p`, have side effects, etc.) and falls back to the time type if
-# inference is not a concrete type.
-function ssa_rate_eltype(u, p, t, majumps, rates)
-    R = typeof(t)
-    if get_num_majumps(majumps) > 0
-        R = promote_type(R, Base.promote_op(evalrxrate, typeof(u), Int, typeof(majumps)))
-    end
-    if !isempty(rates)
-        R = promote_type(R, Base.promote_op(first(rates), typeof(u), typeof(p), typeof(t)))
-    end
-    return isconcretetype(R) ? R : typeof(t)
-end
-
 """
     build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
                            affects!, save_positions, rng; kwargs...)
@@ -145,22 +127,14 @@ function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rate
             Vector{Vector{Pair{Int, eltype(u)}}}())
     end
 
-    # Rate-cache element type: the time type promoted with the actual rate output
-    # type(s). For ordinary Float64 rates this stays Float64 (behavior unchanged);
-    # if a rate returns a non-Float64 number (e.g. a StochasticAD StochasticTriple),
-    # the cache holds that type instead of forcing it into Float64, so such rates
-    # can pass through the existing SSA path. Plain promotion/conversion -- no
-    # StochasticAD dependency in src/.
-    RT = ssa_rate_eltype(u, p, t, majumps, rates)
-
     # current jump rates, allows mass action rates and constant jumps
-    cur_rates = Vector{RT}(undef, get_num_majumps(majumps) + length(rates))
+    cur_rates = Vector{typeof(t)}(undef, get_num_majumps(majumps) + length(rates))
 
-    sum_rate = convert(RT, zero(t))
+    sum_rate = zero(typeof(t))
     next_jump = 0
-    next_jump_time = convert(RT, typemax(typeof(t)))
-    jump_agg_type(next_jump, next_jump_time, convert(RT, end_time), cur_rates,
-        sum_rate, majumps, rates, affects!, save_positions, rng; kwargs...)
+    next_jump_time = typemax(typeof(t))
+    jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
+        majumps, rates, affects!, save_positions, rng; kwargs...)
 end
 
 """

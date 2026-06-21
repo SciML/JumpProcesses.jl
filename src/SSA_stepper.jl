@@ -60,54 +60,71 @@ struct SSAStepper <: DiffEqBase.AbstractDEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
 
 """
-    BoundedSSA(; nmax)
+    BoundedSSA(; rate_bound)
 
 A StochasticAD-compatible SSA algorithm for **jump-only** `ConstantRateJump`
-`DiscreteProblem`s, enabling correct gradients via StochasticAD's
-`derivative_estimate`/`stochastic_triple`.
+`DiscreteProblem`s, giving correct gradients via StochasticAD's
+`derivative_estimate`/`stochastic_triple` — with `saveat` support, so the whole
+sampled path is differentiable, not only the terminal state.
 
-The stock `SSAStepper` cannot be differentiated with StochasticAD: it decides the
-number of events with a `while integrator.t < integrator.tstop < end_time` loop,
-i.e. a boolean predicate on (triple-valued) time, which StochasticAD forbids by
-design — so the event-count derivative is dropped (a state-dependent rate yields
-a gradient of `0`). `BoundedSSA` instead runs a **fixed-length loop of at most
-`nmax` jump attempts**, replacing the data-dependent control flow with stochastic
-primitives (a tracked `Bernoulli` for "is there a next event before the end
-time?", a truncated exponential for the time, stick-breaking `Bernoulli`s for the
-channel, and multiplicative-select masking to freeze the trajectory once the
-event chain breaks). This is exact up to `P(N > nmax)`, the probability of more
-than `nmax` events.
+The stock `SSAStepper` cannot be differentiated with StochasticAD: it advances
+time with a `while integrator.t < integrator.tstop < end_time` loop, i.e. a
+boolean predicate on (triple-valued) time, which StochasticAD forbids by design —
+so the event-count derivative is dropped (a state-dependent rate yields a gradient
+of `0`). `BoundedSSA` instead uses **uniformization (thinning)** against a fixed
+total-propensity bound `Λ = rate_bound`:
 
-With ordinary `Float64` parameters `solve(jprob, BoundedSSA(; nmax))` is just a
-bounded SSA simulation; with StochasticAD triples it differentiates.
+  - candidate event times form a homogeneous Poisson process of rate `Λ` on the
+    time span — these are **parameter-free**, so the loop never branches on a
+    triple and the times stay `Float64`;
+  - at each candidate the current total propensity `a(u)` is recomputed and the
+    event is *accepted* with a tracked `Bernoulli(a(u)/Λ)` (otherwise it is a
+    **null event** absorbing the slack `Λ - a(u)`);
+  - the firing channel is chosen by stick-breaking `Bernoulli`s.
+
+All parameter dependence flows through the accept / channel `Bernoulli`s, so the
+gradient is captured. This is **unbiased** (no step cap) whenever `Λ` is a valid
+bound, and `saveat` is exact because the candidate times are fixed `Float64`.
+
+With ordinary `Float64` parameters `solve(jprob, BoundedSSA(; rate_bound))` is an
+ordinary (uniformization) SSA simulation; with StochasticAD triples it
+differentiates.
 
 # Keyword arguments
 
-  - `nmax` (required): the fixed upper bound on the number of jump events. If the
-    true count can exceed `nmax` the result is biased; size it from
-    [`saturation_probability`](@ref).
+  - `rate_bound` (required): a constant `Λ` upper-bounding the **total** propensity
+    `Σₖ rateₖ(u, p, t)` over the whole trajectory (and over the parameter
+    perturbation). Valid for systems with rigorously bounded populations; a looser
+    bound only costs efficiency (more null events), not accuracy. If `Λ` is
+    violated the accept probability exceeds 1 and sampling errors — pick it with
+    margin.
+
+# `solve` options
+
+  - `saveat`: times (a vector, or a `Number` step) at which to return the solution,
+    with `save_start`/`save_end` controlling the endpoints (same conventions as
+    `SimpleTauLeaping`, via `_process_saveat`); defaults to `[t0, tf]`. `sol.u[i]` is
+    the differentiable state at `sol.t[i]`, and `sol(t)` interpolates (piecewise
+    constant, as with `SSAStepper`).
 
 # Scope / limitations
 
-  - `ConstantRateJump`s only (state-dependent rates are supported); jump-only, no
-    continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported
-    (`evalrxrate` is not triple-generic and mass-action rate constants flow
-    through `param_mapper`).
+  - `ConstantRateJump`s only (state-dependent rates supported); jump-only, no
+    continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported.
   - Additive affects only (the net change is inferred from `affect!` and checked).
   - The differentiation parameter must enter through `prob.p`.
   - The implementation lives in the `JumpProcessesStochasticADExt` extension, so
     `StochasticAD` and `Distributions` must both be loaded to `solve` with it.
 
-See also [`bounded_ssa_final_state`](@ref) (the differentiable core) and
-[`saturation_probability`](@ref).
+See also [`bounded_ssa_path`](@ref), the differentiable core this wraps.
 """
-struct BoundedSSA{N} <: DiffEqBase.AbstractDEAlgorithm
-    nmax::N
+struct BoundedSSA{B} <: DiffEqBase.AbstractDEAlgorithm
+    rate_bound::B
 end
-function BoundedSSA(; nmax = nothing)
-    nmax === nothing && error("BoundedSSA requires the keyword argument `nmax` " *
-                              "(a fixed upper bound on the number of jump events).")
-    BoundedSSA{typeof(nmax)}(nmax)
+function BoundedSSA(; rate_bound = nothing)
+    rate_bound === nothing && error("BoundedSSA requires the keyword argument " *
+        "`rate_bound` (a constant upper bound on the total propensity).")
+    BoundedSSA{typeof(rate_bound)}(rate_bound)
 end
 
 """

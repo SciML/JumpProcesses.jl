@@ -2,31 +2,34 @@ module JumpProcessesStochasticADExt
 
 # StochasticAD-compatible differentiation for jump-only `ConstantRateJump` SSA
 # problems — the implementation behind the `BoundedSSA` algorithm and the
-# `bounded_ssa_final_state` / `saturation_probability` entry points.
+# `bounded_ssa_path` entry point.
 #
 # Why this exists: the stock `solve(jprob, SSAStepper())` cannot be differentiated
-# with StochasticAD. It decides the number of events with a
-# `while integrator.t < integrator.tstop < end_time` loop — a boolean predicate on
-# (triple-valued) time, which StochasticAD forbids by design — so the event-count
-# derivative (the dominant term for state-dependent rates) is dropped and a
-# state-dependent rate gives a gradient of 0. We instead run a fixed-length loop of
-# at most `nmax` jump attempts, representing every discrete decision through
-# stochastic primitives / masks rather than Julia branches. Exact up to
-# `P(N > nmax)`.
+# with StochasticAD. It advances time with a `while integrator.t < integrator.tstop
+# < end_time` loop — a boolean predicate on (triple-valued) time, which StochasticAD
+# forbids by design — so the event-count derivative (the dominant term for
+# state-dependent rates) is dropped and a state-dependent rate gives a gradient of 0.
+#
+# Instead we use UNIFORMIZATION (thinning) against a constant total-propensity bound
+# `Λ = rate_bound`: candidate event times are a homogeneous Poisson process of rate
+# `Λ` (parameter-free, so the loop never branches on a triple and times stay
+# Float64); at each candidate the event is accepted with a tracked
+# `Bernoulli(total_rate(u)/Λ)` (else a null event), and the channel is chosen by
+# stick-breaking. All parameter dependence flows through the accept/channel
+# Bernoullis, so the gradient is captured; it is unbiased given a valid `Λ`, and
+# `saveat` is exact because the candidate times are fixed Float64.
+#
+# This code is fully SEPARATE from the `Direct` aggregator: it reads `jump.rate` /
+# `jump.affect!` only and never touches `time_to_next_jump` or the Direct rate cache.
 #
 # Scope: jump-only `DiscreteProblem`s with `ConstantRateJump`s (state-dependent
-# rates OK) and additive affects. No `MassActionJump` (see `_constant_rate_channels`
-# for why), no `VariableRateJump`, no continuous drift, no rootfinding.
+# rates OK) and additive affects. No `MassActionJump`, no `VariableRateJump`.
 
 using JumpProcesses
 using StochasticAD
-using Distributions: Bernoulli
+using Distributions: Bernoulli, Poisson
 using DiffEqBase
 using Random
-
-# primal value of a (possibly triple) scalar.
-_val(x) = x
-_val(x::StochasticAD.StochasticTriple) = StochasticAD.value(x)
 
 # minimal integrator-like object so a jump's `affect!` can be applied to a scratch
 # state to read off its net effect.
@@ -44,8 +47,8 @@ function _net_change(affect!, ubase, p, t0)
 end
 
 # infer a jump's net state change, verifying it is *additive* (same change from two
-# different base states). The final state is built by adding `Δuₖ` on each event,
-# so non-additive (state-dependent) affects are out of scope.
+# different base states). Additive affects are required: the state is built by
+# adding `Δuₖ` on each event.
 function _additive_change(jump, u0, p, t0)
     base = float.(collect(u0))
     Δ  = _net_change(jump.affect!, base, p, t0)
@@ -57,140 +60,145 @@ function _additive_change(jump, u0, p, t0)
     return Δ
 end
 
-# Resolve a JumpProblem into the per-channel data the bounded loop needs:
-# `(rates_tuple, Δs)` where `rates_tuple` is the tuple of `ConstantRateJump` rate
-# functions (fed to the shared `JumpProcesses.fill_cur_rates!`) and `Δs[k]` is
-# channel `k`'s additive net state change.
-function _constant_rate_channels(jprob, u0, p, t0)
+function _check_supported(jprob)
+    jprob.prob isa DiscreteProblem || error(
+        "BoundedSSA only supports JumpProblems defined over DiscreteProblems " *
+        "(pure jumps, no continuous drift).")
     maj = jprob.massaction_jump
     (maj === nothing || JumpProcesses.get_num_majumps(maj) == 0) || error(
-        "BoundedSSA does not yet support MassActionJump. `evalrxrate` is not " *
-        "triple-generic: its `::R` return assertion pins the rate to the " *
-        "`scaled_rates` element type, and the order>1 branch tests `specpop <= 0` " *
-        "(a boolean on triple-valued species). Mass-action rate constants also " *
-        "flow through `param_mapper(p)`. Build the model with ConstantRateJumps, " *
-        "or track the mass-action follow-up.")
+        "BoundedSSA does not yet support MassActionJump; build the model with " *
+        "ConstantRateJumps.")
     vj = jprob.variable_jumps
     (vj === nothing || isempty(vj)) || error(
         "BoundedSSA supports jump-only constant-rate problems only; it does not " *
         "support VariableRateJumps.")
-    cjumps = jprob.constant_jumps
-    (cjumps === nothing || isempty(cjumps)) && error(
+    cj = jprob.constant_jumps
+    (cj === nothing || isempty(cj)) && error(
         "BoundedSSA requires at least one ConstantRateJump.")
-    rates_tuple, _ = JumpProcesses.get_jump_info_tuples(cjumps)
-    Δs = [_additive_change(j, u0, p, t0) for j in cjumps]
-    return rates_tuple, Δs
+    nothing
+end
+
+# Internal uniformization driver: returns `(tsave, usave)` at the resolved save
+# schedule. Uses `JumpProcesses._process_saveat` (from src/simple_regular_solve.jl)
+# for the interior save times + save_start/save_end flags, so saveat semantics match
+# SimpleTauLeaping and the rest of the package. The save loop mirrors that solver's
+# push idiom; all save-time comparisons are on parameter-free Float64 candidate times.
+function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
+    _check_supported(jprob)
+    u0    = jprob.prob.u0
+    jumps = jprob.constant_jumps
+    t0, tf = first(tspan), last(tspan)
+    ΔT    = tf - t0
+    K     = length(jumps)
+    n     = length(u0)
+
+    saveat_times, ss, se = JumpProcesses._process_saveat(saveat, (t0, tf),
+        save_start, save_end)
+
+    Δ = [_additive_change(jumps[k], u0, p, t0) for k in 1:K]   # Float64 net change/channel
+    z = 0 * sum(p)                                # triple zero carrying p's type
+    u = [float(u0[i]) + z for i in 1:n]
+
+    tsave = typeof(t0)[]
+    usave = typeof(u)[]
+    if ss
+        push!(tsave, t0)
+        push!(usave, copy(u))
+    end
+
+    # candidate events ~ homogeneous Poisson(Λ) on [t0, tf]. PARAMETER-FREE: Λ is a
+    # constant, so M and the times carry no derivative and never branch on a triple.
+    M = rand(Poisson(Λ * ΔT))
+    ctimes = sort!(t0 .+ ΔT .* rand(M))
+
+    save_idx = 1
+    for m in 1:M
+        tm = @inbounds ctimes[m]
+        # record interior save times crossed before this candidate (Float64 compares)
+        while save_idx <= length(saveat_times) && @inbounds(saveat_times[save_idx]) < tm
+            push!(tsave, @inbounds saveat_times[save_idx])
+            push!(usave, copy(u))
+            save_idx += 1
+        end
+
+        rates = [jumps[k].rate(u, p, tm) for k in 1:K]   # recomputed at current state
+        total = sum(rates)
+        accept = rand(Bernoulli(total / Λ))              # thinning: real vs null event
+
+        # which channel: stick-breaking conditional Bernoullis (last deterministic)
+        notchosen = 1 + z
+        sel = [z for _ in 1:n]
+        for k in 1:K
+            chose = k < K ?
+                    rand(Bernoulli(rates[k] / (sum(rates[j] for j in k:K) + 1e-300))) :
+                    (1 + z)
+            take = notchosen * chose
+            sel  = [sel[i] + take * Δ[k][i] for i in 1:n]
+            notchosen = notchosen * (1 - chose)
+        end
+
+        u = [u[i] + accept * sel[i] for i in 1:n]        # apply only on a real event
+    end
+    while save_idx <= length(saveat_times)
+        push!(tsave, @inbounds saveat_times[save_idx])
+        push!(usave, copy(u))
+        save_idx += 1
+    end
+    if se
+        push!(tsave, tf)
+        push!(usave, copy(u))
+    end
+    return tsave, usave
 end
 
 """
-    bounded_ssa_final_state(jprob, p; nmax, tspan = jprob.prob.tspan,
-                            return_saturation = false)
+    bounded_ssa_path(jprob, p; rate_bound, saveat = tf, save_start = nothing,
+                     save_end = nothing, tspan = jprob.prob.tspan)
 
-Final state at `tspan[2]` of a jump-only `ConstantRateJump` process, computed so
-that StochasticAD's `derivative_estimate`/`stochastic_triple` give correct
-gradients — including state-dependent rates such as `rate(u,p,t) = p[1]*u[1]`.
-This is the differentiable core behind [`BoundedSSA`](@ref).
+Differentiable core behind [`BoundedSSA`](@ref). Simulates the jump-only
+`ConstantRateJump` process by uniformization against the constant total-propensity
+bound `rate_bound`, and returns the (StochasticAD-differentiable) state at each save
+time as a `Vector` of state vectors.
 
-Per-channel rates are computed via the same `JumpProcesses.fill_cur_rates!` helper
-the `Direct` aggregator uses, so a triple-valued rate passes through the existing
-rate machinery. See [`BoundedSSA`](@ref) for the method and scope, and
-[`saturation_probability`](@ref) for sizing `nmax`.
-
-`return_saturation = true` returns `(u, active)`; a non-zero primal `active` means
-the trajectory used all `nmax` events and may be truncated.
+`saveat`/`save_start`/`save_end` follow the usual JumpProcesses conventions (via the
+same `_process_saveat` as `SimpleTauLeaping`): `saveat` is a `Number` step or a
+collection of times; endpoints are controlled by `save_start`/`save_end`. Wrap in
+`derivative_estimate` for gradients, e.g. of the terminal state:
 
 ```julia
 derivative_estimate(p0[k]) do pk
     pv = [j == k ? pk : oftype(pk, p0[j]) for j in eachindex(p0)]
-    bounded_ssa_final_state(jprob, pv; nmax = 500)[1]
+    bounded_ssa_path(jprob, pv; rate_bound = Λ, saveat = [tf])[end][1]
 end
 ```
+
+See [`BoundedSSA`](@ref) for the method and the meaning/validity of `rate_bound`.
 """
-function JumpProcesses.bounded_ssa_final_state(jprob, p; nmax,
-        tspan = jprob.prob.tspan, return_saturation = false)
-    prob = jprob.prob
-    u0 = prob.u0
-    t0, tf = first(tspan), last(tspan)
-
-    rates_tuple, Δs = _constant_rate_channels(jprob, u0, p, t0)
-    K = length(Δs)
-    n = length(u0)
-
-    z = 0 * sum(p)                       # triple zero (value 0) carrying p's type
-    u = [float(u0[i]) + z for i in 1:n]  # triple-typed state
-    t = float(t0) + z
-    active = 1 + z                       # 1 while the event chain is unbroken
-
-    for _ in 1:nmax
-        # raw per-channel rates via the shared aggregator helper (triples flow through)
-        cur = [z for _ in 1:K]
-        JumpProcesses.fill_cur_rates!(cur, u, p, t, nothing, rates_tuple)
-        total = sum(cur)
-
-        Δt   = tf - t
-        pocc = 1 - exp(-total * Δt)            # P(next event before tf)
-        occurs = rand(Bernoulli(pocc))
-        step = active * occurs
-
-        # which channel: stick-breaking conditional Bernoullis + multiplicative
-        # select; last channel deterministic, suffix-sum denominator in [0, 1).
-        notchosen = 1 + z
-        sel = [z for _ in 1:n]
-        @inbounds for k in 1:K
-            chose = k < K ?
-                    rand(Bernoulli(cur[k] / (sum(cur[j] for j in k:K) + 1e-300))) :
-                    (1 + z)
-            take = notchosen * chose
-            Δk = Δs[k]
-            sel = [sel[i] + take * Δk[i] for i in 1:n]
-            notchosen = notchosen * (1 - chose)
-        end
-
-        U = rand()
-        τ = -log(1 - U * pocc) / (total + 1e-300)   # truncated-exponential time
-        t = t + step * τ
-        u = [u[i] + step * sel[i] for i in 1:n]
-        active = active * occurs
-    end
-
-    return return_saturation ? (u, active) : u
+function JumpProcesses.bounded_ssa_path(jprob, p; rate_bound,
+        saveat = last(jprob.prob.tspan), save_start = nothing, save_end = nothing,
+        tspan = jprob.prob.tspan)
+    _, usave = _bounded_ssa(jprob, p, rate_bound, tspan, saveat, save_start, save_end)
+    return usave
 end
 
-"""
-    saturation_probability(jprob, p; nmax, tspan = jprob.prob.tspan, ntrials = 1000)
-
-Monte-Carlo estimate of `P(N > nmax)` — the probability the process has more than
-`nmax` events on `tspan`, i.e. the bias of the bounded SSA path. Call with
-ordinary (`Float64`) parameters `p`; size `nmax` so this is negligible.
-"""
-function JumpProcesses.saturation_probability(jprob, p; nmax,
-        tspan = jprob.prob.tspan, ntrials = 1000)
-    nsat = 0
-    for _ in 1:ntrials
-        _, active = JumpProcesses.bounded_ssa_final_state(jprob, p; nmax, tspan,
-            return_saturation = true)
-        (_val(active) != 0) && (nsat += 1)
-    end
-    return nsat / ntrials
-end
-
-# solve(jprob, BoundedSSA(; nmax)): run the bounded path and return a minimal
-# (start, end) solution. `sol.u[end]` is the differentiable final state.
-function DiffEqBase.__solve(jprob::JumpProblem, alg::BoundedSSA;
-        seed = nothing, tspan = jprob.prob.tspan, kwargs...)
+# solve(jprob, BoundedSSA(; rate_bound); saveat, save_start, save_end): run the
+# uniformization path and return a solution whose `u[i]` is the differentiable state
+# at `t[i]`. `sol(t)` works via piecewise-constant interpolation (as with SSAStepper).
+# Defined as `solve` (like SimpleTauLeaping), since BoundedSSA is self-contained and
+# does not use the integrator/init machinery.
+function DiffEqBase.solve(jump_prob::JumpProblem, alg::BoundedSSA;
+        seed = nothing, saveat = nothing, save_start = nothing, save_end = nothing,
+        tspan = jump_prob.prob.tspan, kwargs...)
     seed === nothing || Random.seed!(seed)
-    prob = jprob.prob
-    u_final = JumpProcesses.bounded_ssa_final_state(jprob, prob.p; nmax = alg.nmax,
-        tspan = tspan)
-    # promote u0 to the (possibly triple) final-state type without needing a
-    # convert(::StochasticTriple, ::Float64): multiply by a clean zero.
-    u0p = [u_final[i] * 0 + float(prob.u0[i]) for i in eachindex(prob.u0)]
-    ts = [float(first(tspan)), float(last(tspan))]
-    us = [u0p, u_final]
+    prob = jump_prob.prob
+    ts, us = _bounded_ssa(jump_prob, prob.p, alg.rate_bound, tspan, saveat,
+        save_start, save_end)
     DiffEqBase.build_solution(prob, alg, ts, us;
+        dense = true,
+        interp = DiffEqBase.ConstantInterpolation(ts, us),
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
-        interp = DiffEqBase.ConstantInterpolation(ts, us))
+        retcode = DiffEqBase.ReturnCode.Success)
 end
 
 end # module

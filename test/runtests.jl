@@ -75,9 +75,6 @@ end
 
     if GROUP == "StochasticAD"
         activate_stochasticad_env()
-        # Guards the shared `fill_cur_rates!` refactor the bounded path depends on.
-        # JumpProcesses-only (no OrdinaryDiffEq), so it runs in this isolated env.
-        @time @safetestset "fill_cur_rates! Stock-Path Regression" begin include("fill_cur_rates_regression.jl") end
         @time @safetestset "StochasticAD Extension Tests" begin include("stochasticad_tests.jl") end
     end
 

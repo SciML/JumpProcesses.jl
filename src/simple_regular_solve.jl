@@ -1,6 +1,6 @@
-struct SimpleTauLeaping <: DiffEqBase.AbstractDEAlgorithm end
+struct SimpleTauLeaping <: SciMLBase.AbstractDEAlgorithm end
 
-struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: DiffEqBase.AbstractDEAlgorithm
+struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: SciMLBase.AbstractDEAlgorithm
     epsilon::T  # Error control parameter
 end
 
@@ -142,9 +142,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         push!(tsave, tspan[2])
     end
 
-    sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
+    sol = SciMLBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(tsave, usave))
+        interp = SciMLBase.ConstantInterpolation(tsave, usave))
 end
 
 # Compute the highest order of reaction (HOR) for each reaction j, as per Cao et al. (2006), Section IV.
@@ -399,9 +399,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective, maj,
         save_end)
 
-    sol = DiffEqBase.build_solution(prob, alg, tsave, usave,
+    sol = SciMLBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,
-        interp = DiffEqBase.ConstantInterpolation(tsave, usave))
+        interp = SciMLBase.ConstantInterpolation(tsave, usave))
     return sol
 end
 

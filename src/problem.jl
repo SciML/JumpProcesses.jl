@@ -1,5 +1,5 @@
 function isinplace_jump(p, rj)
-    if p isa DiscreteProblem && p.f === DiffEqBase.DISCRETE_INPLACE_DEFAULT &&
+    if p isa DiscreteProblem && p.f === SciMLBase.DISCRETE_INPLACE_DEFAULT &&
        rj !== nothing
         # Just a default discrete problem f, so don't use it for iip
         DiffEqBase.isinplace(rj)
@@ -71,7 +71,7 @@ the DifferentialEquations.jl [docs](https://docs.sciml.ai/JumpProcesses/stable/)
 examples and commonly asked questions.
 """
 mutable struct JumpProblem{iip, P, A, C, J <: Union{Nothing, AbstractJumpAggregator}, J1, 
-        J2, J3, J4, R, K} <: DiffEqBase.AbstractJumpProblem{P, J}
+        J2, J3, J4, R, K} <: SciMLBase.AbstractJumpProblem{P, J}
     """The type of problem to couple the jumps to. For a pure jump process use `DiscreteProblem`, to couple to ODEs, `ODEProblem`, etc."""
     prob::P
     """The aggregator algorithm that determines the next jump times and types for `ConstantRateJump`s and `MassActionJump`s. Examples include `Direct`."""
@@ -111,7 +111,7 @@ function remake_extended_u0(prob, newu0, rng)
     ExtendedJumpArray(newu0, jump_u)
 end
 
-Base.@pure remaker_of(prob::T) where {T <: JumpProblem} = DiffEqBase.parameterless_type(T)
+Base.@pure remaker_of(prob::T) where {T <: JumpProblem} = SciMLBase.parameterless_type(T)
 function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
         interpret_symbolicmap = true, use_defaults = false, kwargs...)
     T = remaker_of(jprob)
@@ -240,7 +240,7 @@ make_kwarg(; kwargs...) = kwargs
 
 function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet;
         vr_aggregator::VariableRateAggregator = VR_FRM(),
-        save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
+        save_positions = prob isa SciMLBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,
@@ -319,7 +319,7 @@ end
 
 # Special dispatch for PureLeaping aggregator - bypasses all aggregation
 function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
-        save_positions = prob isa DiffEqBase.AbstractDiscreteProblem ?
+        save_positions = prob isa SciMLBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
         rng = DEFAULT_RNG, scale_rates = true, useiszero = true,
         spatial_system = nothing, hopping_constants = nothing,

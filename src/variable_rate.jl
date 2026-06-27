@@ -73,11 +73,11 @@ function extend_u0(prob, Njumps, rng)
     return u0
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
     error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
 
-function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
@@ -103,7 +103,7 @@ function extend_problem(prob::DiffEqBase.AbstractODEProblem, jumps; rng = DEFAUL
     remake(prob; f, u0)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
@@ -139,7 +139,7 @@ function extend_problem(prob::DiffEqBase.AbstractSDEProblem, jumps; rng = DEFAUL
     remake(prob; f, g = jump_g, u0)
 end
 
-function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
@@ -166,7 +166,7 @@ function extend_problem(prob::DiffEqBase.AbstractDDEProblem, jumps; rng = DEFAUL
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
-function extend_problem(prob::DiffEqBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)

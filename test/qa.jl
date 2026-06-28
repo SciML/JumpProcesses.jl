@@ -20,8 +20,8 @@ run_qa(
                 Symbol("@pure"), :BroadcastStyle, :Broadcasted, :Cartesian,
                 :DefaultArrayStyle, :FastMath, :Unknown, :result_style, :sqrt_fast,
                 # SciMLBase non-public
-                :ConstantInterpolation, :DEIntegrator, :DISCRETE_INPLACE_DEFAULT,
-                :EnsembleAlgorithm, :__init, :__solve, :get_colorizers, :isdenseplot,
+                :ConstantInterpolation, :DISCRETE_INPLACE_DEFAULT,
+                :__init, :__solve, :get_colorizers, :isdenseplot,
                 :parameterless_type, :plottable_indices, :save_discretes_if_enabled!,
                 :save_final_discretes!, :solution_new_retcode, :unwrapped_f,
                 :updated_u0_p,
@@ -35,7 +35,6 @@ run_qa(
         ),
         all_explicit_imports_are_public = (;
             ignore = (
-                :DEIntegrator,                  # SciMLBase non-public
                 :add_fast,                      # Base.FastMath non-public
                 :gauss_points, :gauss_weights,  # DiffEqCallbacks non-public
                 :plot_indices,                  # SciMLBase non-public

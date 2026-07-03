@@ -56,7 +56,7 @@ see the
 [tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 for details.
 """
-struct SSAStepper <: DiffEqBase.AbstractDEAlgorithm end
+struct SSAStepper <: SciMLBase.AbstractDEAlgorithm end
 SciMLBase.allows_late_binding_tstops(::SSAStepper) = true
 
 """
@@ -149,7 +149,7 @@ end
     end
 end
 
-function DiffEqBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)
+function SciMLBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)
     # init will handle kwargs merging via init_call
     integrator = init(jump_prob, alg; kwargs...)
     solve!(integrator)
@@ -194,7 +194,7 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
     end
 
     if integrator.sol.retcode === ReturnCode.Default
-        integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
+        integrator.sol = SciMLBase.solution_new_retcode(integrator.sol, ReturnCode.Success)
     end
 end
 
@@ -225,7 +225,7 @@ function check_continuous_callback_error(callback)
     return nothing
 end
 
-function DiffEqBase.__init(jump_prob::JumpProblem,
+function SciMLBase.__init(jump_prob::JumpProblem,
         alg::SSAStepper;
         save_start = true,
         save_end = true,
@@ -276,10 +276,10 @@ function DiffEqBase.__init(jump_prob::JumpProblem,
     end
     save_everystep = any(cb.save_positions)
 
-    sol = DiffEqBase.build_solution(prob, alg, t, u, dense = save_everystep,
+    sol = SciMLBase.build_solution(prob, alg, t, u, dense = save_everystep,
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
-        interp = DiffEqBase.ConstantInterpolation(t, u))
+        interp = SciMLBase.ConstantInterpolation(t, u))
 
     _saveat = (saveat isa Number) ? (prob.tspan[1]:saveat:prob.tspan[2]) : saveat
     if _saveat !== nothing && !isempty(_saveat) && _saveat[1] == prob.tspan[1]
@@ -465,7 +465,7 @@ end
 
 function DiffEqBase.terminate!(integrator::SSAIntegrator, retcode = ReturnCode.Terminated)
     integrator.keep_stepping = false
-    integrator.sol = DiffEqBase.solution_new_retcode(integrator.sol, retcode)
+    integrator.sol = SciMLBase.solution_new_retcode(integrator.sol, retcode)
     nothing
 end
 

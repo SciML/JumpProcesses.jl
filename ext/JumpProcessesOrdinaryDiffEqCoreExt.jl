@@ -2,6 +2,7 @@ module JumpProcessesOrdinaryDiffEqCoreExt
 
 using JumpProcesses
 import DiffEqBase
+import SciMLBase
 import OrdinaryDiffEqCore: OrdinaryDiffEqAlgorithm, DAEAlgorithm,
     StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm
 
@@ -14,8 +15,8 @@ import OrdinaryDiffEqCore: OrdinaryDiffEqAlgorithm, DAEAlgorithm,
 # This method resolves the ambiguity by being more specific in the problem type
 # (AbstractJumpProblem vs Union{..., AbstractJumpProblem, ...}) while matching
 # the exact algorithm union from OrdinaryDiffEqCore.
-function DiffEqBase.__init(
-        _jump_prob::DiffEqBase.AbstractJumpProblem{P},
+function SciMLBase.__init(
+        _jump_prob::SciMLBase.AbstractJumpProblem{P},
         alg::Union{OrdinaryDiffEqAlgorithm, DAEAlgorithm,
             StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm};
         merge_callbacks = true, kwargs...) where {P}

@@ -112,15 +112,6 @@ include("aggregators/aggregated_api.jl")
 include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
-# StochasticAD support. Stub; the method is provided by the package extension
-# `ext/JumpProcessesStochasticADExt.jl`, which loads only when StochasticAD and
-# Distributions are both available. No StochasticAD code lives in `src/`. The
-# `BoundedSSA` algorithm struct itself lives in `src` (see SSA_stepper.jl) so it
-# is always referenceable/documentable; only its `solve` implementation (and this
-# differentiable-path helper) are in the extension.
-function bounded_ssa_path end
-export bounded_ssa_path
-
 """
 Aggregator to indicate that individual jumps should also be handled via the leaping
 algorithm that is passed to solve.
@@ -141,6 +132,10 @@ export SSAStepper, BoundedSSA
 # leaping: 
 include("simple_regular_solve.jl")
 export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
+
+# BoundedSSA: uniformization SSA solver (differentiable via the StochasticAD extension)
+include("bounded_ssa.jl")
+export bounded_ssa_path
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

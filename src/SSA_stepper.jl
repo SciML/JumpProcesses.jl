@@ -112,9 +112,13 @@ differentiates.
   - `ConstantRateJump`s only (state-dependent rates supported); jump-only, no
     continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported.
   - Additive affects only (the net change is inferred from `affect!` and checked).
-  - The differentiation parameter must enter through `prob.p`.
-  - The implementation lives in the `JumpProcessesStochasticADExt` extension, so
-    `StochasticAD` and `Distributions` must both be loaded to `solve` with it.
+  - The differentiation parameter `prob.p` must be a summable/indexable numeric
+    collection (e.g. a `Vector`). SciMLStructures parameter objects (MTK/Catalyst
+    tunables) are not yet specialized — a documented follow-up.
+  - The solver itself is plain (no StochasticAD dependency): with ordinary parameters
+    `solve(jprob, BoundedSSA(; rate_bound))` is a uniformization SSA simulation. It
+    becomes differentiable only when `StochasticAD` (and `Distributions`) are loaded,
+    which supplies the differentiable accept/channel decision.
 
 See also [`bounded_ssa_path`](@ref), the differentiable core this wraps.
 """

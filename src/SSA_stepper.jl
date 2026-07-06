@@ -136,17 +136,8 @@ function Base.propertynames(integrator::SSAIntegrator, private::Bool = false)
     return (fieldnames(SSAIntegrator)..., :derivative_discontinuity)
 end
 
-function DiffEqBase.u_modified!(integrator::SSAIntegrator, bool::Bool)
+function SciMLBase.derivative_discontinuity!(integrator::SSAIntegrator, bool::Bool)
     integrator.u_modified = bool
-end
-
-# SciMLBase v3 renamed `u_modified!` to `derivative_discontinuity!` and internal
-# callback code now calls the new name. Define the method when available so
-# callbacks keep working on v3. Guarded so the file still loads on v2.
-@static if isdefined(SciMLBase, :derivative_discontinuity!)
-    function SciMLBase.derivative_discontinuity!(integrator::SSAIntegrator, bool::Bool)
-        integrator.u_modified = bool
-    end
 end
 
 function SciMLBase.__solve(jump_prob::JumpProblem, alg::SSAStepper; kwargs...)

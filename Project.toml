@@ -8,6 +8,7 @@ ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 FunctionWrappers = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
@@ -22,15 +23,12 @@ SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
 
 [weakdeps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 OrdinaryDiffEqCore = "bbf590c4-e513-4bbe-9b18-05decba2e5d8"
-StochasticAD = "e4facb34-4f7e-4bec-b153-e122c37934ac"
 
 [extensions]
 JumpProcessesKernelAbstractionsExt = ["Adapt", "KernelAbstractions"]
 JumpProcessesOrdinaryDiffEqCoreExt = "OrdinaryDiffEqCore"
-JumpProcessesStochasticADExt = ["StochasticAD", "Distributions"]
 
 [compat]
 ADTypes = "1.22.0"
@@ -40,6 +38,7 @@ ArrayInterface = "7.25.0"
 DataStructures = "0.19.5, 0.19"
 DiffEqBase = "7.5.5, 7"
 DiffEqCallbacks = "4.17.0"
+Distributions = "0.25"
 DocStringExtensions = "0.9.5"
 ExplicitImports = "1"
 FastBroadcast = "1.3.2, 1"
@@ -61,7 +60,6 @@ SciMLBase = "3.18.0, 3.1"
 StableRNGs = "1"
 StaticArrays = "1.9.18"
 Statistics = "1"
-StochasticAD = "0.1"
 StochasticDiffEq = "7.0.0, 7"
 SymbolicIndexingInterface = "0.3.48"
 Test = "1"

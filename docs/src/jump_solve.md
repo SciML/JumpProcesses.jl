@@ -62,6 +62,17 @@ algorithms are optimized for pure jump problems.
     [`SSAStepper`](@ref) generated-solution uses piecewise constant
     interpolation, and can therefore exactly evaluate the sampled solution
     path at any time when only saving the post-jump state for each jump.
+  - `BoundedSSA`: a uniformization (thinning) SSA for jump-only `ConstantRateJump`
+    `DiscreteProblem`s, called as `solve(jprob, BoundedSSA(; rate_bound))` with a
+    constant bound on the total propensity. Unlike `SSAStepper` it is designed to
+    compose with automatic differentiation: when `StochasticAD.jl` is loaded and a
+    `StochasticTriple` parameter is used, `derivative_estimate` /
+    `stochastic_triple` give correct gradients of expectations over the process
+    (including state-dependent rates); it supports `saveat` for the full path. With
+    ordinary parameters it is just an (unbiased) SSA simulation. Valid whenever the
+    total propensity is bounded over the trajectory (e.g. population-bounded
+    systems); currently `ConstantRateJump`s with additive affects only (no
+    `MassActionJump`/`VariableRateJump` yet). See [`BoundedSSA`](@ref).
 
 ## RegularJump Compatible Methods
 

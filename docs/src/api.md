@@ -9,6 +9,7 @@ CurrentModule = JumpProcesses
 ```@docs
 JumpProblem
 SSAStepper
+BoundedSSA
 reset_aggregated_jumps!
 ```
 

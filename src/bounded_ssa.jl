@@ -1,22 +1,78 @@
-# BoundedSSA — a uniformization (thinning) SSA for jump-only `ConstantRateJump`
-# `DiscreteProblem`s. It is an ordinary SSA simulator that ALSO composes with
-# StochasticAD's `derivative_estimate` when StochasticAD is loaded: the only
-# StochasticAD-specific piece is the discrete accept/channel decision, funnelled
-# through the `_bounded_ssa_bernoulli` hook that the `JumpProcessesStochasticADExt`
-# extension overloads for `StochasticTriple`. The solver itself does not depend on
-# StochasticAD, so it lives here in `src`.
-#
-# Method (uniformization / thinning against a constant total-propensity bound
-# `Λ = rate_bound`): candidate event times are a homogeneous Poisson process of rate
-# `Λ` — parameter-free, so the loop never branches on a (triple-valued) time and the
-# times stay `Float64`. At each candidate the event is accepted with a
-# `Bernoulli(total_rate(u)/Λ)` (otherwise a null event absorbing the slack `Λ - a(u)`),
-# and the firing channel is chosen by stick-breaking. When a `StochasticTriple`
-# parameter flows in, the accept/channel Bernoullis become tracked, so the gradient is
-# captured; it is unbiased given a valid `Λ`, and `saveat` is exact.
 
-# minimal integrator-like object so a jump's `affect!` can be applied to a scratch
-# state to read off its net effect.
+"""
+    BoundedSSA(; rate_bound)
+
+A StochasticAD-compatible SSA algorithm for **jump-only** `ConstantRateJump`
+`DiscreteProblem`s, giving correct gradients via StochasticAD's
+`derivative_estimate`/`stochastic_triple` — with `saveat` support, so the whole
+sampled path is differentiable, not only the terminal state.
+
+The stock `SSAStepper` cannot be differentiated with StochasticAD: it advances
+time with a `while integrator.t < integrator.tstop < end_time` loop, i.e. a
+boolean predicate on (triple-valued) time, which StochasticAD forbids by design —
+so the event-count derivative is dropped (a state-dependent rate yields a gradient
+of `0`). `BoundedSSA` instead uses **uniformization (thinning)** against a fixed
+total-propensity bound `Λ = rate_bound`:
+
+  - candidate event times form a homogeneous Poisson process of rate `Λ` on the
+    time span — these are **parameter-free**, so the loop never branches on a
+    triple and the times stay `Float64`;
+  - at each candidate the current total propensity `a(u)` is recomputed and the
+    event is *accepted* with a tracked `Bernoulli(a(u)/Λ)` (otherwise it is a
+    **null event** absorbing the slack `Λ - a(u)`);
+  - the firing channel is chosen by stick-breaking `Bernoulli`s.
+
+All parameter dependence flows through the accept / channel `Bernoulli`s, so the
+gradient is captured. This is **unbiased** (no step cap) whenever `Λ` is a valid
+bound, and `saveat` is exact because the candidate times are fixed `Float64`.
+
+With ordinary `Float64` parameters `solve(jprob, BoundedSSA(; rate_bound))` is an
+ordinary (uniformization) SSA simulation; with StochasticAD triples it
+differentiates.
+
+# Keyword arguments
+
+  - `rate_bound` (required): a constant `Λ` upper-bounding the **total** propensity
+    `Σₖ rateₖ(u, p, t)` over the whole trajectory (and over the parameter
+    perturbation). Valid for systems with rigorously bounded populations; a looser
+    bound only costs efficiency (more null events), not accuracy. If `Λ` is
+    violated the accept probability exceeds 1 and sampling errors — pick it with
+    margin.
+
+# `solve` options
+
+  - `saveat`: times (a vector, or a `Number` step) at which to return the solution,
+    with `save_start`/`save_end` controlling the endpoints (same conventions as
+    `SimpleTauLeaping`, via `_process_saveat`); defaults to `[t0, tf]`. `sol.u[i]` is
+    the differentiable state at `sol.t[i]`, and `sol(t)` interpolates (piecewise
+    constant, as with `SSAStepper`).
+
+# Scope / limitations
+
+  - `ConstantRateJump`s only (state-dependent rates supported); jump-only, no
+    continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported.
+  - Additive affects only (the net change is inferred from `affect!` and checked).
+  - The differentiation parameter `prob.p` must be a summable/indexable numeric
+    collection (e.g. a `Vector`). SciMLStructures parameter objects (MTK/Catalyst
+    tunables) are not yet specialized — a documented follow-up.
+  - The solver itself is plain (no StochasticAD dependency): with ordinary parameters
+    `solve(jprob, BoundedSSA(; rate_bound))` is a uniformization SSA simulation. It
+    becomes differentiable when the user loads `StochasticAD` and passes a
+    `StochasticTriple` parameter — StochasticAD's own `rand(::Bernoulli)` rule makes
+    the accept/channel decisions differentiable, with no glue needed from this package.
+
+Internally this wraps `JumpProcesses.bounded_ssa_path`, the (unexported)
+differentiable core; `solve(jprob, BoundedSSA(; rate_bound))` is the public entry.
+"""
+struct BoundedSSA{B} <: DiffEqBase.AbstractDEAlgorithm
+    rate_bound::B
+end
+function BoundedSSA(; rate_bound = nothing)
+    rate_bound === nothing && error("BoundedSSA requires the keyword argument " *
+        "`rate_bound` (a constant upper bound on the total propensity).")
+    BoundedSSA{typeof(rate_bound)}(rate_bound)
+end
+
 mutable struct BoundedSSAShim{U, P, T}
     u::U
     p::P
@@ -55,12 +111,6 @@ function _bssa_check_supported(jprob)
         error("BoundedSSA requires at least one ConstantRateJump.")
     nothing
 end
-
-# Draw a {0,1} Bernoulli(p). The default (primal) path uses `rand() < p`; the
-# StochasticAD extension overloads this for `StochasticTriple` so the discrete decision
-# becomes differentiable. Isolating this one call is what keeps the solver itself free
-# of any StochasticAD dependency.
-_bounded_ssa_bernoulli(p) = (rand() < p) ? one(p) : zero(p)
 
 # Internal driver: returns `(tsave, usave)` at the resolved save schedule. Uses
 # `_process_saveat` (shared with SimpleTauLeaping) for saveat/save_start/save_end.
@@ -108,14 +158,17 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
 
         rates = [jumps[k].rate(u, p, tm) for k in 1:K]   # recomputed at current state
         total = sum(rates)
-        accept = _bounded_ssa_bernoulli(total / Λ)       # thinning: real vs null event
+        # thinning: real vs null event. `rand(Bernoulli(p))` handles both the primal
+        # draw and — when a StochasticTriple `p` flows in with StochasticAD loaded —
+        # the differentiable decision (StochasticAD's own `rand(::Bernoulli)` rule).
+        accept = rand(Bernoulli(total / Λ))
 
         # which channel: stick-breaking conditional Bernoullis (last deterministic)
         notchosen = 1 + z
         sel = [z for _ in 1:n]
         for k in 1:K
             chose = k < K ?
-                    _bounded_ssa_bernoulli(rates[k] / (sum(rates[j] for j in k:K) + 1e-300)) :
+                    rand(Bernoulli(rates[k] / (sum(rates[j] for j in k:K) + 1e-300))) :
                     (1 + z)
             take = notchosen * chose
             sel = [sel[i] + take * Δ[k][i] for i in 1:n]

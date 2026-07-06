@@ -74,8 +74,11 @@ end
     end
 
     if GROUP == "StochasticAD"
+        # Set up the isolated `stochasticad` project, then run its tests in a fresh
+        # Julia process so it does not clash with the main test environment. If the
+        # tests fail, `run` makes the overall suite fail too.
         activate_stochasticad_env()
-        @time @safetestset "StochasticAD Extension Tests" begin include("stochasticad_tests.jl") end
+        @time run(`$(Base.julia_cmd()) --project=$(joinpath(@__DIR__, "stochasticad")) $(joinpath(@__DIR__, "stochasticad_tests.jl"))`)
     end
 
     if GROUP == "Correctness"

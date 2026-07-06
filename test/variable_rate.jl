@@ -611,7 +611,7 @@ let
     function switch_affect!(integ)
         integ.u[1] = max(round(integ.u[1]), 0.0)
         integ.p.mode = :SSA
-        u_modified!(integ, true)
+        derivative_discontinuity!(integ, true)
         reset_aggregated_jumps!(integ)
     end
     switch_cb = ContinuousCallback(switch_cond, switch_affect!)

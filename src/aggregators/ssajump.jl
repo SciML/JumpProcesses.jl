@@ -65,7 +65,7 @@ function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
     concretize_affects!(p, integrator)
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)
-    u_modified!(integrator, false)
+    derivative_discontinuity!(integrator, false)
     nothing
 end
 

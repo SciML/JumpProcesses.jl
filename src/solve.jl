@@ -1,5 +1,5 @@
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.AbstractDEAlgorithm;
+function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P},
+        alg::SciMLBase.AbstractDEAlgorithm;
         merge_callbacks = true, kwargs...) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
@@ -10,7 +10,7 @@ function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
 end
 
 #Ambiguity Fix
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P},
+function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
         merge_callbacks = true, kwargs...) where {P}
     # Merge jump_prob.kwargs with passed kwargs
@@ -23,24 +23,24 @@ end
 
 # if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
 # SSAStepper
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem{P};
+function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P};
         kwargs...) where {P <: DiscreteProblem}
-    DiffEqBase.__solve(jump_prob, SSAStepper(); kwargs...)
+    SciMLBase.__solve(jump_prob, SSAStepper(); kwargs...)
 end
 
-function DiffEqBase.__solve(jump_prob::DiffEqBase.AbstractJumpProblem; kwargs...)
+function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem; kwargs...)
     error("Auto-solver selection is currently only implemented for JumpProblems defined over DiscreteProblems. Please explicitly specify a solver algorithm in calling solve.")
 end
 
-function DiffEqBase.__init(_jump_prob::DiffEqBase.AbstractJumpProblem{P},
-        alg::DiffEqBase.AbstractDEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+function SciMLBase.__init(_jump_prob::SciMLBase.AbstractJumpProblem{P},
+        alg::SciMLBase.AbstractDEAlgorithm; merge_callbacks = true, kwargs...) where {P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
 
     __jump_init(_jump_prob, alg; kwargs...)
 end 
 
-function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
+function __jump_init(_jump_prob::SciMLBase.AbstractJumpProblem{P}, alg;
         callback = nothing, seed = nothing,
         alias_jump = Threads.threadid() == 1,
         kwargs...) where {P}
@@ -52,7 +52,7 @@ function __jump_init(_jump_prob::DiffEqBase.AbstractJumpProblem{P}, alg;
     end
 
     # DDEProblems do not have a recompile_flag argument
-    if jump_prob.prob isa DiffEqBase.AbstractDDEProblem
+    if jump_prob.prob isa SciMLBase.AbstractDDEProblem
         # callback comes after jump consistent with SSAStepper
         integrator = init(jump_prob.prob, alg;
             callback = CallbackSet(jump_prob.jump_callback, callback),

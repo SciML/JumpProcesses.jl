@@ -3,8 +3,8 @@ David F. Anderson, Masanori Koyama; An asymptotic relationship between coupling
 methods for stochastically modeled population processes. IMA J Numer Anal 2015;
 35 (4): 1757-1778. doi: 10.1093/imanum/dru044
 """
-function SplitCoupledJumpProblem(prob::DiffEqBase.AbstractJumpProblem,
-        prob_control::DiffEqBase.AbstractJumpProblem,
+function SplitCoupledJumpProblem(prob::SciMLBase.AbstractJumpProblem,
+        prob_control::SciMLBase.AbstractJumpProblem,
         aggregator::AbstractAggregatorAlgorithm,
         coupling_map::Vector{Tuple{Int, Int}}; kwargs...)
     JumpProblem(cat_problems(prob.prob, prob_control.prob), aggregator,
@@ -17,8 +17,8 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiscreteProblem)
     DiscreteProblem(u0_coupled, prob.tspan, prob.p)
 end
 
-function cat_problems(prob::DiffEqBase.AbstractODEProblem,
-        prob_control::DiffEqBase.AbstractODEProblem)
+function cat_problems(prob::SciMLBase.AbstractODEProblem,
+        prob_control::SciMLBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
 
     _f = SciMLBase.unwrapped_f(prob.f)
@@ -32,9 +32,9 @@ function cat_problems(prob::DiffEqBase.AbstractODEProblem,
     ODEProblem(new_f, u0_coupled, prob.tspan, prob.p)
 end
 
-function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractODEProblem)
+function cat_problems(prob::DiscreteProblem, prob_control::SciMLBase.AbstractODEProblem)
     l = length(prob.u0) # add l_c = length(prob_control.u0)
-    if !(prob.f isa typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
+    if !(prob.f isa typeof(SciMLBase.DISCRETE_INPLACE_DEFAULT))
         @warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
     end
 
@@ -49,8 +49,8 @@ function cat_problems(prob::DiscreteProblem, prob_control::DiffEqBase.AbstractOD
     ODEProblem(new_f, u0_coupled, prob.tspan, prob.p)
 end
 
-function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
-        prob_control::DiffEqBase.AbstractSDEProblem)
+function cat_problems(prob::SciMLBase.AbstractSDEProblem,
+        prob_control::SciMLBase.AbstractSDEProblem)
     l = length(prob.u0)
     new_f = function (du, u, p, t)
         prob.f(@view(du[1:l]), u.u, p, t)
@@ -64,8 +64,8 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
     SDEProblem(new_f, new_g, u0_coupled, prob.tspan, prob.p)
 end
 
-function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
-        prob_control::DiffEqBase.AbstractODEProblem)
+function cat_problems(prob::SciMLBase.AbstractSDEProblem,
+        prob_control::SciMLBase.AbstractODEProblem)
     l = length(prob.u0)
 
     _f = SciMLBase.unwrapped_f(prob.f)
@@ -85,9 +85,9 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem,
     SDEProblem(new_f, new_g, u0_coupled, prob.tspan, prob.p)
 end
 
-function cat_problems(prob::DiffEqBase.AbstractSDEProblem, prob_control::DiscreteProblem)
+function cat_problems(prob::SciMLBase.AbstractSDEProblem, prob_control::DiscreteProblem)
     l = length(prob.u0)
-    if !(prob_control.f isa typeof(DiffEqBase.DISCRETE_INPLACE_DEFAULT))
+    if !(prob_control.f isa typeof(SciMLBase.DISCRETE_INPLACE_DEFAULT))
         @warn("Coupling to DiscreteProblem with nontrivial f. Note that, unless scale_by_time=true, the meaning of f will change when using an ODE/SDE/DDE/DAE solver.")
     end
     new_f = function (du, u, p, t)
@@ -104,20 +104,20 @@ function cat_problems(prob::DiffEqBase.AbstractSDEProblem, prob_control::Discret
     SDEProblem(new_f, new_g, u0_coupled, prob.tspan)
 end
 
-function cat_problems(prob_control::DiffEqBase.AbstractODEProblem, prob::DiscreteProblem)
+function cat_problems(prob_control::SciMLBase.AbstractODEProblem, prob::DiscreteProblem)
     cat_problems(prob, prob_control)
 end
-function cat_problems(prob_control::DiscreteProblem, prob::DiffEqBase.AbstractSDEProblem)
+function cat_problems(prob_control::DiscreteProblem, prob::SciMLBase.AbstractSDEProblem)
     cat_problems(prob, prob_control)
 end
-function cat_problems(prob_control::DiffEqBase.AbstractODEProblem,
-        prob::DiffEqBase.AbstractSDEProblem)
+function cat_problems(prob_control::SciMLBase.AbstractODEProblem,
+        prob::SciMLBase.AbstractSDEProblem)
     cat_problems(prob, prob_control)
 end
 
 # this only depends on the jumps in prob, not prob.prob
-function build_split_jumps(prob::DiffEqBase.AbstractJumpProblem,
-        prob_control::DiffEqBase.AbstractJumpProblem,
+function build_split_jumps(prob::SciMLBase.AbstractJumpProblem,
+        prob_control::SciMLBase.AbstractJumpProblem,
         coupling_map::Vector{Tuple{Int, Int}})
     num_jumps = length(prob.discrete_jump_aggregation.rates)
     num_jumps_control = length(prob_control.discrete_jump_aggregation.rates)

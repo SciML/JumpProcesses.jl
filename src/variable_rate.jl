@@ -211,7 +211,7 @@ end
 # initialize: (cb, u, t, integrator)
 function (c::VR_FRMEventCallback)(cb, u, t, integrator)
     integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
-    u_modified!(integrator, true)
+    derivative_discontinuity!(integrator, true)
     nothing
 end
 
@@ -372,7 +372,7 @@ end
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
     concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
-    u_modified!(integrator, false)
+    derivative_discontinuity!(integrator, false)
     nothing
 end
 

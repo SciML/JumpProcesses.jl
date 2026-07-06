@@ -220,7 +220,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.prev_jump = next_jump
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
-    u_modified!(integrator, false)
+    derivative_discontinuity!(integrator, false)
 
     return false
 end

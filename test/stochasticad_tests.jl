@@ -36,7 +36,7 @@ end
         jprob = JumpProblem(DiscreteProblem([u0], (0.0, T)), Direct(), death)
         analytic = -T * u0 * exp(-μ0 * T)
         g, se = sad_partial([μ0], 1; N = 10000) do p
-            bounded_ssa_path(jprob, p; rate_bound = Λ, saveat = [T])[end][1]
+            JumpProcesses.bounded_ssa_path(jprob, p; rate_bound = Λ, saveat = [T])[end][1]
         end
         @test abs(g - analytic) < 4 * se     # event-count derivative captured
         @test abs(g) > 1.0                    # explicitly NOT the zero a naive SSA gives
@@ -53,7 +53,7 @@ end
         analytic = [(1 - b) / μ0, -λ0 / μ0^2 * (1 - b) + (u0 - a) * (-T * b)]
         for k in 1:2
             g, se = sad_partial([λ0, μ0], k; N = 10000) do p
-                bounded_ssa_path(jprob, p; rate_bound = Λ, saveat = [T])[end][1]
+                JumpProcesses.bounded_ssa_path(jprob, p; rate_bound = Λ, saveat = [T])[end][1]
             end
             @test abs(g - analytic[k]) < 4 * se
         end
@@ -68,7 +68,7 @@ end
         sat = [0.0, 0.5, 1.0]
         for (idx, s) in enumerate(sat)
             m, se = pmean(N = 4000) do
-                bounded_ssa_path(jprob, [μ0]; rate_bound = Λ, saveat = sat)[idx][1]
+                JumpProcesses.bounded_ssa_path(jprob, [μ0]; rate_bound = Λ, saveat = sat)[idx][1]
             end
             # `s = 0` is deterministic (u(0) = u0, se = 0); the `+ 1e-9` keeps the
             # zero-variance point from failing `0 < 0`.
@@ -82,7 +82,7 @@ end
         death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (integ.u[1] -= 1; nothing))
         jprob = JumpProblem(DiscreteProblem([u0], (0.0, T), [μ0]), Direct(), death)
         mb, seb = pmean(N = 4000) do
-            bounded_ssa_path(jprob, [μ0]; rate_bound = Λ, saveat = [T])[end][1]
+            JumpProcesses.bounded_ssa_path(jprob, [μ0]; rate_bound = Λ, saveat = [T])[end][1]
         end
         ms, ses = pmean(N = 4000) do
             solve(jprob, SSAStepper()).u[end][1]
@@ -116,12 +116,12 @@ end
         # MassActionJump not yet supported
         majump = MassActionJump([0.5], [[1 => 1]], [[1 => -1]])
         jp_ma = JumpProblem(DiscreteProblem([10], (0.0, T), [0.5]), Direct(), majump)
-        @test_throws ErrorException bounded_ssa_path(jp_ma, [0.5]; rate_bound = 10.0)
+        @test_throws ErrorException JumpProcesses.bounded_ssa_path(jp_ma, [0.5]; rate_bound = 10.0)
         # missing rate_bound on the algorithm
         @test_throws ErrorException BoundedSSA()
         # non-additive (state-dependent) affect
         weird = ConstantRateJump((u, p, t) -> p[1], integ -> (integ.u[1] *= 2; nothing))
         jp_w = JumpProblem(DiscreteProblem([10], (0.0, T)), Direct(), weird)
-        @test_throws ErrorException bounded_ssa_path(jp_w, [0.5]; rate_bound = 10.0)
+        @test_throws ErrorException JumpProcesses.bounded_ssa_path(jp_w, [0.5]; rate_bound = 10.0)
     end
 end

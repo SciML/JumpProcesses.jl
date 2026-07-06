@@ -12,6 +12,7 @@ using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
 using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_handle
 using PoissonRandom: PoissonRandom, pois_rand
 using Distributions: Distributions, Bernoulli
+using SciMLStructures: SciMLStructures
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
 using Graphs: Graphs, AbstractGraph, dst, grid, src

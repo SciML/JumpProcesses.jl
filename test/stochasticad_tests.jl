@@ -1,4 +1,4 @@
-using JumpProcesses, StochasticAD, Distributions
+using JumpProcesses, StochasticAD, Distributions, SciMLStructures
 using Statistics, Random, Test
 
 # Tests for the optional StochasticAD extension: differentiating expectations over
@@ -23,6 +23,19 @@ end
 function pmean(f; N)
     s = [f() for _ in 1:N]
     return mean(s), std(s) / sqrt(N)
+end
+
+# A minimal SciMLStructures parameter object standing in for an MTK/Catalyst
+# `MTKParameters`: its differentiable tunables live in `.tunables`. Used to check that
+# BoundedSSA seeds from and differentiates through the tunable portion of a *structured*
+# parameter, not only plain `Vector`s. Only the `Tunable` portion is implemented — the
+# sole portion BoundedSSA consults (via `_bssa_tunables`).
+struct TunableParams{T}
+    tunables::T
+end
+SciMLStructures.isscimlstructure(::TunableParams) = true
+function SciMLStructures.canonicalize(::SciMLStructures.Tunable, p::TunableParams)
+    p.tunables, TunableParams, true
 end
 
 @testset "StochasticAD constant-rate jumps (BoundedSSA, uniformization)" begin
@@ -108,6 +121,24 @@ end
             solve(jp, BoundedSSA(; rate_bound = Λ); saveat = [T]).u[end][1]
         end
         @test abs(g - analytic) < 4 * se
+    end
+
+    # --- Test F: SciMLStructures parameter object (MTK/Catalyst tunables) -------
+    # Same pure-death gradient as Test A, but the parameter is a structured
+    # SciMLStructures object; BoundedSSA must seed from and differentiate through its
+    # tunable portion (a plain `Vector` canonicalizes to itself — covered by Test A).
+    @testset "SciMLStructures tunable parameters" begin
+        T, u0, μ0, Λ = 1.0, 100, 0.5, 60.0
+        death = ConstantRateJump((u, p, t) -> p.tunables[1] * u[1],
+            integ -> (integ.u[1] -= 1; nothing))
+        jprob = JumpProblem(DiscreteProblem([u0], (0.0, T)), Direct(), death)
+        analytic = -T * u0 * exp(-μ0 * T)
+        g, se = sad_partial([μ0], 1; N = 10000) do p
+            JumpProcesses.bounded_ssa_path(jprob, TunableParams(p);
+                rate_bound = Λ, saveat = [T])[end][1]
+        end
+        @test abs(g - analytic) < 4 * se     # tunable-portion derivative captured
+        @test abs(g) > 1.0
     end
 
     # --- guards: misuse should error, not silently mislead ---------------------

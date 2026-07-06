@@ -52,9 +52,10 @@ differentiates.
   - `ConstantRateJump`s only (state-dependent rates supported); jump-only, no
     continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported.
   - Additive affects only (the net change is inferred from `affect!` and checked).
-  - The differentiation parameter `prob.p` must be a summable/indexable numeric
-    collection (e.g. a `Vector`). SciMLStructures parameter objects (MTK/Catalyst
-    tunables) are not yet specialized — a documented follow-up.
+  - The differentiation parameter `prob.p` may be a plain numeric collection (e.g. a
+    `Vector`) or a SciMLStructures parameter object (MTK/Catalyst `MTKParameters`); in
+    the latter case the differentiable **tunable** portion is the target (extracted via
+    `SciMLStructures.canonicalize`), matching how the rest of JumpProcesses treats `p`.
   - The solver itself is plain (no StochasticAD dependency): with ordinary parameters
     `solve(jprob, BoundedSSA(; rate_bound))` is a uniformization SSA simulation. It
     becomes differentiable when the user loads `StochasticAD` and passes a
@@ -112,6 +113,14 @@ function _bssa_check_supported(jprob)
     nothing
 end
 
+# Differentiable parameters used to choose the state's element type. Arrays are used
+# directly; SciMLStructures objects use their tunable values, so injected AD types
+# promote the state. Scalars and NullParameters are returned unchanged.
+function _bssa_tunables(p)
+    SciMLStructures.isscimlstructure(p) ?
+    SciMLStructures.canonicalize(SciMLStructures.Tunable(), p)[1] : p
+end
+
 # Internal driver: returns `(tsave, usave)` at the resolved save schedule. Uses
 # `_process_saveat` (shared with SimpleTauLeaping) for saveat/save_start/save_end.
 function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
@@ -127,11 +136,11 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
 
     Δ = [_bssa_additive_change(jumps[k], u0, p, t0) for k in 1:K]
 
-    # `0 * sum(p)` promotes the state to the parameter's element type (giving a triple
-    # zero when a StochasticTriple flows in). This assumes `p` is a summable/indexable
-    # numeric collection, e.g. a `Vector` — SciMLStructures parameter objects
-    # (MTK/Catalyst tunables) are not yet specialized. See BoundedSSA docs.
-    z = 0 * sum(p)
+    # `0 * sum(...)` promotes the state to the parameter's element type (giving a triple
+    # zero when a StochasticTriple flows in). We seed from the **tunable** numeric portion
+    # of `p` (see `_bssa_tunables`), so both plain `Vector` parameters and SciMLStructures
+    # parameter objects (MTK/Catalyst tunables) are supported; a `Vector` seeds from itself.
+    z = 0 * sum(_bssa_tunables(p))
     u = [float(u0[i]) + z for i in 1:n]
 
     tsave = typeof(t0)[]
@@ -207,9 +216,10 @@ end
 ```
 
 `saveat`/`save_start`/`save_end` follow the usual JumpProcesses conventions (via
-`_process_saveat`, as `SimpleTauLeaping`). `p` must be a summable/indexable numeric
-collection (e.g. a `Vector`); SciMLStructures parameter objects are not yet specialized.
-See [`BoundedSSA`](@ref) for the method and the meaning/validity of `rate_bound`.
+`_process_saveat`, as `SimpleTauLeaping`). `p` may be a plain numeric collection (e.g. a
+`Vector`) or a SciMLStructures parameter object (MTK/Catalyst), whose tunable portion is
+the differentiation target. See [`BoundedSSA`](@ref) for the method and the
+meaning/validity of `rate_bound`.
 """
 function bounded_ssa_path(jprob, p; rate_bound, saveat = last(jprob.prob.tspan),
         save_start = nothing, save_end = nothing, tspan = jprob.prob.tspan)

@@ -63,11 +63,6 @@ differentiates.
     `Vector`) or a SciMLStructures parameter object (MTK/Catalyst `MTKParameters`); in
     the latter case the differentiable **tunable** portion is the target (extracted via
     `SciMLStructures.canonicalize`), matching how the rest of JumpProcesses treats `p`.
-  - The solver itself is plain (no StochasticAD dependency): with ordinary parameters
-    `solve(jprob, BoundedSSA(; rate_bound))` is a uniformization SSA simulation. It
-    becomes differentiable when the user loads `StochasticAD` and passes a
-    `StochasticTriple` parameter — StochasticAD's own `rand(::Bernoulli)` rule makes
-    the accept/channel decisions differentiable, with no glue needed from this package.
 
 Internally this wraps `JumpProcesses.bounded_ssa_path`, the (unexported)
 differentiable core; `solve(jprob, BoundedSSA(; rate_bound))` is the public entry.

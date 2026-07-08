@@ -2,8 +2,8 @@
 """
     BoundedSSA(; rate_bound)
 
-A StochasticAD-compatible SSA algorithm for **jump-only** `ConstantRateJump`
-`DiscreteProblem`s, giving correct gradients via StochasticAD's
+A StochasticAD-compatible SSA algorithm for **jump-only** `ConstantRateJump` /
+`MassActionJump` `DiscreteProblem`s, giving correct gradients via StochasticAD's
 `derivative_estimate`/`stochastic_triple` — with `saveat` support, so the whole
 sampled path is differentiable, not only the terminal state.
 
@@ -49,9 +49,16 @@ differentiates.
 
 # Scope / limitations
 
-  - `ConstantRateJump`s only (state-dependent rates supported); jump-only, no
-    continuous drift, no `VariableRateJump`. `MassActionJump` is not yet supported.
-  - Additive affects only (the net change is inferred from `affect!` and checked).
+  - `ConstantRateJump`s and `MassActionJump`s (state-dependent / mass-action rates
+    supported); jump-only, no continuous drift, no `VariableRateJump`.
+  - Additive affects only. A `ConstantRateJump`'s net change is inferred from `affect!`
+    and checked; a `MassActionJump`'s `net_stoch` is inherently additive. For a
+    `MassActionJump` rate constant to be *differentiated* it must flow from `p` via a
+    `param_idxs`/`param_mapper` jump (the combinatoric scaling is matched); a jump with
+    fixed numeric `scaled_rates` still simulates, but those constants carry no derivative.
+    Note: MTK/Catalyst-generated mass-action jumps *simulate* under `BoundedSSA` but do
+    not yet *differentiate* their rate constants — MTK's mass-action parameter mapper
+    coerces rates to `Float64`, which drops the `StochasticTriple` (a documented follow-up).
   - The differentiation parameter `prob.p` may be a plain numeric collection (e.g. a
     `Vector`) or a SciMLStructures parameter object (MTK/Catalyst `MTKParameters`); in
     the latter case the differentiable **tunable** portion is the target (extracted via
@@ -65,7 +72,7 @@ differentiates.
 Internally this wraps `JumpProcesses.bounded_ssa_path`, the (unexported)
 differentiable core; `solve(jprob, BoundedSSA(; rate_bound))` is the public entry.
 """
-struct BoundedSSA{B} <: DiffEqBase.AbstractDEAlgorithm
+struct BoundedSSA{B} <: SciMLBase.AbstractDEAlgorithm
     rate_bound::B
 end
 function BoundedSSA(; rate_bound = nothing)
@@ -101,15 +108,14 @@ end
 function _bssa_check_supported(jprob)
     jprob.prob isa DiscreteProblem || error(
         "BoundedSSA only supports JumpProblems over DiscreteProblems (pure jumps).")
-    maj = jprob.massaction_jump
-    (maj === nothing || get_num_majumps(maj) == 0) || error(
-        "BoundedSSA does not yet support MassActionJump; use ConstantRateJumps.")
     vj = jprob.variable_jumps
     (vj === nothing || isempty(vj)) || error(
-        "BoundedSSA supports jump-only constant-rate problems only (no VariableRateJumps).")
+        "BoundedSSA supports jump-only problems only (no VariableRateJumps).")
     cj = jprob.constant_jumps
-    (cj === nothing || isempty(cj)) &&
-        error("BoundedSSA requires at least one ConstantRateJump.")
+    nc = (cj === nothing) ? 0 : length(cj)
+    nm = get_num_majumps(jprob.massaction_jump)
+    (nc + nm >= 1) || error(
+        "BoundedSSA requires at least one ConstantRateJump or MassActionJump.")
     nothing
 end
 
@@ -121,20 +127,63 @@ function _bssa_tunables(p)
     SciMLStructures.canonicalize(SciMLStructures.Tunable(), p)[1] : p
 end
 
+# Dense additive net state change of MassActionJump reaction `r` (from its net_stoch),
+# over `n` species. MassAction affects are inherently additive, so -- unlike a
+# ConstantRateJump -- no affect! probing / verification is needed.
+function _bssa_ma_delta(net_stoch_r, n)
+    Δ = zeros(Float64, n)
+    for (spec, change) in net_stoch_r
+        Δ[spec] += change
+    end
+    return Δ
+end
+
+# Propensity of MassActionJump reaction `r` at state `u`. `unscaled` is the per-reaction
+# unscaled rate constants from `param_mapper(p)` (so a StochasticTriple parameter flows
+# through), or `nothing` to fall back to the jump's stored (constant) scaled_rates. The
+# mass-action factor is the falling factorial ∏_j (u[spec] - j): it is naturally zero
+# when a reactant is insufficient (integer populations), so no boolean on the (triple)
+# population is needed, and BoundedSSA never calls `evalrxrate` (avoiding its `::R`
+# return assertion). Combinatoric scaling matches the stock aggregator via `scalerate`.
+function _bssa_ma_rate(u, maj, unscaled, r)
+    sr = unscaled === nothing ? maj.scaled_rates[r] :
+         (maj.rescale_rates_on_update ? scalerate(unscaled[r], maj.reactant_stoch[r]) :
+          unscaled[r])
+    val = sr
+    for (spec, s) in maj.reactant_stoch[r]
+        pop = u[spec]
+        for j in 0:(s - 1)
+            val = val * (pop - j)
+        end
+    end
+    return val
+end
+
 # Internal driver: returns `(tsave, usave)` at the resolved save schedule. Uses
 # `_process_saveat` (shared with SimpleTauLeaping) for saveat/save_start/save_end.
 function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
     _bssa_check_supported(jprob)
     u0 = jprob.prob.u0
-    jumps = jprob.constant_jumps
+    cjumps = jprob.constant_jumps === nothing ? () : jprob.constant_jumps
+    maj = jprob.massaction_jump
     t0, tf = first(tspan), last(tspan)
     ΔT = tf - t0
-    K = length(jumps)
+    Kc = length(cjumps)
+    nrx = get_num_majumps(maj)
+    K = Kc + nrx
     n = length(u0)
 
     saveat_times, ss, se = _process_saveat(saveat, (t0, tf), save_start, save_end)
 
-    Δ = [_bssa_additive_change(jumps[k], u0, p, t0) for k in 1:K]
+    # additive net change per channel: ConstantRateJumps (net change inferred from
+    # affect! and verified additive) first, then MassActionJump reactions (net_stoch).
+    Δ = Vector{Vector{Float64}}(undef, K)
+    for k in 1:Kc
+        Δ[k] = _bssa_additive_change(cjumps[k], u0, p, t0)
+    end
+    for r in 1:nrx
+        Δ[Kc + r] = _bssa_ma_delta(maj.net_stoch[r], n)
+    end
 
     # `0 * sum(...)` promotes the state to the parameter's element type (giving a triple
     # zero when a StochasticTriple flows in). We seed from the **tunable** numeric portion
@@ -165,7 +214,12 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
             save_idx += 1
         end
 
-        rates = [jumps[k].rate(u, p, tm) for k in 1:K]   # recomputed at current state
+        # per-channel propensities at the current state: ConstantRateJumps then
+        # MassActionJump reactions. MA rate constants come from `param_mapper(p)` (so a
+        # StochasticTriple parameter flows through), else the stored scaled_rates.
+        maunscaled = (nrx > 0 && using_params(maj)) ? maj.param_mapper(p) : nothing
+        rates = [k <= Kc ? cjumps[k].rate(u, p, tm) :
+                 _bssa_ma_rate(u, maj, maunscaled, k - Kc) for k in 1:K]
         total = sum(rates)
         # thinning: real vs null event. `rand(Bernoulli(p))` handles both the primal
         # draw and — when a StochasticTriple `p` flows in with StochasticAD loaded —
@@ -203,8 +257,8 @@ end
                      save_end = nothing, tspan = jprob.prob.tspan)
 
 Differentiable core behind [`BoundedSSA`](@ref): simulate the jump-only
-`ConstantRateJump` process by uniformization against the constant total-propensity
-bound `rate_bound`, and return the state at each save time as a `Vector` of state
+`ConstantRateJump` / `MassActionJump` process by uniformization against the constant
+total-propensity bound `rate_bound`, and return the state at each save time as a `Vector` of state
 vectors. When a `StochasticTriple` parameter flows in (StochasticAD loaded) the result
 is differentiable, so this can be wrapped in `derivative_estimate`:
 
@@ -237,9 +291,9 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::BoundedSSA;
     prob = jump_prob.prob
     ts, us = _bounded_ssa(jump_prob, prob.p, alg.rate_bound, tspan, saveat,
         save_start, save_end)
-    DiffEqBase.build_solution(prob, alg, ts, us;
+    SciMLBase.build_solution(prob, alg, ts, us;
         dense = true,
-        interp = DiffEqBase.ConstantInterpolation(ts, us),
+        interp = SciMLBase.ConstantInterpolation(ts, us),
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
         retcode = ReturnCode.Success)

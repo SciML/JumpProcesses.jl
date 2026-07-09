@@ -36,10 +36,10 @@ import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
 using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
-                  DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
-                  ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
-                  deleteat!, isinplace, remake, savevalues!, step!,
-                  derivative_discontinuity!
+    DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
+    ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
+    deleteat!, isinplace, remake, savevalues!, step!,
+    derivative_discontinuity!
 using SciMLBase: SciMLBase, DEIntegrator
 
 abstract type AbstractJump end
@@ -47,7 +47,7 @@ abstract type AbstractMassActionJump <: AbstractJump end
 abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
-              DEIntegrator{Alg, IIP, U, T} end
+DEIntegrator{Alg, IIP, U, T} end
 
 const DEFAULT_RNG = Random.default_rng()
 
@@ -113,8 +113,35 @@ include("variable_rate.jl")
 export VariableRateAggregator, VR_FRM, VR_Direct, VR_DirectFW
 
 """
-Aggregator to indicate that individual jumps should also be handled via the leaping
-algorithm that is passed to solve.
+    PureLeaping()
+
+Request that all jumps in a [`JumpProblem`](@ref) are handled by the leaping algorithm
+passed to `solve`, instead of being converted into callback-based SSA aggregators during
+problem construction.
+
+## Returns
+
+  - A stateless aggregator marker for `JumpProblem(prob, PureLeaping(), jumps; kwargs...)`.
+
+## Notes
+
+  - `PureLeaping` is currently intended for tau-leaping algorithms such as
+    [`SimpleTauLeaping`](@ref) and [`SimpleExplicitTauLeaping`](@ref).
+  - Spatial jump problems are not supported by the `PureLeaping` construction path.
+
+## Examples
+
+```julia
+using JumpProcesses, DiffEqBase
+
+rate!(out, u, p, t) = (out[1] = 0.2 * u[1])
+affect!(du, u, p, t, counts, mark) = (du[1] = -counts[1])
+rj = RegularJump(rate!, affect!, 1)
+
+prob = DiscreteProblem([10], (0.0, 1.0))
+jprob = JumpProblem(prob, PureLeaping(), rj)
+sol = solve(jprob, SimpleTauLeaping(); dt = 0.1)
+```
 """
 struct PureLeaping <: AbstractAggregatorAlgorithm end
 export PureLeaping
@@ -129,7 +156,7 @@ export init, solve, solve!
 include("SSA_stepper.jl")
 export SSAStepper
 
-# leaping: 
+# leaping:
 include("simple_regular_solve.jl")
 export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
 

@@ -1,12 +1,39 @@
-# bracketing intervals for RSSA-based aggregators
-# see: "On the rejection-based algorithm for simulation and analysis of
-#       large-scale reaction networks", Thanh et al, J. Chem. Phys., 2015
-# note, expects the type of the bracketing variables [ulow,uhigh] to be the
-# same as the fluct_rate and ushift.
+"""
+    BracketData(fluctrate, threshold, Δu)
+    BracketData{T1, T2}()
+
+Configure species-population brackets used by RSSA-based aggregators.
+
+For species population `u[i]`, the bracket is
+`[(1 - fluctrate) * u[i], (1 + fluctrate) * u[i]]` when `u[i] >= threshold`.
+For smaller populations, the bracket is `[max(u[i] - Δu, 0), u[i] + Δu]`.
+Each field may be either a scalar shared by all species or a vector indexed by species.
+
+## Fields
+
+  - `fluctrate`: Relative fluctuation width used for populations at or above `threshold`.
+  - `threshold`: Population threshold below which the absolute `Δu` bracket is used.
+  - `Δu`: Absolute bracket half-width used for populations below `threshold`.
+
+## Notes
+
+  - `BracketData{T1, T2}()` constructs `BracketData(T1(0.1), T2(25), T2(4))`.
+  - The bracketing rules follow the RSSA construction in Thanh et al., J. Chem. Phys. 142,
+    244106 (2015).
+
+## Examples
+
+```julia
+using JumpProcesses
+
+bd = BracketData(0.1, 25, 4)
+bd.fluctrate == 0.1
+```
+"""
 struct BracketData{T1, T2}
-    fluctrate::T1         # interval should be [1-fluctrate,1+fluctrate] * u
-    threshold::T2         # for u below threshold interval is:
-    Δu::T2                #   [max(u-Δu,0),u+Δu]
+    fluctrate::T1
+    threshold::T2
+    Δu::T2
 end
 
 # # suggested defaults
@@ -26,7 +53,7 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
 @inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.Δu
 
 @inline function delta_bracket(u::Integer, δ)
-    (trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u))
+    return (trunc(typeof(u), (one(δ) - δ) * u), trunc(typeof(u), (one(δ) + δ) * u))
 end
 
 @inline delta_bracket(u, δ) = ((one(δ) - δ) * u), ((one(δ) + δ) * u)
@@ -48,7 +75,7 @@ end
 
 # Get propensity brackets of massaction jump k.
 @inline function get_majump_brackets(ulow, uhigh, k, majumps)
-    evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
+    return evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
 end
 
 # for constant rate jumps we must check the ordering of the bracket values
@@ -68,8 +95,10 @@ get brackets for the rate of reaction rx by first checking if the reaction is a 
     if rx <= num_majumps
         return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
     else
-        @inbounds return get_cjump_brackets(p.ulow, p.uhigh, p.rates[rx - num_majumps],
-            params, t)
+        @inbounds return get_cjump_brackets(
+            p.ulow, p.uhigh, p.rates[rx - num_majumps],
+            params, t
+        )
     end
 end
 
@@ -79,7 +108,7 @@ end
     @inbounds for (i, uval) in enumerate(u)
         ulow[i], uhigh[i] = get_spec_brackets(p.bracket_data, i, uval)
     end
-    nothing
+    return nothing
 end
 
 @inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::SVector)
@@ -88,12 +117,12 @@ end
         p.ulow = setindex(p.ulow, ulow, i)
         p.uhigh = setindex(p.uhigh, uhigh, i)
     end
-    nothing
+    return nothing
 end
 
 # For ExtendedJumpArray, only iterate over the species portion (u.u), not the jump tracking portion
 @inline function update_u_brackets!(p::AbstractSSAJumpAggregator, u::ExtendedJumpArray)
-    update_u_brackets!(p, u.u)
+    return update_u_brackets!(p, u.u)
 end
 
 # Set up bracketing. The aggregator must have fields
@@ -122,5 +151,5 @@ function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     end
     p.sum_rate = sum_rate
 
-    nothing
+    return nothing
 end

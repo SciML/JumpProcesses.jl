@@ -11,6 +11,8 @@ using Random: Random, randexp, seed!
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
 using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_handle
 using PoissonRandom: PoissonRandom, pois_rand
+using Distributions: Distributions, Bernoulli
+using SciMLStructures: SciMLStructures
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
 using Graphs: Graphs, AbstractGraph, dst, grid, src
@@ -132,6 +134,10 @@ export SSAStepper
 # leaping: 
 include("simple_regular_solve.jl")
 export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
+
+# BoundedSSA: uniformization SSA solver (differentiable when StochasticAD is loaded)
+include("bounded_ssa.jl")
+export BoundedSSA
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

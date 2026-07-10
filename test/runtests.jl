@@ -9,6 +9,16 @@ function activate_gpu_env()
     Pkg.instantiate()
 end
 
+# Isolated environment for the StochasticAD extension tests. StochasticAD pins
+# old transitive deps (e.g. ForwardDiff 0.10) that conflict with the modern
+# OrdinaryDiffEq stack, so it is kept out of the main test target and run here
+# in its own project (no ODE solver needed -- the extension never calls `solve`).
+function activate_stochasticad_env()
+    Pkg.activate(joinpath(@__DIR__, "stochasticad"))
+    Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
+    Pkg.instantiate()
+end
+
 @time begin
     if GROUP == "QA"
         @time @safetestset "QA Tests" begin include("qa.jl") end
@@ -61,6 +71,14 @@ end
     if GROUP == "CUDA"
         activate_gpu_env()
         @time @safetestset "GPU Tau Leaping test" begin include("gpu/regular_jumps.jl") end
+    end
+
+    if GROUP == "StochasticAD"
+        # Set up the isolated `stochasticad` project, then run its tests in a fresh
+        # Julia process so it does not clash with the main test environment. If the
+        # tests fail, `run` makes the overall suite fail too.
+        activate_stochasticad_env()
+        @time run(`$(Base.julia_cmd()) --project=$(joinpath(@__DIR__, "stochasticad")) $(joinpath(@__DIR__, "stochasticad_tests.jl"))`)
     end
 
     if GROUP == "Correctness"

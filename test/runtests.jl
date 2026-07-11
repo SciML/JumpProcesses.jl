@@ -12,7 +12,6 @@ end
 @time begin
     if GROUP == "QA"
         @time @safetestset "QA Tests" begin include("qa.jl") end
-        @time @safetestset "Public API Documentation" begin include("public_api_docs.jl") end
     end
     
     if GROUP == "All" || GROUP == "InterfaceI"

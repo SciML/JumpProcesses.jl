@@ -58,10 +58,8 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_FRM <: VariableRateAggregator end
 
-function configure_jump_problem(
-        prob, vr_aggregator::VR_FRM, jumps, cvrjs;
-        rng = DEFAULT_RNG
-    )
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs;
+        rng = DEFAULT_RNG)
     new_prob = extend_problem(prob, cvrjs; rng)
     variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
     return new_prob, variable_jump_callback
@@ -86,7 +84,7 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps; rng = DEFAULT
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                return update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
             end
         end
     else
@@ -100,11 +98,9 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps; rng = DEFAULT
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = ODEFunction{isinplace(prob)}(
-        jump_f; sys = prob.f.sys,
-        observed = prob.f.observed
-    )
-    return remake(prob; f, u0)
+    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, u0)
 end
 
 function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
@@ -114,7 +110,7 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps; rng = DEFAULT
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                return update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
             end
         end
     else
@@ -129,20 +125,18 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps; rng = DEFAULT
 
     if prob.noise_rate_prototype === nothing
         jump_g = function (du, u, p, t)
-            return prob.g(du.u, u.u, p, t)
+            prob.g(du.u, u.u, p, t)
         end
     else
         jump_g = function (du, u, p, t)
-            return prob.g(du, u.u, p, t)
+            prob.g(du, u.u, p, t)
         end
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = SDEFunction{isinplace(prob)}(
-        jump_f, jump_g; sys = prob.f.sys,
-        observed = prob.f.observed
-    )
-    return remake(prob; f, g = jump_g, u0)
+    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, g = jump_g, u0)
 end
 
 function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
@@ -152,7 +146,7 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(du.u, u.u, h, p, t)
-                return update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps...)
             end
         end
     else
@@ -166,11 +160,9 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = DDEFunction{isinplace(prob)}(
-        jump_f; sys = prob.f.sys,
-        observed = prob.f.observed
-    )
-    return remake(prob; f, u0)
+    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, u0)
 end
 
 # Not sure if the DAE one is correct: Should be a residual of sorts
@@ -181,7 +173,7 @@ function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps; rng = DEFAULT
         jump_f = let _f = _f
             function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(out, du.u, u.u, h, p, t)
-                return update_jumps!(out, u, p, t, length(u.u), jumps...)
+                update_jumps!(out, u, p, t, length(u.u), jumps...)
             end
         end
     else
@@ -195,11 +187,9 @@ function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps; rng = DEFAULT
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = DAEFunction{isinplace(prob)}(
-        jump_f, sys = prob.f.sys,
-        observed = prob.f.observed
-    )
-    return remake(prob; f, u0)
+    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
+        observed = prob.f.observed)
+    remake(prob; f, u0)
 end
 
 struct VR_FRMEventCallback{F, RNG}
@@ -215,50 +205,48 @@ end
 function (c::VR_FRMEventCallback)(integrator)
     c.affect!(integrator)
     integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
-    return nothing
+    nothing
 end
 
 # initialize: (cb, u, t, integrator)
 function (c::VR_FRMEventCallback)(cb, u, t, integrator)
     integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
     derivative_discontinuity!(integrator, true)
-    return nothing
+    nothing
 end
 
 function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
     cb_functor = VR_FRMEventCallback(idx, jump.affect!, rng)
-    return ContinuousCallback(
-        cb_functor, cb_functor;
+    ContinuousCallback(cb_functor, cb_functor;
         initialize = cb_functor,
         idxs = jump.idxs,
         rootfind = jump.rootfind,
         interp_points = jump.interp_points,
         save_positions = jump.save_positions,
         abstol = jump.abstol,
-        reltol = jump.reltol
-    )
+        reltol = jump.reltol)
 end
 
 function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
     idx += 1
     new_cb = wrap_jump_in_callback(idx, jump; rng)
-    return build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = DEFAULT_RNG)
+    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = DEFAULT_RNG)
 end
 
 function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
     idx += 1
-    return CallbackSet(cb, wrap_jump_in_callback(idx, jump; rng))
+    CallbackSet(cb, wrap_jump_in_callback(idx, jump; rng))
 end
 
 @inline function update_jumps!(du, u, p, t, idx, jump)
     idx += 1
-    return du[idx] = jump.rate(u.u, p, t)
+    du[idx] = jump.rate(u.u, p, t)
 end
 
 @inline function update_jumps!(du, u, p, t, idx, jump, jumps...)
     idx += 1
     du[idx] = jump.rate(u.u, p, t)
-    return update_jumps!(du, u, p, t, idx, jumps...)
+    update_jumps!(du, u, p, t, idx, jumps...)
 end
 
 ################################### VR_Direct and VR_DirectFW ####################################
@@ -307,7 +295,6 @@ sol = solve(jprob, Tsit5())
   - `VR_Direct` and `VR_DirectFW` are expected to generally be more performant than `VR_FRM`.
 """
 struct VR_Direct <: VariableRateAggregator end
-
 """
 $(TYPEDEF)
 
@@ -359,8 +346,7 @@ mutable struct VR_DirectEventCache{T, RNG, F1, F2}
 end
 
 function VR_DirectEventCache(
-        jumps::JumpSet, ::VR_Direct, prob, ::Type{T}; rng = DEFAULT_RNG
-    ) where {T}
+        jumps::JumpSet, ::VR_Direct, prob, ::Type{T}; rng = DEFAULT_RNG) where {T}
     initial_threshold = randexp(rng, T)
     vjumps = jumps.variable_jumps
 
@@ -369,16 +355,13 @@ function VR_DirectEventCache(
 
     cum_rate_sum = Vector{T}(undef, length(vjumps))
 
-    return VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(
-        zero(T),
+    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T),
         initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs,
-        affect_funcs, cum_rate_sum
-    )
+        affect_funcs, cum_rate_sum)
 end
 
 function VR_DirectEventCache(
-        jumps::JumpSet, ::VR_DirectFW, prob, ::Type{T}; rng = DEFAULT_RNG
-    ) where {T}
+        jumps::JumpSet, ::VR_DirectFW, prob, ::Type{T}; rng = DEFAULT_RNG) where {T}
     initial_threshold = randexp(rng, T)
     vjumps = jumps.variable_jumps
 
@@ -389,11 +372,9 @@ function VR_DirectEventCache(
 
     cum_rate_sum = Vector{T}(undef, length(vjumps))
 
-    return VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), Any}(
-        zero(T),
+    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), Any}(zero(T),
         initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs,
-        affect_funcs, cum_rate_sum
-    )
+        affect_funcs, cum_rate_sum)
 end
 
 # Initialization function for VR_DirectEventCache
@@ -404,29 +385,23 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     cache.current_threshold = cache.prev_threshold
     cache.total_rate = zero(integrator.t)
     cache.cum_rate_sum .= 0
-    return nothing
+    nothing
 end
 
-@inline function concretize_vr_direct_affects!(
-        cache::VR_DirectEventCache,
-        ::I
-    ) where {I <: SciMLBase.DEIntegrator}
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache,
+        ::I) where {I <: SciMLBase.DEIntegrator}
     if (cache.affect_funcs isa Vector) &&
-            !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
+       !(cache.affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}})
         AffectWrapper = FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}
-        cache.affect_funcs = AffectWrapper[
-            makewrapper(AffectWrapper, aff)
-                for aff in cache.affect_funcs
-        ]
+        cache.affect_funcs = AffectWrapper[makewrapper(AffectWrapper, aff)
+                                           for aff in cache.affect_funcs]
     end
-    return nothing
+    nothing
 end
 
-@inline function concretize_vr_direct_affects!(
-        cache::VR_DirectEventCache{T, RNG, F1, F2},
-        ::I
-    ) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
-    return nothing
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2},
+        ::I) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
+    nothing
 end
 
 # Wrapper for initialize to match ContinuousCallback signature
@@ -434,7 +409,7 @@ function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
     concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
     derivative_discontinuity!(integrator, false)
-    return nothing
+    nothing
 end
 
 # Merge callback parameters across all jumps for VR_Direct
@@ -449,10 +424,8 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps)
         reltol = min(reltol, jump.reltol)
     end
 
-    return ContinuousCallback(
-        cache, cache; initialize = initialize_vr_direct_wrapper,
-        save_positions, abstol, reltol
-    )
+    return ContinuousCallback(cache, cache; initialize = initialize_vr_direct_wrapper,
+        save_positions, abstol, reltol)
 end
 
 function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs; rng = DEFAULT_RNG)
@@ -472,7 +445,7 @@ end
 # recursively evaluate the cumulative sum of the rates for type stability
 @inline function cumsum_rates!(cum_rate_sum, u, p, t, rates::Tuple)
     cur_sum = zero(eltype(cum_rate_sum))
-    return cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
+    cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
 end
 
 # loop-based version for Vector rate_funcs (avoids dynamic splatting)
@@ -489,18 +462,16 @@ end
     new_sum = cur_sum + rate(u, p, t)
     @inbounds cum_rate_sum[idx] = new_sum
     idx += 1
-    return cumsum_rates!(cum_rate_sum, u, p, t, idx, new_sum, rates...)
+    cumsum_rates!(cum_rate_sum, u, p, t, idx, new_sum, rates...)
 end
 
 @inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate)
-    return @inbounds cum_rate_sum[idx] = cur_sum + rate(u, p, t)
+    @inbounds cum_rate_sum[idx] = cur_sum + rate(u, p, t)
 end
 
 function total_variable_rate(
         cache::VR_DirectEventCache{
-            T, RNG, F1, F2,
-        }, u, p, t
-    ) where {T, RNG, F1, F2}
+            T, RNG, F1, F2}, u, p, t) where {T, RNG, F1, F2}
     (; cum_rate_sum, rate_funcs) = cache
     sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
     return sum_rate
@@ -545,22 +516,18 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     return cache.current_threshold
 end
 
-@generated function execute_affect!(
-        cache::VR_DirectEventCache{T, RNG, F1, F2},
-        integrator::I, idx
-    ) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
-    return quote
+@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2},
+        integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
+    quote
         (; affect_funcs) = cache
         Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds affect_funcs[i](integrator)) i -> (@inbounds affect_funcs[fieldcount(F2)](integrator))
     end
 end
 
-@inline function execute_affect!(
-        cache::VR_DirectEventCache,
-        integrator::I, idx
-    ) where {I <: SciMLBase.DEIntegrator}
+@inline function execute_affect!(cache::VR_DirectEventCache,
+        integrator::I, idx) where {I <: SciMLBase.DEIntegrator}
     (; affect_funcs) = cache
-    return if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
+    if affect_funcs isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
         @inbounds affect_funcs[idx](integrator)
     else
         error("Error, invalid affect_funcs type. Expected a vector of function wrappers and got $(typeof(affect_funcs))")

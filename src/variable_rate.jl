@@ -295,6 +295,42 @@ sol = solve(jprob, Tsit5())
   - `VR_Direct` and `VR_DirectFW` are expected to generally be more performant than `VR_FRM`.
 """
 struct VR_Direct <: VariableRateAggregator end
+"""
+$(TYPEDEF)
+
+Function-wrapper variant of [`VR_Direct`](@ref) for simulations with many
+[`VariableRateJump`](@ref)s.
+
+`VR_DirectFW` uses the same direct-method callback strategy as `VR_Direct`, but stores the
+rate and affect functions in `FunctionWrappers`-based containers.
+
+## Returns
+
+  - A stateless [`VariableRateAggregator`](@ref) value for the `vr_aggregator` keyword of
+    [`JumpProblem`](@ref).
+
+## Examples
+
+```julia
+using JumpProcesses, OrdinaryDiffEq
+
+u0 = [1.0]
+p = [10.0, 0.5]
+tspan = (0.0, 10.0)
+
+birth_rate(u, p, t) = p[1]
+birth_affect!(integrator) = (integrator.u[1] += 1; nothing)
+birth_jump = VariableRateJump(birth_rate, birth_affect!)
+
+death_rate(u, p, t) = p[2] * u[1]
+death_affect!(integrator) = (integrator.u[1] -= 1; nothing)
+death_jump = VariableRateJump(death_rate, death_affect!)
+
+oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)
+jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_DirectFW())
+sol = solve(jprob, Tsit5())
+```
+"""
 struct VR_DirectFW <: VariableRateAggregator end
 
 mutable struct VR_DirectEventCache{T, RNG, F1, F2}

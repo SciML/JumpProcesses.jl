@@ -179,6 +179,33 @@ const JUMP_AGGREGATORS = (Direct(), DirectFW(), DirectCR(), SortingDirect(), RSS
 struct NullAggregator <: AbstractAggregatorAlgorithm end
 
 # true if aggregator requires a jump dependency graph
+"""
+    needs_depgraph(aggregator) -> Bool
+
+Return whether an aggregator requires a reaction dependency graph when building a
+[`JumpProblem`](@ref).
+
+## Arguments
+
+  - `aggregator`: An `AbstractAggregatorAlgorithm` value such as [`DirectCR`](@ref),
+    [`SortingDirect`](@ref), [`NRM`](@ref), [`CCNRM`](@ref), [`RDirect`](@ref), or
+    [`Coevolve`](@ref).
+
+## Returns
+
+  - `true` when the aggregator needs a dependency graph from each reaction to the
+    reactions whose propensities must be updated after it fires.
+  - `false` for aggregators that update all rates or otherwise do not use this graph.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+needs_depgraph(Direct()) == false
+needs_depgraph(NRM()) == true
+```
+"""
 needs_depgraph(aggregator::AbstractAggregatorAlgorithm) = false
 needs_depgraph(aggregator::DirectCR) = true
 needs_depgraph(aggregator::SortingDirect) = true
@@ -190,6 +217,30 @@ needs_depgraph(aggregator::Coevolve) = true
 # true if aggregator requires a map from solution variable to dependent jumps.
 # It is implicitly assumed these aggregators also require the reverse map, from
 # jumps to variables they update.
+"""
+    needs_vartojumps_map(aggregator) -> Bool
+
+Return whether an aggregator requires the species-to-reaction dependency map used by
+RSSA-style bracketing.
+
+## Arguments
+
+  - `aggregator`: An `AbstractAggregatorAlgorithm` value.
+
+## Returns
+
+  - `true` for [`RSSA`](@ref) and [`RSSACR`](@ref).
+  - `false` for other built-in aggregators.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+needs_vartojumps_map(RSSA()) == true
+needs_vartojumps_map(Direct()) == false
+```
+"""
 needs_vartojumps_map(aggregator::AbstractAggregatorAlgorithm) = false
 needs_vartojumps_map(aggregator::RSSA) = true
 needs_vartojumps_map(aggregator::RSSACR) = true

@@ -1,5 +1,75 @@
+"""
+    SimpleTauLeaping()
+
+Fixed-step tau-leaping algorithm for pure [`RegularJump`](@ref) problems.
+
+Use `SimpleTauLeaping` with `JumpProblem(prob, PureLeaping(), regular_jump)` and pass
+the timestep through the `dt` keyword to `solve`.
+
+## Keyword Arguments
+
+The algorithm constructor has no fields or keyword arguments. The `solve` method accepts:
+
+  - `dt`: Required fixed timestep.
+  - `seed`: Optional random seed for the jump problem RNG.
+  - `saveat`: Optional scalar interval or collection of save times.
+  - `save_start`: Whether to save the initial time. Defaults follow SciML save conventions.
+  - `save_end`: Whether to save the final time. Defaults follow SciML save conventions.
+
+## Returns
+
+  - A stateless `SciMLBase.AbstractDEAlgorithm` value.
+
+## Examples
+
+```julia
+using JumpProcesses, DiffEqBase
+
+rate!(out, u, p, t) = (out[1] = 0.1 * u[1])
+affect!(du, u, p, t, counts, mark) = (du[1] = -counts[1])
+rj = RegularJump(rate!, affect!, 1)
+
+prob = DiscreteProblem([20], (0.0, 2.0))
+jprob = JumpProblem(prob, PureLeaping(), rj)
+sol = solve(jprob, SimpleTauLeaping(); dt = 0.1)
+```
+"""
 struct SimpleTauLeaping <: SciMLBase.AbstractDEAlgorithm end
 
+"""
+    SimpleExplicitTauLeaping(; epsilon = 0.05)
+    SimpleExplicitTauLeaping(epsilon)
+
+Adaptive explicit tau-leaping algorithm for pure [`MassActionJump`](@ref) problems.
+
+Use `SimpleExplicitTauLeaping` with `JumpProblem(prob, PureLeaping(), mass_action_jump)`.
+The algorithm computes step sizes from the mass-action propensities and the error-control
+parameter `epsilon`.
+
+## Arguments
+
+  - `epsilon`: Positive floating-point error-control parameter. Smaller values generally
+    produce smaller steps.
+
+## Fields
+
+  - `epsilon`: Stored error-control parameter used by the adaptive leaping step selector.
+
+## Returns
+
+  - A `SciMLBase.AbstractDEAlgorithm` value.
+
+## Examples
+
+```julia
+using JumpProcesses, DiffEqBase
+
+maj = MassActionJump([0.1], [[1 => 1]], [[1 => -1]])
+prob = DiscreteProblem([20], (0.0, 2.0))
+jprob = JumpProblem(prob, PureLeaping(), maj)
+sol = solve(jprob, SimpleExplicitTauLeaping())
+```
+"""
 struct SimpleExplicitTauLeaping{T <: AbstractFloat} <: SciMLBase.AbstractDEAlgorithm
     epsilon::T  # Error control parameter
 end
@@ -405,6 +475,35 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     return sol
 end
 
+"""
+    EnsembleGPUKernel()
+    EnsembleGPUKernel(backend)
+
+Ensemble algorithm marker for GPU execution of tau-leaping ensemble simulations.
+
+## Arguments
+
+  - `backend`: Optional KernelAbstractions-compatible backend. `nothing` requests the
+    default backend selected by the extension.
+
+## Fields
+
+  - `backend`: Backend object used by the GPU extension.
+  - `cpu_offload`: Fraction of trajectories to offload to CPU execution.
+
+## Returns
+
+  - A `SciMLBase.EnsembleAlgorithm` value for use as the ensemble algorithm argument to
+    `solve`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+ensemble_alg = EnsembleGPUKernel()
+```
+"""
 struct EnsembleGPUKernel{Backend} <: SciMLBase.EnsembleAlgorithm
     backend::Backend
     cpu_offload::Float64

@@ -429,6 +429,30 @@ end
 using_params(maj::MassActionJump{T, S, U, Nothing}) where {T, S, U} = false
 using_params(maj::MassActionJump) = true
 using_params(maj::Nothing) = false
+"""
+    get_num_majumps(jumps) -> Int
+
+Return the number of mass-action jumps represented by a jump container.
+
+## Arguments
+
+  - `jumps`: A [`MassActionJump`](@ref), [`SpatialMassActionJump`](@ref),
+    [`JumpSet`](@ref), or `nothing`.
+
+## Returns
+
+  - The number of mass-action reaction channels. `nothing` returns `0`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+maj = MassActionJump([1.0], [[1 => 1]], [[1 => -1]])
+get_num_majumps(maj) == 1
+get_num_majumps(nothing) == 0
+```
+"""
 @inline get_num_majumps(maj::MassActionJump) = length(maj.net_stoch)
 @inline get_num_majumps(maj::Nothing) = 0
 

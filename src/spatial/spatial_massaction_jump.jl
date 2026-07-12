@@ -1,6 +1,60 @@
 const AVecOrNothing = Union{AbstractVector, Nothing}
 const AMatOrNothing = Union{AbstractMatrix, Nothing}
 
+"""
+    SpatialMassActionJump(uniform_rates, spatial_rates, reactant_stoch, net_stoch,
+        param_mapper = nothing; scale_rates = true, useiszero = true, nocopy = false)
+    SpatialMassActionJump(spatial_rates, reactant_stoch, net_stoch, param_mapper = nothing;
+        kwargs...)
+    SpatialMassActionJump(uniform_rates, reactant_stoch, net_stoch, param_mapper = nothing;
+        kwargs...)
+    SpatialMassActionJump(ma_jumps::MassActionJump; scale_rates = false, kwargs...)
+
+Represent mass-action reactions whose rate constants may be uniform across sites, vary by
+site, or include both uniform and spatially varying reaction channels.
+
+Uniform reactions are ordered before spatially varying reactions. For a spatial rate matrix,
+rows index reactions and columns index sites.
+
+## Arguments
+
+  - `uniform_rates`: Vector of rate constants for reactions that use the same rate at every
+    site, or `nothing`.
+  - `spatial_rates`: Matrix of rate constants for site-dependent reactions, or `nothing`.
+  - `reactant_stoch`: Reactant stoichiometry for each reaction, using the same pair-vector
+    representation as [`MassActionJump`](@ref).
+  - `net_stoch`: Net stoichiometry for each reaction.
+  - `param_mapper`: Optional function mapping problem parameters to rate constants.
+  - `ma_jumps`: Existing [`MassActionJump`](@ref) to reinterpret as spatial mass-action
+    reactions.
+
+## Keyword Arguments
+
+  - `scale_rates`: Whether to divide rates by factorial stoichiometry factors. Defaults to
+    `true` for raw rates and `false` when constructing from an existing `MassActionJump`.
+  - `useiszero`: Whether a single zero reactant entry is treated as an empty reactant list.
+  - `nocopy`: Whether to store input arrays directly instead of copying them.
+
+## Fields
+
+  - `uniform_rates`: Uniform reaction rates, or `nothing`.
+  - `spatial_rates`: Site-dependent reaction-rate matrix, or `nothing`.
+  - `reactant_stoch`: Reactant stoichiometry by reaction.
+  - `net_stoch`: Net stoichiometry by reaction.
+  - `param_mapper`: Optional parameter-to-rate mapping.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+rates = [0.1 0.2 0.3]
+reactant_stoch = [[1 => 1]]
+net_stoch = [[1 => -1]]
+smaj = SpatialMassActionJump(rates, reactant_stoch, net_stoch)
+get_num_majumps(smaj) == 1
+```
+"""
 struct SpatialMassActionJump{A <: AVecOrNothing, B <: AMatOrNothing, S, U, V} <:
        AbstractMassActionJump
     uniform_rates::A # reactions that are uniform in space

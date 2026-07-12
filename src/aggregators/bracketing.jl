@@ -3,6 +3,38 @@
 #       large-scale reaction networks", Thanh et al, J. Chem. Phys., 2015
 # note, expects the type of the bracketing variables [ulow,uhigh] to be the
 # same as the fluct_rate and ushift.
+"""
+    BracketData(fluctrate, threshold, Δu)
+    BracketData{T1, T2}()
+
+Configure species-population brackets used by RSSA-based aggregators.
+
+For species population `u[i]`, the bracket is
+`[(1 - fluctrate) * u[i], (1 + fluctrate) * u[i]]` when `u[i] >= threshold`.
+For smaller populations, the bracket is `[max(u[i] - Δu, 0), u[i] + Δu]`.
+Each field may be either a scalar shared by all species or a vector indexed by species.
+
+## Fields
+
+  - `fluctrate`: Relative fluctuation width used for populations at or above `threshold`.
+  - `threshold`: Population threshold below which the absolute `Δu` bracket is used.
+  - `Δu`: Absolute bracket half-width used for populations below `threshold`.
+
+## Notes
+
+  - `BracketData{T1, T2}()` constructs `BracketData(T1(0.1), T2(25), T2(4))`.
+  - The bracketing rules follow the RSSA construction in Thanh et al., J. Chem. Phys. 142,
+    244106 (2015).
+
+## Examples
+
+```julia
+using JumpProcesses
+
+bd = BracketData(0.1, 25, 4)
+bd.fluctrate == 0.1
+```
+"""
 struct BracketData{T1, T2}
     fluctrate::T1         # interval should be [1-fluctrate,1+fluctrate] * u
     threshold::T2         # for u below threshold interval is:

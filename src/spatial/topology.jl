@@ -3,6 +3,29 @@ A file with structs and functions for setting up and using the topology of the s
 """
 
 ################### Graph ########################
+"""
+    num_sites(spatial_system) -> Int
+
+Return the number of sites in a spatial system.
+
+## Arguments
+
+  - `spatial_system`: A `Graphs.AbstractGraph` or [`CartesianGridRej`](@ref)-compatible
+    grid.
+
+## Returns
+
+  - The number of graph vertices or Cartesian grid cells.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+grid = CartesianGrid((2, 3))
+num_sites(grid) == 6
+```
+"""
 num_sites(graph::AbstractGraph) = Graphs.nv(graph)
 # neighbors(graph::AbstractGraph, site) = Graphs.neighbors(graph, site)
 # outdegree(graph::AbstractGraph, site) = Graphs.outdegree(graph, site)
@@ -43,6 +66,29 @@ end
 
 dimension(grid) = length(grid.dims)
 num_sites(grid) = prod(grid.dims)
+"""
+    outdegree(grid, site) -> Int
+
+Return the number of valid nearest-neighbor sites adjacent to `site`.
+
+## Arguments
+
+  - `grid`: A [`CartesianGridRej`](@ref)-compatible grid.
+  - `site`: Linear site index.
+
+## Returns
+
+  - The number of in-domain neighbors for `site`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+grid = CartesianGrid((2, 2))
+outdegree(grid, 1) == 2
+```
+"""
 outdegree(grid, site) = grid.nums_neighbors[site]
 
 """
@@ -100,9 +146,71 @@ function pad_hop_vec!(to_pad::AbstractVector, grid, site, hop_vec::AbstractVecto
     to_pad
 end
 
+"""
+    CartesianGrid(dims)
+
+Construct the default Cartesian grid topology for spatial jump simulations.
+
+`CartesianGrid` currently returns a [`CartesianGridRej`](@ref), which samples random
+neighbors by rejection from the potential coordinate offsets.
+
+## Arguments
+
+  - `dims`: Tuple or vector of side lengths. One-, two-, and three-dimensional grids are
+    supported by the built-in offset tables.
+
+## Returns
+
+  - A [`CartesianGridRej`](@ref) with sites indexed by Julia linear indices.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+grid = CartesianGrid((3, 4))
+num_sites(grid) == 12
+collect(neighbors(grid, 1)) == [2, 4]
+```
+"""
 CartesianGrid(dims) = CartesianGridRej(dims) # use CartesianGridRej by default
 
 # neighbor sampling is rejection-based
+"""
+    CartesianGridRej(dims)
+    CartesianGridRej(dimension, linear_size::Int)
+
+Cartesian grid topology with rejection-based random neighbor sampling.
+
+Sites are represented by linear indices over `dims`. Neighbor relations use the nearest
+Cartesian offsets in one, two, or three dimensions and reject offsets that would leave the
+domain.
+
+## Arguments
+
+  - `dims`: Tuple or vector of side lengths.
+  - `dimension`: Number of Cartesian dimensions for a hypercube grid.
+  - `linear_size`: Side length used in every dimension when constructing from
+    `(dimension, linear_size)`.
+
+## Fields
+
+  - `dims`: Side lengths of the grid.
+  - `nums_neighbors`: Number of valid neighbors for each site.
+  - `CI`: Cartesian indices for the grid domain.
+  - `LI`: Linear indices for the grid domain.
+  - `offsets`: Candidate Cartesian offsets used to enumerate or sample neighbors.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+grid = CartesianGridRej((2, 2))
+outdegree(grid, 1) == 2
+collect(neighbors(grid, 1)) == [2, 3]
+```
+"""
 struct CartesianGridRej{N, T}
     "dimensions (side lengths) of the grid"
     dims::NTuple{N, Int}

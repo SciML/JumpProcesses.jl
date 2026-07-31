@@ -1,3 +1,7 @@
+# The General registry's TagBot trigger service decides whether TagBot is
+# installed by grepping this repo's workflow files for "JuliaRegistries/TagBot".
+# The thin caller below never mentions it, so this line must stay or registrations
+# stop being tagged. Removable once RegistryCI's filename-based check is deployed.
 name: "TagBot"
 on:
   issue_comment:

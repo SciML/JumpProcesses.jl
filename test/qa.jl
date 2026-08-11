@@ -1,9 +1,14 @@
 using SciMLTesting, JumpProcesses
 
-const REEXPORTED_API = Tuple(
-    name for name in names(JumpProcesses; all = false) if name !== :JumpProcesses &&
-        isdefined(JumpProcesses, name) &&
-        parentmodule(getfield(JumpProcesses, name)) !== JumpProcesses
+const REEXPORTED_API = (
+    :DiffEqBase,
+    :neighbors,
+    :outdegree,
+    (
+        name for name in names(JumpProcesses.DiffEqBase; all = false) if
+            name !== :DiffEqBase && isdefined(JumpProcesses, name) &&
+            getfield(JumpProcesses, name) === getfield(JumpProcesses.DiffEqBase, name)
+    )...,
 )
 
 # The ExplicitImports ignore-lists below are names owned by other packages whose
@@ -13,6 +18,7 @@ const REEXPORTED_API = Tuple(
 run_qa(
     JumpProcesses;
     explicit_imports = true,
+    reexports_allow = REEXPORTED_API,
     api_docs_kwargs = (; rendered = true, rendered_ignore = REEXPORTED_API),
     aqua_kwargs = (;
         ambiguities = false,       # TODO: fix ambiguities and enable

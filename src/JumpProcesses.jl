@@ -38,7 +38,7 @@ import SymbolicIndexingInterface as SII
 using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
                   DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
                   ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
-                  deleteat!, isinplace, remake, savevalues!, step!,
+                  isinplace, remake, savevalues!, step!,
                   derivative_discontinuity!
 using SciMLBase: SciMLBase, DEIntegrator
 

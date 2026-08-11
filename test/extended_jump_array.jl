@@ -1,4 +1,5 @@
 using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
+using OrdinaryDiffEqBDF
 using FastBroadcast
 using StableRNGs
 
@@ -185,4 +186,40 @@ let
         rng = StableRNG(789))
     sol = solve(jprob, Rodas5P(linsolve = QRFactorization()))
     @test sol.retcode == ReturnCode.Success
+end
+
+@testset "DAE with VariableRateJump" begin
+    function dae!(out, du, u, p, t)
+        out .= du
+        nothing
+    end
+    dae(du, u, p, t) = du
+    rate(u, p, t) = u[1] + 1.0
+    affect!(integrator) = (integrator.u[1] += 1; nothing)
+    jump = VariableRateJump(rate, affect!)
+
+    for (f, iip) in ((dae!, true), (dae, false))
+        prob = DAEProblem{iip, SciMLBase.FullSpecialize}(
+            f, [0.0], [0.0], (0.0, 0.1);
+            differential_vars = [true])
+        jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(),
+            rng = StableRNG(626))
+        @test length(jump_prob.prob.du0) == length(jump_prob.prob.u0) == 2
+        @test length(jump_prob.prob.differential_vars) == 2
+        @test SciMLBase.specialization(jump_prob.prob.f) === SciMLBase.FullSpecialize
+
+        if isinplace(jump_prob.prob)
+            out = zero(jump_prob.prob.u0)
+            jump_prob.prob.f(
+                out, jump_prob.prob.du0, jump_prob.prob.u0, jump_prob.prob.p, 0.0)
+            @test all(iszero, out)
+
+            sol = solve(jump_prob, DFBDF())
+            @test sol.retcode == ReturnCode.Success
+        else
+            out = jump_prob.prob.f(
+                jump_prob.prob.du0, jump_prob.prob.u0, jump_prob.prob.p, 0.0)
+            @test all(iszero, out)
+        end
+    end
 end

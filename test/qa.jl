@@ -19,7 +19,6 @@ run_qa(
     JumpProcesses;
     explicit_imports = true,
     reexports_allow = REEXPORTED_API,
-    api_docs_kwargs = (; rendered = true, rendered_ignore = REEXPORTED_API),
     aqua_kwargs = (;
         ambiguities = false,       # TODO: fix ambiguities and enable
         piracies = false,          # default solvers defined for AbstractJumpProblem

@@ -1,7 +1,6 @@
 module JumpProcesses
 
-using Reexport: Reexport, @reexport
-@reexport using DiffEqBase
+using DiffEqBase
 
 # Explicit imports from standard libraries
 using LinearAlgebra: LinearAlgebra, mul!

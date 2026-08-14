@@ -31,6 +31,7 @@ not already installed
 ```julia
 using Pkg
 Pkg.add("JumpProcesses")
+Pkg.add("SciMLBase")
 Pkg.add("OrdinaryDiffEq")
 Pkg.add("StochasticDiffEq")
 Pkg.add("Plots")
@@ -39,7 +40,7 @@ Pkg.add("Plots")
 We then load these packages, and set some plotting defaults, as
 
 ```@example tut3
-using JumpProcesses, StochasticDiffEq, OrdinaryDiffEq, Plots
+using JumpProcesses, SciMLBase, StochasticDiffEq, OrdinaryDiffEq, Plots
 default(; lw = 2)
 ```
 

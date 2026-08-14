@@ -60,7 +60,7 @@ which is the simplest TPP process with ``\lambda(t) = 1``. Let's start by
 loading our packages.
 
 ```@example tpp-tutorial
-using JumpProcesses, Plots
+using JumpProcesses, SciMLBase, Plots
 ```
 
 In JumpProcesses, a `ConstantRateJump` is a TPP whose rate is constant

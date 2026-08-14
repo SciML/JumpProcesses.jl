@@ -1,15 +1,6 @@
 using SciMLTesting, JumpProcesses
 
-const REEXPORTED_API = (
-    :DiffEqBase,
-    :neighbors,
-    :outdegree,
-    (
-        name for name in names(JumpProcesses.DiffEqBase; all = false) if
-            name !== :DiffEqBase && isdefined(JumpProcesses, name) &&
-            getfield(JumpProcesses, name) === getfield(JumpProcesses.DiffEqBase, name)
-    )...,
-)
+const REEXPORTED_API = (:init, :solve, :solve!, :neighbors, :outdegree)
 
 # The ExplicitImports ignore-lists below are names owned by other packages whose
 # released public API does not (yet) include them; each group is annotated with its

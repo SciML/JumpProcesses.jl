@@ -76,7 +76,7 @@ Therefore, we have that our structure includes a vector of sub-TPP
 connected graph `g`.
 
 ```@example tpp-advanced
-using JumpProcesses
+using JumpProcesses, SciMLBase
 using PointProcesses
 
 struct SciMLPointProcess{M, J <: JumpProcesses.AbstractJump, G, D, T <: Real} <:

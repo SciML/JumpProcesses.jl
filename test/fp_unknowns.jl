@@ -1,4 +1,4 @@
-using Test, JumpProcesses, StableRNGs
+using Test, JumpProcesses, SciMLBase, StableRNGs
 
 rng = StableRNG(12345)
 

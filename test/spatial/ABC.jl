@@ -1,4 +1,4 @@
-using JumpProcesses, DiffEqBase
+using JumpProcesses, DiffEqBase, SciMLBase
 # using BenchmarkTools
 using Test, Graphs
 using StableRNGs

@@ -1,4 +1,4 @@
-using JumpProcesses, StaticArrays
+using JumpProcesses, SciMLBase, StaticArrays
 using Test
 using StableRNGs
 rng = StableRNG(12345)

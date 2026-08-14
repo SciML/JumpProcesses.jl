@@ -1,4 +1,4 @@
-using DiffEqBase, JumpProcesses, DataStructures
+using DiffEqBase, JumpProcesses, SciMLBase, DataStructures
 using Test, Statistics
 
 using StableRNGs

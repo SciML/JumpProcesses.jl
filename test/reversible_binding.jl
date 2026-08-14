@@ -1,4 +1,4 @@
-using JumpProcesses, DiffEqBase
+using JumpProcesses, DiffEqBase, SciMLBase
 using Test, LinearAlgebra
 using StableRNGs
 rng = StableRNG(12345)

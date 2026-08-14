@@ -35,11 +35,11 @@ import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
 using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
-                  DDEFunction, DiscreteProblem, ODEFunction, ODEProblem,
+                  DDEFunction, ODEFunction, ODEProblem,
                   ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
                   isinplace, remake, savevalues!, step!,
                   derivative_discontinuity!
-using SciMLBase: SciMLBase, DEIntegrator
+using SciMLBase: SciMLBase, DEIntegrator, DiscreteProblem
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end

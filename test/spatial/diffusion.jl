@@ -1,4 +1,4 @@
-using JumpProcesses, DiffEqBase
+using JumpProcesses, DiffEqBase, SciMLBase
 using Test
 using LinearAlgebra
 using Graphs

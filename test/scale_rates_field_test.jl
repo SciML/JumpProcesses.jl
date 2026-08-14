@@ -1,4 +1,4 @@
-using JumpProcesses, OrdinaryDiffEq, Test
+using JumpProcesses, OrdinaryDiffEq, SciMLBase, Test
 
 # Reaction: 3X → Y (third-order, factorial(3) = 6)
 # reactant_stoch: species 1 consumed with stoichiometry 3

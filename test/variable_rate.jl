@@ -1,4 +1,4 @@
-using DiffEqBase, JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, Test
+using DiffEqBase, JumpProcesses, OrdinaryDiffEq, SciMLBase, StochasticDiffEq, Test
 using Random, LinearSolve, Statistics
 using StableRNGs, ADTypes
 rng = StableRNG(12345)

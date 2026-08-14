@@ -26,13 +26,14 @@ installed via
 ```julia
 using Pkg
 Pkg.add("JumpProcesses")
+Pkg.add("SciMLBase")
 Pkg.add("Plots")
 ```
 
 Let's also load our packages and set some defaults for our plot formatting
 
 ```@example tut1
-using JumpProcesses, Plots
+using JumpProcesses, SciMLBase, Plots
 default(; lw = 2)
 ```
 
@@ -56,7 +57,7 @@ In the remainder of this tutorial we will use
 is the full program listing, which we will subsequently explain line by line
 
 ```julia
-using JumpProcesses, Plots
+using JumpProcesses, SciMLBase, Plots
 
 rate(u, p, t) = p.λ
 affect!(integrator) = (integrator.u[1] += 1)
@@ -77,7 +78,7 @@ We can define and simulate our jump process as follows. We first load our
 packages
 
 ```@example tut1
-using JumpProcesses, Plots
+using JumpProcesses, SciMLBase, Plots
 ```
 
 To specify our jump process, we need to define two functions. One that given the

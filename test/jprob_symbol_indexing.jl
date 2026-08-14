@@ -1,5 +1,5 @@
 # prepares the problem
-using JumpProcesses, Test, SymbolicIndexingInterface
+using JumpProcesses, SciMLBase, Test, SymbolicIndexingInterface
 rate1(u, p, t) = p[1]
 rate2(u, p, t) = p[2]
 affect1!(integ) = (integ.u[1] += 1)

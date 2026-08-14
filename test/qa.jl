@@ -1,10 +1,6 @@
 using SciMLTesting, JumpProcesses
 
-const REEXPORTED_API = Tuple(
-    name for name in names(JumpProcesses; all = false) if name !== :JumpProcesses &&
-        isdefined(JumpProcesses, name) &&
-        parentmodule(getfield(JumpProcesses, name)) !== JumpProcesses
-)
+const REEXPORTED_API = (:init, :solve, :solve!, :neighbors, :outdegree)
 
 # The ExplicitImports ignore-lists below are names owned by other packages whose
 # released public API does not (yet) include them; each group is annotated with its
@@ -13,7 +9,7 @@ const REEXPORTED_API = Tuple(
 run_qa(
     JumpProcesses;
     explicit_imports = true,
-    api_docs_kwargs = (; rendered = true, rendered_ignore = REEXPORTED_API),
+    reexports_allow = REEXPORTED_API,
     aqua_kwargs = (;
         ambiguities = false,       # TODO: fix ambiguities and enable
         piracies = false,          # default solvers defined for AbstractJumpProblem

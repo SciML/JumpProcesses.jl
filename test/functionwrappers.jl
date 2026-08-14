@@ -1,4 +1,4 @@
-using JumpProcesses, Test, StableRNGs, FunctionWrappers
+using JumpProcesses, Test, StableRNGs, FunctionWrappers, SciMLBase
 rng = StableRNG(12345)
 
 # https://github.com/SciML/JumpProcesses.jl/issues/324

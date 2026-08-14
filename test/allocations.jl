@@ -1,4 +1,4 @@
-using Test, JumpProcesses
+using Test, JumpProcesses, SciMLBase
 using StableRNGs
 
 # tests for https://github.com/SciML/JumpProcesses.jl/issues/305

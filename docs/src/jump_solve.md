@@ -71,8 +71,8 @@ algorithms are optimized for pure jump problems.
     (including state-dependent rates); it supports `saveat` for the full path. With
     ordinary parameters it is just an (unbiased) SSA simulation. Valid whenever the
     total propensity is bounded over the trajectory (e.g. population-bounded
-    systems); currently `ConstantRateJump`s with additive affects only (no
-    `MassActionJump`/`VariableRateJump` yet). See [`BoundedSSA`](@ref).
+    systems); currently `ConstantRateJump`s and `MassActionJump`s with additive
+    affects only (no `VariableRateJump` yet). See [`BoundedSSA`](@ref).
 
 ## RegularJump Compatible Methods
 

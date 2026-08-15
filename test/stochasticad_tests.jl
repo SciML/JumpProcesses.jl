@@ -173,10 +173,10 @@ end
     @testset "guards" begin
         T = 1.0
         # missing rate_bound on the algorithm
-        @test_throws ErrorException BoundedSSA()
+        @test_throws ArgumentError BoundedSSA()
         # non-additive (state-dependent) affect
         weird = ConstantRateJump((u, p, t) -> p[1], integ -> (integ.u[1] *= 2; nothing))
         jp_w = JumpProblem(DiscreteProblem([10], (0.0, T), [0.5]), Direct(), weird)
-        @test_throws ErrorException solve(jp_w, BoundedSSA(; rate_bound = 10.0))
+        @test_throws ArgumentError solve(jp_w, BoundedSSA(; rate_bound = 10.0))
     end
 end

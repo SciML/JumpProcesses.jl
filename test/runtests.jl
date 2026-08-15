@@ -46,6 +46,7 @@ end
         @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
         @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
         @time @safetestset "Extinction test" begin include("extinction_test.jl") end
+        @time @safetestset "BoundedSSA Tests" begin include("bounded_ssa.jl") end
     end
     if GROUP == "All" || GROUP == "InterfaceII"
         @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end

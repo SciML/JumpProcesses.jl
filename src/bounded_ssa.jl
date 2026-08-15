@@ -46,11 +46,18 @@ differentiates.
     `SimpleTauLeaping`, via `_process_saveat`); defaults to `[t0, tf]`. `sol.u[i]` is
     the differentiable state at `sol.t[i]`, and `sol(t)` interpolates (piecewise
     constant, as with `SSAStepper`).
+  - Randomness is drawn from the `JumpProblem`'s `rng` (as for the other SSAs), so
+    seeding it (e.g. `JumpProblem(...; rng = StableRNG(seed))`) makes runs reproducible
+    and independent of the global RNG; `solve(...; seed)` reseeds that same `rng`.
 
 # Scope / limitations
 
   - `ConstantRateJump`s and `MassActionJump`s (state-dependent / mass-action rates
     supported); jump-only, no continuous drift, no `VariableRateJump`.
+  - The state `u0` must be array-valued (indexable, e.g. a `Vector`); scalar states are
+    not supported (they error early). Numeric types are preserved: when the state, tunable
+    parameters and `rate_bound` all use `Float32`, `BoundedSSA` keeps `Float32` arithmetic
+    internally rather than forcing quantities to `Float64` (mixed types promote as usual).
   - Additive affects only. A `ConstantRateJump`'s net change is inferred from `affect!`
     and checked; a `MassActionJump`'s `net_stoch` is inherently additive. For a
     `MassActionJump` rate constant to be *differentiated* it must flow from `p` via a
@@ -71,8 +78,10 @@ struct BoundedSSA{B} <: SciMLBase.AbstractDEAlgorithm
     rate_bound::B
 end
 function BoundedSSA(; rate_bound = nothing)
-    rate_bound === nothing && error("BoundedSSA requires the keyword argument " *
-        "`rate_bound` (a constant upper bound on the total propensity).")
+    rate_bound === nothing && throw(ArgumentError("BoundedSSA requires the keyword " *
+        "argument `rate_bound` (a constant upper bound on the total propensity)."))
+    rate_bound > 0 || throw(ArgumentError("BoundedSSA `rate_bound` must be a positive " *
+        "number (an upper bound on the total propensity)."))
     BoundedSSA{typeof(rate_bound)}(rate_bound)
 end
 
@@ -88,29 +97,33 @@ function _bssa_net_change(affect!, ubase, p, t0)
     return u .- ubase
 end
 
-# infer a jump's additive net state change, verifying it is state-independent.
+# infer a jump's additive net state change, verifying it is state-independent. `base` keeps
+# the state's own element type (no forced `Float64`), so the inferred change stays integer
+# for integer populations and `Float32` for a `Float32` state.
 function _bssa_additive_change(jump, u0, p, t0)
-    base = float.(collect(u0))
+    base = collect(u0)
     Δ = _bssa_net_change(jump.affect!, base, p, t0)
     Δ2 = _bssa_net_change(jump.affect!, base .+ one(eltype(base)), p, t0)
-    isapprox(Δ, Δ2) || error(
+    isapprox(Δ, Δ2) || throw(ArgumentError(
         "BoundedSSA supports only additive affects (a constant net state change), " *
         "but a jump's affect! gave a state-dependent change ($Δ vs $Δ2 from a " *
-        "shifted state).")
+        "shifted state)."))
     return Δ
 end
 
 function _bssa_check_supported(jprob)
-    jprob.prob isa DiscreteProblem || error(
-        "BoundedSSA only supports JumpProblems over DiscreteProblems (pure jumps).")
+    jprob.prob isa DiscreteProblem || throw(ArgumentError(
+        "BoundedSSA only supports JumpProblems over DiscreteProblems (pure jumps)."))
+    jprob.prob.u0 isa AbstractArray || throw(ArgumentError(
+        "BoundedSSA requires an array-valued state `u0`; scalar states are not supported."))
     vj = jprob.variable_jumps
-    (vj === nothing || isempty(vj)) || error(
-        "BoundedSSA supports jump-only problems only (no VariableRateJumps).")
+    (vj === nothing || isempty(vj)) || throw(ArgumentError(
+        "BoundedSSA supports jump-only problems only (no VariableRateJumps)."))
     cj = jprob.constant_jumps
     nc = (cj === nothing) ? 0 : length(cj)
     nm = get_num_majumps(jprob.massaction_jump)
-    (nc + nm >= 1) || error(
-        "BoundedSSA requires at least one ConstantRateJump or MassActionJump.")
+    (nc + nm >= 1) || throw(ArgumentError(
+        "BoundedSSA requires at least one ConstantRateJump or MassActionJump."))
     nothing
 end
 
@@ -123,10 +136,11 @@ function _bssa_tunables(p)
 end
 
 # Dense additive net state change of MassActionJump reaction `r` (from its net_stoch),
-# over `n` species. MassAction affects are inherently additive, so -- unlike a
-# ConstantRateJump -- no affect! probing / verification is needed.
-function _bssa_ma_delta(net_stoch_r, n)
-    Δ = zeros(Float64, n)
+# over `n` species, stored in the requested numeric type `T` (the run's primal float type).
+# MassAction affects are inherently additive, so -- unlike a ConstantRateJump -- no affect!
+# probing / verification is needed.
+function _bssa_ma_delta(net_stoch_r, n, ::Type{T}) where {T}
+    Δ = zeros(T, n)
     for (spec, change) in net_stoch_r
         Δ[spec] += change
     end
@@ -156,7 +170,7 @@ end
 
 # Internal driver: returns `(tsave, usave)` at the resolved save schedule. Uses
 # `_process_saveat` (shared with SimpleTauLeaping) for saveat/save_start/save_end.
-function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
+function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end, rng)
     _bssa_check_supported(jprob)
     u0 = jprob.prob.u0
     cjumps = jprob.constant_jumps === nothing ? () : jprob.constant_jumps
@@ -170,14 +184,22 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
 
     saveat_times, ss, se = _process_saveat(saveat, (t0, tf), save_start, save_end)
 
+    # Primal floating-point type of the run, from the (always non-triple) rate bound and
+    # the state. Drives the parameter-free delta storage and the zero-denominator sentinel
+    # `tiny`, so a `Float32` problem stays `Float32` (no silent promotion to `Float64`).
+    Tf = float(promote_type(typeof(Λ), eltype(u0)))
+    tiny = nextfloat(zero(Tf))
+
     # additive net change per channel: ConstantRateJumps (net change inferred from
     # affect! and verified additive) first, then MassActionJump reactions (net_stoch).
-    Δ = Vector{Vector{Float64}}(undef, K)
+    # Deltas are stoichiometry constants (parameter-free), so they carry the primal type
+    # `Tf`, never a StochasticTriple; they promote the state only when a real event fires.
+    Δ = Vector{Vector{Tf}}(undef, K)
     for k in 1:Kc
         Δ[k] = _bssa_additive_change(cjumps[k], u0, p, t0)
     end
     for r in 1:nrx
-        Δ[Kc + r] = _bssa_ma_delta(maj.net_stoch[r], n)
+        Δ[Kc + r] = _bssa_ma_delta(maj.net_stoch[r], n, Tf)
     end
 
     # `0 * sum(...)` promotes the state to the parameter's element type (giving a triple
@@ -185,7 +207,7 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
     # of `p` (see `_bssa_tunables`), so both plain `Vector` parameters and SciMLStructures
     # parameter objects (MTK/Catalyst tunables) are supported; a `Vector` seeds from itself.
     z = 0 * sum(_bssa_tunables(p))
-    u = [float(u0[i]) + z for i in 1:n]
+    u = [u0[i] + z for i in 1:n]
 
     tsave = typeof(t0)[]
     usave = typeof(u)[]
@@ -197,8 +219,13 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
     # candidate events ~ homogeneous Poisson(Λ) on [t0, tf]. PARAMETER-FREE (Λ is a
     # constant), so the count and times carry no derivative and never branch on a
     # triple. Uses PoissonRandom's `pois_rand`, as elsewhere in JumpProcesses.
-    M = pois_rand(Random.default_rng(), Λ * ΔT)
-    ctimes = sort!(t0 .+ ΔT .* rand(M))
+    M = pois_rand(rng, Λ * ΔT)
+    ctimes = sort!(t0 .+ ΔT .* rand(rng, M))
+
+    # MA rate constants come from `param_mapper(p)` (so a StochasticTriple parameter flows
+    # through), else the stored scaled_rates. Loop-invariant (depends only on `p`), so it is
+    # computed once here rather than at every candidate event.
+    maunscaled = (nrx > 0 && using_params(maj)) ? maj.param_mapper(p) : nothing
 
     save_idx = 1
     for m in 1:M
@@ -210,23 +237,25 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end)
         end
 
         # per-channel propensities at the current state: ConstantRateJumps then
-        # MassActionJump reactions. MA rate constants come from `param_mapper(p)` (so a
-        # StochasticTriple parameter flows through), else the stored scaled_rates.
-        maunscaled = (nrx > 0 && using_params(maj)) ? maj.param_mapper(p) : nothing
+        # MassActionJump reactions.
         rates = [k <= Kc ? cjumps[k].rate(u, p, tm) :
                  _bssa_ma_rate(u, maj, maunscaled, k - Kc) for k in 1:K]
         total = sum(rates)
-        # thinning: real vs null event. `rand(Bernoulli(p))` handles both the primal
+        # thinning: real vs null event. `rand(rng, Bernoulli(p))` handles both the primal
         # draw and — when a StochasticTriple `p` flows in with StochasticAD loaded —
         # the differentiable decision (StochasticAD's own `rand(::Bernoulli)` rule).
-        accept = rand(Bernoulli(total / Λ))
+        accept = rand(rng, Bernoulli(total / Λ))
 
-        # which channel: stick-breaking conditional Bernoullis (last deterministic)
+        # which channel: stick-breaking conditional Bernoullis (last deterministic).
+        # `+ tiny` guards the 0/0 that appears once every remaining channel has zero
+        # propensity (an absorbing / extinct state): without it the ratio is `NaN` and
+        # `Bernoulli` throws. `tiny = nextfloat(zero(Tf))` is the smallest step above zero
+        # in the run's float type, so it leaves a genuine (nonzero-suffix) ratio unchanged.
         notchosen = 1 + z
         sel = [z for _ in 1:n]
         for k in 1:K
             chose = k < K ?
-                    rand(Bernoulli(rates[k] / (sum(rates[j] for j in k:K) + 1e-300))) :
+                    rand(rng, Bernoulli(rates[k] / (sum(rates[j] for j in k:K) + tiny))) :
                     (1 + z)
             take = notchosen * chose
             sel = [sel[i] + take * Δ[k][i] for i in 1:n]
@@ -272,7 +301,8 @@ meaning/validity of `rate_bound`.
 """
 function bounded_ssa_path(jprob, p; rate_bound, saveat = last(jprob.prob.tspan),
         save_start = nothing, save_end = nothing, tspan = jprob.prob.tspan)
-    _, usave = _bounded_ssa(jprob, p, rate_bound, tspan, saveat, save_start, save_end)
+    _, usave = _bounded_ssa(jprob, p, rate_bound, tspan, saveat, save_start, save_end,
+        jprob.rng)
     return usave
 end
 
@@ -282,10 +312,10 @@ end
 function DiffEqBase.solve(jump_prob::JumpProblem, alg::BoundedSSA;
         seed = nothing, saveat = nothing, save_start = nothing, save_end = nothing,
         tspan = jump_prob.prob.tspan, kwargs...)
-    seed === nothing || Random.seed!(seed)
+    seed === nothing || Random.seed!(jump_prob.rng, seed)
     prob = jump_prob.prob
     ts, us = _bounded_ssa(jump_prob, prob.p, alg.rate_bound, tspan, saveat,
-        save_start, save_end)
+        save_start, save_end, jump_prob.rng)
     SciMLBase.build_solution(prob, alg, ts, us;
         dense = true,
         interp = SciMLBase.ConstantInterpolation(ts, us),

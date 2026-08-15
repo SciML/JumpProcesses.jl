@@ -1,5 +1,6 @@
 using JumpProcesses, StochasticAD, Distributions, SciMLStructures
 using Statistics, Random, Test
+using SciMLBase: DiscreteProblem
 
 # Tests for BoundedSSA — a uniformization (thinning) SSA for jump-only
 # ConstantRateJump/MassActionJump DiscreteProblems that composes with StochasticAD.

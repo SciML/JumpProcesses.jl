@@ -6,6 +6,7 @@
 # in the isolated `stochasticad/` environment (`test/stochasticad_tests.jl`).
 using JumpProcesses, Statistics, Random, Test
 using StableRNGs
+using SciMLBase: DiscreteProblem
 
 @testset "BoundedSSA (ordinary SSA interface)" begin
 

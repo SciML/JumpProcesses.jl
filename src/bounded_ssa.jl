@@ -22,22 +22,89 @@ total-propensity bound `Λ = rate_bound`:
     **null event** absorbing the slack `Λ - a(u)`);
   - the firing channel is chosen by stick-breaking `Bernoulli`s.
 
-All parameter dependence flows through the accept / channel `Bernoulli`s, so the
-gradient is captured. This is **unbiased** (no step cap) whenever `Λ` is a valid
-bound, and `saveat` is exact because the candidate times are fixed `Float64`.
+**Primal simulation.** With a valid fixed bound `Λ`, uniformization samples *exactly
+the same continuous-time Markov chain* as the original SSA: it introduces no
+time-discretization bias and no event-count truncation bias (there is no step cap).
+To see this, write `aₖ(u,p,t)` for the propensity of reaction `k` and
+`a(u,p,t) = Σₖ aₖ(u,p,t)` for the total. Candidate events arrive at rate `Λ`,
+and a candidate is turned into reaction `k` with probability `aₖ(u,p,t)/Λ`
+(via the accept and channel `Bernoulli`s), so the effective rate of reaction `k` is
+
+    Λ · (aₖ(u,p,t)/Λ) = aₖ(u,p,t),
+
+which reproduces the chain's exact propensities. The remaining candidates are
+**null events** (probability `1 - a(u,p,t)/Λ`); they leave the state unchanged
+and therefore do not alter these rates.
+
+Because uniformization introduces no time discretization, values requested through
+`saveat` are taken from the exact piecewise-constant jump path. Under StochasticAD,
+the candidate times remain ordinary parameter-independent floating-point values.
+
+**Gradient (StochasticAD).** Separately from the primal correctness above, all
+differentiated-parameter dependence flows through the accept / channel `Bernoulli`s,
+so StochasticAD can propagate derivative information through these discrete decisions
+while the candidate-event schedule remains independent of the differentiated
+parameters. This avoids the parameter-dependent event-count control flow that
+prevents the standard SSA loop from being differentiated directly in this way.
 
 With ordinary `Float64` parameters `solve(jprob, BoundedSSA(; rate_bound))` is an
 ordinary (uniformization) SSA simulation; with StochasticAD triples it
 differentiates.
 
-# Keyword arguments
+# Keyword arguments — the `rate_bound` contract
 
-  - `rate_bound` (required): a constant `Λ` upper-bounding the **total** propensity
-    `Σₖ rateₖ(u, p, t)` over the whole trajectory (and over the parameter
-    perturbation). Valid for systems with rigorously bounded populations; a looser
-    bound only costs efficiency (more null events), not accuracy. If `Λ` is
-    violated the accept probability exceeds 1 and sampling errors — pick it with
-    margin.
+`rate_bound = Λ` is the uniformization bound, and the correctness of the method
+rests on it. It must be **all** of the following:
+
+ 1. **A finite positive constant** — a single scalar value, not `Inf` or `NaN`.
+ 2. **Independent of the differentiated parameters** — it must not depend on the
+    `p` with respect to which derivatives are being estimated.
+ 3. **Fixed throughout the differentiated solve** — the same `Λ` is used
+    throughout both the primal and stochastic-derivative computation; it does not
+    vary in time or from event to event.
+ 4. **A true upper bound on the total propensity**, i.e.
+
+    ```
+    Σₖ rateₖ(u, p, t) ≤ Λ
+    ```
+
+    for **every reachable state `u`** over the **entire** simulation interval
+    `[t0, tf]`, not merely the initial or typical state. For an open population
+    with no finite global population bound (for example, an unrestricted birth
+    process), a finite global `Λ` may not exist. Models with conserved totals,
+    finite capacities, or other rigorous state bounds are natural cases where
+    such a bound can be established.
+ 5. **Valid in a local parameter neighbourhood** — when using StochasticAD, the
+    bound must remain valid for the local parameter variations represented by the
+    stochastic derivative computation. Leave sufficient margin so that an
+    infinitesimal change in the differentiated parameter cannot violate the bound.
+
+!!! warning "Do not recompute `Λ` from the differentiated parameter"
+    Do not derive `rate_bound` from a `StochasticTriple`, or otherwise make it
+    depend on the differentiated parameter inside the differentiated function.
+    For example, do not write `rate_bound = c * maximum(p)` or
+    `rate_bound = sum(rateₖ(u0, p, t0))` there.
+
+    `BoundedSSA` deliberately keeps the candidate Poisson process
+    parameter-independent: all differentiated parameter dependence is intended to
+    enter through the reaction propensities and the resulting stochastic
+    accept/channel decisions. A parameter-dependent `Λ` violates this construction
+    and is unsupported.
+
+    Compute `Λ` once from a rigorous structural bound on the model and pass that
+    fixed value to every solve involved in the derivative estimate.
+
+**Loose vs. invalid bounds.**
+
+  - A **valid but loose** `Λ` preserves the uniformization construction. The cost
+    is efficiency: candidate events arrive at rate `Λ`, while a candidate is a
+    real event with probability `a(u)/Λ` and a **null event** with probability
+    `1 - a(u)/Λ`. Thus a larger bound produces more null events and more work.
+  - A `Λ` that **can be violated** — i.e. some reachable state has
+    `Σₖ rateₖ(u, p, t) > Λ` — invalidates the uniformization construction because
+    the required acceptance probability would exceed `1`. Do not rely on runtime
+    sampling errors to detect this condition; choose and justify `Λ` with
+    sufficient margin.
 
 # `solve` options
 
@@ -58,10 +125,51 @@ differentiates.
     not supported (they error early). Numeric types are preserved: when the state, tunable
     parameters and `rate_bound` all use `Float32`, `BoundedSSA` keeps `Float32` arithmetic
     internally rather than forcing quantities to `Float64` (mixed types promote as usual).
-  - Additive affects only. A `ConstantRateJump`'s net change is inferred from `affect!`
-    and checked; a `MassActionJump`'s `net_stoch` is inherently additive. For a
-    `MassActionJump` rate constant to be *differentiated* it must flow from `p` via a
-    `param_idxs`/`param_mapper` jump (the combinatoric scaling is matched); a jump with
+    - **`ConstantRateJump` `affect!` contract (additive updates only).** For a
+    `ConstantRateJump`, `BoundedSSA` does not run `affect!` on every firing. Instead it
+    infers, *once*, a constant net state change `Δ` by probing `affect!`, then applies
+    `u = u + Δ` at each firing. This frozen, additive update allows `BoundedSSA` to
+    update the stochastic state without re-running arbitrary `affect!` code at each
+    firing. The `affect!` must therefore represent a net change to `integrator.u`
+    that is:
+        - **state-independent** — `Δ` must not depend on the current `integrator.u`;
+        - **time-independent** — `Δ` must not depend on `integrator.t`;
+        - **parameter-independent** — `Δ` must not depend on `integrator.p`;
+        - **a mutation of `integrator.u` only** (e.g. `integ.u[1] -= 1; integ.u[2] += 1`).
+
+    The following are **not** supported:
+        - updates whose `Δ` depends on the current state (e.g. `integ.u[1] *= 2`);
+        - updates whose `Δ` depends on `integrator.t`;
+        - mutation of `integrator.p`;
+        - arbitrary external side effects inside `affect!`.
+
+    Only a limited check for state dependence is currently performed: during
+    inference, `BoundedSSA` evaluates `affect!` at the initial state and at a
+    uniformly shifted state and compares the resulting net changes. If they differ,
+    the jump is rejected with an `ArgumentError`.
+
+    This check is intentionally only a guard against common non-additive affects; it
+    does **not** prove that `Δ` is state-independent for every possible state. An
+    `affect!` whose state dependence happens to produce the same `Δ` at the two
+    probed states may still pass the check.
+
+    Time-dependent, parameter-dependent, parameter-mutating, and externally
+    side-effecting affects are outside the supported contract and are not reliably
+    validated. In particular, inference is performed once at the initial `(t, p)`,
+    after which the inferred `Δ` is reused for every firing. Such affects may
+    therefore produce incorrect behavior or fail during inference.
+
+    Mutating `integrator.p` is especially unsafe: the inference shim receives the
+    problem's parameter object directly, so mutations of a mutable parameter object
+    may persist beyond the probe itself.
+
+    Keep `affect!` a pure, time-independent, parameter-independent additive update
+    of `integrator.u`.
+    - `MassActionJump` does **not** rely on this inference: its net state change comes
+    directly from the reaction stoichiometry (`net_stoch`), so the additive update is
+    exact by construction and the `affect!` restrictions above do not apply to it.
+  - For a `MassActionJump` rate constant to be *differentiated* it must flow from `p` via
+    a `param_idxs`/`param_mapper` jump (the combinatoric scaling is matched); a jump with
     fixed numeric `scaled_rates` still simulates, but those constants carry no derivative.
     Note: MTK/Catalyst-generated mass-action jumps *simulate* under `BoundedSSA` but do
     not yet *differentiate* their rate constants — MTK's mass-action parameter mapper
@@ -127,12 +235,29 @@ function _bssa_check_supported(jprob)
     nothing
 end
 
-# Differentiable parameters used to choose the state's element type. Arrays are used
-# directly; SciMLStructures objects use their tunable values, so injected AD types
-# promote the state. Scalars and NullParameters are returned unchanged.
+# Extract the differentiable parameters ("tunables") from `p`. SciMLStructures objects
+# (plain `Array`s included) return their canonicalized `Tunable` portion; a bare scalar or
+# tuple is returned as-is. This is *extraction only* — turning the tunables into the state's
+# zero-seed (and handling the parameterless case) is `_bssa_parameter_zero`.
 function _bssa_tunables(p)
     SciMLStructures.isscimlstructure(p) ?
     SciMLStructures.canonicalize(SciMLStructures.Tunable(), p)[1] : p
+end
+
+# Zero used to seed the working state's element type, so an injected StochasticTriple
+# parameter promotes the state (`u = u0 .+ z`). Kept separate from tunable extraction so
+# each supported parameter container is handled explicitly:
+#
+#   * `NullParameters` — no differentiable parameter exists, so use an ordinary zero of
+#     the run's primal numeric type `T`; no AD type is injected into the state.
+#   * scalar parameter — `0 * tunables` preserves the parameter's numeric/AD type, so a
+#     scalar StochasticTriple promotes the working state.
+#   * arrays / tuples / SciMLStructures tunables — `0 * sum(tunables)`, preserving the
+#     previous behavior while allowing an injected AD element type to promote the state.
+function _bssa_parameter_zero(p, ::Type{T}) where {T}
+    p isa SciMLBase.NullParameters && return zero(T)
+    tunables = _bssa_tunables(p)
+    return tunables isa Number ? 0 * tunables : 0 * sum(tunables)
 end
 
 # Dense additive net state change of MassActionJump reaction `r` (from its net_stoch),
@@ -202,11 +327,12 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end, rng)
         Δ[Kc + r] = _bssa_ma_delta(maj.net_stoch[r], n, Tf)
     end
 
-    # `0 * sum(...)` promotes the state to the parameter's element type (giving a triple
-    # zero when a StochasticTriple flows in). We seed from the **tunable** numeric portion
-    # of `p` (see `_bssa_tunables`), so both plain `Vector` parameters and SciMLStructures
-    # parameter objects (MTK/Catalyst tunables) are supported; a `Vector` seeds from itself.
-    z = 0 * sum(_bssa_tunables(p))
+    # Seed the working state's element type from the parameter, so an injected StochasticTriple
+    # promotes the state (giving a triple zero when one flows in). `_bssa_parameter_zero`
+    # handles every parameter container explicitly: a plain `Vector`, a scalar, a tuple, a
+    # SciMLStructures tunable object, or a parameterless `NullParameters` (which seeds a plain
+    # `zero(Tf)` of the primal-run type, as there is nothing to differentiate).
+    z = _bssa_parameter_zero(p, Tf)
     u = [u0[i] + z for i in 1:n]
 
     tsave = typeof(t0)[]
@@ -241,10 +367,23 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end, rng)
         rates = [k <= Kc ? cjumps[k].rate(u, p, tm) :
                  _bssa_ma_rate(u, maj, maunscaled, k - Kc) for k in 1:K]
         total = sum(rates)
-        # thinning: real vs null event. `rand(rng, Bernoulli(p))` handles both the primal
-        # draw and — when a StochasticTriple `p` flows in with StochasticAD loaded —
+        prob = total / Λ
+        # Uniformization requires total <= Λ. `Bernoulli(prob)` checks the same condition,
+        # but checking it here provides a BoundedSSA-specific diagnostic (with the offending
+        # total, Λ and time) instead of Distributions' generic `@check_args` failure. We do
+        # NOT clamp `prob` to 1 — that would silently alter the sampled process.
+        #
+        # With StochasticAD, this predicate must also remain valid across the tracked
+        # parameter perturbations, consistent with the `rate_bound` contract that Λ bound the
+        # total propensity for the local perturbations as well as the nominal trajectory.
+        prob <= one(prob) || throw(ArgumentError(
+            "BoundedSSA rate_bound violated: total propensity = $total exceeds " *
+            "rate_bound = $Λ at time t = $tm. Increase `rate_bound` to a valid upper " *
+            "bound on the total propensity Σₖ rateₖ(u, p, t) over all reachable states."))
+        # thinning: real vs null event. `rand(rng, Bernoulli(prob))` handles both the primal
+        # draw and — when a StochasticTriple `prob` flows in with StochasticAD loaded —
         # the differentiable decision (StochasticAD's own `rand(::Bernoulli)` rule).
-        accept = rand(rng, Bernoulli(total / Λ))
+        accept = rand(rng, Bernoulli(prob))
 
         # which channel: stick-breaking conditional Bernoullis (last deterministic).
         # `+ tiny` guards the 0/0 that appears once every remaining channel has zero

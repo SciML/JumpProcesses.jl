@@ -49,7 +49,8 @@ end
     # A naive `while t<T` SSA returns 0 here; uniformization recovers the value.
     @testset "pure death (state-dependent)" begin
         T, u0, μ0, Λ = 1.0, 100, 0.5, 60.0     # Λ ≥ μ·u0 = 50, with margin
-        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (integ.u[1] -= 1; nothing))
+        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (
+            integ.u[1] -= 1; nothing))
         analytic = -T * u0 * exp(-μ0 * T)
         g, se = sad_partial([μ0], 1; N = 4000) do p
             jp = JumpProblem(DiscreteProblem([u0], (0.0, T), p), Direct(), death)
@@ -59,17 +60,33 @@ end
         @test abs(g) > 1.0                    # explicitly NOT the zero a naive SSA gives
     end
 
-    # --- Test B: birth-death, multi-channel + state-dependent ------------------
-    # birth λ, death μ·u ; E[u(T)] = λ/μ + (u0-λ/μ)e^{-μT}
-    @testset "birth-death (multi-channel, state-dependent)" begin
-        T, u0, λ0, μ0, Λ = 1.0, 50, 10.0, 0.3, 60.0   # total = λ + μ·u ≤ ~28 ≪ Λ
-        birth = ConstantRateJump((u, p, t) -> p[1],        integ -> (integ.u[1] += 1; nothing))
-        death = ConstantRateJump((u, p, t) -> p[2] * u[1], integ -> (integ.u[1] -= 1; nothing))
-        a, b = λ0 / μ0, exp(-μ0 * T)
-        analytic = [(1 - b) / μ0, -λ0 / μ0^2 * (1 - b) + (u0 - a) * (-T * b)]
+    # --- Test B: reversible conversion A <-> B, multi-channel, globally bounded ----
+    # A --> B at rate α*A; B --> A at rate β*B; A + B = N is conserved.
+    # Hence total propensity α*A + β*B <= N*max(α, β), giving a finite global bound.
+    #
+    # E[A(T)] = m∞ + (A0 - m∞)exp(-(α+β)T),
+    # where m∞ = βN/(α+β). Test both analytic parameter derivatives below.
+    @testset "reversible conversion A<->B (conserved, globally bounded)" begin
+        T, N_tot, A0, α0, β0, Λ = 1.0, 40, 30, 1.0, 0.5, 60.0
+
+        # At the nominal parameters, α·A + β·B ≤ N·max(α,β) = 40.
+        # Λ = 60 is fixed and leaves margin for the local AD perturbation.
+        B0 = N_tot - A0
+        conv = ConstantRateJump((u, p, t) -> p[1] * u[1],
+            integ -> (integ.u[1] -= 1; integ.u[2] += 1; nothing))   # A --> B, rate α·A
+        rev = ConstantRateJump((u, p, t) -> p[2] * u[2],
+            integ -> (integ.u[2] -= 1; integ.u[1] += 1; nothing))   # B --> A, rate β·B
+        s = α0 + β0
+        decay = exp(-s * T)
+        minf = β0 * N_tot / s
+        # analytic ∂E[A(T)]/∂α and ∂E[A(T)]/∂β
+        dα = (-β0 * N_tot / s^2) * (1 - decay) - (A0 - minf) * T * decay
+        dβ = (α0 * N_tot / s^2) * (1 - decay) - (A0 - minf) * T * decay
+        analytic = [dα, dβ]
         for k in 1:2
-            g, se = sad_partial([λ0, μ0], k; N = 4000) do p
-                jp = JumpProblem(DiscreteProblem([u0], (0.0, T), p), Direct(), birth, death)
+            g,
+            se = sad_partial([α0, β0], k; N = 4000) do p
+                jp = JumpProblem(DiscreteProblem([A0, B0], (0.0, T), p), Direct(), conv, rev)
                 solve(jp, BoundedSSA(; rate_bound = Λ); saveat = [T]).u[end][1]
             end
             @test abs(g - analytic[k]) < 4 * se
@@ -80,7 +97,8 @@ end
     # pure death: E[u(s)] = u0·e^{-μs} at every save time s.
     @testset "saveat path (intermediate times)" begin
         T, u0, μ0, Λ = 1.0, 100, 0.5, 60.0
-        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (integ.u[1] -= 1; nothing))
+        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (
+            integ.u[1] -= 1; nothing))
         jprob = JumpProblem(DiscreteProblem([u0], (0.0, T), [μ0]), Direct(), death)
         sat = [0.0, 0.5, 1.0]
         for (idx, s) in enumerate(sat)
@@ -96,7 +114,8 @@ end
     # --- Test D: primal mean matches the stock SSA -----------------------------
     @testset "primal mean matches stock SSAStepper" begin
         T, u0, μ0, Λ = 1.0, 100, 0.4, 60.0
-        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (integ.u[1] -= 1; nothing))
+        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (
+            integ.u[1] -= 1; nothing))
         jprob = JumpProblem(DiscreteProblem([u0], (0.0, T), [μ0]), Direct(), death)
         mb, seb = pmean(N = 4000) do
             solve(jprob, BoundedSSA(; rate_bound = Λ); saveat = [T]).u[end][1]
@@ -111,7 +130,8 @@ end
     # --- Test E: solve interface — full path + piecewise-constant interpolation -
     @testset "solve returns a full path + interpolates" begin
         T, u0, μ0, Λ = 1.0, 100, 0.5, 60.0
-        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (integ.u[1] -= 1; nothing))
+        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (
+            integ.u[1] -= 1; nothing))
         jprob = JumpProblem(DiscreteProblem([u0], (0.0, T), [μ0]), Direct(), death)
         sol = solve(jprob, BoundedSSA(; rate_bound = Λ); saveat = [0.0, 0.5, 1.0])
         @test sol.t == [0.0, 0.5, 1.0]
@@ -129,7 +149,8 @@ end
         death = ConstantRateJump((u, p, t) -> p.tunables[1] * u[1],
             integ -> (integ.u[1] -= 1; nothing))
         analytic = -T * u0 * exp(-μ0 * T)
-        g, se = sad_partial([μ0], 1; N = 4000) do p
+        g,
+        se = sad_partial([μ0], 1; N = 4000) do p
             jp = JumpProblem(DiscreteProblem([u0], (0.0, T), TunableParams(p)), Direct(), death)
             solve(jp, BoundedSSA(; rate_bound = Λ); saveat = [T]).u[end][1]
         end

@@ -36,6 +36,25 @@ sol = solve(jump_prob, Tsit5())
 sol = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
 sol = solve(jump_prob, Rosenbrock23())
 
+function vrfrm_trajectory(default_seed)
+    task = @task begin
+        Random.seed!(default_seed)
+        local_rng = StableRNG(12345)
+        ode_prob = ODEProblem((du, u, p, t) -> fill!(du, 0), [0.0], (0.0, 1.0))
+        jump1 = VariableRateJump((u, p, t) -> 1.0,
+            integrator -> (integrator.u[1] += 1))
+        jump2 = VariableRateJump((u, p, t) -> 10.0,
+            integrator -> (integrator.u[1] += 1))
+        jump_prob = JumpProblem(ode_prob, jump1, jump2; vr_aggregator = VR_FRM(),
+            rng = local_rng)
+        solve(jump_prob, Tsit5(); saveat = 0.0:0.05:1.0).u
+    end
+    schedule(task)
+    return fetch(task)
+end
+
+@test vrfrm_trajectory(123) == vrfrm_trajectory(456)
+
 jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
 integrator = init(jump_prob_gill, Tsit5())
 sol_gill = solve(jump_prob_gill, Tsit5())
@@ -271,8 +290,6 @@ end
 
 # accuracy test based on 
 # https://github.com/SciML/JumpProcesses.jl/issues/320
-# note that even with the seeded StableRNG this test is not 
-# deterministic for some reason.
 function getmean(Nsims, prob, alg, tsave, seed)
     umean = zeros(length(tsave))
     integrator = init(prob, alg; saveat = tsave, seed)

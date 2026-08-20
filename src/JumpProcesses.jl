@@ -10,6 +10,7 @@ using Random: Random, randexp, seed!
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
 using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_handle
 using PoissonRandom: PoissonRandom, pois_rand
+using PrecompileTools: @compile_workload, @setup_workload
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
 using Graphs: Graphs, AbstractGraph, dst, grid, src
@@ -180,5 +181,20 @@ export DirectCRDirect
 # coupling
 include("coupled_array.jl")
 include("coupling.jl")
+
+@setup_workload begin
+    rate = (u, p, t) -> u[1]
+    affect! = integrator -> (integrator.u[1] += 1)
+    jump = ConstantRateJump(rate, affect!)
+    prob = DiscreteProblem([10.0], (0.0, 1.0))
+    jump_prob = JumpProblem(prob, Direct(), jump;
+        rng = Random.MersenneTwister(12345), save_positions = (false, false))
+
+    @compile_workload begin
+        integrator = init(jump_prob, SSAStepper())
+        step!(integrator)
+        solve(jump_prob, SSAStepper())
+    end
+end
 
 end # module

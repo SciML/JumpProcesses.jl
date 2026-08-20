@@ -73,6 +73,12 @@ function extend_u0(prob, Njumps, rng)
     return u0
 end
 
+function extend_du0(prob, jumps)
+    t0 = first(prob.tspan)
+    jump_du0 = [jump.rate(prob.u0, prob.p, t0) for jump in jumps]
+    return ExtendedJumpArray(prob.du0, jump_du0)
+end
+
 function extend_problem(prob::SciMLBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
     error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
@@ -165,31 +171,39 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT
     remake(prob; f, u0)
 end
 
-# Not sure if the DAE one is correct: Should be a residual of sorts
 function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
         jump_f = let _f = _f
-            function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
-                _f(out, du.u, u.u, h, p, t)
+            function (out::ExtendedJumpArray, du::ExtendedJumpArray,
+                    u::ExtendedJumpArray, p, t)
+                _f(out.u, du.u, u.u, p, t)
                 update_jumps!(out, u, p, t, length(u.u), jumps...)
+                out.jump_u .= du.jump_u .- out.jump_u
             end
         end
     else
         jump_f = let _f = _f
-            function (du, u::ExtendedJumpArray, h, p, t)
-                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-                return du
+            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
+                jump_out = [du.jump_u[i] - jump.rate(u.u, p, t)
+                            for (i, jump) in enumerate(jumps)]
+                return ExtendedJumpArray(_f(du.u, u.u, p, t), jump_out)
             end
         end
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
+    du0 = extend_du0(prob, jumps)
+    differential_vars = if prob.differential_vars === nothing
+        nothing
+    else
+        ExtendedJumpArray(prob.differential_vars, trues(length(jumps)))
+    end
+    f = DAEFunction{isinplace(prob), SciMLBase.specialization(prob.f)}(jump_f;
+        sys = prob.f.sys,
         observed = prob.f.observed)
-    remake(prob; f, u0)
+    remake(prob; f, du0, u0, differential_vars)
 end
 
 struct VR_FRMEventCallback{F, RNG}

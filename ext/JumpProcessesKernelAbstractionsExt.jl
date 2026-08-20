@@ -5,6 +5,8 @@ using KernelAbstractions, Adapt
 using StaticArrays
 using PoissonRandom, Random
 
+include("ssa_stepper.jl")
+
 function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         alg::SimpleTauLeaping,
         ensemblealg::EnsembleGPUKernel;

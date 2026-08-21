@@ -34,6 +34,8 @@ run_qa(
                 :AbstractQ,
                 # FunctionWrappers non-public
                 :FunctionWrapper,
+                # SciMLStructures non-public
+                :Tunable, :canonicalize, :isscimlstructure,
             ),
         ),
         all_explicit_imports_are_public = (;

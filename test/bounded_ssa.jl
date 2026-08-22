@@ -145,7 +145,7 @@ _SS.canonicalize(::_SS.Tunable, p::BSSATunable) = (p.tunables, BSSATunable, true
         @test_throws ArgumentError BoundedSSA(; rate_bound = 0.0)   # non-positive bound
     end
 
-    # --- non-additive ConstantRateJump affects are rejected, not mis-simulated ----
+    # --- non-additive ConstantRateJump affects are rejected, not simulated incorrectly ----
     # BoundedSSA infers a constant additive net change Δ from `affect!` by probing it at
     # two states. State-dependent affects that produce different Δ values are rejected.
     #

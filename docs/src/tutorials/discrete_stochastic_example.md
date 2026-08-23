@@ -50,7 +50,6 @@ not already installed, they can be added as follows:
 ```julia
 using Pkg
 Pkg.add("JumpProcesses")
-Pkg.add("SciMLBase")
 Pkg.add("OrdinaryDiffEq")
 Pkg.add("Plots")
 Pkg.add("Catalyst")                # optional
@@ -59,12 +58,12 @@ Pkg.add("Catalyst")                # optional
 Let's now load the required packages and set some default plot settings
 
 ```julia
-using JumpProcesses, SciMLBase, OrdinaryDiffEq, Plots, LinearAlgebra
+using JumpProcesses, OrdinaryDiffEq, Plots, LinearAlgebra
 default(; lw = 2)
 ```
 
 ```@setup tut2
-using JumpProcesses, SciMLBase, OrdinaryDiffEq, Plots, LinearAlgebra
+using JumpProcesses, OrdinaryDiffEq, Plots, LinearAlgebra
 default(; lw = 2)
 ```
 

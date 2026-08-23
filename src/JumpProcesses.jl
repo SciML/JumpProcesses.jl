@@ -35,12 +35,22 @@ import RecursiveArrayTools: recursivecopy!
 import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
-using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
-                  DDEFunction, ODEFunction, ODEProblem,
-                  ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
-                  isinplace, remake, savevalues!, step!,
-                  derivative_discontinuity!
-using SciMLBase: SciMLBase, DEIntegrator, DiscreteProblem
+using DiffEqBase: DiffEqBase, DAEFunction, DDEFunction, isinplace
+using SciMLBase: SciMLBase, DEIntegrator
+
+# The SciML common interface that JumpProcesses reexports (see the second `export`
+# block below), so that `using JumpProcesses` on its own is enough to build the problem
+# a `JumpProblem` wraps, attach callbacks, solve it, drive the integrator from a jump
+# `affect!`, run ensembles, and inspect the result. Everything here stays owned and
+# documented upstream in SciMLBase.
+using SciMLBase: CallbackSet, ContinuousCallback, DiscreteFunction, DiscreteProblem,
+                 EnsembleAnalysis, EnsembleDistributed, EnsembleProblem, EnsembleSerial,
+                 EnsembleSolution, EnsembleSplitThreads, EnsembleSummary,
+                 EnsembleThreads, NullParameters, ODEFunction, ODEProblem, ODESolution,
+                 ReturnCode, SDEFunction, SDEProblem, VectorContinuousCallback,
+                 add_saveat!, add_tstop!, derivative_discontinuity!, reinit!, remake,
+                 savevalues!, set_proposed_dt!, set_t!, set_u!, step!,
+                 successful_retcode, terminate!, u_modified!
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
@@ -152,6 +162,16 @@ export JumpProblem, SplitCoupledJumpProblem
 
 include("solve.jl")
 export init, solve, solve!
+
+# Reexported SciML common interface; approved via `reexports_allow` in test/qa.jl.
+export CallbackSet, ContinuousCallback, DiscreteCallback, DiscreteFunction,
+       DiscreteProblem, EnsembleAnalysis, EnsembleDistributed, EnsembleProblem,
+       EnsembleSerial, EnsembleSolution, EnsembleSplitThreads, EnsembleSummary,
+       EnsembleThreads, NullParameters, ODEFunction, ODEProblem, ODESolution,
+       ReturnCode, SDEFunction, SDEProblem, VectorContinuousCallback, add_saveat!,
+       add_tstop!, derivative_discontinuity!, reinit!, remake, savevalues!,
+       set_proposed_dt!, set_t!, set_u!, step!, successful_retcode, terminate!,
+       u_modified!
 
 include("SSA_stepper.jl")
 export SSAStepper

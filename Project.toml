@@ -4,6 +4,7 @@ authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 version = "9.29.3"
 
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
@@ -17,6 +18,7 @@ PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+SimpleNonlinearSolve = "727e6d20-b764-4bd8-a329-72de5adea6c7"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
 
@@ -54,6 +56,7 @@ RecursiveArrayTools = "4.3.0, 4"
 SafeTestsets = "0.1"
 SciMLBase = "3.18.0, 3.1"
 SciMLTesting = "2.8"
+SimpleNonlinearSolve = "2, 3"
 StableRNGs = "1"
 StaticArrays = "1.9.18"
 Statistics = "1"
@@ -63,7 +66,6 @@ Test = "1"
 julia = "1.10"
 
 [extras]
-ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
@@ -78,4 +80,4 @@ StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["ADTypes", "FastBroadcast", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "SciMLTesting", "StableRNGs", "Statistics", "StochasticDiffEq", "Test"]
+test = ["FastBroadcast", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "SciMLTesting", "StableRNGs", "Statistics", "StochasticDiffEq", "Test"]

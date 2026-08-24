@@ -36,7 +36,9 @@ import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
 using DiffEqBase: DiffEqBase, DAEFunction, DDEFunction, isinplace
-using SciMLBase: SciMLBase, DEIntegrator
+using SimpleNonlinearSolve: SimpleNonlinearSolve, SimpleNewtonRaphson
+using ADTypes: ADTypes, AutoFiniteDiff
+using SciMLBase: SciMLBase, DEIntegrator, NonlinearProblem
 
 # The SciML common interface that JumpProcesses reexports (see the second `export`
 # block below), so that `using JumpProcesses` on its own is enough to build the problem
@@ -178,7 +180,8 @@ export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleExplicitTauLeaping, SimpleImplicitTauLeaping,
+       NewtonImplicitSolver, TrapezoidalImplicitSolver, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")

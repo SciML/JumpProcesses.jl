@@ -61,7 +61,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
         trajectories = Nsims, dt = 0.1, saveat = t_compare)
 
-    # MassActionJump formulation for SimpleExplicitTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping / SimpleImplicitTauLeaping
     reactant_stoich = [[1 => 1, 2 => 1], [2 => 1], Pair{Int, Int}[]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [1 => 1]]
     param_idxs = [1, 2, 3]
@@ -73,13 +73,25 @@ end
         trajectories = Nsims, saveat = t_compare)
 
     # Compute mean I trajectories via direct indexing (I is index 2 in SIR)
+    # Solve with SimpleImplicitTauLeaping (Newton and Trapezoidal)
+    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = NewtonImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+    sol_implicit_trap = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = TrapezoidalImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 2)
     mean_I_simple = compute_mean_at_saves(sol_simple, Nsims, npts, 2)
     mean_I_explicit = compute_mean_at_saves(sol_adaptive, Nsims, npts, 2)
+    mean_I_implicit_newton = compute_mean_at_saves(sol_implicit_newton, Nsims, npts, 2)
+    mean_I_implicit_trap = compute_mean_at_saves(sol_implicit_trap, Nsims, npts, 2)
 
     # Compare full mean trajectories across all saved timepoints
     @test all(isapprox.(mean_I_direct, mean_I_simple, rtol = 0.1))
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_newton, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_trap, rtol = 0.1))
 end
 
 # SEIR model with exposed compartment
@@ -127,7 +139,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
         trajectories = Nsims, dt = 0.1, saveat = t_compare)
 
-    # MassActionJump formulation for SimpleExplicitTauLeaping
+    # MassActionJump formulation for SimpleExplicitTauLeaping / SimpleImplicitTauLeaping
     reactant_stoich = [[1 => 1, 3 => 1], [2 => 1], [3 => 1]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [3 => -1, 4 => 1]]
     param_idxs = [1, 2, 3]
@@ -139,13 +151,25 @@ end
         trajectories = Nsims, saveat = t_compare)
 
     # Compute mean I trajectories via direct indexing (I is index 3 in SEIR)
+    # Solve with SimpleImplicitTauLeaping (Newton and Trapezoidal)
+    sol_implicit_newton = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = NewtonImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+    sol_implicit_trap = solve(EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(solver = TrapezoidalImplicitSolver()), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare)
+
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 3)
     mean_I_simple = compute_mean_at_saves(sol_simple, Nsims, npts, 3)
     mean_I_explicit = compute_mean_at_saves(sol_adaptive, Nsims, npts, 3)
+    mean_I_implicit_newton = compute_mean_at_saves(sol_implicit_newton, Nsims, npts, 3)
+    mean_I_implicit_trap = compute_mean_at_saves(sol_implicit_trap, Nsims, npts, 3)
 
     # Compare full mean trajectories across all saved timepoints
     @test all(isapprox.(mean_I_direct, mean_I_simple, rtol = 0.1))
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_newton, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit_trap, rtol = 0.1))
 end
 
 # Test zero-rate case for SimpleExplicitTauLeaping

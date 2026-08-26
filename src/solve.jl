@@ -1,6 +1,6 @@
-function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P},
+function SciMLBase.__solve(jump_prob::JumpProblem{IIP, P},
         alg::SciMLBase.AbstractDEAlgorithm;
-        merge_callbacks = true, kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {IIP, P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
 
@@ -9,10 +9,9 @@ function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P},
     integrator.sol
 end
 
-#Ambiguity Fix
-function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P},
+function SciMLBase.__solve(jump_prob::JumpProblem{IIP, P},
         alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
-        merge_callbacks = true, kwargs...) where {P}
+        merge_callbacks = true, kwargs...) where {IIP, P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
 
@@ -23,17 +22,17 @@ end
 
 # if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use
 # SSAStepper
-function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem{P};
-        kwargs...) where {P <: DiscreteProblem}
+function SciMLBase.__solve(jump_prob::JumpProblem{IIP, P};
+        kwargs...) where {IIP, P <: DiscreteProblem}
     SciMLBase.__solve(jump_prob, SSAStepper(); kwargs...)
 end
 
-function SciMLBase.__solve(jump_prob::SciMLBase.AbstractJumpProblem; kwargs...)
+function SciMLBase.__solve(jump_prob::JumpProblem; kwargs...)
     error("Auto-solver selection is currently only implemented for JumpProblems defined over DiscreteProblems. Please explicitly specify a solver algorithm in calling solve.")
 end
 
-function SciMLBase.__init(_jump_prob::SciMLBase.AbstractJumpProblem{P},
-        alg::SciMLBase.AbstractDEAlgorithm; merge_callbacks = true, kwargs...) where {P}
+function SciMLBase.__init(_jump_prob::JumpProblem{IIP, P},
+        alg::SciMLBase.AbstractDEAlgorithm; merge_callbacks = true, kwargs...) where {IIP, P}
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(_jump_prob; merge_callbacks, kwargs...)
 

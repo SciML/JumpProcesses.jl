@@ -24,11 +24,6 @@ run_qa(
     JumpProcesses;
     explicit_imports = true,
     reexports_allow = REEXPORTED_API,
-    aqua_kwargs = (;
-        ambiguities = false,       # TODO: fix ambiguities and enable
-        piracies = false,          # default solvers defined for AbstractJumpProblem
-        persistent_tasks = false,  # disabled due to false positives
-    ),
     ei_kwargs = (;
         # Names not (yet) declared public in their owner package's released API.
         all_qualified_accesses_are_public = (;
@@ -45,7 +40,7 @@ run_qa(
                 # DiffEqBase non-public
                 :Stats,
                 # LinearAlgebra non-public
-                :AbstractQ,
+                :AbstractQ, :AdjointQ, :QRPackedQ,
                 # FunctionWrappers non-public
                 :FunctionWrapper,
             ),

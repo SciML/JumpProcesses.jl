@@ -85,7 +85,7 @@ function aggregate(aggregator::DirectCR, u, p, t, end_time, constant_jumps,
 end
 
 # set up a new simulation and calculate the first jump / jump time
-function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t)
+function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t::Number)
     p.end_time = integrator.sol.prob.tspan[2]
 
     # initialize rates

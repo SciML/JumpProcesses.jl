@@ -90,7 +90,8 @@ end
 Base.zero(A::ExtendedJumpArray) = fill!(similar(A), 0)
 
 # Required for non-diagonal noise; also handles full-state matrices from LinearSolve
-function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector)
+function _mul_extended_jump_array!(c::ExtendedJumpArray, A::AbstractVecOrMat,
+        u::AbstractVector)
     Nu = length(c.u)
     if size(A, 1) == Nu
         mul!(c.u, A, u)
@@ -105,6 +106,12 @@ function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::Abstra
         throw(DimensionMismatch("first dimension of A, $(size(A,1)), does not match length of c.u, $Nu, or length of c, $(length(c))"))
     end
 end
+
+LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector) =
+    _mul_extended_jump_array!(c, A, u)
+
+LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
+    u::AbstractVector) = _mul_extended_jump_array!(c, A, u)
 
 # Ignore axes
 function Base.similar(A::ExtendedJumpArray, ::Type{S},
@@ -139,8 +146,19 @@ end
 function LinearAlgebra.ldiv!(A::LinearAlgebra.LU, b::ExtendedJumpArray)
     _eja_flat_apply_and_scatter!(LinearAlgebra.ldiv!, A, b)
 end
+function LinearAlgebra.ldiv!(A::LinearAlgebra.LU{T, LinearAlgebra.Tridiagonal{T, V}},
+        b::ExtendedJumpArray) where {T, V}
+    _eja_flat_apply_and_scatter!(LinearAlgebra.ldiv!, A, b)
+end
 
 function LinearAlgebra.lmul!(A::LinearAlgebra.AbstractQ, b::ExtendedJumpArray)
+    _eja_flat_apply_and_scatter!(LinearAlgebra.lmul!, A, b)
+end
+function LinearAlgebra.lmul!(A::LinearAlgebra.QRPackedQ, b::ExtendedJumpArray)
+    _eja_flat_apply_and_scatter!(LinearAlgebra.lmul!, A, b)
+end
+function LinearAlgebra.lmul!(A::LinearAlgebra.AdjointQ{<:Any, <:LinearAlgebra.QRPackedQ},
+        b::ExtendedJumpArray)
     _eja_flat_apply_and_scatter!(LinearAlgebra.lmul!, A, b)
 end
 

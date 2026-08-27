@@ -39,6 +39,11 @@ end
         @time @safetestset "Extinction test" begin include("extinction_test.jl") end
     end
     if GROUP == "All" || GROUP == "InterfaceII"
+        @time @safetestset "SDE callback tests" begin
+            run(
+                `$(Base.julia_cmd()) --startup-file=no --project=$(Base.active_project()) $(joinpath(@__DIR__, "sde_callbacks.jl"))`
+            )
+        end
         @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
         @time @safetestset "Save_positions test" begin include("save_positions.jl") end
         @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end

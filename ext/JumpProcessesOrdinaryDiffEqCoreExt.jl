@@ -25,4 +25,12 @@ function SciMLBase.__init(
     _jump_init(_jump_prob, alg; kwargs...)
 end
 
+function SciMLBase.__solve(
+        jump_prob::JumpProcesses.JumpProblem{IIP, P},
+        alg::Union{StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm};
+        kwargs...
+    ) where {IIP, P <: SciMLBase.AbstractRODEProblem}
+    return JumpProcesses.__jump_solve(jump_prob, alg; kwargs...)
+end
+
 end

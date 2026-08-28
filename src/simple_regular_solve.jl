@@ -77,43 +77,7 @@ end
 SimpleExplicitTauLeaping(; epsilon = 0.05) = SimpleExplicitTauLeaping(epsilon)
 
 """
-$(TYPEDEF)
-
-Abstract supertype for the nonlinear formulations
-[`SimpleImplicitTauLeaping`](@ref) can solve at each step.
-"""
-abstract type AbstractImplicitSolver end
-
-"""
-$(TYPEDEF)
-
-Solve each implicit tau-leaping step in its unmodified, fully implicit form,
-
-```math
-X(t + \\tau) = X(t) + \\sum_j \\nu_j a_j(X(t + \\tau)) \\tau
-```
-
-as in Rathinam et al. (2003) and Cao et al. (2004).
-"""
-struct NewtonImplicitSolver <: AbstractImplicitSolver end
-
-"""
-$(TYPEDEF)
-
-Solve each implicit tau-leaping step in trapezoidal form, averaging the
-propensities at the current and the new state,
-
-```math
-X(t + \\tau) = X(t) + \\sum_j \\nu_j \\frac{a_j(X(t)) + a_j(X(t + \\tau))}{2} \\tau.
-```
-
-The trapezoidal formulation damps the excessive stiffness of the fully implicit
-step and keeps the equilibrium distribution closer to the exact one.
-"""
-struct TrapezoidalImplicitSolver <: AbstractImplicitSolver end
-
-"""
-$(TYPEDEF)
+    SimpleImplicitTauLeaping(; epsilon = 0.05)
 
 An implicit tau-leaping method for stiff pure-jump problems.
 
@@ -125,6 +89,12 @@ lifts that restriction; see Rathinam et al. (2003) and Cao et al. (2004).
 The deterministic part of the step is taken implicitly and the fluctuations are
 then sampled with Poisson random variables, after which the step is rejected and
 `tau` halved if it would drive a population negative.
+
+```math
+X(t + \\tau) = X(t) + \\sum_j \\nu_j a_j(X(t + \\tau)) \\tau
+```
+
+as in Rathinam et al. (2003) and Cao et al. (2004).
 
 ## Fields
 
@@ -147,17 +117,54 @@ jprob = JumpProblem(prob, PureLeaping(), maj)
 sol = solve(jprob, SimpleImplicitTauLeaping())
 ```
 """
-struct SimpleImplicitTauLeaping{T <: AbstractFloat, S <: AbstractImplicitSolver} <:
-       SciMLBase.AbstractDEAlgorithm
+struct SimpleImplicitTauLeaping{T <: AbstractFloat} <: SciMLBase.AbstractDEAlgorithm
     """Error control parameter used when selecting `tau`."""
     epsilon::T
-    """The nonlinear formulation solved at each step."""
-    solver::S
 end
 
-function SimpleImplicitTauLeaping(; epsilon = 0.05, solver = NewtonImplicitSolver())
-    SimpleImplicitTauLeaping(epsilon, solver)
+SimpleImplicitTauLeaping(; epsilon = 0.05) = SimpleImplicitTauLeaping(epsilon)
+
+"""
+    SimpleTrapezoidalLeaping(; epsilon = 0.05)
+
+An implicit trapezoidal tau-leaping method for stiff pure-jump problems.
+
+The method averages the propensities at the current and new states,
+
+```math
+X(t + \\tau) = X(t) + \\sum_j \\nu_j \\frac{a_j(X(t)) + a_j(X(t + \\tau))}{2} \\tau.
+```
+
+This formulation damps the excessive stiffness of the fully implicit step and
+keeps the equilibrium distribution closer to the exact one.
+
+## Fields
+
+$(FIELDS)
+
+## Notes
+
+  - Only works with `JumpProblem`s defined from `DiscreteProblem`s that contain
+    only a `MassActionJump`, built with the `PureLeaping()` aggregator.
+  - Supports `saveat`, `save_start` and `save_end`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+maj = MassActionJump([1.0, 1.0], [[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]])
+prob = DiscreteProblem([100, 100], (0.0, 10.0))
+jprob = JumpProblem(prob, PureLeaping(), maj)
+sol = solve(jprob, SimpleTrapezoidalLeaping())
+```
+"""
+struct SimpleTrapezoidalLeaping{T <: AbstractFloat} <: SciMLBase.AbstractDEAlgorithm
+    """Error control parameter used when selecting `tau`."""
+    epsilon::T
 end
+
+SimpleTrapezoidalLeaping(; epsilon = 0.05) = SimpleTrapezoidalLeaping(epsilon)
 
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     if !(jump_prob.aggregator isa PureLeaping)
@@ -173,8 +180,13 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         jump_prob.regular_jump !== nothing
 end
 
-function validate_pure_leaping_inputs(jump_prob::JumpProblem,
-        alg::Union{SimpleExplicitTauLeaping, SimpleImplicitTauLeaping})
+function validate_pure_leaping_inputs(
+        jump_prob::JumpProblem,
+        alg::Union{
+            SimpleExplicitTauLeaping, SimpleImplicitTauLeaping,
+            SimpleTrapezoidalLeaping,
+        }
+    )
     if !(jump_prob.aggregator isa PureLeaping)
         @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
         JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
@@ -559,19 +571,13 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     return sol
 end
 
-# Residual of the implicit step, written so that the root u_new is the state at
-# t + tau. `params` carries a preallocated propensity cache for each of the two
-# states so that repeated residual evaluations do not allocate.
-#
-#   Newton:      u_new = u_current + sum_j nu_j a_j(u_new) tau
-#   Trapezoidal: u_new = u_current + sum_j nu_j (a_j(u_current) + a_j(u_new))/2 tau
 function implicit_equation!(resid, u_new, params)
-    (; u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps, solver) = params
+    (; u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps, alg) = params
 
     rate(rate_new, u_new, p, t + tau)
     resid .= u_new .- u_current
 
-    if solver isa NewtonImplicitSolver
+    if alg isa SimpleImplicitTauLeaping
         for j in 1:numjumps
             for spec_idx in axes(nu, 1)
                 resid[spec_idx] -= nu[spec_idx, j] * rate_new[j] * tau
@@ -583,22 +589,24 @@ function implicit_equation!(resid, u_new, params)
         for j in 1:numjumps
             for spec_idx in axes(nu, 1)
                 resid[spec_idx] -= nu[spec_idx, j] * half *
-                                   (rate_new[j] + rate_current[j]) * tau
+                    (rate_new[j] + rate_current[j]) * tau
             end
         end
     end
-    nothing
+    return nothing
 end
 
-# Solve one implicit step for the state at t + tau. Returns the new state and
-# whether the nonlinear solve converged.
-function solve_implicit(u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps,
-        solver)
+function solve_implicit(
+        u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps,
+        alg
+    )
     u_guess = convert(Vector{float(eltype(u_current))}, u_current)
-    params = (; u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps, solver)
+    params = (; u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps, alg)
     prob = NonlinearProblem(implicit_equation!, u_guess, params)
-    sol = solve(prob, SimpleNewtonRaphson(autodiff = AutoFiniteDiff());
-        abstol = 1e-6, reltol = 1e-6)
+    sol = solve(
+        prob, SimpleNewtonRaphson(autodiff = AutoFiniteDiff());
+        abstol = 1.0e-6, reltol = 1.0e-6
+    )
     return sol.u, SciMLBase.successful_retcode(sol)
 end
 
@@ -606,7 +614,8 @@ function simple_implicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_current, maj,
-        solver, save_end)
+        save_end
+    )
     save_idx = 1
 
     # Upper bound carried across iterations. Unlike the explicit loop, whose
@@ -621,20 +630,27 @@ function simple_implicit_tau_leaping_loop!(
             t_current = t_end
             break
         end
-        tau = compute_tau(u_current, rate_cache, nu, hor, p, t_current,
-            epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+        tau = compute_tau(
+            u_current, rate_cache, nu, hor, p, t_current,
+            epsilon, rate, dtmin, max_hor, max_stoich, numjumps
+        )
         tau = min(tau, tau_cap, t_end - t_current)
         if !isempty(saveat_times) && save_idx <= length(saveat_times) &&
-           t_current + tau > saveat_times[save_idx]
+                t_current + tau > saveat_times[save_idx]
             tau = saveat_times[save_idx] - t_current
         end
 
-        u_predicted, converged = solve_implicit(u_current, rate_cache, rate_current, nu, p,
-            t_current, tau, rate, numjumps, solver)
+        u_predicted, converged = solve_implicit(
+            u_current, rate_cache, rate_current, nu, p,
+            t_current, tau, rate, numjumps, alg
+        )
         if !converged
-            tau <= dtmin &&
-                error("SimpleImplicitTauLeaping failed to converge at t = $t_current " *
-                      "with the smallest permitted step dtmin = $dtmin.")
+            if tau <= dtmin
+                error(
+                    "$(nameof(typeof(alg))) failed to converge at t = $t_current " *
+                        "with the smallest permitted step dtmin = $dtmin."
+                )
+            end
             tau_cap = tau / 2
             continue
         end
@@ -644,7 +660,7 @@ function simple_implicit_tau_leaping_loop!(
         for j in eachindex(counts)
             scaled = rate_cache[j] * tau
             counts[j] = scaled <= zero(scaled) ? zero(eltype(counts)) :
-                        pois_rand(rng, scaled)
+                pois_rand(rng, scaled)
         end
 
         du .= 0
@@ -662,9 +678,8 @@ function simple_implicit_tau_leaping_loop!(
         end
         t_new = t_current + tau
 
-        # Save state if at a saveat time or if saveat is empty
         if isempty(saveat_times) ||
-           (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+                (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
             push!(usave, copy(u_new))
             push!(tsave, t_new)
             if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
@@ -677,26 +692,29 @@ function simple_implicit_tau_leaping_loop!(
         tau_cap = typemax(typeof(t_current))  # release the bound after a good step
     end
 
-    # Save endpoint if requested and not already saved
     if save_end && (isempty(tsave) || tsave[end] != t_end)
         push!(usave, copy(u_current))
         push!(tsave, t_end)
     end
+    return nothing
 end
 
-function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
+function DiffEqBase.solve(
+        jump_prob::JumpProblem,
+        alg::Union{SimpleImplicitTauLeaping, SimpleTrapezoidalLeaping};
         seed = nothing,
         dtmin = nothing,
-        saveat = nothing, save_start = nothing, save_end = nothing)
+        saveat = nothing, save_start = nothing, save_end = nothing
+    )
     validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleImplicitTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
+        error("$(nameof(typeof(alg))) can only be used with PureLeaping JumpProblem with a MassActionJump.")
 
     prob = jump_prob.prob
     rng = jump_prob.rng
     tspan = prob.tspan
 
     if dtmin === nothing
-        dtmin = 1e-10 * one(typeof(tspan[2]))
+        dtmin = 1.0e-10 * one(typeof(tspan[2]))
     end
 
     (seed !== nothing) && seed!(rng, seed)
@@ -709,7 +727,6 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
 
     saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
 
-    # Initialize current state and saved history
     u_current = copy(u0)
     u_new = similar(u0)
     t_current = tspan[1]
@@ -726,30 +743,31 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleImplicitTauLeaping;
     du = similar(u0)
     t_end = tspan[2]
     epsilon = alg.epsilon
-    solver = alg.solver
 
-    # Extract net stoichiometry for state updates
     nu = zeros(float(eltype(u0)), length(u0), numjumps)
     for j in 1:numjumps
         for (spec_idx, stoch) in maj.net_stoch[j]
             nu[spec_idx, j] = stoch
         end
     end
-    # Extract reactant stoichiometry for hor and gi
     reactant_stoch = maj.reactant_stoch
     hor = compute_hor(reactant_stoch, numjumps)
     max_hor, max_stoich = precompute_reaction_conditions(
-        reactant_stoch, hor, length(u0), numjumps)
+        reactant_stoch, hor, length(u0), numjumps
+    )
 
     simple_implicit_tau_leaping_loop!(
         prob, alg, u_current, u_new, t_current, t_end, p, rng,
         rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
         dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_current, maj,
-        solver, save_end)
+        save_end
+    )
 
-    sol = SciMLBase.build_solution(prob, alg, tsave, usave,
+    sol = SciMLBase.build_solution(
+        prob, alg, tsave, usave,
         calculate_error = false,
-        interp = SciMLBase.ConstantInterpolation(tsave, usave))
+        interp = SciMLBase.ConstantInterpolation(tsave, usave)
+    )
     return sol
 end
 

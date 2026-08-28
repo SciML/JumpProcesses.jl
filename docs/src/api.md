@@ -66,7 +66,9 @@ VR_FRM
 ```@docs
 EnsembleGPUKernel
 SimpleExplicitTauLeaping
+SimpleImplicitTauLeaping
 SimpleTauLeaping
+SimpleTrapezoidalLeaping
 ```
 
 ## Spatial Jump APIs

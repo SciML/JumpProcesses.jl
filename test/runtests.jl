@@ -57,6 +57,7 @@ end
         @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
         @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
         @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
+        @time @safetestset "SSA kernel on the CPU backend" begin include("kernelabstractions_ssa.jl") end
     end
 
     if GROUP == "CUDA"

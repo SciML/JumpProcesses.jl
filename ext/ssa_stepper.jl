@@ -1,18 +1,3 @@
-###############################################################################
-# GPU kernel implementation of Gillespie's Direct method for `SSAStepper`.
-#
-# Only `MassActionJump`s are supported. A mass action propensity is completely
-# determined by its stoichiometry and rate constant, so it can be evaluated on
-# the device from data alone. `ConstantRateJump`s cannot: their rates are
-# arbitrary Julia closures and their `affect!`s mutate an integrator, neither of
-# which can be reconstructed from a device kernel.
-#
-# Two properties of mass action jumps are what make the kernel simple: the
-# combinatoric prefactors are already folded into `scaled_rates`, and the
-# propensities depend on neither `p` nor `t`. A trajectory can therefore be
-# advanced using nothing but the stoichiometry tables.
-###############################################################################
-
 """
     GPUMassActionJump
 
@@ -135,46 +120,15 @@ state. Out-of-place so the state can live in registers as an `SVector`.
     u
 end
 
-###############################################################################
-# Device RNG.
+# Randomness comes from the backend's own generator: inside a kernel `rand`
+# resolves to the device implementation, the same one the tau-leaping kernel
+# reaches through `PoissonRandom.PassthroughRNG`. It is drawn in the working
+# precision so that a Float32 problem never pulls Float64 math onto the device.
 #
-# splitmix64: a small counter-based generator with a full 2^64 period. Each
-# thread keeps its state in a register and advances it on every draw, so a
-# trajectory consumes one long stream rather than re-deriving values from a
-# fixed seed (which correlates successive draws).
-###############################################################################
+# An exponential waiting time is built from that uniform as -log(1 - u), written
+# with log1p so that u == 0 gives 0 rather than Inf and no branch is needed.
+@inline exprand(::Type{RT}) where {RT} = -log1p(-rand(RT))
 
-@inline function splitmix64(state::UInt64)
-    state += 0x9e3779b97f4a7c15
-    z = state
-    z = (z ⊻ (z >> 30)) * 0xbf58476d1ce4e5b9
-    z = (z ⊻ (z >> 27)) * 0x94d049bb133111eb
-    z = z ⊻ (z >> 31)
-    state, z
-end
-
-# Seed a per-trajectory stream. The index is mixed through splitmix64 twice so
-# that adjacent trajectories start from well-separated states rather than seeds
-# differing in their low bits.
-@inline function init_rng_state(seed::UInt64, i::Integer)
-    _, z = splitmix64(seed ⊻ (UInt64(i) * 0x9e3779b97f4a7c15))
-    _, z = splitmix64(z)
-    z
-end
-
-# Uniform draw on (0, 1]. Excluding zero keeps `log` finite for the exponential
-# waiting time; the top 53 bits are used so every representable stride of the
-# Float64 mantissa is reachable.
-@inline function randu01(state::UInt64, ::Type{RT}) where {RT}
-    state, z = splitmix64(state)
-    u = (RT(z >> 11) + one(RT)) / RT(9007199254740992)  # (k + 1) / 2^53
-    state, u
-end
-
-# Output is laid out as `us[trajectory, species, save_index]` so that the
-# trajectory index varies fastest. Neighbouring threads then write neighbouring
-# addresses and the stores coalesce, which matters because these are the only
-# global memory writes the kernel performs.
 @inline function store_state!(us, u, sidx, i)
     @inbounds for k in eachindex(u)
         us[i, k, sidx] = u[k]
@@ -182,7 +136,7 @@ end
 end
 
 """
-    ssa_direct_kernel!(us, u0, maj, saveat, t0, tend, seed)
+    ssa_direct_kernel!(us, u0, maj, saveat, t0, tend)
 
 Advance one SSA trajectory per thread using Gillespie's Direct method, writing
 the state sampled on the `saveat` grid into `us[trajectory, species, save_idx]`.
@@ -192,8 +146,7 @@ during reaction selection rather than cached, so the kernel needs no per-thread
 scratch memory in global memory. For the small reaction counts typical of SSA
 models the extra arithmetic is cheaper than the memory traffic it replaces.
 """
-@kernel function ssa_direct_kernel!(us, u0, maj, @Const(saveat), t0, tend,
-        seed::UInt64)
+@kernel function ssa_direct_kernel!(us, u0, maj, @Const(saveat), t0, tend)
     i = @index(Global, Linear)
 
     @inbounds begin
@@ -203,7 +156,6 @@ models the extra arithmetic is cheaper than the memory traffic it replaces.
 
         u = u0
         t = RT(t0)
-        rngstate = init_rng_state(seed, i)
 
         # Grid points at or before the initial time hold the initial condition.
         sidx = 1
@@ -227,8 +179,7 @@ models the extra arithmetic is cheaper than the memory traffic it replaces.
                 break
             end
 
-            rngstate, r = randu01(rngstate, RT)
-            tnext = t - log(r) / total_rate
+            tnext = t + exprand(RT) / total_rate
 
             # Piecewise-constant sampling, matching `SSAStepper`: a grid point
             # strictly before the next jump sees the pre-jump state.
@@ -241,8 +192,7 @@ models the extra arithmetic is cheaper than the memory traffic it replaces.
 
             # Direct method: pick the reaction whose cumulative propensity first
             # exceeds a uniform draw scaled by the total.
-            rngstate, r = randu01(rngstate, RT)
-            target = r * total_rate
+            target = rand(RT) * total_rate
             acc = zero(RT)
             rx = numjumps
             for k in 1:numjumps
@@ -313,8 +263,10 @@ grid points, as if the problem had been built with
 `save_positions = (false, false)`; the aggregator chosen in the `JumpProblem` is
 also ignored, since the kernel always runs the Direct method.
 
-Randomness comes from a per-thread device generator seeded from `seed`, so the
-`rng` stored in the `JumpProblem` has no effect here.
+Randomness comes from the backend's own device RNG rather than the `rng` stored
+in the `JumpProblem`. `seed` is applied to the ambient generator, so it makes a
+run reproducible on backends that draw from it, such as `CPU()`; seeding a GPU
+backend is done through that backend's own `seed!`.
 
 The reaction data is uploaded to the device once and shared by every thread, so
 all trajectories solve the same problem and a `prob_func` is not supported.
@@ -337,6 +289,8 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     callback === nothing ||
         error("EnsembleGPUKernel with SSAStepper does not support callbacks, since they \
                would have to run inside the GPU kernel.")
+
+    seed !== nothing && Random.seed!(seed)
 
     ensemblealg.backend === nothing ? backend = CPU() : backend = ensemblealg.backend
 
@@ -390,10 +344,8 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
 
     us = allocate(backend, ET, (trajectories, state_dim, nsave))
 
-    seed_val = seed === nothing ? UInt64(12345) : UInt64(seed)
-
     kernel = ssa_direct_kernel!(backend)
-    kernel(us, u0, maj_gpu, saveat_gpu, t0, tend, seed_val; ndrange = trajectories)
+    kernel(us, u0, maj_gpu, saveat_gpu, t0, tend; ndrange = trajectories)
     KernelAbstractions.synchronize(backend)
 
     _us = Array(us)

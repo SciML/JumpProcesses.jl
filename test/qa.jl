@@ -39,6 +39,10 @@ run_qa(
                 :updated_u0_p,
                 # DiffEqBase non-public
                 :Stats,
+                # ForwardDiff: Dual is the AD number type used in
+                # ext/JumpProcessesForwardDiffExt.jl. It is exported but not
+                # declared `public` in ForwardDiff's released API.
+                :Dual,
                 # LinearAlgebra non-public
                 :AbstractQ, :AdjointQ, :QRPackedQ,
                 # FunctionWrappers non-public

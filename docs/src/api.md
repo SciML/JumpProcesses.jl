@@ -65,6 +65,7 @@ VR_FRM
 
 ```@docs
 EnsembleGPUKernel
+SimpleAdaptiveTauLeaping
 SimpleExplicitTauLeaping
 SimpleImplicitTauLeaping
 SimpleTauLeaping

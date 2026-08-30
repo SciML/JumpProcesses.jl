@@ -7,5 +7,7 @@ Lamba = "Lamba"
 resetted = "resetted"
 # "IMA J Numer Anal" journal abbreviation in a citation
 Numer = "Numer"
+# "SIAM J. Sci. Stat. Comput." journal abbreviation in a citation
+Comput = "Comput"
 # setp from SymbolicIndexingInterface
 setp = "setp"

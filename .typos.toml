@@ -1,6 +1,7 @@
 [default.extend-words]
 resetted = "resetted"
 Numer = "Numer"
+Comput = "Comput"
 # Additional SciML terms
 setp = "setp"
 getp = "getp"

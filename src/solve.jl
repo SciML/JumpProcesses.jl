@@ -1,23 +1,18 @@
-function SciMLBase.__solve(jump_prob::JumpProblem{IIP, P},
+function SciMLBase.__solve(
+        jump_prob::JumpProblem{IIP, P},
         alg::SciMLBase.AbstractDEAlgorithm;
-        merge_callbacks = true, kwargs...) where {IIP, P}
-    # Merge jump_prob.kwargs with passed kwargs
-    kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
-
-    integrator = __jump_init(jump_prob, alg; kwargs...)
-    solve!(integrator)
-    integrator.sol
+        merge_callbacks = true, kwargs...
+    ) where {IIP, P}
+    return __jump_solve(jump_prob, alg; merge_callbacks, kwargs...)
 end
 
-function SciMLBase.__solve(jump_prob::JumpProblem{IIP, P},
-        alg::Union{SciMLBase.AbstractRODEAlgorithm, SciMLBase.AbstractSDEAlgorithm};
-        merge_callbacks = true, kwargs...) where {IIP, P}
+function __jump_solve(jump_prob, alg; merge_callbacks = true, kwargs...)
     # Merge jump_prob.kwargs with passed kwargs
     kwargs = DiffEqBase.merge_problem_kwargs(jump_prob; merge_callbacks, kwargs...)
 
     integrator = __jump_init(jump_prob, alg; kwargs...)
     solve!(integrator)
-    integrator.sol
+    return integrator.sol
 end
 
 # if passed a JumpProblem over a DiscreteProblem, and no aggregator is selected use

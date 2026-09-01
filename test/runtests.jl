@@ -58,12 +58,14 @@ end
         @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
         @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
         @time @safetestset "SSA kernel on the CPU backend" begin include("kernelabstractions_ssa.jl") end
+        @time @safetestset "Explicit tau-leaping kernel on the CPU backend" begin include("kernelabstractions_explicit_tau.jl") end
     end
 
     if GROUP == "CUDA"
         activate_gpu_env()
         @time @safetestset "GPU Tau Leaping test" begin include("gpu/regular_jumps.jl") end
         @time @safetestset "GPU SSA test" begin include("gpu/ssa.jl") end
+        @time @safetestset "GPU Explicit Tau Leaping test" begin include("gpu/explicit_tau.jl") end
     end
 
     if GROUP == "Correctness"

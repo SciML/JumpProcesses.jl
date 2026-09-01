@@ -256,6 +256,29 @@ end
     end
 end
 
+@testset "Zero order reactions in tau-leaping" begin
+    # A zero order reaction has an empty reactant stoichiometry. `compute_hor`
+    # used to take the element type from the first entry of the first reaction,
+    # which threw a BoundsError for such a model.
+    maj = MassActionJump([5.0], [Pair{Int, Int}[]], [[1 => 1]])
+    prob = DiscreteProblem([0.0], (0.0, 4.0))
+    jprob = JumpProblem(prob, PureLeaping(), maj; rng)
+
+    @test JumpProcesses.compute_hor([Pair{Int, Int}[], [1 => 2]], 2) == [0, 2]
+
+    for alg in (SimpleExplicitTauLeaping(), SimpleImplicitTauLeaping())
+        sol = solve(jprob, alg; seed = 1234, saveat = 2.0)
+        @test sol.t == [0.0, 2.0, 4.0]
+        @test issorted([u[1] for u in sol.u])   # A can only accumulate
+    end
+
+    # mean of A(t) is the Poisson mean 5t
+    Nsims = 4000
+    sol = solve(EnsembleProblem(jprob), SimpleExplicitTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = 4.0)
+    @test isapprox(mean(sol.u[i].u[end][1] for i in 1:Nsims), 20.0, rtol = 0.05)
+end
+
 @testset "PureLeaping Aggregator Tests" begin
     # Test with MassActionJump
     u0 = [10, 5, 0]

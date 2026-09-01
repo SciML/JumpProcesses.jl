@@ -97,6 +97,40 @@ jump_prob = JumpProblem(oop_prob, Direct(), oop_test_jump)
 sol = solve(jump_prob, Tsit5())
 @test sol.retcode == ReturnCode.Success
 
+@testset "Extended problems preserve specialization" begin
+    rate(u, p, t) = one(t)
+    affect!(integrator) = nothing
+    jump = VariableRateJump(rate, affect!)
+
+    function f!(du, u, p, t)
+        du .= u
+        return nothing
+    end
+    function g!(du, u, p, t)
+        du .= 0.1
+        return nothing
+    end
+    function f_dde!(du, u, h, p, t)
+        du .= h(p, t - 1)
+        return nothing
+    end
+
+    ode_f = ODEFunction{true, AutoDespecialize}(f!)
+    sde_f = SDEFunction{true, AutoDespecialize}(f!, g!)
+    dde_f = DDEFunction{true, AutoDespecialize}(f_dde!)
+    problems = (
+        ODEProblem(ode_f, [1.0], (0.0, 1.0), [1.0]),
+        SDEProblem(sde_f, [1.0], (0.0, 1.0), [1.0]),
+        DDEProblem(dde_f, [1.0], (p, t) -> [1.0], (0.0, 1.0), [1.0];
+            constant_lags = [1.0])
+    )
+
+    for prob in problems
+        jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
+        @test SciMLBase.specialization(typeof(jump_prob.prob.f)) == AutoDespecialize
+    end
+end
+
 # Test saveat https://github.com/SciML/JumpProcesses.jl/issues/179 and https://github.com/SciML/JumpProcesses.jl/issues/322
 let
     f(du, u, p, t) = (du[1] = u[1]; nothing)

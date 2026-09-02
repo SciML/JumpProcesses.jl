@@ -11,6 +11,8 @@ host, so the device only evaluates the closed form.
 """
 @inline function gpu_compute_gi(u, max_hor, max_stoich, i, ::Type{RT}) where {RT}
     onert = one(RT)
+    two = 2 * onert
+    three = 3 * onert
 
     @inbounds begin
         hor = max_hor[i]
@@ -18,25 +20,27 @@ host, so the device only evaluates the closed form.
         x = RT(u[i])
     end
 
-    if hor <= 1                     # species i is not a reactant, or first order
-        return onert
-    elseif hor == 2
-        stoich == 1 && return 2 * onert
-        # 2S_i -> products; fall back to 2 when x_i <= 1
-        return x > onert ? 2 * onert + onert / (x - onert) : 2 * onert
-    elseif hor == 3
-        stoich == 1 && return 3 * onert
-        if stoich == 2
-            # 2S_i + S_k -> products; fall back to 3 when x_i <= 1
-            return x > onert ?
-                   (3 * onert / 2) * (2 * onert + onert / (x - onert)) : 3 * onert
-        end
-        # 3S_i -> products; fall back to 3 when x_i <= 2
-        return x > 2 * onert ?
-               3 * onert + onert / (x - onert) + 2 * onert / (x - 2 * onert) : 3 * onert
-    end
+    # Written with `ifelse` rather than branches so that threads of a warp that
+    # land on different reaction orders do not diverge. Both arms are therefore
+    # always evaluated: when x_i is too small the reciprocals below divide by
+    # zero or go negative, but IEEE division yields +/-Inf rather than trapping,
+    # and those values are exactly the ones the selects discard.
+    inv_xm1 = onert / (x - onert)     # 1 / (x_i - 1)
+    inv_xm2 = two / (x - two)         # 2 / (x_i - 2)
 
-    return onert
+    # 2S_i -> products; fall back to 2 when x_i <= 1
+    g2_s2 = ifelse(x > onert, two + inv_xm1, two)
+    # 2S_i + S_k -> products is exactly 3/2 of the order 2 form, including its
+    # fallback, so it reuses it rather than recomputing the reciprocal
+    g3_s2 = (three / two) * g2_s2
+    # 3S_i -> products; fall back to 3 when x_i <= 2
+    g3_s3 = ifelse(x > two, three + inv_xm1 + inv_xm2, three)
+
+    g_hor2 = ifelse(stoich == 1, two, g2_s2)
+    g_hor3 = ifelse(stoich == 1, three, ifelse(stoich == 2, g3_s2, g3_s3))
+
+    # hor 0 and 1, and anything unsupported, take the default of 1
+    return ifelse(hor == 2, g_hor2, ifelse(hor == 3, g_hor3, onert))
 end
 
 """
@@ -85,8 +89,11 @@ entries the host walks past are zero.
         bound = max(epsilon * RT(u[i]) / gi, one(RT))   # max(epsilon x_i / g_i, 1)
         m = abs(mu[i])
         s = sigma2[i]
-        mu_term = m > zero(RT) ? bound / m : typemax(RT)              # eq. (8), first term
-        sigma_term = s > zero(RT) ? bound * bound / s : typemax(RT)   # eq. (8), second term
+        zed = zero(RT)
+        # branch-free for the same reason as above; a zero denominator gives Inf,
+        # which the select discards in favour of typemax
+        mu_term = ifelse(m > zed, bound / m, typemax(RT))              # eq. (8), first term
+        sigma_term = ifelse(s > zed, bound * bound / s, typemax(RT))   # eq. (8), second term
         tau = min(tau, mu_term, sigma_term)
     end
 

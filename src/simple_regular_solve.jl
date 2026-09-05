@@ -1,10 +1,13 @@
 """
     SimpleTauLeaping()
 
-Fixed-step tau-leaping algorithm for pure [`RegularJump`](@ref) problems.
+Fixed-step tau-leaping algorithm for pure [`MassActionJump`](@ref) or
+[`RegularJump`](@ref) problems.
 
-Use `SimpleTauLeaping` with `JumpProblem(prob, PureLeaping(), regular_jump)` and pass
-the timestep through the `dt` keyword to `solve`.
+Use `SimpleTauLeaping` with `JumpProblem(prob, PureLeaping(), jump)`, where `jump` is
+a `MassActionJump` or a `RegularJump`, and pass the timestep through `dt` to `solve`.
+Both representations also support `EnsembleGPUKernel`; custom regular-jump rate
+and update functions must be compatible with the selected device.
 
 ## Keyword Arguments
 
@@ -241,7 +244,10 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         isempty(jump_prob.jump_callback.discrete_callbacks) &&
         isempty(jump_prob.constant_jumps) &&
         isempty(jump_prob.variable_jumps) &&
-        get_num_majumps(jump_prob.massaction_jump) == 0 &&
+        (
+        get_num_majumps(jump_prob.massaction_jump) == 0 ||
+            is_massaction_regular_jump(jump_prob.regular_jump, jump_prob.massaction_jump)
+    ) &&
         jump_prob.regular_jump !== nothing
 end
 
@@ -304,7 +310,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing, dt = error("dt is required for SimpleTauLeaping."),
         saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
+        error("SimpleTauLeaping requires a PureLeaping JumpProblem with a MassActionJump or a RegularJump.")
 
     (; prob, rng) = jump_prob
     (seed !== nothing) && seed!(rng, seed)

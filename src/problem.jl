@@ -350,13 +350,18 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     crjs = jumps.constant_jumps
     vrjs = jumps.variable_jumps
     
-    iip = isinplace_jump(prob, jumps.regular_jump)
+    rj = jumps.regular_jump
+    if rj === nothing && prob isa DiscreteProblem && get_num_majumps(maj) > 0
+        rj = massaction_regular_jump(maj)
+    end
+    iip = isinplace_jump(prob, rj)
     solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
     JumpProblem{iip, typeof(prob), typeof(aggregator), typeof(jump_cbs),
-        typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(jumps.regular_jump),
+        typeof(disc_agg), typeof(crjs), typeof(vrjs), typeof(rj),
         typeof(maj), typeof(rng), typeof(solkwargs)}(prob, aggregator, disc_agg,
-        jump_cbs, crjs, vrjs, jumps.regular_jump, maj, rng, solkwargs)
+        jump_cbs, crjs, vrjs, rj, maj, rng, solkwargs
+    )
 end
 
 aggregator(jp::JumpProblem{iip, P, A}) where {iip, P, A} = A

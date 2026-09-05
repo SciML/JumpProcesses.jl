@@ -139,6 +139,11 @@ problem construction.
 
   - `PureLeaping` is currently intended for tau-leaping algorithms such as
     [`SimpleTauLeaping`](@ref) and [`SimpleExplicitTauLeaping`](@ref).
+  - A `MassActionJump` can be passed directly to all tau-leaping algorithms in
+    JumpProcesses and StochasticDiffEq. The rates and count-based updates are
+    supplied automatically; no user-written `RegularJump` is required.
+  - `SimpleTauLeaping` and StochasticDiffEq's leaping algorithms additionally accept
+    a `RegularJump` for more general rates and updates.
   - Spatial jump problems are not supported by the `PureLeaping` construction path.
 
 ## Examples

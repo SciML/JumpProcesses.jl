@@ -15,7 +15,9 @@ faster as they only simulate the total number of jumps over each leap interval,
 and thus do not need to simulate the realization of every single jump. Jumps for
 use with exact simulation methods can be defined as `ConstantRateJump`s,
 `MassActionJump`s, and/or `VariableRateJump`. Jumps for use with inexact
-τ-leaping methods should be defined as `RegularJump`s.
+τ-leaping methods can be defined as `MassActionJump`s with `PureLeaping()`.
+`SimpleTauLeaping` and StochasticDiffEq's leaping algorithms also accept
+`RegularJump`s for more general rates and count-based updates.
 
 There are special algorithms available for efficiently simulating an exact, pure
 `JumpProblem` (i.e., a `JumpProblem` over a `DiscreteProblem`).  `SSAStepper()`
@@ -71,10 +73,17 @@ These methods support mixing with event handling, other jump types, and all of
 the features of the normal differential equation solvers.
 
   - `TauLeaping`: an adaptive tau-leaping algorithm with post-leap estimates.
+  - `CaoTauLeaping`: adaptive Cao tau selection.
+  - `ImplicitTauLeaping`: implicit tau-leaping.
+  - `ThetaTrapezoidalTauLeaping`: implicit theta-trapezoidal tau-leaping.
+
+All four also accept `JumpProblem(prob, PureLeaping(), mass_action_jump)` directly.
+For fixed steps with the implicit methods, pass `dt` and `adaptive = false`.
 
 ### JumpProcesses.jl
 
-  - `SimpleTauLeaping`: a tau-leaping algorithm for pure `RegularJump` `JumpProblem`s.
+  - `SimpleTauLeaping`: fixed-step leaping for pure `MassActionJump` or `RegularJump`
+    `JumpProblem`s constructed with `PureLeaping()`.
     Requires a choice of `dt`.
   - `RegularSSA`: a version of SSA for pure `RegularJump` `JumpProblem`s.
 
@@ -87,3 +96,31 @@ and the jump process has designed a regular jump.
 
   - `EM`: Explicit Euler-Maruyama.
   - `ImplicitEM`: Implicit Euler-Maruyama. See the SDE solvers page for more details.
+
+## Common mass-action input
+
+The same mass-action problem can be used with JumpProcesses' fixed-step, adaptive
+explicit, implicit, trapezoidal, and switching solvers, as well as
+StochasticDiffEq's leaping solvers:
+
+```@example common_massaction
+using JumpProcesses, StochasticDiffEq
+
+maj = MassActionJump([0.1], [[1 => 1]], [[1 => -1, 2 => 1]])
+prob = DiscreteProblem([1000.0, 0.0], (0.0, 1.0))
+jprob = JumpProblem(prob, PureLeaping(), maj)
+
+fixed_sol = solve(jprob, SimpleTauLeaping(); dt = 0.01)
+explicit_sol = solve(jprob, SimpleExplicitTauLeaping())
+implicit_sol = solve(jprob, SimpleImplicitTauLeaping())
+trapezoidal_sol = solve(jprob, SimpleTrapezoidalLeaping())
+switching_sol = solve(jprob, SimpleAdaptiveTauLeaping())
+regular_sol = solve(jprob, TauLeaping())
+nothing # hide
+```
+
+`SimpleTauLeaping` and `SimpleExplicitTauLeaping` support this mass-action input
+with `EnsembleGPUKernel`. The fixed-step kernel requires `dt`; the adaptive
+explicit kernel requires `saveat`. Implicit and switching GPU kernels are not
+provided. `SimpleTauLeaping` also supports device-compatible `RegularJump`
+functions; the adaptive explicit GPU kernel requires mass-action kinetics.

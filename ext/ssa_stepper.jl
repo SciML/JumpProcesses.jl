@@ -210,13 +210,13 @@ models the extra arithmetic is cheaper than the memory traffic it replaces.
 end
 
 """
-    validate_gpu_ssa_inputs(jump_prob)
+    validate_gpu_massaction_inputs(jump_prob)
 
 The GPU kernel can only run problems whose jumps are all `MassActionJump`s over
 a `DiscreteProblem`, with no user callbacks. The single discrete callback that
 is always present is the jump aggregator itself.
 """
-function validate_gpu_ssa_inputs(jump_prob::JumpProblem)
+function validate_gpu_massaction_inputs(jump_prob::JumpProblem)
     jump_prob.prob isa DiscreteProblem &&
         JumpProcesses.get_num_majumps(jump_prob.massaction_jump) > 0 &&
         isempty(jump_prob.constant_jumps) &&
@@ -228,7 +228,7 @@ end
 
 # Build the vector of times the kernel samples at. Every trajectory shares this
 # grid, so it doubles as the `t` vector of each returned solution.
-function ssa_save_times(saveat, tspan::Tuple{TT, TT}, save_start,
+function gpu_save_times(saveat, tspan::Tuple{TT, TT}, save_start,
         save_end) where {TT <: AbstractFloat}
     t0, tend = tspan
 
@@ -298,7 +298,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     jump_prob isa JumpProblem ||
         error("EnsembleGPUKernel with SSAStepper requires a JumpProblem, got $(typeof(jump_prob)).")
 
-    validate_gpu_ssa_inputs(jump_prob) ||
+    validate_gpu_massaction_inputs(jump_prob) ||
         error("EnsembleGPUKernel with SSAStepper only supports JumpProblems built from a \
                DiscreteProblem whose jumps are all MassActionJumps, with no user \
                callbacks. ConstantRateJumps and VariableRateJumps are not supported \
@@ -321,7 +321,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     TT = float(eltype(prob.tspan))
     t0, tend = TT(prob.tspan[1]), TT(prob.tspan[2])
 
-    save_times = ssa_save_times(saveat, (t0, tend), save_start, save_end)
+    save_times = gpu_save_times(saveat, (t0, tend), save_start, save_end)
     nsave = length(save_times)
 
     # Every thread reads one shared copy of the stoichiometry, rate constants and

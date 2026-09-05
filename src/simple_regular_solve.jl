@@ -382,7 +382,9 @@ end
 # HOR is the sum of stoichiometric coefficients of reactants in reaction j.
 # Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
 function compute_hor(reactant_stoch, numjumps)
-    stoch_type = eltype(first(first(reactant_stoch)))
+    # Taken from the type rather than from an element: a zero order reaction has an
+    # empty reactant stoichiometry, and `first` of that throws.
+    stoch_type = eltype(eltype(eltype(reactant_stoch)))
     hor = zeros(stoch_type, numjumps)
     for j in 1:numjumps
         order = sum(

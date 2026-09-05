@@ -230,7 +230,7 @@ end
 function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
     idx += 1
     new_cb = wrap_jump_in_callback(idx, jump; rng)
-    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng = DEFAULT_RNG)
+    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng)
 end
 
 function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)

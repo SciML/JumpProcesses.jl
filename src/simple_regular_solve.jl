@@ -374,7 +374,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     end
 
     sol = SciMLBase.build_solution(prob, alg, tsave, usave,
-        calculate_error = false,
+        calculate_error = false, retcode = ReturnCode.Success,
         interp = SciMLBase.ConstantInterpolation(tsave, usave))
 end
 
@@ -633,7 +633,7 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
         save_end)
 
     sol = SciMLBase.build_solution(prob, alg, tsave, usave,
-        calculate_error = false,
+        calculate_error = false, retcode = ReturnCode.Success,
         interp = SciMLBase.ConstantInterpolation(tsave, usave))
     return sol
 end
@@ -832,7 +832,7 @@ function DiffEqBase.solve(
 
     sol = SciMLBase.build_solution(
         prob, alg, tsave, usave,
-        calculate_error = false,
+        calculate_error = false, retcode = ReturnCode.Success,
         interp = SciMLBase.ConstantInterpolation(tsave, usave)
     )
     return sol
@@ -1088,7 +1088,7 @@ function DiffEqBase.solve(
 
     sol = SciMLBase.build_solution(
         prob, alg, tsave, usave,
-        calculate_error = false,
+        calculate_error = false, retcode = ReturnCode.Success,
         interp = SciMLBase.ConstantInterpolation(tsave, usave)
     )
     return sol

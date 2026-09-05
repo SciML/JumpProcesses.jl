@@ -27,7 +27,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
 
     # Validate that this is a PureLeaping JumpProblem
     JumpProcesses.validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
+        error("SimpleTauLeaping requires a PureLeaping JumpProblem with a MassActionJump or a RegularJump.")
     prob = jump_prob.prob
 
     probs = [remake(jump_prob) for _ in 1:trajectories]
@@ -79,6 +79,36 @@ struct JumpData{R, C}
     rate::R
     c::C
     numjumps::Int
+end
+
+Adapt.@adapt_structure JumpData
+
+struct GPUMassActionRate{M}
+    jump::M
+end
+Adapt.@adapt_structure GPUMassActionRate
+
+function (rate::GPUMassActionRate)(out, u, p, t)
+    for j in eachindex(out)
+        out[j] = gpu_evalrxrate(u, j, rate.jump, eltype(out))
+    end
+    return nothing
+end
+
+struct GPUMassActionChange{M}
+    jump::M
+end
+Adapt.@adapt_structure GPUMassActionChange
+
+function (change::GPUMassActionChange)(du, u, p, t, counts, mark)
+    fill!(du, zero(eltype(du)))
+    maj = change.jump
+    for j in eachindex(counts)
+        for k in maj.ns_offsets[j]:(maj.ns_offsets[j + 1] - 1)
+            du[maj.ns_species[k]] += maj.ns_coeffs[k] * counts[j]
+        end
+    end
+    return nothing
 end
 
 # SimpleTauLeaping kernel
@@ -155,7 +185,12 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
         backend, trajectories, seed, dt, kwargs...)
     # Extract common jump data
     rj = prob.regular_jump
-    rj_data = JumpData(rj.rate, rj.c, rj.numjumps)
+    rj_data = if JumpProcesses.is_massaction_regular_jump(rj, prob.massaction_jump)
+        maj = GPUMassActionJump(prob.massaction_jump, backend, float(eltype(prob.prob.tspan)))
+        JumpData(GPUMassActionRate(maj), GPUMassActionChange(maj), rj.numjumps)
+    else
+        JumpData(rj.rate, rj.c, rj.numjumps)
+    end
 
     # Extract trajectory-specific data without static typing
     probs_data = [TrajectoryData(SA{eltype(p.prob.u0)}[p.prob.u0...], p.prob.p, p.prob.tspan)
@@ -183,7 +218,7 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
 
     # Pre-allocate thread-local buffers
     current_u_buf = allocate(backend, eltype(prob.prob.u0), (state_dim, n_trajectories))
-    rate_cache_buf = allocate(backend, eltype(prob.prob.u0), (num_jumps, n_trajectories))
+    rate_cache_buf = allocate(backend, float(eltype(prob.prob.u0)), (num_jumps, n_trajectories))
     counts_buf = allocate(backend, eltype(prob.prob.u0), (num_jumps, n_trajectories))
     local_dc_buf = allocate(backend, eltype(prob.prob.u0), (state_dim, n_trajectories))
 

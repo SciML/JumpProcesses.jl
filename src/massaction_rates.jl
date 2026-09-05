@@ -158,3 +158,39 @@ function add_self_dependencies!(dg; dosort = true)
         end
     end
 end
+
+struct MassActionRate{M}
+    jump::M
+end
+
+function (rate::MassActionRate)(out, u, p, t)
+    for j in eachindex(out)
+        out[j] = evalrxrate(u, j, rate.jump)
+    end
+    return nothing
+end
+
+struct MassActionChange{M}
+    jump::M
+end
+
+function (change::MassActionChange)(du, u, p, t, counts, mark)
+    fill!(du, zero(eltype(du)))
+    for j in eachindex(counts)
+        for (species, coefficient) in change.jump.net_stoch[j]
+            du[species] += coefficient * counts[j]
+        end
+    end
+    return nothing
+end
+
+function massaction_regular_jump(maj::MassActionJump)
+    return RegularJump{true}(MassActionRate(maj), MassActionChange(maj), get_num_majumps(maj))
+end
+
+is_massaction_regular_jump(::Any, maj) = false
+function is_massaction_regular_jump(
+        rj::RegularJump{true, <:MassActionRate, <:MassActionChange}, maj
+    )
+    return rj.rate.jump === maj && rj.c.jump === maj
+end

@@ -23,7 +23,7 @@ There are no $$C$$ molecules at the start.
 We first create the grid:
 
 ```@example spatial
-using JumpProcesses, SciMLBase
+using JumpProcesses
 dims = (5, 5)
 num_nodes = prod(dims) # number of sites
 grid = CartesianGrid(dims) # or use Graphs.grid(dims)

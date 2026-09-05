@@ -76,6 +76,161 @@ end
 
 SimpleExplicitTauLeaping(; epsilon = 0.05) = SimpleExplicitTauLeaping(epsilon)
 
+"""
+    SimpleImplicitTauLeaping(; epsilon = 0.05)
+
+An implicit tau-leaping method for stiff pure-jump problems.
+
+Explicit tau-leaping is limited by the fastest reaction in the system, so a
+stiff model forces a step size far smaller than the timescale of interest.
+Each step here instead solves a nonlinear equation for the new state, which
+lifts that restriction; see Rathinam et al. (2003) and Cao et al. (2004).
+
+The deterministic part of the step is taken implicitly and the fluctuations are
+then sampled with Poisson random variables, after which the step is rejected and
+`tau` halved if it would drive a population negative.
+
+```math
+X(t + \\tau) = X(t) + \\sum_j \\nu_j a_j(X(t + \\tau)) \\tau
+```
+
+as in Rathinam et al. (2003) and Cao et al. (2004).
+
+## Fields
+
+$(FIELDS)
+
+## Notes
+
+  - Only works with `JumpProblem`s defined from `DiscreteProblem`s that contain
+    only a `MassActionJump`, built with the `PureLeaping()` aggregator.
+  - Supports `saveat`, `save_start` and `save_end`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+maj = MassActionJump([1.0, 1.0], [[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]])
+prob = DiscreteProblem([100, 100], (0.0, 10.0))
+jprob = JumpProblem(prob, PureLeaping(), maj)
+sol = solve(jprob, SimpleImplicitTauLeaping())
+```
+"""
+struct SimpleImplicitTauLeaping{T <: AbstractFloat} <: SciMLBase.AbstractDEAlgorithm
+    """Error control parameter used when selecting `tau`."""
+    epsilon::T
+end
+
+SimpleImplicitTauLeaping(; epsilon = 0.05) = SimpleImplicitTauLeaping(epsilon)
+
+"""
+    SimpleTrapezoidalLeaping(; epsilon = 0.05)
+
+An implicit trapezoidal tau-leaping method for stiff pure-jump problems.
+
+The method averages the propensities at the current and new states,
+
+```math
+X(t + \\tau) = X(t) + \\sum_j \\nu_j \\frac{a_j(X(t)) + a_j(X(t + \\tau))}{2} \\tau.
+```
+
+This formulation damps the excessive stiffness of the fully implicit step and
+keeps the equilibrium distribution closer to the exact one.
+
+## Fields
+
+$(FIELDS)
+
+## Notes
+
+  - Only works with `JumpProblem`s defined from `DiscreteProblem`s that contain
+    only a `MassActionJump`, built with the `PureLeaping()` aggregator.
+  - Supports `saveat`, `save_start` and `save_end`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+maj = MassActionJump([1.0, 1.0], [[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]])
+prob = DiscreteProblem([100, 100], (0.0, 10.0))
+jprob = JumpProblem(prob, PureLeaping(), maj)
+sol = solve(jprob, SimpleTrapezoidalLeaping())
+```
+"""
+struct SimpleTrapezoidalLeaping{T <: AbstractFloat} <: SciMLBase.AbstractDEAlgorithm
+    """Error control parameter used when selecting `tau`."""
+    epsilon::T
+end
+
+SimpleTrapezoidalLeaping(; epsilon = 0.05) = SimpleTrapezoidalLeaping(epsilon)
+
+"""
+$(TYPEDEF)
+
+A tau-leaping method that switches between an explicit and an implicit step
+according to whether the system currently looks stiff.
+
+Explicit tau-leaping is efficient on non-stiff systems but is limited by the
+fastest reaction, while an implicit step lifts that limit at the cost of a
+nonlinear solve per step. This solver measures stiffness at each step and pays
+for the implicit step only when it is needed, following Cao et al. (2007).
+
+Stiffness is judged from the spread of the propensities, or, when
+`eigenvalue_check` is set, from the eigenvalue ratio of the Jacobian of the
+drift. When a step is taken implicitly the tau-selection tolerance is relaxed by
+`implicit_epsilon_factor`, since the implicit step is not restricted by the fast
+timescale it damps.
+
+The implicit step itself is whichever algorithm is passed as `implicit_alg`,
+either [`SimpleImplicitTauLeaping`](@ref) or [`SimpleTrapezoidalLeaping`](@ref).
+
+## Fields
+
+$(FIELDS)
+
+## Notes
+
+  - Only works with `JumpProblem`s defined from `DiscreteProblem`s that contain
+    only a `MassActionJump`, built with the `PureLeaping()` aggregator.
+  - Supports `saveat`, `save_start` and `save_end`.
+
+## Examples
+
+```julia
+using JumpProcesses
+
+maj = MassActionJump([1.0, 1.0], [[1 => 1], [2 => 1]], [[1 => -1, 2 => 1], [1 => 1, 2 => -1]])
+prob = DiscreteProblem([100, 100], (0.0, 10.0))
+jprob = JumpProblem(prob, PureLeaping(), maj)
+
+sol = solve(jprob, SimpleAdaptiveTauLeaping())
+sol = solve(jprob, SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping()))
+```
+"""
+struct SimpleAdaptiveTauLeaping{T <: AbstractFloat, A <: SciMLBase.AbstractDEAlgorithm} <:
+       SciMLBase.AbstractDEAlgorithm
+    """Error control parameter used when selecting `tau`."""
+    epsilon::T
+    """The algorithm used for steps that are taken implicitly."""
+    implicit_alg::A
+    """Whether to judge stiffness from the eigenvalues of the drift Jacobian."""
+    eigenvalue_check::Bool
+    """Eigenvalue ratio above which the system counts as stiff."""
+    stiffness_ratio_threshold::T
+    """Factor relaxing `epsilon` when a step is taken implicitly."""
+    implicit_epsilon_factor::T
+end
+
+function SimpleAdaptiveTauLeaping(;
+        epsilon = 0.05, implicit_alg = SimpleImplicitTauLeaping(),
+        eigenvalue_check = false, stiffness_ratio_threshold = 1.0e4,
+        implicit_epsilon_factor = 10.0)
+    SimpleAdaptiveTauLeaping(epsilon, implicit_alg, eigenvalue_check,
+        stiffness_ratio_threshold, implicit_epsilon_factor)
+end
+
 function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
     if !(jump_prob.aggregator isa PureLeaping)
         @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
@@ -90,7 +245,13 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         jump_prob.regular_jump !== nothing
 end
 
-function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping)
+function validate_pure_leaping_inputs(
+        jump_prob::JumpProblem,
+        alg::Union{
+            SimpleExplicitTauLeaping, SimpleImplicitTauLeaping,
+            SimpleTrapezoidalLeaping, SimpleAdaptiveTauLeaping,
+        }
+    )
     if !(jump_prob.aggregator isa PureLeaping)
         @warn "When using $alg, please pass PureLeaping() as the aggregator to the \
         JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
@@ -221,7 +382,9 @@ end
 # HOR is the sum of stoichiometric coefficients of reactants in reaction j.
 # Extract the element type from reactant_stoch to avoid hardcoding type assumptions.
 function compute_hor(reactant_stoch, numjumps)
-    stoch_type = eltype(first(first(reactant_stoch)))
+    # Taken from the type rather than from an element: a zero order reaction has an
+    # empty reactant stoichiometry, and `first` of that throws.
+    stoch_type = eltype(eltype(eltype(reactant_stoch)))
     hor = zeros(stoch_type, numjumps)
     for j in 1:numjumps
         order = sum(
@@ -472,6 +635,462 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleExplicitTauLeaping;
     sol = SciMLBase.build_solution(prob, alg, tsave, usave,
         calculate_error = false,
         interp = SciMLBase.ConstantInterpolation(tsave, usave))
+    return sol
+end
+
+function implicit_equation!(resid, u_new, params)
+    (; u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps, alg) = params
+
+    rate(rate_new, u_new, p, t + tau)
+    resid .= u_new .- u_current
+
+    if alg isa SimpleImplicitTauLeaping
+        for j in 1:numjumps
+            for spec_idx in axes(nu, 1)
+                resid[spec_idx] -= nu[spec_idx, j] * rate_new[j] * tau
+            end
+        end
+    else
+        rate(rate_current, u_current, p, t)
+        half = one(eltype(rate_new)) / 2
+        for j in 1:numjumps
+            for spec_idx in axes(nu, 1)
+                resid[spec_idx] -= nu[spec_idx, j] * half *
+                    (rate_new[j] + rate_current[j]) * tau
+            end
+        end
+    end
+    return nothing
+end
+
+function solve_implicit(
+        u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps,
+        alg
+    )
+    u_guess = convert(Vector{float(eltype(u_current))}, u_current)
+    params = (; u_current, rate_new, rate_current, nu, p, t, tau, rate, numjumps, alg)
+    prob = NonlinearProblem(implicit_equation!, u_guess, params)
+    sol = solve(
+        prob, SimpleNewtonRaphson(autodiff = AutoFiniteDiff());
+        abstol = 1.0e-6, reltol = 1.0e-6
+    )
+    return sol.u, SciMLBase.successful_retcode(sol)
+end
+
+function simple_implicit_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_current, maj,
+        save_end
+    )
+    save_idx = 1
+
+    # Upper bound carried across iterations. Unlike the explicit loop, whose
+    # retries redraw the Poisson counts, the implicit solve is deterministic in
+    # (u_current, tau): retrying at an unchanged tau would fail identically, so a
+    # rejected step has to shrink this bound to make progress.
+    tau_cap = typemax(typeof(t_current))
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        if all(<=(0), rate_cache)  # No reactions can occur, step to final time
+            t_current = t_end
+            break
+        end
+        tau = compute_tau(
+            u_current, rate_cache, nu, hor, p, t_current,
+            epsilon, rate, dtmin, max_hor, max_stoich, numjumps
+        )
+        tau = min(tau, tau_cap, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) &&
+                t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
+        end
+
+        u_predicted, converged = solve_implicit(
+            u_current, rate_cache, rate_current, nu, p,
+            t_current, tau, rate, numjumps, alg
+        )
+        if !converged
+            if tau <= dtmin
+                error(
+                    "$(nameof(typeof(alg))) failed to converge at t = $t_current " *
+                        "with the smallest permitted step dtmin = $dtmin."
+                )
+            end
+            tau_cap = tau / 2
+            continue
+        end
+
+        # Sample the leap using the propensities at the implicitly predicted state.
+        rate(rate_cache, u_predicted, p, t_current + tau)
+        for j in eachindex(counts)
+            scaled = rate_cache[j] * tau
+            counts[j] = scaled <= zero(scaled) ? zero(eltype(counts)) :
+                pois_rand(rng, scaled)
+        end
+
+        du .= 0
+        for j in 1:numjumps
+            for (spec_idx, stoch) in maj.net_stoch[j]
+                du[spec_idx] += stoch * counts[j]
+            end
+        end
+        u_new .= u_current .+ du
+        if any(<(0), u_new)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
+            tau <= dtmin && break
+            tau_cap = tau / 2
+            continue
+        end
+        t_new = t_current + tau
+
+        if isempty(saveat_times) ||
+                (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
+        end
+
+        u_current .= u_new
+        t_current = t_new
+        tau_cap = typemax(typeof(t_current))  # release the bound after a good step
+    end
+
+    if save_end && (isempty(tsave) || tsave[end] != t_end)
+        push!(usave, copy(u_current))
+        push!(tsave, t_end)
+    end
+    return nothing
+end
+
+function DiffEqBase.solve(
+        jump_prob::JumpProblem,
+        alg::Union{SimpleImplicitTauLeaping, SimpleTrapezoidalLeaping};
+        seed = nothing,
+        dtmin = nothing,
+        saveat = nothing, save_start = nothing, save_end = nothing
+    )
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("$(nameof(typeof(alg))) can only be used with PureLeaping JumpProblem with a MassActionJump.")
+
+    prob = jump_prob.prob
+    rng = jump_prob.rng
+    tspan = prob.tspan
+
+    if dtmin === nothing
+        dtmin = 1.0e-10 * one(typeof(tspan[2]))
+    end
+
+    (seed !== nothing) && seed!(rng, seed)
+
+    maj = jump_prob.massaction_jump
+    numjumps = get_num_majumps(maj)
+    rate = massaction_rate(maj, numjumps)
+    u0 = copy(prob.u0)
+    p = prob.p
+
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
+
+    u_current = copy(u0)
+    u_new = similar(u0)
+    t_current = tspan[1]
+    if save_start
+        usave = [copy(u0)]
+        tsave = [tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
+    rate_cache = zeros(float(eltype(u0)), numjumps)
+    rate_current = similar(rate_cache)
+    counts = zero(rate_cache)
+    du = similar(u0)
+    t_end = tspan[2]
+    epsilon = alg.epsilon
+
+    nu = zeros(float(eltype(u0)), length(u0), numjumps)
+    for j in 1:numjumps
+        for (spec_idx, stoch) in maj.net_stoch[j]
+            nu[spec_idx, j] = stoch
+        end
+    end
+    reactant_stoch = maj.reactant_stoch
+    hor = compute_hor(reactant_stoch, numjumps)
+    max_hor, max_stoich = precompute_reaction_conditions(
+        reactant_stoch, hor, length(u0), numjumps
+    )
+
+    simple_implicit_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_current, maj,
+        save_end
+    )
+
+    sol = SciMLBase.build_solution(
+        prob, alg, tsave, usave,
+        calculate_error = false,
+        interp = SciMLBase.ConstantInterpolation(tsave, usave)
+    )
+    return sol
+end
+
+# Select tau for an implicit step. The implicit step is not restricted by the
+# fast timescale it damps, so the tolerance is relaxed by
+# `implicit_epsilon_factor` and applied at the state the explicit step would
+# have reached, per Cao et al. (2007), Section III.A.
+function compute_tau_implicit(u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin,
+        max_hor, max_stoich, numjumps, implicit_epsilon_factor)
+    tau_explicit = compute_tau(
+        u, rate_cache, nu, hor, p, t, epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+
+    u_predict = float.(u)
+    rate(rate_cache, u, p, t)
+    for j in 1:numjumps
+        for spec_idx in axes(nu, 1)
+            u_predict[spec_idx] += nu[spec_idx, j] * rate_cache[j] * tau_explicit
+        end
+    end
+    u_predict .= max.(u_predict, zero(eltype(u_predict)))
+
+    relaxed_epsilon = epsilon * implicit_epsilon_factor
+    tau = compute_tau(u_predict, rate_cache, nu, hor, p, t + tau_explicit,
+        relaxed_epsilon, rate, dtmin, max_hor, max_stoich, numjumps)
+    return max(tau, dtmin)
+end
+
+# Jacobian of the drift dX/dt = sum_j nu_j a_j(X), i.e. nu * (da/dX). Note this
+# is the numspecies x numspecies matrix whose eigenvalues measure stiffness; the
+# propensity Jacobian da/dX alone is numjumps x numspecies and is not square in
+# general, so its eigenvalues are not defined.
+# Reference: Cao et al. (2007), Section III.B
+function compute_drift_jacobian(u, rate, nu, numjumps, numspecies, p, t)
+    T = float(eltype(u))
+    sqrteps = sqrt(eps(T))
+    da = zeros(T, numjumps, numspecies)
+    rate_cache = zeros(T, numjumps)
+    rate_plus = zeros(T, numjumps)
+    rate(rate_cache, u, p, t)
+    u_plus = float.(collect(u))
+    for i in 1:numspecies
+        h_i = sqrteps * max(abs(u[i]), one(T))
+        u_plus[i] = u[i] + h_i
+        rate(rate_plus, u_plus, p, t)
+        for j in 1:numjumps
+            da[j, i] = (rate_plus[j] - rate_cache[j]) / h_i
+        end
+        u_plus[i] = u[i]
+    end
+    return nu * da
+end
+
+# Decide whether the system currently looks stiff, either from the spread of the
+# propensities or from the eigenvalue ratio of the drift Jacobian.
+# Reference: Cao et al. (2007), Section III.B
+function is_stiff(rate_cache, u, epsilon, eigenvalue_check, stiffness_ratio_threshold,
+        p, t, rate, nu, numjumps, numspecies)
+    positive_rates = Iterators.filter(>(zero(eltype(rate_cache))), rate_cache)
+    count(_ -> true, positive_rates) <= 1 && return false
+
+    if eigenvalue_check
+        J = compute_drift_jacobian(u, rate, nu, numjumps, numspecies, p, t)
+        magnitudes = Iterators.filter(>(1e-10), abs.(real.(LinearAlgebra.eigvals(J))))
+        count(_ -> true, magnitudes) <= 1 && return false
+        # Stiffness ratio threshold, Petzold (1983), SIAM J. Sci. Stat. Comput. 4(1), 136-148
+        return maximum(magnitudes) / minimum(magnitudes) > stiffness_ratio_threshold
+    end
+
+    # Propensity ratio threshold, Cao et al. (2007), Section III.B
+    return maximum(positive_rates) / minimum(positive_rates) > epsilon * sum(u)
+end
+function simple_adaptive_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, numspecies, epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective,
+        rate_current, maj, implicit_alg, eigenvalue_check, stiffness_ratio_threshold,
+        implicit_epsilon_factor, save_end
+    )
+    save_idx = 1
+
+    # Upper bound carried across iterations. An explicit retry redraws the
+    # Poisson counts and so eventually succeeds at an unchanged tau, but the
+    # implicit solve is deterministic in (u_current, tau): retrying it at the
+    # same tau would fail identically, so a rejected implicit step has to shrink
+    # this bound to make progress.
+    tau_cap = typemax(typeof(t_current))
+
+    while t_current < t_end
+        rate(rate_cache, u_current, p, t_current)
+        if all(<=(0), rate_cache)  # No reactions can occur, step to final time
+            t_current = t_end
+            break
+        end
+
+        use_implicit = is_stiff(
+            rate_cache, u_current, epsilon, eigenvalue_check,
+            stiffness_ratio_threshold, p, t_current, rate, nu, numjumps, numspecies
+        )
+
+        tau = if use_implicit
+            compute_tau_implicit(
+                u_current, rate_cache, nu, hor, p, t_current,
+                epsilon, rate, dtmin, max_hor, max_stoich, numjumps,
+                implicit_epsilon_factor
+            )
+        else
+            compute_tau(
+                u_current, rate_cache, nu, hor, p, t_current,
+                epsilon, rate, dtmin, max_hor, max_stoich, numjumps
+            )
+        end
+        tau = min(tau, tau_cap, t_end - t_current)
+        if !isempty(saveat_times) && save_idx <= length(saveat_times) &&
+                t_current + tau > saveat_times[save_idx]
+            tau = saveat_times[save_idx] - t_current
+        end
+
+        if use_implicit
+            # Recompute the propensities at u_current: compute_tau_implicit
+            # leaves rate_cache holding the values at its predicted state.
+            rate(rate_cache, u_current, p, t_current)
+            u_predicted, converged = solve_implicit(
+                u_current, rate_cache, rate_current, nu, p, t_current, tau, rate,
+                numjumps, implicit_alg
+            )
+            if !converged
+                tau <= dtmin &&
+                    error("SimpleAdaptiveTauLeaping failed to converge at t = $t_current " *
+                    "with the smallest permitted step dtmin = $dtmin.")
+                tau_cap = tau / 2
+                continue
+            end
+            # Sample the leap from the propensities at the predicted state.
+            rate(rate_cache, u_predicted, p, t_current + tau)
+        end
+
+        rate_effective .= max.(rate_cache .* tau, zero(eltype(rate_cache)))
+        for j in eachindex(counts)
+            counts[j] = if rate_effective[j] <= zero(eltype(rate_effective))
+                zero(eltype(counts))
+            else
+                pois_rand(rng, rate_effective[j])
+            end
+        end
+
+        du .= zero(eltype(du))
+        for j in 1:numjumps
+            for (spec_idx, stoch) in maj.net_stoch[j]
+                du[spec_idx] += stoch * counts[j]
+            end
+        end
+        u_new .= u_current .+ du
+        if any(<(0), u_new)
+            # Halve tau to avoid negative populations, as per Cao et al. (2006), Section 3.3
+            tau <= dtmin && break
+            use_implicit && (tau_cap = tau / 2)
+            continue
+        end
+        t_new = t_current + tau
+
+        # Save state if at a saveat time or if saveat is empty
+        if isempty(saveat_times) ||
+                (save_idx <= length(saveat_times) && t_new >= saveat_times[save_idx])
+            push!(usave, copy(u_new))
+            push!(tsave, t_new)
+            if !isempty(saveat_times) && t_new >= saveat_times[save_idx]
+                save_idx += 1
+            end
+        end
+
+        u_current .= u_new
+        t_current = t_new
+        tau_cap = typemax(typeof(t_current))  # release the bound after a good step
+    end
+
+    # Save endpoint if requested and not already saved
+    if save_end && (isempty(tsave) || tsave[end] != t_end)
+        push!(usave, copy(u_current))
+        push!(tsave, t_end)
+    end
+    return nothing
+end
+
+function DiffEqBase.solve(
+        jump_prob::JumpProblem, alg::SimpleAdaptiveTauLeaping;
+        seed = nothing,
+        dtmin = nothing,
+        saveat = nothing, save_start = nothing, save_end = nothing
+    )
+    validate_pure_leaping_inputs(jump_prob, alg) ||
+        error("SimpleAdaptiveTauLeaping can only be used with PureLeaping JumpProblem with a MassActionJump.")
+
+    prob = jump_prob.prob
+    rng = jump_prob.rng
+    tspan = prob.tspan
+
+    if dtmin === nothing
+        dtmin = 1.0e-10 * one(typeof(tspan[2]))
+    end
+
+    (seed !== nothing) && seed!(rng, seed)
+
+    maj = jump_prob.massaction_jump
+    numjumps = get_num_majumps(maj)
+    rate = massaction_rate(maj, numjumps)
+    u0 = copy(prob.u0)
+    p = prob.p
+
+    saveat_times, save_start, save_end = _process_saveat(saveat, tspan, save_start, save_end)
+
+    # Initialize current state and saved history
+    u_current = copy(u0)
+    u_new = similar(u0)
+    t_current = tspan[1]
+    if save_start
+        usave = [copy(u0)]
+        tsave = [tspan[1]]
+    else
+        usave = typeof(u0)[]
+        tsave = typeof(tspan[1])[]
+    end
+    numspecies = length(u0)
+    rate_cache = zeros(float(eltype(u0)), numjumps)
+    rate_effective = similar(rate_cache)
+    rate_current = similar(rate_cache)
+    counts = zero(rate_cache)
+    du = similar(u0)
+    t_end = tspan[2]
+
+    # Extract net stoichiometry for state updates
+    nu = zeros(float(eltype(u0)), numspecies, numjumps)
+    for j in 1:numjumps
+        for (spec_idx, stoch) in maj.net_stoch[j]
+            nu[spec_idx, j] = stoch
+        end
+    end
+    # Extract reactant stoichiometry for hor and gi
+    reactant_stoch = maj.reactant_stoch
+    hor = compute_hor(reactant_stoch, numjumps)
+    max_hor, max_stoich = precompute_reaction_conditions(
+        reactant_stoch, hor, numspecies, numjumps
+    )
+
+    simple_adaptive_tau_leaping_loop!(
+        prob, alg, u_current, u_new, t_current, t_end, p, rng,
+        rate, nu, hor, max_hor, max_stoich, numjumps, numspecies, alg.epsilon,
+        dtmin, saveat_times, usave, tsave, du, counts, rate_cache, rate_effective,
+        rate_current, maj, alg.implicit_alg, alg.eigenvalue_check,
+        alg.stiffness_ratio_threshold, alg.implicit_epsilon_factor, save_end
+    )
+
+    sol = SciMLBase.build_solution(
+        prob, alg, tsave, usave,
+        calculate_error = false,
+        interp = SciMLBase.ConstantInterpolation(tsave, usave)
+    )
     return sol
 end
 

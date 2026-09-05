@@ -1,5 +1,6 @@
 using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
 using FastBroadcast
+using ForwardDiff
 using StableRNGs
 
 rng = StableRNG(123)
@@ -11,6 +12,18 @@ old_norm = Base.FastMath.sqrt_fast(DiffEqBase.UNITLESS_ABS2(rand_array) /
                                    max(DiffEqBase.recursive_length(rand_array), 1))
 new_norm = DiffEqBase.ODE_DEFAULT_NORM(rand_array, 0.0)
 @test old_norm ≈ new_norm
+
+dual_array = ExtendedJumpArray(
+    ForwardDiff.Dual.(rand(rng, 5), 1.0),
+    ForwardDiff.Dual.(rand(rng, 2), 1.0)
+)
+dual_norm = DiffEqBase.ODE_DEFAULT_NORM(dual_array, ForwardDiff.Dual(0.0, 1.0))
+@test ForwardDiff.value(dual_norm) ≈ DiffEqBase.ODE_DEFAULT_NORM(
+    ExtendedJumpArray(
+        ForwardDiff.value.(dual_array.u),
+        ForwardDiff.value.(dual_array.jump_u)
+    ), 0.0
+)
 
 # Check for an ExtendedJumpArray where the types differ (Float64/Int64)
 rand_array = ExtendedJumpArray{Float64, 1, Vector{Float64}, Vector{Int64}}(rand(rng, 5),
@@ -146,6 +159,15 @@ let rng = StableRNG(593)
     @test c.jump_u ≈ full[4:6]
 end
 
+let rng = StableRNG(621)
+    c = ExtendedJumpArray(zeros(3), zeros(1))
+    A = UpperTriangular(rand(rng, 3, 3))
+    u = rand(rng, 3)
+    mul!(c, A, u)
+    @test c.u ≈ A * u
+    @test all(iszero, c.jump_u)
+end
+
 # Test ldiv! and lmul! for stiff solver support
 let rng = StableRNG(456)
     u = rand(rng, 3)
@@ -159,6 +181,13 @@ let rng = StableRNG(456)
     expected = F \ flat
     ldiv!(F, eja)
     @test vcat(eja.u, eja.jump_u) ≈ expected
+
+    eja_tridiagonal = ExtendedJumpArray(copy(u), copy(jump_u))
+    tridiagonal = Tridiagonal(fill(-1.0, 4), fill(5.0, 5), fill(-1.0, 4))
+    tridiagonal_factorization = lu(tridiagonal)
+    expected_tridiagonal = tridiagonal_factorization \ flat
+    ldiv!(tridiagonal_factorization, eja_tridiagonal)
+    @test vcat(eja_tridiagonal.u, eja_tridiagonal.jump_u) ≈ expected_tridiagonal
 
     # lmul! with Q from QR
     eja2 = ExtendedJumpArray(copy(u), copy(jump_u))

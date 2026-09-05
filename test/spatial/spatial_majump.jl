@@ -57,6 +57,12 @@ non_uniform_majumps_3 = SpatialMassActionJump(
     netstoch) # birth on the left, death on the right
 non_uniform_majumps = [non_uniform_majumps_1, non_uniform_majumps_2, non_uniform_majumps_3]
 
+empty_spatial_majump = SpatialMassActionJump(nothing, reactstoch, netstoch)
+empty_spatial_majump_with_mapper = SpatialMassActionJump(nothing, reactstoch, netstoch,
+    identity)
+@test get_num_majumps(empty_spatial_majump) == 0
+@test get_num_majumps(empty_spatial_majump_with_mapper) == 0
+
 # put together the JumpProblem's
 uniform_jump_problems = JumpProblem[JumpProblem(prob, NSM(), majump,
                                         hopping_constants = hopping_constants,

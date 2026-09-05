@@ -64,7 +64,7 @@ function aggregate(aggregator::RDirect, u, p, t, end_time, constant_jumps,
 end
 
 # set up a new simulation and calculate the first jump / jump time
-function initialize!(p::RDirectJumpAggregation, integrator, u, params, t)
+function initialize!(p::RDirectJumpAggregation, integrator, u, params, t::Number)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_rates_and_sum!(p, u, params, t)
     p.max_rate = maximum(p.cur_rates)

@@ -112,16 +112,32 @@ function SpatialMassActionJump(urates::A, srates::B, rs, ns; scale_rates = true,
         useiszero = useiszero, nocopy = nocopy)
 end
 
+function SpatialMassActionJump(::Nothing, srates::B, rs, ns;
+        scale_rates = true, useiszero = true, nocopy = false) where {B <: AMatOrNothing}
+    SpatialMassActionJump(nothing, srates, rs, ns, nothing;
+        scale_rates = scale_rates, useiszero = useiszero, nocopy = nocopy)
+end
+
 function SpatialMassActionJump(srates::B, rs, ns, pmapper; scale_rates = true,
         useiszero = true,
         nocopy = false) where {B <: AMatOrNothing}
     SpatialMassActionJump(nothing, srates, rs, ns, pmapper; scale_rates = scale_rates,
         useiszero = useiszero, nocopy = nocopy)
 end
+function SpatialMassActionJump(::Nothing, rs, ns, pmapper; scale_rates = true,
+        useiszero = true, nocopy = false)
+    SpatialMassActionJump(nothing, nothing, rs, ns, pmapper;
+        scale_rates = scale_rates, useiszero = useiszero, nocopy = nocopy)
+end
 function SpatialMassActionJump(srates::B, rs, ns; scale_rates = true, useiszero = true,
         nocopy = false) where {B <: AMatOrNothing}
     SpatialMassActionJump(nothing, srates, rs, ns, nothing; scale_rates = scale_rates,
         useiszero = useiszero, nocopy = nocopy)
+end
+function SpatialMassActionJump(::Nothing, rs, ns; scale_rates = true, useiszero = true,
+        nocopy = false)
+    SpatialMassActionJump(nothing, nothing, rs, ns, nothing;
+        scale_rates = scale_rates, useiszero = useiszero, nocopy = nocopy)
 end
 
 function SpatialMassActionJump(urates::A, rs, ns, pmapper; scale_rates = true,
@@ -169,6 +185,10 @@ function get_num_majumps(smaj::SpatialMassActionJump{
 end
 using_params(smaj::SpatialMassActionJump) = false
 
+function rate_at_site(rx, site,
+        smaj::SpatialMassActionJump{Nothing, Nothing})
+    throw(BoundsError(smaj, rx))
+end
 function rate_at_site(rx, site,
         smaj::SpatialMassActionJump{Nothing, B, S, U, V}) where {B, S, U, V}
     smaj.spatial_rates[rx, site]

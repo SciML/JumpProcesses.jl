@@ -3,6 +3,9 @@ using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
+@test SimpleImplicitTauLeaping().epsilon == 0.05
+@test SimpleTrapezoidalLeaping().epsilon == 0.05
+
 Nsims = 1000
 t_compare = 0.0:10.0:250.0
 npts = length(t_compare)
@@ -61,7 +64,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
         trajectories = Nsims, dt = 0.1, saveat = t_compare)
 
-    # MassActionJump formulation for SimpleExplicitTauLeaping
+    # MassActionJump formulation for adaptive tau-leaping algorithms
     reactant_stoich = [[1 => 1, 2 => 1], [2 => 1], Pair{Int, Int}[]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [1 => 1]]
     param_idxs = [1, 2, 3]
@@ -73,13 +76,44 @@ end
         trajectories = Nsims, saveat = t_compare)
 
     # Compute mean I trajectories via direct indexing (I is index 2 in SIR)
+    sol_implicit = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+    sol_trapezoidal = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleTrapezoidalLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+
+    sol_adaptive_implicit = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+    sol_adaptive_trapezoidal = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping()),
+        EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 2)
     mean_I_simple = compute_mean_at_saves(sol_simple, Nsims, npts, 2)
     mean_I_explicit = compute_mean_at_saves(sol_adaptive, Nsims, npts, 2)
+    mean_I_implicit = compute_mean_at_saves(sol_implicit, Nsims, npts, 2)
+    mean_I_trapezoidal = compute_mean_at_saves(sol_trapezoidal, Nsims, npts, 2)
+    mean_I_adaptive_implicit = compute_mean_at_saves(sol_adaptive_implicit, Nsims, npts, 2)
+    mean_I_adaptive_trapezoidal = compute_mean_at_saves(sol_adaptive_trapezoidal, Nsims, npts, 2)
 
     # Compare full mean trajectories across all saved timepoints
     @test all(isapprox.(mean_I_direct, mean_I_simple, rtol = 0.1))
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_trapezoidal, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_adaptive_implicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_adaptive_trapezoidal, rtol = 0.1))
 end
 
 # SEIR model with exposed compartment
@@ -127,7 +161,7 @@ end
     sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
         trajectories = Nsims, dt = 0.1, saveat = t_compare)
 
-    # MassActionJump formulation for SimpleExplicitTauLeaping
+    # MassActionJump formulation for adaptive tau-leaping algorithms
     reactant_stoich = [[1 => 1, 3 => 1], [2 => 1], [3 => 1]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [3 => -1, 4 => 1]]
     param_idxs = [1, 2, 3]
@@ -139,13 +173,44 @@ end
         trajectories = Nsims, saveat = t_compare)
 
     # Compute mean I trajectories via direct indexing (I is index 3 in SEIR)
+    sol_implicit = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleImplicitTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+    sol_trapezoidal = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleTrapezoidalLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+
+    sol_adaptive_implicit = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+    sol_adaptive_trapezoidal = solve(
+        EnsembleProblem(jump_prob_maj),
+        SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping()),
+        EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare
+    )
+
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 3)
     mean_I_simple = compute_mean_at_saves(sol_simple, Nsims, npts, 3)
     mean_I_explicit = compute_mean_at_saves(sol_adaptive, Nsims, npts, 3)
+    mean_I_implicit = compute_mean_at_saves(sol_implicit, Nsims, npts, 3)
+    mean_I_trapezoidal = compute_mean_at_saves(sol_trapezoidal, Nsims, npts, 3)
+    mean_I_adaptive_implicit = compute_mean_at_saves(sol_adaptive_implicit, Nsims, npts, 3)
+    mean_I_adaptive_trapezoidal = compute_mean_at_saves(sol_adaptive_trapezoidal, Nsims, npts, 3)
 
     # Compare full mean trajectories across all saved timepoints
     @test all(isapprox.(mean_I_direct, mean_I_simple, rtol = 0.1))
     @test all(isapprox.(mean_I_direct, mean_I_explicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_implicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_trapezoidal, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_adaptive_implicit, rtol = 0.1))
+    @test all(isapprox.(mean_I_direct, mean_I_adaptive_trapezoidal, rtol = 0.1))
 end
 
 # Test zero-rate case for SimpleExplicitTauLeaping
@@ -169,6 +234,51 @@ end
 end
 
 # Test PureLeaping aggregator functionality
+@testset "SimpleAdaptiveTauLeaping stiffness detection" begin
+    # SEIR has 3 reactions but 4 species, so the Jacobian of the propensities is
+    # 3x4. Stiffness has to be measured from the square drift Jacobian nu * da/dX.
+    reactant_stoich = [[1 => 1, 3 => 1], [2 => 1], [3 => 1]]
+    net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [3 => -1, 4 => 1]]
+    maj = MassActionJump([0.3 / 1000, 0.2, 0.1], reactant_stoich, net_stoich)
+    prob = DiscreteProblem([999.0, 0.0, 10.0, 0.0], (0.0, 20.0))
+    jprob = JumpProblem(prob, PureLeaping(), maj; rng)
+
+    total0 = sum(prob.u0)
+    for implicit_alg in (SimpleImplicitTauLeaping(), SimpleTrapezoidalLeaping())
+        for eigenvalue_check in (false, true)
+            alg = SimpleAdaptiveTauLeaping(; implicit_alg, eigenvalue_check)
+            sol = solve(jprob, alg; seed = 1234)
+            @test sol.t[end] == 20.0
+            @test all(u -> all(>=(0), u), sol.u)
+            # every reaction moves one individual between compartments
+            @test all(u -> sum(u) == total0, sol.u)
+        end
+    end
+end
+
+@testset "Zero order reactions in tau-leaping" begin
+    # A zero order reaction has an empty reactant stoichiometry. `compute_hor`
+    # used to take the element type from the first entry of the first reaction,
+    # which threw a BoundsError for such a model.
+    maj = MassActionJump([5.0], [Pair{Int, Int}[]], [[1 => 1]])
+    prob = DiscreteProblem([0.0], (0.0, 4.0))
+    jprob = JumpProblem(prob, PureLeaping(), maj; rng)
+
+    @test JumpProcesses.compute_hor([Pair{Int, Int}[], [1 => 2]], 2) == [0, 2]
+
+    for alg in (SimpleExplicitTauLeaping(), SimpleImplicitTauLeaping())
+        sol = solve(jprob, alg; seed = 1234, saveat = 2.0)
+        @test sol.t == [0.0, 2.0, 4.0]
+        @test issorted([u[1] for u in sol.u])   # A can only accumulate
+    end
+
+    # mean of A(t) is the Poisson mean 5t
+    Nsims = 4000
+    sol = solve(EnsembleProblem(jprob), SimpleExplicitTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = 4.0)
+    @test isapprox(mean(sol.u[i].u[end][1] for i in 1:Nsims), 20.0, rtol = 0.05)
+end
+
 @testset "PureLeaping Aggregator Tests" begin
     # Test with MassActionJump
     u0 = [10, 5, 0]

@@ -1,6 +1,20 @@
 using SciMLTesting, JumpProcesses
 
-const REEXPORTED_API = (:init, :solve, :solve!, :neighbors, :outdegree)
+# The SciML common interface JumpProcesses deliberately reexports so that
+# `using JumpProcesses` is enough to build, solve and inspect a jump problem. Owned and
+# documented upstream; kept in sync with the reexport `export` block in
+# src/JumpProcesses.jl. `neighbors`/`outdegree` are the Graphs.jl methods JumpProcesses
+# extends for its spatial grids.
+const REEXPORTED_API = (
+    :CallbackSet, :ContinuousCallback, :DiscreteCallback, :DiscreteFunction,
+    :DiscreteProblem, :EnsembleAnalysis, :EnsembleDistributed, :EnsembleProblem,
+    :EnsembleSerial, :EnsembleSolution, :EnsembleSplitThreads, :EnsembleSummary,
+    :EnsembleThreads, :NullParameters, :ODEFunction, :ODEProblem, :ODESolution,
+    :ReturnCode, :SDEFunction, :SDEProblem, :VectorContinuousCallback, :add_saveat!,
+    :add_tstop!, :derivative_discontinuity!, :init, :neighbors, :outdegree, :reinit!,
+    :remake, :savevalues!, :set_proposed_dt!, :set_t!, :set_u!, :solve, :solve!, :step!,
+    :successful_retcode, :terminate!, :u_modified!,
+)
 
 # The ExplicitImports ignore-lists below are names owned by other packages whose
 # released public API does not (yet) include them; each group is annotated with its
@@ -10,11 +24,6 @@ run_qa(
     JumpProcesses;
     explicit_imports = true,
     reexports_allow = REEXPORTED_API,
-    aqua_kwargs = (;
-        ambiguities = false,       # TODO: fix ambiguities and enable
-        piracies = false,          # default solvers defined for AbstractJumpProblem
-        persistent_tasks = false,  # disabled due to false positives
-    ),
     ei_kwargs = (;
         # Names not (yet) declared public in their owner package's released API.
         all_qualified_accesses_are_public = (;
@@ -30,8 +39,12 @@ run_qa(
                 :updated_u0_p,
                 # DiffEqBase non-public
                 :Stats,
+                # ForwardDiff: Dual is the AD number type used in
+                # ext/JumpProcessesForwardDiffExt.jl. It is exported but not
+                # declared `public` in ForwardDiff's released API.
+                :Dual,
                 # LinearAlgebra non-public
-                :AbstractQ,
+                :AbstractQ, :AdjointQ, :QRPackedQ,
                 # FunctionWrappers non-public
                 :FunctionWrapper,
             ),

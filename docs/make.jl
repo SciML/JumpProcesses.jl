@@ -21,7 +21,7 @@ mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/require", "[tex]/ma
         ])))
 
 makedocs(sitename = "JumpProcesses.jl", authors = "Chris Rackauckas", modules = [JumpProcesses],
-    clean = true, doctest = false, linkcheck = true, warnonly = [:missing_docs],
+    clean = true, linkcheck = true, checkdocs = :exports,
     format = Documenter.HTML(; assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/JumpProcesses/",
         prettyurls = (get(ENV, "CI", nothing) == "true"),

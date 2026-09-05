@@ -10,6 +10,7 @@ using Random: Random, randexp, seed!
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
 using DataStructures: DataStructures, MutableBinaryMinHeap, sizehint!, top_with_handle
 using PoissonRandom: PoissonRandom, pois_rand
+using PrecompileTools: @compile_workload, @setup_workload
 using ArrayInterface: ArrayInterface
 using FunctionWrappers: FunctionWrappers
 using Graphs: Graphs, AbstractGraph, dst, grid, src
@@ -34,12 +35,24 @@ import RecursiveArrayTools: recursivecopy!
 import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
-using DiffEqBase: DiffEqBase, CallbackSet, ContinuousCallback, DAEFunction,
-                  DDEFunction, ODEFunction, ODEProblem,
-                  ODESolution, ReturnCode, SDEFunction, SDEProblem, add_tstop!,
-                  isinplace, remake, savevalues!, step!,
-                  derivative_discontinuity!
-using SciMLBase: SciMLBase, DEIntegrator, DiscreteProblem
+using DiffEqBase: DiffEqBase, DAEFunction, DDEFunction, isinplace
+using SimpleNonlinearSolve: SimpleNonlinearSolve, SimpleNewtonRaphson
+using ADTypes: ADTypes, AutoFiniteDiff
+using SciMLBase: SciMLBase, DEIntegrator, NonlinearProblem
+
+# The SciML common interface that JumpProcesses reexports (see the second `export`
+# block below), so that `using JumpProcesses` on its own is enough to build the problem
+# a `JumpProblem` wraps, attach callbacks, solve it, drive the integrator from a jump
+# `affect!`, run ensembles, and inspect the result. Everything here stays owned and
+# documented upstream in SciMLBase.
+using SciMLBase: CallbackSet, ContinuousCallback, DiscreteFunction, DiscreteProblem,
+                 EnsembleAnalysis, EnsembleDistributed, EnsembleProblem, EnsembleSerial,
+                 EnsembleSolution, EnsembleSplitThreads, EnsembleSummary,
+                 EnsembleThreads, NullParameters, ODEFunction, ODEProblem, ODESolution,
+                 ReturnCode, SDEFunction, SDEProblem, VectorContinuousCallback,
+                 add_saveat!, add_tstop!, derivative_discontinuity!, reinit!, remake,
+                 savevalues!, set_proposed_dt!, set_t!, set_u!, step!,
+                 successful_retcode, terminate!, u_modified!
 
 abstract type AbstractJump end
 abstract type AbstractMassActionJump <: AbstractJump end
@@ -152,12 +165,23 @@ export JumpProblem, SplitCoupledJumpProblem
 include("solve.jl")
 export init, solve, solve!
 
+# Reexported SciML common interface; approved via `reexports_allow` in test/qa.jl.
+export CallbackSet, ContinuousCallback, DiscreteCallback, DiscreteFunction,
+       DiscreteProblem, EnsembleAnalysis, EnsembleDistributed, EnsembleProblem,
+       EnsembleSerial, EnsembleSolution, EnsembleSplitThreads, EnsembleSummary,
+       EnsembleThreads, NullParameters, ODEFunction, ODEProblem, ODESolution,
+       ReturnCode, SDEFunction, SDEProblem, VectorContinuousCallback, add_saveat!,
+       add_tstop!, derivative_discontinuity!, reinit!, remake, savevalues!,
+       set_proposed_dt!, set_t!, set_u!, step!, successful_retcode, terminate!,
+       u_modified!
+
 include("SSA_stepper.jl")
 export SSAStepper
 
 # leaping: 
 include("simple_regular_solve.jl")
-export SimpleTauLeaping, SimpleExplicitTauLeaping, EnsembleGPUKernel
+export SimpleTauLeaping, SimpleExplicitTauLeaping, SimpleImplicitTauLeaping,
+    SimpleTrapezoidalLeaping, SimpleAdaptiveTauLeaping, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -180,5 +204,20 @@ export DirectCRDirect
 # coupling
 include("coupled_array.jl")
 include("coupling.jl")
+
+@setup_workload begin
+    rate = (u, p, t) -> u[1]
+    affect! = integrator -> (integrator.u[1] += 1)
+    jump = ConstantRateJump(rate, affect!)
+    prob = DiscreteProblem([10.0], (0.0, 1.0))
+    jump_prob = JumpProblem(prob, Direct(), jump;
+        rng = Random.MersenneTwister(12345), save_positions = (false, false))
+
+    @compile_workload begin
+        integrator = init(jump_prob, SSAStepper())
+        step!(integrator)
+        solve(jump_prob, SSAStepper())
+    end
+end
 
 end # module

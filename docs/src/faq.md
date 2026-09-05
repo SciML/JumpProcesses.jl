@@ -90,7 +90,7 @@ Internally, JumpProcesses SSAs (aggregators) order all `MassActionJump`s first,
 then all `ConstantRateJumps` and/or `VariableRateJumps`. i.e., in the example
 
 ```julia
-using JumpProcesses, SciMLBase
+using JumpProcesses
 rs = [[1 => 1], [2 => 1]]
 ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
 p = [1.0, 0.0]
@@ -131,7 +131,7 @@ A simple example that uses a `MassActionJump` and changes the parameters at a
 specified time in the simulation using a `DiscreteCallback` is
 
 ```julia
-using JumpProcesses, SciMLBase
+using JumpProcesses
 rs = [[1 => 1], [2 => 1]]
 ns = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
 p = [1.0, 0.0]

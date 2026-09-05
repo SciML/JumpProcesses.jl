@@ -568,6 +568,10 @@ end
 function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
     JumpSet(vj, cj, rj, check_majump_type(maj))
 end
+function JumpSet(vj::AbstractJump, cj::AbstractJump, rj::AbstractJump,
+        maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
+    JumpSet(vj, cj, rj, check_majump_type(maj))
+end
 
 JumpSet(jump::ConstantRateJump) = JumpSet((), (jump,), nothing, nothing)
 JumpSet(jump::VariableRateJump) = JumpSet((jump,), (), nothing, nothing)

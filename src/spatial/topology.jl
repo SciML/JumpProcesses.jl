@@ -33,6 +33,8 @@ rand_nbr(rng, graph::AbstractGraph, site) = rand(rng, neighbors(graph, site))
 nth_nbr(graph::AbstractGraph, site, n) = @inbounds neighbors(graph, site)[n]
 
 ################### CartesianGrid ########################
+abstract type AbstractCartesianGrid end
+
 const offsets_1D = [CartesianIndex(-1), CartesianIndex(1)]
 const offsets_2D = [
     CartesianIndex(0, -1),
@@ -89,7 +91,7 @@ grid = CartesianGrid((2, 2))
 outdegree(grid, 1) == 2
 ```
 """
-outdegree(grid, site) = grid.nums_neighbors[site]
+outdegree(grid::AbstractCartesianGrid, site::Int) = grid.nums_neighbors[site]
 
 """
     nth_potential_nbr(grid, site, n)
@@ -121,7 +123,7 @@ end
 
 return an iterator over neighbors of site in ascending order. Do not use in hot loops
 """
-function neighbors(grid, site)
+function neighbors(grid::AbstractCartesianGrid, site::Int)
     CI = grid.CI
     LI = grid.LI
     I = CI[site]
@@ -211,7 +213,7 @@ outdegree(grid, 1) == 2
 collect(neighbors(grid, 1)) == [2, 3]
 ```
 """
-struct CartesianGridRej{N, T}
+struct CartesianGridRej{N, T} <: AbstractCartesianGrid
     "dimensions (side lengths) of the grid"
     dims::NTuple{N, Int}
 

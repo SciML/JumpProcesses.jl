@@ -1104,7 +1104,13 @@ end
     EnsembleGPUKernel()
     EnsembleGPUKernel(backend)
 
-Ensemble algorithm marker for GPU execution of tau-leaping ensemble simulations.
+Ensemble algorithm for pure-jump simulations with [`SSAStepper`](@ref),
+[`SimpleExplicitTauLeaping`](@ref), or [`SimpleTauLeaping`](@ref).
+
+Load `KernelAbstractions` and `Adapt` to activate the extension, and pass an explicit
+backend such as `CUDABackend()` from CUDA for GPU execution. The default is the
+KernelAbstractions CPU backend. See [GPU ensembles](@ref gpu_ensembles) for supported
+problem representations, required solve options, and limitations.
 
 ## Arguments
 

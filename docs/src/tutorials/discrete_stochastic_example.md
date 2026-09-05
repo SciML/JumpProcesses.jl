@@ -936,3 +936,8 @@ we use as follows:
 sol = solve(jump_prob, SimpleTauLeaping(); dt = 0.001)
 plot(sol; label = ["S(t)" "I(t)" "R(t)"])
 ```
+
+For adaptive explicit, implicit, and switching methods using `MassActionJump`,
+and for the StochasticDiffEq solvers using this same `RegularJump` interface,
+continue with the [tau-leaping tutorial](@ref tau_leaping_tutorial).
+The [GPU tutorial](@ref gpu_ensembles) covers running ensembles on a GPU.

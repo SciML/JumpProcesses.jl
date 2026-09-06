@@ -4,7 +4,7 @@
 # functions of the current population sizes (i.e. u)
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
-mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, VJMAP, JVMAP, BD, U} <:
+mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, CB, VJMAP, JVMAP, BD, U} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
@@ -16,6 +16,7 @@ mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, VJMAP, JVMAP, BD, U} <:
     ma_jumps::S
     rates::F1
     affects!::F2
+    brackets::CB
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     vartojumps_map::VJMAP
@@ -27,7 +28,7 @@ end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
-        rng::RNG; u::U, vartojumps_map = nothing,
+        rng::RNG; u::U, brackets, vartojumps_map = nothing,
         jumptovars_map = nothing,
         bracket_data = nothing, kwargs...) where {T, S, F1, F2, RNG, U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
@@ -63,9 +64,9 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     uhigh = similar(u)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    RSSAJumpAggregation{T, S, F1, affecttype, RNG, typeof(vtoj_map),
+    RSSAJumpAggregation{T, S, F1, affecttype, RNG, typeof(brackets), typeof(vtoj_map),
         typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
-        crh_bnds, sr, maj, rs, affs!, sps,
+        crh_bnds, sr, maj, rs, affs!, brackets, sps,
         rng, vtoj_map, jtov_map, bd, ulow,
         uhigh)
 end
@@ -78,9 +79,10 @@ function aggregate(aggregator::RSSA, u, p, t, end_time, constant_jumps,
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
+    brackets = get_jump_bracket_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(RSSAJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions, rng; u = u,
+        rates, affects!, save_positions, rng; u = u, brackets,
         kwargs...)
 end
 

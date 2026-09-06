@@ -42,13 +42,15 @@ reaction_index = 1
 
 # constant rate
 rate(u, params, t) = 1 / u[1]
+affect!(integrator) = nothing
+crj = ConstantRateJump(rate, affect!)
 params = nothing
 t = 0.0
-@test JP.get_cjump_brackets(ulow, uhigh, rate, params, t)[1] == 1 / 10 # low
-@test JP.get_cjump_brackets(ulow, uhigh, rate, params, t)[2] == 1 / 2 # high
+@test JP.cjump_brackets(crj, ulow, uhigh, params, t)[1] == 1 / 10 # low
+@test JP.cjump_brackets(crj, ulow, uhigh, params, t)[2] == 1 / 2 # high
 
 ### Aggregator ###
-mutable struct DummyAggregator{T, M, R, BD} <:
+mutable struct DummyAggregator{T, M, R, CB, BD} <:
                JP.AbstractSSAJumpAggregator{T, M, R, Nothing, Nothing}
     ulow::Vector{Int}
     uhigh::Vector{Int}
@@ -57,13 +59,16 @@ mutable struct DummyAggregator{T, M, R, BD} <:
     sum_rate::T
     ma_jumps::M
     rates::R
+    brackets::CB
     bracket_data::BD
 end
 # one massaction jump, one constant rate jump
 cur_rate_low = [0.0, 0.0]
 cur_rate_high = [0.0, 0.0]
 sum_rate = 0.0
-p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, [rate], bd)
+brackets = JP.get_jump_bracket_fwrappers(ulow, params, t, (crj,))
+p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
+    [rate], brackets, bd)
 
 u = [100]
 JP.update_u_brackets!(p, u)
@@ -77,7 +82,8 @@ reaction_index = 2
 @test JP.get_jump_brackets(reaction_index, p, params, t)[1] == rate(p.uhigh, params, t)
 @test JP.get_jump_brackets(reaction_index, p, params, t)[2] == rate(p.ulow, params, t)
 
-p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, [rate], bd)
+p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
+    [rate], brackets, bd)
 JP.set_bracketing!(p, u, params, t)
 @test p.ulow[1]≈u[1] * (1 - fluctuation_rate) atol=1
 @test p.uhigh[1]≈u[1] * (1 + fluctuation_rate) atol=1
@@ -86,3 +92,15 @@ JP.set_bracketing!(p, u, params, t)
 @test p.cur_rate_low[2] == rate(p.uhigh, params, t)
 @test p.cur_rate_high[2] == rate(p.ulow, params, t)
 @test p.sum_rate ≈ sum(p.cur_rate_high)
+
+# non-monotonic rate function
+bounded_crj = ConstantRateJump((u, p, t) -> u[1] / (1 + u[2]), affect!;
+    lrate = (ulow, uhigh, p, t) -> ulow[1] / (1 + uhigh[2]),
+    urate = (ulow, uhigh, p, t) -> uhigh[1] / (1 + ulow[2]))
+
+box_low, box_high = [2, 5], [6, 9]
+box_states = [[a, b] for a in box_low[1]:box_high[1], b in box_low[2]:box_high[2]]
+
+lo = JP.lower_rate_bound(bounded_crj, box_low, box_high, params, t)
+hi = JP.upper_rate_bound(bounded_crj, box_low, box_high, params, t)
+@test all(lo <= bounded_crj.rate(u, params, t) <= hi for u in box_states)

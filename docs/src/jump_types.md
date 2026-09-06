@@ -84,6 +84,11 @@ ConstantRateJump(rate, affect!)
     interface. It encodes how the state should change due to *one* occurrence of
     the jump.
 
+For aggregators that bracket rates over state intervals, such as `RSSA` and `RSSACR`, one
+can also supply `lrate` and `urate` rate bound functions. If not supplied, these bounds
+will be computed automatically by evaluating `rate` at the interval endpoints (which is
+only correct for rate functions that are increasing, such as mass action rates).
+
 #### Defining a Mass Action Jump
 
 The constructor for a [`MassActionJump`](@ref) is:
@@ -294,6 +299,8 @@ aggregator requires various types of dependency graphs, see the next section):
   - `RSSA`: The Rejection SSA (RSSA) method of Thanh *et al.* [^5][^6]. With `RSSACR`,
     for very large reaction networks, it often offers the best performance of all
     methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+    For `ConstantRateJump`s, `RSSA` and `RSSACR` require rate bounds, see
+    [`ConstantRateJump`](@ref).
   - `RSSACR`: The Rejection SSA (RSSA) with Composition-Rejection method of
     Thanh *et al.* [^7]. With `RSSA`, for very large reaction networks, it often offers
     the best performance of all methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).

@@ -3,6 +3,28 @@ using Test, LinearAlgebra, Statistics
 using StableRNGs
 rng = StableRNG(12345)
 
+@testset "Successful leaping return codes" begin
+    prob = DiscreteProblem([100.0], (0.0, 1.0))
+    rate! = (out, u, p, t) -> (out[1] = 0.1 * u[1])
+    change! = (du, u, p, t, counts, mark) -> (du[1] = -counts[1])
+    regular_jump = RegularJump(rate!, change!, 1)
+    massaction_jump = MassActionJump([0.1], [[1 => 1]], [[1 => -1]])
+    for alg in (
+            SimpleTauLeaping(), SimpleExplicitTauLeaping(),
+            SimpleImplicitTauLeaping(), SimpleTrapezoidalLeaping(), SimpleAdaptiveTauLeaping(),
+        )
+        @testset "$(nameof(typeof(alg)))" begin
+            jump = alg isa SimpleTauLeaping ? regular_jump : massaction_jump
+            jp = JumpProblem(prob, PureLeaping(), jump; rng = StableRNG(12345))
+            kwargs = alg isa SimpleTauLeaping ? (; dt = 0.01) : (;)
+            sol = solve(jp, alg; kwargs...)
+            @test sol.t[end] == last(prob.tspan)
+            @test sol.retcode == ReturnCode.Success
+            @test successful_retcode(sol)
+        end
+    end
+end
+
 @test SimpleImplicitTauLeaping().epsilon == 0.05
 @test SimpleTrapezoidalLeaping().epsilon == 0.05
 

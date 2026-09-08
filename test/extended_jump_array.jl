@@ -63,10 +63,10 @@ bc_mismatch = ExtendedJumpArray(rand(rng, 8), rand(rng, 4))
 bc_dtype_1 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))
 bc_dtype_2 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))
 result = bc_dtype_1 + bc_dtype_2 * 2
-@test eltype(result.jump_u) == Int64
+@test eltype(result.jump_u) == Int
 out_result = ExtendedJumpArray(zeros(10), zeros(2))
 out_result .= bc_dtype_1 .+ bc_dtype_2 .* 2
-@test eltype(result.jump_u) == Int64
+@test eltype(result.jump_u) == Int
 @test out_result ≈ result
 
 # Test that fast broadcasting also gives the correct results

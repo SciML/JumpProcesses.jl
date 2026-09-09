@@ -33,6 +33,9 @@ JumpProcessesForwardDiffExt = "ForwardDiff"
 JumpProcessesKernelAbstractionsExt = ["Adapt", "KernelAbstractions"]
 JumpProcessesOrdinaryDiffEqCoreExt = "OrdinaryDiffEqCore"
 
+[sources]
+DiffEqBase = {url = "https://github.com/ChrisRackauckas-Claude/OrdinaryDiffEq.jl.git", rev = "fix-32bit-interp-points-range", subdir = "lib/DiffEqBase"}
+
 [compat]
 ADTypes = "1.22.0"
 Adapt = "4.6.0"

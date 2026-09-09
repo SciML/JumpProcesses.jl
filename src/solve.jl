@@ -69,7 +69,8 @@ end
 # jump aggregator's RNG. We cannot assume the JumpProblem's stored RNG is any particular
 # type, so we pass the seed through `hash` (to decorrelate from the input) and then through
 # a Xoshiro draw (to ensure strong mixing regardless of the target RNG's seeding quality).
-const _JUMP_SEED_SALT = 0x4a756d7050726f63  # "JumPProc" in ASCII
+# Truncate salt to native UInt so hash(::UInt64, ::UInt) matches on 32-bit Julia.
+const _JUMP_SEED_SALT = 0x4a756d7050726f63 % UInt  # "JumPProc" in ASCII
 _derive_jump_seed(seed) = rand(Random.Xoshiro(hash(seed, _JUMP_SEED_SALT)), UInt64)
 
 function resetted_jump_problem(_jump_prob, seed)

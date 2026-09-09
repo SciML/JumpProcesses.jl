@@ -350,13 +350,14 @@ end
 function PriorityTimeTable(
         times::AbstractVector, mintime, timestep; binwidthconst = 16, numbinsconst = 20)
     binwidth = binwidthconst * timestep
-    numbins = floor(Int64, numbinsconst * sqrt(length(times)))
+    # Use native Int so F matches Tuple{Int,Int} / Int kwargs on 32-bit.
+    numbins = floor(Int, numbinsconst * sqrt(length(times)))
     maxtime = mintime + numbins * binwidth
 
     pidtype = typeof(numbins)
     ptype = eltype(times)
     groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()
-    pidtogroup = Vector{Tuple{Int, Int}}(undef, length(times))
+    pidtogroup = Vector{Tuple{pidtype, pidtype}}(undef, length(times))
 
     ttgdata = TimeGrouper{ptype}(mintime, binwidth)
     # Create the groups, [t_min, t_min + τ), [t_min + τ, t_min + 2τ)...
@@ -366,7 +367,7 @@ function PriorityTimeTable(
 
     ptt = PriorityTimeTable(
         groups, pidtogroup, times, ttgdata, zero(pidtype),
-        zero(pidtype), maxtime, binwidthconst, numbinsconst)
+        zero(pidtype), maxtime, pidtype(binwidthconst), pidtype(numbinsconst))
     # Insert priority ids into the groups
     for (pid, time) in enumerate(times)
         if time > maxtime

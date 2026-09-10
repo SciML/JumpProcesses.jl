@@ -161,7 +161,7 @@ Update rates
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]
                 sum_rate -= crhigh[jidx]
-                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
             end
         end
@@ -187,7 +187,7 @@ end
             # for each dependent jump, update jump rate brackets
             for jidx in p.vartojumps_map[uidx]
                 sum_rate -= crhigh[jidx]
-                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, params, t)
+                p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
             end
         end

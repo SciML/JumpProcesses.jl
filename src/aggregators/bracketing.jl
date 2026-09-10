@@ -86,13 +86,13 @@ end
 """
 get brackets for the rate of reaction rx by first checking if the reaction is a massaction reaction
 """
-@inline function get_jump_brackets(rx, p::AbstractSSAJumpAggregator, params, t)
+@inline function get_jump_brackets(rx, p::AbstractSSAJumpAggregator, u, params, t)
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
         return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
     else
-        @inbounds return p.brackets[rx - num_majumps](p.ulow, p.uhigh, params, t)
+        @inbounds return p.brackets[rx - num_majumps](p.ulow, p.uhigh, u, params, t)
     end
 end
 
@@ -128,7 +128,7 @@ function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     # reaction rate bracketing interval
     sum_rate = zero(p.sum_rate)
     @inbounds for rx in 1:(get_num_majumps(p.ma_jumps) + length(p.brackets))
-        p.cur_rate_low[rx], p.cur_rate_high[rx] = get_jump_brackets(rx, p, params, t)
+        p.cur_rate_low[rx], p.cur_rate_high[rx] = get_jump_brackets(rx, p, u, params, t)
         sum_rate += p.cur_rate_high[rx]
     end
     p.sum_rate = sum_rate

@@ -8,7 +8,7 @@ bd = BracketData(fluctuation_rate, threshold, Δu)
 
 ### Getters ###
 species_index = 1
-# The fluctuation rate δ corresponds to species brackets (1-δ)*u, (1+δ)*u. So 0 < δ < 1. 
+# The fluctuation rate δ corresponds to species brackets (1-δ)*u, (1+δ)*u. So 0 < δ < 1.
 @test 0 < JP.getfr(bd, species_index) < 1
 # If u < threshold, then the brackets are (max(u-Δu, 0), u+Δu). So 0 <= threshold and 0 <= Δu.
 @test 0 <= JP.gettv(bd, species_index)
@@ -46,8 +46,9 @@ affect!(integrator) = nothing
 crj = ConstantRateJump(rate, affect!)
 params = nothing
 t = 0.0
-@test JP.cjump_brackets(crj, ulow, uhigh, params, t)[1] == 1 / 10 # low
-@test JP.cjump_brackets(crj, ulow, uhigh, params, t)[2] == 1 / 2 # high
+ucur = [5]
+@test JP.cjump_brackets(crj, ulow, uhigh, ucur, params, t)[1] == 1 / 10 # low
+@test JP.cjump_brackets(crj, ulow, uhigh, ucur, params, t)[2] == 1 / 2 # high
 
 ### Aggregator ###
 mutable struct DummyAggregator{T, M, R, CB, BD} <:
@@ -76,11 +77,11 @@ JP.update_u_brackets!(p, u)
 @test p.uhigh[1]≈u[1] * (1 + fluctuation_rate) atol=1
 
 reaction_index = 1
-@test JP.get_jump_brackets(reaction_index, p, params, t)[1] == majump_rates[1] * p.ulow[1]
-@test JP.get_jump_brackets(reaction_index, p, params, t)[2] == majump_rates[1] * p.uhigh[1]
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[1] == majump_rates[1] * p.ulow[1]
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[2] == majump_rates[1] * p.uhigh[1]
 reaction_index = 2
-@test JP.get_jump_brackets(reaction_index, p, params, t)[1] == rate(p.uhigh, params, t)
-@test JP.get_jump_brackets(reaction_index, p, params, t)[2] == rate(p.ulow, params, t)
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[1] == rate(p.uhigh, params, t)
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[2] == rate(p.ulow, params, t)
 
 p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
     [rate], brackets, bd)
@@ -97,22 +98,22 @@ JP.set_bracketing!(p, u, params, t)
 nonmonotonic_rate(u, p, t) = u[1] / (1 + u[2])
 
 joint_crj = ConstantRateJump(nonmonotonic_rate, affect!;
-    bounds = (ulow, uhigh, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2]),
+    bounds = (ulow, uhigh, u, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2]),
                                                urate = uhigh[1] / (1 + ulow[2])))
 
-box_low, box_high = [2, 5], [6, 9]
+box_low, box_high, box_cur = [2, 5], [6, 9], [4, 7]
 box_states = [[a, b] for a in box_low[1]:box_high[1], b in box_low[2]:box_high[2]]
 
-lo, hi = JP.cjump_brackets(joint_crj, box_low, box_high, params, t)
+lo, hi = JP.cjump_brackets(joint_crj, box_low, box_high, box_cur, params, t)
 @test all(lo <= nonmonotonic_rate(u, params, t) <= hi for u in box_states)
 
 # one-sided rate bounds
 split_crj = ConstantRateJump(nonmonotonic_rate, affect!;
-    lrate = (ulow, uhigh, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2])),
-    urate = (ulow, uhigh, p, t) -> RateBounds(urate = uhigh[1] / (1 + ulow[2])))
+    lrate = (ulow, uhigh, u, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2])),
+    urate = (ulow, uhigh, u, p, t) -> RateBounds(urate = uhigh[1] / (1 + ulow[2])))
 
-lo = JP.lower_rate_bound(split_crj, box_low, box_high, params, t)
-hi = JP.upper_rate_bound(split_crj, box_low, box_high, params, t)
+lo = JP.lower_rate_bound(split_crj, box_low, box_high, box_cur, params, t)
+hi = JP.upper_rate_bound(split_crj, box_low, box_high, box_cur, params, t)
 @test all(lo <= nonmonotonic_rate(u, params, t) <= hi for u in box_states)
 
 @test_throws ErrorException JP.get_jump_bracket_fwrappers(box_low, params, t,

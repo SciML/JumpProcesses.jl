@@ -66,7 +66,7 @@ end
 cur_rate_low = [0.0, 0.0]
 cur_rate_high = [0.0, 0.0]
 sum_rate = 0.0
-brackets = JP.get_jump_bracket_fwrappers(ulow, params, t, (crj,))
+brackets = JP.get_jump_bracket_fwrappers(ulow, params, t, (crj,), RSSA())
 p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
     [rate], brackets, bd)
 
@@ -93,14 +93,31 @@ JP.set_bracketing!(p, u, params, t)
 @test p.cur_rate_high[2] == rate(p.ulow, params, t)
 @test p.sum_rate ≈ sum(p.cur_rate_high)
 
-# non-monotonic rate function
-bounded_crj = ConstantRateJump((u, p, t) -> u[1] / (1 + u[2]), affect!;
-    lrate = (ulow, uhigh, p, t) -> ulow[1] / (1 + uhigh[2]),
-    urate = (ulow, uhigh, p, t) -> uhigh[1] / (1 + ulow[2]))
+### user supplied rate bounds ###
+nonmonotonic_rate(u, p, t) = u[1] / (1 + u[2])
+
+joint_crj = ConstantRateJump(nonmonotonic_rate, affect!;
+    bounds = (ulow, uhigh, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2]),
+                                               urate = uhigh[1] / (1 + ulow[2])))
 
 box_low, box_high = [2, 5], [6, 9]
 box_states = [[a, b] for a in box_low[1]:box_high[1], b in box_low[2]:box_high[2]]
 
-lo = JP.lower_rate_bound(bounded_crj, box_low, box_high, params, t)
-hi = JP.upper_rate_bound(bounded_crj, box_low, box_high, params, t)
-@test all(lo <= bounded_crj.rate(u, params, t) <= hi for u in box_states)
+lo, hi = JP.cjump_brackets(joint_crj, box_low, box_high, params, t)
+@test all(lo <= nonmonotonic_rate(u, params, t) <= hi for u in box_states)
+
+# one-sided rate bounds
+split_crj = ConstantRateJump(nonmonotonic_rate, affect!;
+    lrate = (ulow, uhigh, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2])),
+    urate = (ulow, uhigh, p, t) -> RateBounds(urate = uhigh[1] / (1 + ulow[2])))
+
+lo = JP.lower_rate_bound(split_crj, box_low, box_high, params, t)
+hi = JP.upper_rate_bound(split_crj, box_low, box_high, params, t)
+@test all(lo <= nonmonotonic_rate(u, params, t) <= hi for u in box_states)
+
+@test_throws ErrorException JP.get_jump_bracket_fwrappers(box_low, params, t,
+    (split_crj,), RSSA())
+@test_throws ErrorException JP.get_jump_lrate_fwrappers(box_low, params, t,
+    (joint_crj,), RSSA())
+@test_throws ErrorException JP.get_jump_urate_fwrappers(box_low, params, t,
+    (joint_crj,), RSSA())

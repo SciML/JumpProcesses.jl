@@ -75,7 +75,7 @@ their own special time integrators.
 The constructor for a [`ConstantRateJump`](@ref) is:
 
 ```julia
-ConstantRateJump(rate, affect!)
+ConstantRateJump(rate, affect!; bounds=nothing)
 ```
 
   - `rate(u, p, t)` is a function which calculates the rate given the current
@@ -84,10 +84,11 @@ ConstantRateJump(rate, affect!)
     interface. It encodes how the state should change due to *one* occurrence of
     the jump.
 
-For aggregators that bracket rates over state intervals, such as `RSSA` and `RSSACR`, one
-can also supply `lrate` and `urate` rate bound functions. If not supplied, these bounds
-will be computed automatically by evaluating `rate` at the interval endpoints (which is
-only correct for rate functions that are increasing, such as mass action rates).
+For aggregators that bracket rates, such as `RSSA` and `RSSACR`, one can also supply a
+`bounds(ulow, uhigh, p, t)` function returning a [`RateBounds`](@ref) that bounds `rate`
+over the state bracket `[ulow, uhigh]`. If not supplied, the bounds are computed
+automatically by evaluating `rate` at the endpoints of the bracket (which is only correct
+for rate functions that are monotonic in the state, such as mass action rates).
 
 #### Defining a Mass Action Jump
 

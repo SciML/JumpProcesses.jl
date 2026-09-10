@@ -97,7 +97,7 @@ function aggregate(aggregator::RSSACR, u, p, t, end_time, constant_jumps,
 
     # handle constant jumps using function wrappers
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
-    brackets = get_jump_bracket_fwrappers(u, p, t, constant_jumps)
+    brackets = get_jump_bracket_fwrappers(u, p, t, constant_jumps, aggregator)
 
     build_jump_aggregation(RSSACRJumpAggregation, u, p, t, end_time, ma_jumps,
         rates, affects!, save_positions, rng; u = u, brackets, kwargs...)

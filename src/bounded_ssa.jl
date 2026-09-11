@@ -17,10 +17,12 @@ total-propensity bound `Λ = rate_bound`:
   - candidate event times form a homogeneous Poisson process of rate `Λ` on the
     time span — these are **parameter-free**, so the loop never branches on a
     triple and the times stay `Float64`;
-  - at each candidate the current total propensity `a(u)` is recomputed and the
-    event is *accepted* with a tracked `Bernoulli(a(u)/Λ)` (otherwise it is a
-    **null event** absorbing the slack `Λ - a(u)`);
-  - the firing channel is chosen by stick-breaking `Bernoulli`s.
+  - at each candidate the current propensities `rateₖ(u)` are recomputed and the
+    candidate resolves to reaction `k` with probability `rateₖ(u)/Λ`, or to a
+    **null event** with probability `1 - Σₖ rateₖ(u)/Λ`. This single Λ-normalized
+    outcome is realized by stick-breaking `Bernoulli`s over the *remaining* mass
+    (starting at `Λ`), with no separate accept/reject step, so a reaction with
+    zero propensity is selected with probability exactly `0`.
 
 **Primal simulation.** With a valid fixed bound `Λ`, uniformization samples *exactly
 the same continuous-time Markov chain* as the original SSA: it introduces no
@@ -28,7 +30,7 @@ time-discretization bias and no event-count truncation bias (there is no step ca
 To see this, write `aₖ(u,p,t)` for the propensity of reaction `k` and
 `a(u,p,t) = Σₖ aₖ(u,p,t)` for the total. Candidate events arrive at rate `Λ`,
 and a candidate is turned into reaction `k` with probability `aₖ(u,p,t)/Λ`
-(via the accept and channel `Bernoulli`s), so the effective rate of reaction `k` is
+(via the Λ-normalized stick-breaking `Bernoulli`s), so the effective rate of reaction `k` is
 
     Λ · (aₖ(u,p,t)/Λ) = aₖ(u,p,t),
 
@@ -41,7 +43,7 @@ Because uniformization introduces no time discretization, values requested throu
 the candidate times remain ordinary parameter-independent floating-point values.
 
 **Gradient (StochasticAD).** Separately from the primal correctness above, all
-differentiated-parameter dependence flows through the accept / channel `Bernoulli`s,
+differentiated-parameter dependence flows through the Λ-normalized stick-breaking `Bernoulli`s,
 so StochasticAD can propagate derivative information through these discrete decisions
 while the candidate-event schedule remains independent of the differentiated
 parameters. This avoids the parameter-dependent event-count control flow that
@@ -73,7 +75,12 @@ rests on it. It must be **all** of the following:
     with no finite global population bound (for example, an unrestricted birth
     process), a finite global `Λ` may not exist. Models with conserved totals,
     finite capacities, or other rigorous state bounds are natural cases where
-    such a bound can be established.
+    such a bound can be established. Prefer a **strict** bound (leave margin, as in
+    point 5): channel selection divides by the remaining mass
+    `Λ - Σ_{j<k} rateⱼ ≥ Λ - Σₖ rateₖ`, so a bound attained with *equality*
+    (`Σₖ rateₖ = Λ`) at a state whose trailing channels have zero rate is a
+    degenerate `0/0` and is unsupported — a strict bound makes the remaining mass
+    positive and avoids it.
  5. **Valid in a local parameter neighbourhood** — when using StochasticAD, the
     bound must remain valid for the local parameter variations represented by the
     stochastic derivative computation. Leave sufficient margin so that an
@@ -88,7 +95,7 @@ rests on it. It must be **all** of the following:
     `BoundedSSA` deliberately keeps the candidate Poisson process
     parameter-independent: all differentiated parameter dependence is intended to
     enter through the reaction propensities and the resulting stochastic
-    accept/channel decisions. A parameter-dependent `Λ` violates this construction
+    channel-selection decisions. A parameter-dependent `Λ` violates this construction
     and is unsupported.
 
     Compute `Λ` once from a rigorous structural bound on the model and pass that
@@ -102,7 +109,7 @@ rests on it. It must be **all** of the following:
     `1 - a(u)/Λ`. Thus a larger bound produces more null events and more work.
   - A `Λ` that **can be violated** — i.e. some reachable state has
     `Σₖ rateₖ(u, p, t) > Λ` — invalidates the uniformization construction because
-    the required acceptance probability would exceed `1`. Do not rely on runtime
+    a channel-selection probability would exceed `1`. Do not rely on runtime
     sampling errors to detect this condition; choose and justify `Λ` with
     sufficient margin.
 
@@ -309,11 +316,10 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end, rng)
 
     saveat_times, ss, se = _process_saveat(saveat, (t0, tf), save_start, save_end)
 
-    # Primal floating-point type of the run, from the (always non-triple) rate bound and
-    # the state. Drives the parameter-free delta storage and the zero-denominator sentinel
-    # `tiny`, so a `Float32` problem stays `Float32` (no silent promotion to `Float64`).
+    # Primal floating-point type of the run, from the (always non-triple) rate bound and the
+    # state. Drives the parameter-free delta storage, so a `Float32` problem stays `Float32`
+    # (no silent promotion to `Float64`).
     Tf = float(promote_type(typeof(Λ), eltype(u0)))
-    tiny = nextfloat(zero(Tf))
 
     # additive net change per channel: ConstantRateJumps (net change inferred from
     # affect! and verified additive) first, then MassActionJump reactions (net_stoch).
@@ -353,6 +359,15 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end, rng)
     # computed once here rather than at every candidate event.
     maunscaled = (nrx > 0 && using_params(maj)) ? maj.param_mapper(p) : nothing
 
+    # Per-candidate working buffers, allocated ONCE and reused (mutated in place) to avoid the
+    # O(M·K) array allocations an allocating inner loop would make: `rates` holds the K channel
+    # propensities, `sel` the net state change of the current candidate. Both carry the working
+    # element type of `u` (its StochasticTriple type under AD), so no per-element conversion or
+    # reallocation happens in the hot loop; only the unavoidable per-draw StochasticAD triple
+    # perturbations remain.
+    rates = Vector{eltype(u)}(undef, K)
+    sel = fill(z, n)
+
     save_idx = 1
     for m in 1:M
         tm = @inbounds ctimes[m]
@@ -362,46 +377,55 @@ function _bounded_ssa(jprob, p, Λ, tspan, saveat, save_start, save_end, rng)
             save_idx += 1
         end
 
-        # per-channel propensities at the current state: ConstantRateJumps then
-        # MassActionJump reactions.
-        rates = [k <= Kc ? cjumps[k].rate(u, p, tm) :
-                 _bssa_ma_rate(u, maj, maunscaled, k - Kc) for k in 1:K]
+        # per-channel propensities at the current state (filled into the reused buffer):
+        # ConstantRateJumps then MassActionJump reactions.
+        @inbounds for k in 1:K
+            rates[k] = k <= Kc ? cjumps[k].rate(u, p, tm) :
+                       _bssa_ma_rate(u, maj, maunscaled, k - Kc)
+        end
         total = sum(rates)
-        prob = total / Λ
-        # Uniformization requires total <= Λ. `Bernoulli(prob)` checks the same condition,
-        # but checking it here provides a BoundedSSA-specific diagnostic (with the offending
-        # total, Λ and time) instead of Distributions' generic `@check_args` failure. We do
-        # NOT clamp `prob` to 1 — that would silently alter the sampled process.
-        #
-        # With StochasticAD, this predicate must also remain valid across the tracked
-        # parameter perturbations, consistent with the `rate_bound` contract that Λ bound the
-        # total propensity for the local perturbations as well as the nominal trajectory.
-        prob <= one(prob) || throw(ArgumentError(
+        # Rate-bound guard: uniformization requires Σₖ rateₖ ≤ Λ (equivalently every channel
+        # probability below stays ≤ 1). Checked here for a BoundedSSA-specific diagnostic (the
+        # offending total, Λ, time) rather than a generic downstream failure; we do NOT clamp.
+        # For a valid strict bound `total` stays below `Λ`, so this predicate is invariant under
+        # the tracked perturbations and fires only on a genuine bound violation.
+        total <= Λ || throw(ArgumentError(
             "BoundedSSA rate_bound violated: total propensity = $total exceeds " *
             "rate_bound = $Λ at time t = $tm. Increase `rate_bound` to a valid upper " *
             "bound on the total propensity Σₖ rateₖ(u, p, t) over all reachable states."))
-        # thinning: real vs null event. `rand(rng, Bernoulli(prob))` handles both the primal
-        # draw and — when a StochasticTriple `prob` flows in with StochasticAD loaded —
-        # the differentiable decision (StochasticAD's own `rand(::Bernoulli)` rule).
-        accept = rand(rng, Bernoulli(prob))
 
-        # which channel: stick-breaking conditional Bernoullis (last deterministic).
-        # `+ tiny` guards the 0/0 that appears once every remaining channel has zero
-        # propensity (an absorbing / extinct state): without it the ratio is `NaN` and
-        # `Bernoulli` throws. `tiny = nextfloat(zero(Tf))` is the smallest step above zero
-        # in the run's float type, so it leaves a genuine (nonzero-suffix) ratio unchanged.
+        # Full-outcome uniformization selection over {reaction 1,…,K, null}. While no channel has
+        # been chosen (`notchosen = 1`) reaction k fires with conditional probability
+        # rateₖ/remaining, where `remaining` = Λ - Σ_{j<k} rateⱼ; once a channel is chosen
+        # (`notchosen = 0`) the numerator `notchosen·rateₖ` is 0 so no later channel can fire, and
+        # the `(1-notchosen)·Λ` padding keeps the denominator ≥ Λ so a trailing zero-rate tail (or
+        # exact bound saturation) never yields 0/0 — with no artificial epsilon. This telescopes to
+        # the exact marginals P(reaction k) = rateₖ/Λ and P(null) = 1 - Σₖ rateₖ/Λ, with no separate
+        # accept/reject Bernoulli and no conditioning on Σₖ rateₖ. A zero-propensity channel gets
+        # probability exactly 0 — never selected in the primal or in any tracked alternate, so
+        # populations never go negative and every probability stays in [0,1]. `check_args = false`
+        # skips only Distributions' `0 ≤ p ≤ 1` constructor test, a boolean predicate on a
+        # StochasticTriple that StochasticAD cannot evaluate; it is safe because the construction
+        # guarantees `0 ≤ q ≤ 1` and StochasticAD's own `rand(::Bernoulli)` rule handles p = 0 / 1.
+        # `sel` is the reused buffer, reset to the zero seed and accumulated in place.
+        remaining = Λ
         notchosen = 1 + z
-        sel = [z for _ in 1:n]
-        for k in 1:K
-            chose = k < K ?
-                    rand(rng, Bernoulli(rates[k] / (sum(rates[j] for j in k:K) + tiny))) :
-                    (1 + z)
+        fill!(sel, z)
+        @inbounds for k in 1:K
+            denom = remaining + (1 - notchosen) * Λ
+            q = notchosen * rates[k] / denom
+            chose = rand(rng, Bernoulli(q; check_args = false))
             take = notchosen * chose
-            sel = [sel[i] + take * Δ[k][i] for i in 1:n]
+            for i in 1:n
+                sel[i] = sel[i] + take * Δ[k][i]
+            end
             notchosen = notchosen * (1 - chose)
+            remaining = remaining - rates[k]
         end
 
-        u = [u[i] + accept * sel[i] for i in 1:n]        # apply only on a real event
+        @inbounds for i in 1:n                  # null event ⇒ sel all-zero (state unchanged)
+            u[i] = u[i] + sel[i]
+        end
     end
     while save_idx <= length(saveat_times)
         push!(tsave, @inbounds saveat_times[save_idx])

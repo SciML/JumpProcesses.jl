@@ -191,6 +191,60 @@ end
         @test abs(mb - ms) < 4 * sqrt(seb^2 + ses^2)
     end
 
+    # --- Regression: reversible NATURAL boundary A0=N, B0=0 -------------------
+    # Starting with all mass in A (B0=0) makes the B->A channel have zero propensity at t=0.
+    # The earlier accept + conditional stick-breaking (with a deterministic last channel and an
+    # epsilon denominator) drove an invalid StochasticAD alternate trajectory here (negative B,
+    # channel probability > 1). The Λ-normalized full-outcome selection fixes it; check that both
+    # parameter derivatives from the boundary start match the analytic values.
+    @testset "reversible natural boundary (A0=N, B0=0)" begin
+        T, N, k1_0, k2_0, Λ = 1.0, 100, 1.0, 0.5, 130.0     # Λ = N·max(k1,k2)_box with margin
+        conv = ConstantRateJump((u, p, t) -> p[1] * u[1],
+            integ -> (integ.u[1] -= 1; integ.u[2] += 1; nothing))   # A --> B
+        rev = ConstantRateJump((u, p, t) -> p[2] * u[2],
+            integ -> (integ.u[2] -= 1; integ.u[1] += 1; nothing))   # B --> A
+        s = k1_0 + k2_0
+        q = exp(-s * T)
+        # A0=N, B0=0  ⇒  A(T) ~ Binomial(N, pAA),  pAA = k2/s + (k1/s) q
+        analytic = [N * (k2_0 * (q - 1) / s^2 - (k1_0 * T / s) * q),      # d/dk1 E[A(T)]
+            N * (k1_0 * (1 - q) / s^2 - (k1_0 * T / s) * q)]             # d/dk2 E[A(T)]
+        for k in 1:2
+            g,
+            se = sad_partial([k1_0, k2_0], k; N = 4000) do p
+                jp = JumpProblem(DiscreteProblem([N, 0], (0.0, T), p), Direct(), conv, rev)
+                solve(jp, BoundedSSA(; rate_bound = Λ); saveat = [T]).u[end][1]
+            end
+            @test abs(g - analytic[k]) < 4 * se
+        end
+    end
+
+    # --- Regression: pure death frequently absorbing at X=0 (zero total propensity) ----
+    # With X small and T long, trajectories commonly reach X=0 (a0=0) well before the final
+    # candidate; the solver must keep producing null events with no 0/0, NaN, or AD exception.
+    @testset "pure death absorbing (X reaches 0)" begin
+        T, N, μ0, Λ = 3.0, 5, 1.0, 7.5     # μ_max = 1.5, Λ = μ_max·N
+        death = ConstantRateJump((u, p, t) -> p[1] * u[1], integ -> (integ.u[1] -= 1; nothing))
+        analytic = -N * T * exp(-μ0 * T)
+        g, se = sad_partial([μ0], 1; N = 4000) do p
+            jp = JumpProblem(DiscreteProblem([N], (0.0, T), p), Direct(), death)
+            solve(jp, BoundedSSA(; rate_bound = Λ); saveat = [T]).u[end][1]
+        end
+        @test abs(g - analytic) < 4 * se
+    end
+
+    # --- Regression: Float32 at the boundary (no accidental Float64 promotion; no magic 1e-300) --
+    @testset "Float32 boundary reversible (primal)" begin
+        T, N, Λ = 1.0f0, 100, 130.0f0
+        conv = ConstantRateJump((u, p, t) -> p[1] * u[1],
+            integ -> (integ.u[1] -= 1; integ.u[2] += 1; nothing))
+        rev = ConstantRateJump((u, p, t) -> p[2] * u[2],
+            integ -> (integ.u[2] -= 1; integ.u[1] += 1; nothing))
+        jp = JumpProblem(DiscreteProblem([N, 0], (0.0f0, T), Float32[1.0, 0.5]), Direct(), conv, rev)
+        sol = solve(jp, BoundedSSA(; rate_bound = Λ); saveat = [T])
+        @test eltype(sol.u[end]) === Float32          # stayed Float32, no promotion
+        @test 0 <= sol.u[end][1] <= N
+    end
+
     # --- guards: misuse should error, not silently mislead ---------------------
     @testset "guards" begin
         T = 1.0

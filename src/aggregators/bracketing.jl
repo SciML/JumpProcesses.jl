@@ -83,25 +83,16 @@ end
     evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
 end
 
-# for constant rate jumps we must check the ordering of the bracket values
-# Get propensity brackets of constant rate jump.
-@inline function get_cjump_brackets(ulow, uhigh, rate, params, t)
-    rlow = rate(ulow, params, t)
-    rhigh = rate(uhigh, params, t)
-    return (rlow <= rhigh) ? (rlow, rhigh) : (rhigh, rlow)
-end
-
 """
 get brackets for the rate of reaction rx by first checking if the reaction is a massaction reaction
 """
-@inline function get_jump_brackets(rx, p::AbstractSSAJumpAggregator, params, t)
+@inline function get_jump_brackets(rx, p::AbstractSSAJumpAggregator, u, params, t)
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
         return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
     else
-        @inbounds return get_cjump_brackets(p.ulow, p.uhigh, p.rates[rx - num_majumps],
-            params, t)
+        @inbounds return p.brackets[rx - num_majumps](p.ulow, p.uhigh, u, params, t)
     end
 end
 
@@ -129,28 +120,16 @@ end
 end
 
 # Set up bracketing. The aggregator must have fields
-#    ulow, uhigh, cur_rate_low, cur_rate_high, sum_rate, ma_jumps, rates.
+#    ulow, uhigh, cur_rate_low, cur_rate_high, sum_rate, ma_jumps, rates, brackets
 function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     # species bracketing interval
     update_u_brackets!(p, u)
 
     # reaction rate bracketing interval
-    # mass action jumps
     sum_rate = zero(p.sum_rate)
-    majumps = p.ma_jumps
-    crlow = p.cur_rate_low
-    crhigh = p.cur_rate_high
-    @inbounds for k in 1:get_num_majumps(majumps)
-        crlow[k], crhigh[k] = get_majump_brackets(p.ulow, p.uhigh, k, majumps)
-        sum_rate += crhigh[k]
-    end
-
-    # constant rate jumps
-    k = get_num_majumps(majumps) + 1
-    @inbounds for rate in p.rates
-        crlow[k], crhigh[k] = get_cjump_brackets(p.ulow, p.uhigh, rate, params, t)
-        sum_rate += crhigh[k]
-        k += 1
+    @inbounds for rx in 1:(get_num_majumps(p.ma_jumps) + length(p.brackets))
+        p.cur_rate_low[rx], p.cur_rate_high[rx] = get_jump_brackets(rx, p, u, params, t)
+        sum_rate += p.cur_rate_high[rx]
     end
     p.sum_rate = sum_rate
 

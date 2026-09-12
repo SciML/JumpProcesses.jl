@@ -75,7 +75,7 @@ their own special time integrators.
 The constructor for a [`ConstantRateJump`](@ref) is:
 
 ```julia
-ConstantRateJump(rate, affect!)
+ConstantRateJump(rate, affect!; bounds=nothing)
 ```
 
   - `rate(u, p, t)` is a function which calculates the rate given the current
@@ -83,6 +83,12 @@ ConstantRateJump(rate, affect!)
   - `affect!(integrator)` is the effect on the equation using the integrator
     interface. It encodes how the state should change due to *one* occurrence of
     the jump.
+
+For aggregators that bracket rates, such as `RSSA` and `RSSACR`, one can also supply a
+`bounds(ulow, uhigh, u, p, t)` function returning a [`RateBounds`](@ref) that bounds `rate`
+over the state bracket `[ulow, uhigh]`. If not supplied, the bounds are computed
+automatically by evaluating `rate` at the endpoints of the bracket (which is only correct
+for rate functions that are monotonic in the state, such as mass action rates).
 
 #### Defining a Mass Action Jump
 
@@ -294,6 +300,8 @@ aggregator requires various types of dependency graphs, see the next section):
   - `RSSA`: The Rejection SSA (RSSA) method of Thanh *et al.* [^5][^6]. With `RSSACR`,
     for very large reaction networks, it often offers the best performance of all
     methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
+    For `ConstantRateJump`s, `RSSA` and `RSSACR` require rate bounds, see
+    [`ConstantRateJump`](@ref).
   - `RSSACR`: The Rejection SSA (RSSA) with Composition-Rejection method of
     Thanh *et al.* [^7]. With `RSSA`, for very large reaction networks, it often offers
     the best performance of all methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).

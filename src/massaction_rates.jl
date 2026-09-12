@@ -159,38 +159,87 @@ function add_self_dependencies!(dg; dosort = true)
     end
 end
 
-struct MassActionRate{M}
-    jump::M
-end
+@inline massaction_data(jump::MassActionJump) =
+    (jump.scaled_rates, jump.reactant_stoch, jump.net_stoch)
+@inline massaction_data(jump::MassActionJump{<:Number}) =
+    ((jump.scaled_rates,), (jump.reactant_stoch,), (jump.net_stoch,))
 
-function (rate::MassActionRate)(out, u, p, t)
-    for j in eachindex(out)
-        out[j] = evalrxrate(u, j, rate.jump)
+"""
+    massaction_rates!(rates, jump::MassActionJump, u)
+
+Write each reaction propensity at populations `u` into `rates`. Uses the stored,
+combinatorially scaled rate constants and falling factorial rate laws. A reaction
+with insufficient reactants has zero propensity. `rates` must have one entry per
+reaction and must not alias `u` or the jump's data. Rate constants must already
+be initialized; for parameter-dependent rates, use the mass-action jump stored
+in a `JumpProblem`.
+"""
+function massaction_rates!(rates, jump::MassActionJump, u)
+    constants, reactants, _ = massaction_data(jump)
+    for j in eachindex(constants)
+        rates[j] = massaction_propensity(constants, reactants, u, j)
     end
-    return nothing
+    return rates
 end
 
-struct MassActionChange{M}
-    jump::M
+@inline function massaction_propensity(constants, reactants, u, j)
+    rate = one(eltype(u))
+    for (species, order) in reactants[j]
+        population = u[species]
+        population <= order - 1 && return zero(rate)
+        for k in 0:(order - 1)
+            rate *= population - k
+        end
+    end
+    return rate * constants[j]
 end
 
-function (change::MassActionChange)(du, u, p, t, counts, mark)
+"""
+    massaction_stoichiometry_mul!(du, jump::MassActionJump, counts)
+
+Overwrite `du` with the net stoichiometry times the reaction vector `counts`.
+`counts` may contain reaction counts or propensities and must have one entry per
+reaction. `du` must have one entry per species and must not alias `counts` or the
+jump's data.
+"""
+function massaction_stoichiometry_mul!(du, jump::MassActionJump, counts)
     fill!(du, zero(eltype(du)))
-    for j in eachindex(counts)
-        for (species, coefficient) in change.jump.net_stoch[j]
+    _, _, stoichiometry = massaction_data(jump)
+    for j in eachindex(stoichiometry)
+        for (species, coefficient) in stoichiometry[j]
             du[species] += coefficient * counts[j]
         end
     end
-    return nothing
+    return du
 end
 
-function massaction_regular_jump(maj::MassActionJump)
-    return RegularJump{true}(MassActionRate(maj), MassActionChange(maj), get_num_majumps(maj))
+"""
+    massaction_drift!(du, jump::MassActionJump, u)
+
+Overwrite `du` with the mass-action drift, the net stoichiometry times the
+propensities at `u`. Evaluates and accumulates each reaction without allocating
+an intermediate propensity vector. Supports automatic differentiation through
+`u` when `du` can store the resulting scalar type. `du` must have one entry per
+species and must not alias `u` or the jump's data. Initialize rate constants as
+for [`massaction_rates!`](@ref).
+"""
+function massaction_drift!(du, jump::MassActionJump, u)
+    fill!(du, zero(eltype(du)))
+    constants, reactants, stoichiometry = massaction_data(jump)
+    for j in eachindex(constants)
+        rate = massaction_propensity(constants, reactants, u, j)
+        for (species, coefficient) in stoichiometry[j]
+            du[species] += coefficient * rate
+        end
+    end
+    return du
 end
 
-is_massaction_regular_jump(::Any, maj) = false
-function is_massaction_regular_jump(
-        rj::RegularJump{true, <:MassActionRate, <:MassActionChange}, maj
-    )
-    return rj.rate.jump === maj && rj.c.jump === maj
-end
+leaping_rates!(out, jump::MassActionJump, u, p, t) = massaction_rates!(out, jump, u)
+leaping_rates!(out, jump::RegularJump, u, p, t) = jump.rate(out, u, p, t)
+leaping_change!(du, jump::MassActionJump, u, p, t, counts, mark) =
+    massaction_stoichiometry_mul!(du, jump, counts)
+leaping_change!(du, jump::RegularJump, u, p, t, counts, mark) =
+    jump.c(du, u, p, t, counts, mark)
+leaping_num_jumps(jump::MassActionJump) = get_num_majumps(jump)
+leaping_num_jumps(jump::RegularJump) = jump.numjumps

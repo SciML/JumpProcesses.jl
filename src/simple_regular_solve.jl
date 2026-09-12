@@ -240,15 +240,15 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
         Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
     end
-    isempty(jump_prob.jump_callback.continuous_callbacks) &&
+    return jump_prob.prob isa DiscreteProblem &&
+        isempty(jump_prob.jump_callback.continuous_callbacks) &&
         isempty(jump_prob.jump_callback.discrete_callbacks) &&
         isempty(jump_prob.constant_jumps) &&
         isempty(jump_prob.variable_jumps) &&
-        (
-        get_num_majumps(jump_prob.massaction_jump) == 0 ||
-            is_massaction_regular_jump(jump_prob.regular_jump, jump_prob.massaction_jump)
-    ) &&
+        xor(
+        get_num_majumps(jump_prob.massaction_jump) > 0,
         jump_prob.regular_jump !== nothing
+    )
 end
 
 function validate_pure_leaping_inputs(
@@ -316,11 +316,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     (seed !== nothing) && seed!(rng, seed)
 
     rj = jump_prob.regular_jump
-    rate = rj.rate # rate function rate(out,u,p,t)
-    numjumps = rj.numjumps # used for size information (# of jump processes)
-    c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p, mark)
+    jump = rj === nothing ? jump_prob.massaction_jump : rj
+    numjumps = leaping_num_jumps(jump)
 
-    if !isnothing(rj.mark_dist) == nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
+    if rj !== nothing && !isnothing(rj.mark_dist)
         error("Mark distributions are currently not supported in SimpleTauLeaping")
     end
 
@@ -352,10 +351,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     for i in 2:n
         tprev = tspan[1] + (i - 2) * dt
         t_new = tprev + dt
-        rate(rate_cache, uprev, p, tprev)
+        leaping_rates!(rate_cache, jump, uprev, p, tprev)
         rate_cache .*= dt
         counts .= pois_rand.((rng,), rate_cache)
-        c(du, uprev, p, tprev, counts, mark)
+        leaping_change!(du, jump, uprev, p, tprev, counts, nothing)
         u_new .= du .+ uprev
 
         # Save logic — only allocate (via copy) when actually saving

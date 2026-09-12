@@ -221,11 +221,7 @@ function validate_gpu_massaction_inputs(jump_prob::JumpProblem)
         JumpProcesses.get_num_majumps(jump_prob.massaction_jump) > 0 &&
         isempty(jump_prob.constant_jumps) &&
         isempty(jump_prob.variable_jumps) &&
-        (
-        jump_prob.regular_jump === nothing || JumpProcesses.is_massaction_regular_jump(
-            jump_prob.regular_jump, jump_prob.massaction_jump
-        )
-    ) &&
+        jump_prob.regular_jump === nothing &&
         isempty(jump_prob.jump_callback.continuous_callbacks) &&
         length(jump_prob.jump_callback.discrete_callbacks) <= 1
 end

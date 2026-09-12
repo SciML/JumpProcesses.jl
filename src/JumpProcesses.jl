@@ -71,6 +71,7 @@ const USE_SORTINGDIRECT_THRESHOLD = 200
 
 include("jumps.jl")
 export ConstantRateJump, VariableRateJump, RegularJump, MassActionJump, JumpSet
+export massaction_rates!, massaction_stoichiometry_mul!, massaction_drift!
 
 include("massaction_rates.jl")
 
@@ -140,10 +141,10 @@ problem construction.
   - `PureLeaping` is currently intended for tau-leaping algorithms such as
     [`SimpleTauLeaping`](@ref) and [`SimpleExplicitTauLeaping`](@ref).
   - A `MassActionJump` can be passed directly to all tau-leaping algorithms in
-    JumpProcesses and StochasticDiffEq. The rates and count-based updates are
-    supplied automatically; no user-written `RegularJump` is required.
-  - `SimpleTauLeaping` and StochasticDiffEq's leaping algorithms additionally accept
-    a `RegularJump` for more general rates and updates.
+    JumpProcesses. The problem preserves its mass-action
+    representation so each solver can use the rate constants and stoichiometry directly.
+  - `SimpleTauLeaping` additionally accepts a `RegularJump` for more general rates
+    and updates.
   - Spatial jump problems are not supported by the `PureLeaping` construction path.
 
 ## Examples

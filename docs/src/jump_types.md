@@ -494,3 +494,16 @@ as will trying to update either `p` or `tspan` while passing a new
     COEVOLVE: a joint point process model for information diffusion and network
     evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
     10.5555/3122009.3122050.
+
+## Mass-action operations for solver authors
+
+`JumpProblem` preserves `MassActionJump` data. Solvers can use the rate constants
+and stoichiometry directly and choose their own storage and evaluation strategy.
+The following operations support CPU solver implementations; GPU solvers should
+prepare a device-compatible representation during solver initialization.
+
+```@docs
+massaction_rates!
+massaction_stoichiometry_mul!
+massaction_drift!
+```

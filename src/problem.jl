@@ -351,9 +351,6 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     vrjs = jumps.variable_jumps
     
     rj = jumps.regular_jump
-    if rj === nothing && prob isa DiscreteProblem && get_num_majumps(maj) > 0
-        rj = massaction_regular_jump(maj)
-    end
     iip = isinplace_jump(prob, rj)
     solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 

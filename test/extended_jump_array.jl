@@ -215,3 +215,16 @@ let
     sol = solve(jprob, Rodas5P(linsolve = QRFactorization()))
     @test sol.retcode == ReturnCode.Success
 end
+
+# Subset getindex on an ExtendedJumpArray must return a dense array of the
+# index shape: Julia 1.13's `_unsafe_getindex` verifies `axes(similar(...))`
+# against the index shape, which the axes-ignoring `similar` violated.
+let
+    u = ExtendedJumpArray([1.0, 2.0, 3.0], [4.0])
+    @test u[[1, 2, 3]] isa Vector{Float64}
+    @test u[[1, 2, 3]] == [1.0, 2.0, 3.0]
+    @test u[[4]] == [4.0]
+    @test Vector(u[:]) == [1.0, 2.0, 3.0, 4.0]
+    @test similar(u) isa ExtendedJumpArray
+    @test copy(u) isa ExtendedJumpArray
+end

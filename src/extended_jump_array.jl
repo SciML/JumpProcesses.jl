@@ -113,10 +113,15 @@ LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector)
 LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
     u::AbstractVector) = _mul_extended_jump_array!(c, A, u)
 
-# Ignore axes
+# Whole-array copies stay ExtendedJumpArrays. A subset getindex asks `similar`
+# for a container of the index shape, which no longer matches this array's axes;
+# Julia 1.13 checks the result's axes, so return a plain dense array there.
 function Base.similar(A::ExtendedJumpArray, ::Type{S},
         axes::Tuple{Base.OneTo{Int}}) where {S}
-    ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
+    if axes == Base.axes(A)
+        return ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
+    end
+    return similar(A.u, S, axes)
 end
 
 # plotting

@@ -97,7 +97,7 @@ jprob = JumpProblem(prob, PureLeaping(), rj)
 
 fixed_sol = solve(jprob, SimpleTauLeaping(); dt = 0.01)
 adaptive_sol = solve(jprob, TauLeaping(); dt = 0.01)
-cao_sol = solve(jprob, CaoTauLeaping(); dt = 0.01)
+cao_sol = solve(jprob, CaoTauLeaping(); dt = 0.01, adaptive = false)
 implicit_sol = solve(jprob, ImplicitTauLeaping(); dt = 0.01, adaptive = false)
 theta_sol = solve(
     jprob, ThetaTrapezoidalTauLeaping(; theta = 0.5); dt = 0.01, adaptive = false

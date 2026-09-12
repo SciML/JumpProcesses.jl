@@ -5,13 +5,13 @@ an interval. It introduces discretization error in addition to Monte Carlo
 sampling error. Compare ensembles and repeat with smaller steps or tighter
 step-selection parameters when assessing accuracy.
 
-## Adaptive mass-action methods
+## Mass-action kinetics
 
-JumpProcesses' adaptive leaping solvers accept a `MassActionJump` directly. Here a
-reversible conversion is coupled to a slower irreversible reaction:
+Define the kinetics with a `MassActionJump`, then choose a leaping method. Here
+a reversible conversion is coupled to a slower irreversible reaction:
 
 ```@example tau
-using JumpProcesses
+using JumpProcesses, StochasticDiffEq, Test
 
 maj = MassActionJump(
     [100.0, 100.0, 0.1],
@@ -25,6 +25,19 @@ explicit_sol = solve(jprob, SimpleExplicitTauLeaping(; epsilon = 0.01); saveat =
 implicit_sol = solve(jprob, SimpleImplicitTauLeaping(); saveat = 0.1)
 trapezoidal_sol = solve(jprob, SimpleTrapezoidalLeaping(); saveat = 0.1)
 switching_sol = solve(jprob, SimpleAdaptiveTauLeaping(); saveat = 0.1)
+fixed_sol = solve(jprob, SimpleTauLeaping(); dt = 0.001)
+tau_sol = solve(jprob, TauLeaping(); dt = 0.001)
+cao_sol = solve(jprob, CaoTauLeaping(); dt = 0.001, adaptive = false)
+sde_implicit_sol = solve(jprob, ImplicitTauLeaping(); dt = 0.001, adaptive = false)
+theta_sol = solve(
+    jprob, ThetaTrapezoidalTauLeaping(); dt = 0.001, adaptive = false
+)
+
+for solution in (fixed_sol, tau_sol, cao_sol, sde_implicit_sol, theta_sol)
+    @test successful_retcode(solution)
+    @test solution.t[end] ≈ 1.0
+    @test all(u -> sum(u) ≈ 200.0, solution.u)
+end
 nothing # hide
 ```
 
@@ -52,32 +65,9 @@ end
 nothing # hide
 ```
 
-These solvers require a pure mass-action model over a `DiscreteProblem`; do not
-add a `RegularJump` or separately aggregated jumps to this problem.
-
-## Reusing the mass-action problem with StochasticDiffEq
-
-The same `jprob` also works with `SimpleTauLeaping` and StochasticDiffEq's
-leaping solvers. No conversion to a user-written `RegularJump` is needed:
-
-```@example tau
-using StochasticDiffEq
-
-fixed_sol = solve(jprob, SimpleTauLeaping(); dt = 0.001)
-tau_sol = solve(jprob, TauLeaping(); dt = 0.001)
-cao_sol = solve(jprob, CaoTauLeaping(); dt = 0.001)
-sde_implicit_sol = solve(jprob, ImplicitTauLeaping(); dt = 0.001, adaptive = false)
-theta_sol = solve(
-    jprob, ThetaTrapezoidalTauLeaping(); dt = 0.001, adaptive = false
-)
-
-for solution in (fixed_sol, tau_sol, cao_sol, sde_implicit_sol, theta_sol)
-    @test successful_retcode(solution)
-    @test solution.t[end] ≈ 1.0
-    @test all(u -> sum(u) ≈ 200.0, solution.u)
-end
-nothing # hide
-```
+The `SimpleExplicitTauLeaping`, `SimpleImplicitTauLeaping`,
+`SimpleTrapezoidalLeaping`, and `SimpleAdaptiveTauLeaping` methods require pure
+mass-action kinetics over a `DiscreteProblem`.
 
 ## More general rates with RegularJump
 

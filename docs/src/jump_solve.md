@@ -81,7 +81,7 @@ count-based updates.
 | JumpProcesses | [`SimpleTrapezoidalLeaping`](@ref) | `MassActionJump` | Adaptive implicit trapezoidal; `epsilon` |
 | JumpProcesses | [`SimpleAdaptiveTauLeaping`](@ref) | `MassActionJump` | Switches explicit/implicit; `epsilon` |
 | StochasticDiffEq | `TauLeaping` | `MassActionJump` or `RegularJump` | Adaptive with post-leap estimates |
-| StochasticDiffEq | `CaoTauLeaping` | `MassActionJump` or `RegularJump` | Adaptive Cao step selection |
+| StochasticDiffEq | `CaoTauLeaping` | `MassActionJump` or `RegularJump` | Fixed steps with `dt`, `adaptive = false`; adaptive selector incomplete |
 | StochasticDiffEq | `ImplicitTauLeaping` | `MassActionJump` or `RegularJump` | Implicit; fixed steps with `dt`, `adaptive = false` |
 | StochasticDiffEq | `ThetaTrapezoidalTauLeaping` | `MassActionJump` or `RegularJump` | Implicit theta-trapezoidal; fixed steps with `dt`, `adaptive = false` |
 
@@ -89,9 +89,8 @@ count-based updates.
 
 The `Simple*` methods listed above are streamlined solvers for pure jump problems:
 construct a `DiscreteProblem` and use `PureLeaping()` as the aggregator. The
-adaptive mass-action methods require a `MassActionJump`. All methods construct
-the rates and stoichiometric updates from it without a user-written
-`RegularJump`. They support `saveat`, `save_start`, and `save_end`.
+adaptive mass-action methods require a `MassActionJump`. Each solver uses the stored rate constants and
+stoichiometry directly. They support `saveat`, `save_start`, and `save_end`.
 
 `SimpleImplicitTauLeaping` takes the deterministic part of a leap implicitly.
 `SimpleTrapezoidalLeaping` averages current and new-state propensities in that

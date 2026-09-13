@@ -55,8 +55,10 @@ These methods can be much faster as they do not need to simulate the realization
 of every individual jump event. τ-leaping methods trade accuracy for speed, and
 are best used when a set of jumps do not make significant changes to the
 processes' state and/or rates over the course of one time-step (i.e., during a
-leap interval). A single [`RegularJump`](@ref) is used to encode jumps for
-τ-leaping algorithms. While τ-leaping methods can be proven to converge in the
+leap interval). A single [`RegularJump`](@ref) encodes custom rates and count-based
+updates for τ-leaping algorithms. All tau-leaping methods accept a
+[`MassActionJump`](@ref) directly through `PureLeaping()`; see
+[Tau-Leaping Methods](@ref jump_solve). While τ-leaping methods can be proven to converge in the
 limit that the time-step approaches zero, their accuracy can be highly dependent
 on the chosen time-step. As a rule of thumb, if changes to the state variable
 `u` during a time-step (i.e., leap interval) are "minimal" compared to the size of
@@ -494,3 +496,16 @@ as will trying to update either `p` or `tspan` while passing a new
     COEVOLVE: a joint point process model for information diffusion and network
     evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:
     10.5555/3122009.3122050.
+
+## Mass-action operations for solver authors
+
+`JumpProblem` preserves `MassActionJump` data. Solvers can use the rate constants
+and stoichiometry directly and choose their own storage and evaluation strategy.
+The following operations support CPU solver implementations; GPU solvers should
+prepare a device-compatible representation during solver initialization.
+
+```@docs
+massaction_rates!
+massaction_stoichiometry_mul!
+massaction_drift!
+```

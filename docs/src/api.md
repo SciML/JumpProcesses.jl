@@ -23,6 +23,7 @@ MassActionJump
 VariableRateJump
 RegularJump
 JumpSet
+RateBounds
 ```
 
 ## Aggregator Types

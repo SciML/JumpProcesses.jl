@@ -1,3 +1,106 @@
+
+"""
+    RateBounds(; lrate, urate, rateinterval = Inf)
+
+Computed bounds on a jump's rate for a fixed state bracket `[ulow, uhigh]` at time `t`.
+
+## Fields
+
+$(FIELDS)
+
+## Notes
+
+  - The rates must satisfy `lrate <= rate(v, p, s) <= urate` for every `v` with `ulow .<= v .<= uhigh` and `s` in `[t, t + rateinterval]`.
+  - At least one of `lrate` or `urate` must be given. An omitted bound defaults to the trivially valid one: `zero` below and `typemax` above.
+  - For `ConstantRateJump`s, `rateinterval` is always `Inf`, as rates do not explicitly depend on `t`.
+
+## Examples
+
+Increasing rate in one species but decreasing in another:
+```julia
+rate(u, p, t) = p[1] * u[1] / (1 + u[2])
+bounds(ulow, uhigh, u, p, t) = RateBounds(lrate = p[1] * ulow[1] / (1 + uhigh[2]),
+                                          urate = p[1] * uhigh[1] / (1 + ulow[2]))
+```
+
+Extremas lying inside the bracket:
+```julia
+rate(u, p, t) = p[1] * u[1] * (p[2] - u[1])
+function bounds(ulow, uhigh, u, p, t)
+    L = p[1] * max(abs(p[2] - 2*ulow[1]), abs(p[2] - 2*uhigh[1]))
+    δr = L * max(u[1] - ulow[1], uhigh[1] - u[1])
+    r = rate(u, p, t)
+    RateBounds(lrate = max(r - δr, zero(r)), urate = r + δr)
+end
+```
+
+Rate that depends on time:
+```julia
+rate(u, p, t) = p[1] * u[1] * exp(-p[2] * t)
+function bounds(ulow, uhigh, u, p, t)
+    Δ = p[3]
+    RateBounds(lrate = p[1] * ulow[1] * exp(-p[2] * (t + Δ)),
+               urate = p[1] * uhigh[1] * exp(-p[2] * t),
+               rateinterval = Δ)
+end
+```
+"""
+struct RateBounds{R, T}
+    """Lower bound of the rate."""
+    lrate::R
+    """Upper bound of the rate."""
+    urate::R
+    """Time window over which the bounds hold."""
+    rateinterval::T
+end
+
+function RateBounds(; lrate=nothing, urate=nothing, rateinterval = Inf)
+    (lrate === nothing && urate === nothing) &&
+        error("`RateBounds` requires at least one of `lrate` or `urate`.")
+    l = lrate === nothing ? zero(urate) : lrate
+    u = urate === nothing ? typemax(lrate) : urate
+    RateBounds(promote(l, u)..., rateinterval)
+end
+
+"""
+    RateBoundFunctions(; bounds, lrate, urate)
+
+Rate bound functions stored on a jump.
+
+Each function takes `(ulow, uhigh, u, p, t)` and returns a [`RateBounds`](@ref) over the state bracket `[ulow, uhigh]`. Most aggregators call `bounds`. `lrate` and `urate` are exposed only for aggregators that benefit from the separation.
+
+## Fields
+
+$(FIELDS)
+
+## Notes
+
+  - All fields are optional, but an aggregator errors at initialization if the form it consumes is missing.
+"""
+struct RateBoundFunctions{B, L, U}
+    """Computes both bounds in a single call."""
+    bounds::B
+    """Computes the lower bound."""
+    lrate::L
+    """Computes the upper bound."""
+    urate::U
+end
+
+RateBoundFunctions(; bounds = nothing, lrate = nothing, urate = nothing) =
+    RateBoundFunctions(bounds, lrate, urate)
+
+hasbounds(::Nothing) = false
+hasbounds(::RateBoundFunctions{Nothing}) = false
+hasbounds(::RateBoundFunctions) = true
+
+haslrate(::Nothing) = false
+haslrate(::RateBoundFunctions{B, Nothing}) where {B} = false
+haslrate(::RateBoundFunctions) = true
+
+hasurate(::Nothing) = false
+hasurate(::RateBoundFunctions{B, L, Nothing}) where {B, L} = false
+hasurate(::RateBoundFunctions) = true
+
 """
 $(TYPEDEF)
 
@@ -22,13 +125,87 @@ crj = ConstantRateJump(rate, affect!)
 ```
 Notice, here that `rate` changes in time, but is constant between the occurrence
 of jumps (when `u[1]` will decrease).
+
+Rate bounds may be supplied separately, for use with bracketing aggregators such as `RSSA`:
+```julia
+rate(u, p, t) = p[1] * u[1] / (1 + u[2])
+affect!(integrator) = integrator.u[1] -= 1
+bounds(ulow, uhigh, u, p, t) = RateBounds(lrate=p[1]*ulow[1] / (1+uhigh[2]),
+                                          urate=p[1]*uhigh[1] / (1+ulow[2]))
+crj = ConstantRateJump(rate, affect!; bounds)
+```
+
+## Notes
+
+- When rate bounds are not supplied, they are computed by evaluating the rate at `ulow`
+  and `uhigh`. These bounds are only correct if the rate is monotonic with respect to
+  state, i.e. increasing in all species or decreasing in all species.
 """
-struct ConstantRateJump{F1, F2} <: AbstractJump
+struct ConstantRateJump{F1, F2, B} <: AbstractJump
     """Function `rate(u,p,t)` that returns the jump's current rate."""
     rate::F1
     """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
     affect!::F2
+    """Optional `RateBoundFunctions` holding user supplied bracketing functions."""
+    bounds::B
 end
+
+function ConstantRateJump(rate, affect!; bounds = nothing, lrate = nothing, urate = nothing)
+    if bounds === nothing && lrate === nothing && urate === nothing
+        ConstantRateJump(rate, affect!, nothing)
+    else
+        ConstantRateJump(rate, affect!, RateBoundFunctions(bounds, lrate, urate))
+    end
+end
+
+hasbounds(c::ConstantRateJump) = hasbounds(c.bounds)
+haslrate(c::ConstantRateJump) = haslrate(c.bounds)
+hasurate(c::ConstantRateJump) = hasurate(c.bounds)
+
+check_jump_bounds(::ConstantRateJump{F1, F2, Nothing}, i, agg) where {F1, F2} = nothing
+function check_jump_bounds(c::ConstantRateJump, i, agg)
+    hasbounds(c) ||
+        error("$(nameof(typeof(agg))) requires a joint rate bound. Pass `bounds` when constructing `ConstantRateJump` $i.")
+    nothing
+end
+
+check_jump_lrate(::ConstantRateJump{F1, F2, Nothing}, i, agg) where {F1, F2} = nothing
+function check_jump_lrate(c::ConstantRateJump, i, agg)
+    haslrate(c) ||
+        error("$(nameof(typeof(agg))) requires a lower rate bound. Pass `lrate` when constructing `ConstantRateJump` $i.")
+    nothing
+end
+
+check_jump_urate(::ConstantRateJump{F1, F2, Nothing}, i, agg) where {F1, F2} = nothing
+function check_jump_urate(c::ConstantRateJump, i, agg)
+    hasurate(c) ||
+        error("$(nameof(typeof(agg))) requires an upper rate bound. Pass `urate` when constructing `ConstantRateJump` $i.")
+    nothing
+end
+
+@inline function cjump_brackets(c::ConstantRateJump, ulow, uhigh, u, p, t)
+    b = c.bounds.bounds(ulow, uhigh, u, p, t)
+    (b.lrate, b.urate)
+end
+# fallback assumes the rate is monotonic in the state; it would be cleaner to demand
+# user-specified bounds for decreasing rates and only handle the increasing case by default
+@inline function cjump_brackets(c::ConstantRateJump{F1, F2, Nothing},
+    ulow, uhigh, u, p, t) where {F1, F2}
+    rlow = c.rate(ulow, p, t)
+    rhigh = c.rate(uhigh, p, t)
+    rlow <= rhigh ? (rlow, rhigh) : (rhigh, rlow)
+end
+
+@inline lower_rate_bound(c::ConstantRateJump, ulow, uhigh, u, p, t) =
+    c.bounds.lrate(ulow, uhigh, u, p, t).lrate
+@inline lower_rate_bound(c::ConstantRateJump{F1, F2, Nothing}, ulow, uhigh, u, p,
+        t) where {F1, F2} = min(c.rate(ulow, p, t), c.rate(uhigh, p, t))
+
+@inline upper_rate_bound(c::ConstantRateJump, ulow, uhigh, u, p, t) =
+    c.bounds.urate(ulow, uhigh, u, p, t).urate
+@inline upper_rate_bound(c::ConstantRateJump{F1, F2, Nothing}, ulow, uhigh, u, p,
+        t) where {F1, F2} = max(c.rate(ulow, p, t), c.rate(uhigh, p, t))
+
 
 """
 $(TYPEDEF)
@@ -214,7 +391,7 @@ function rate!(out, u, p, t)
 end
 
 const dc = zeros(3,2)
-function c(du, u, p, t, counts, mark) 
+function c(du, u, p, t, counts, mark)
     mul!(du, dc, counts)
     nothing
 end
@@ -785,3 +962,54 @@ function get_jump_info_fwrappers(u, p, t, jumps)
 
     rates, affects!
 end
+
+function get_jump_bracket_fwrappers(u, p, t, jumps, agg)
+    BracketWrapper = FunctionWrappers.FunctionWrapper{Tuple{typeof(t), typeof(t)},
+        Tuple{typeof(u), typeof(u), typeof(u), typeof(p), typeof(t)}}
+
+    if (jumps !== nothing) && !isempty(jumps)
+        for (i, c) in enumerate(jumps)
+            check_jump_bounds(c, i, agg)
+        end
+        [BracketWrapper(make_bracket_fn(c)) for c in jumps]
+    else
+        Vector{BracketWrapper}()
+    end
+end
+
+make_bracket_fn(c::ConstantRateJump) =
+    (ulow, uhigh, u, p, t) -> cjump_brackets(c, ulow, uhigh, u, p, t)
+
+function get_jump_lrate_fwrappers(u, p, t, jumps, agg)
+    BoundWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
+        Tuple{typeof(u), typeof(u), typeof(u), typeof(p), typeof(t)}}
+
+    if (jumps !== nothing) && !isempty(jumps)
+        for (i, c) in enumerate(jumps)
+            check_jump_lrate(c, i, agg)
+        end
+        [BoundWrapper(make_lrate_fn(c)) for c in jumps]
+    else
+        Vector{BoundWrapper}()
+    end
+end
+
+function get_jump_urate_fwrappers(u, p, t, jumps, agg)
+    BoundWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
+        Tuple{typeof(u), typeof(u), typeof(u), typeof(p), typeof(t)}}
+
+    if (jumps !== nothing) && !isempty(jumps)
+        for (i, c) in enumerate(jumps)
+            check_jump_urate(c, i, agg)
+        end
+        [BoundWrapper(make_urate_fn(c)) for c in jumps]
+    else
+        Vector{BoundWrapper}()
+    end
+end
+
+make_lrate_fn(c::ConstantRateJump) =
+    (ulow, uhigh, u, p, t) -> lower_rate_bound(c, ulow, uhigh, u, p, t)
+
+make_urate_fn(c::ConstantRateJump) =
+    (ulow, uhigh, u, p, t) -> upper_rate_bound(c, ulow, uhigh, u, p, t)

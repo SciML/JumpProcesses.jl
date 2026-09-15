@@ -47,14 +47,14 @@ BracketData{T1, T2}() where {T1, T2} = BracketData(T1(0.1), T2(25), T2(4))
 
 # support either vectors of data for each field, or scalars
 # Get fluctuation rate of species i.
-@inline getfr(bd::BracketData{AbstractVector{T1}, T2}, i) where {T1, T2} = bd.fluctrate[i]
+@inline getfr(bd::BracketData{T1, T2}, i) where {T1 <: AbstractVector, T2} = bd.fluctrate[i]
 @inline getfr(bd::BracketData{T1, T2}, i) where {T1 <: Number, T2} = bd.fluctrate
 
 # Get threshold value of species i.
-@inline gettv(bd::BracketData{T1, AbstractVector{T2}}, i) where {T1, T2} = bd.threshold[i]
+@inline gettv(bd::BracketData{T1, T2}, i) where {T1, T2 <: AbstractVector} = bd.threshold[i]
 @inline gettv(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.threshold
 
-@inline getΔu(bd::BracketData{T1, AbstractVector{T2}}, i) where {T1, T2} = bd.Δu[i]
+@inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: AbstractVector} = bd.Δu[i]
 @inline getΔu(bd::BracketData{T1, T2}, i) where {T1, T2 <: Number} = bd.Δu
 
 @inline function delta_bracket(u::Integer, δ)

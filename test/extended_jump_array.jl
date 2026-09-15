@@ -63,10 +63,10 @@ bc_mismatch = ExtendedJumpArray(rand(rng, 8), rand(rng, 4))
 bc_dtype_1 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))
 bc_dtype_2 = ExtendedJumpArray(rand(rng, 10), rand(rng, 1:10, 2))
 result = bc_dtype_1 + bc_dtype_2 * 2
-@test eltype(result.jump_u) == Int64
+@test eltype(result.jump_u) == Int
 out_result = ExtendedJumpArray(zeros(10), zeros(2))
 out_result .= bc_dtype_1 .+ bc_dtype_2 .* 2
-@test eltype(result.jump_u) == Int64
+@test eltype(result.jump_u) == Int
 @test out_result ≈ result
 
 # Test that fast broadcasting also gives the correct results
@@ -214,4 +214,17 @@ let
         rng = StableRNG(789))
     sol = solve(jprob, Rodas5P(linsolve = QRFactorization()))
     @test sol.retcode == ReturnCode.Success
+end
+
+# Subset getindex on an ExtendedJumpArray must return a dense array of the
+# index shape: Julia 1.13's `_unsafe_getindex` verifies `axes(similar(...))`
+# against the index shape, which the axes-ignoring `similar` violated.
+let
+    u = ExtendedJumpArray([1.0, 2.0, 3.0], [4.0])
+    @test u[[1, 2, 3]] isa Vector{Float64}
+    @test u[[1, 2, 3]] == [1.0, 2.0, 3.0]
+    @test u[[4]] == [4.0]
+    @test Vector(u[:]) == [1.0, 2.0, 3.0, 4.0]
+    @test similar(u) isa ExtendedJumpArray
+    @test copy(u) isa ExtendedJumpArray
 end

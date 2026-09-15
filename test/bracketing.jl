@@ -26,6 +26,12 @@ species_index = 3
 @test JP.get_spec_brackets(bd, species_index, u)[1]≈u[3] * (1 - fluctuation_rate) atol=1
 @test JP.get_spec_brackets(bd, species_index, u)[2]≈u[3] * (1 + fluctuation_rate) atol=1
 
+# Per-species brackets
+bdv = BracketData{Vector{Float64}, Vector{Int}}([0.0, 0.1], [0, 25], [0, 4])
+u = [7,7]
+@test JP.get_spec_brackets(bdv, 1, u) == (u[1], u[1])
+@test JP.get_spec_brackets(bdv, 2, u) == (u[2] - 4, u[2] + 4)
+
 ### Reaction rate brackets ###
 ulow = [2]
 uhigh = [10]

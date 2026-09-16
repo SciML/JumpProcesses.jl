@@ -7,7 +7,7 @@ Pkg.add(&quot;JumpProcesses&quot;)</code></pre><h2 id="Contributing-and-Getting-
   <span class="sgr90">[31c24e10] </span>Distributions v0.25.131
   <span class="sgr90">[e30172f5] </span>Documenter v1.19.0
   <span class="sgr90">[86223c79] </span>Graphs v1.15.0
-  <span class="sgr90">[ccbc3e58] </span>JumpProcesses v9.32.4 `~/work/JumpProcesses.jl/JumpProcesses.jl`
+  <span class="sgr90">[ccbc3e58] </span>JumpProcesses v9.32.5 `~/work/JumpProcesses.jl/JumpProcesses.jl`
   <span class="sgr90">[1dea7af3] </span>OrdinaryDiffEq v7.8.1
   <span class="sgr90">[d3585ca7] </span>OrdinaryDiffEqFunctionMap v2.3.0
   <span class="sgr90">[43230ef6] </span>OrdinaryDiffEqRosenbrock v2.7.4
@@ -21,9 +21,9 @@ Build Info:
   Official https://julialang.org release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 4 × AMD EPYC 7763 64-Core Processor
+  CPU: 4 × AMD EPYC 9V74 80-Core Processor
   WORD_SIZE: 64
-  LLVM: libLLVM-20.1.8 (ORCJIT, znver3)
+  LLVM: libLLVM-20.1.8 (ORCJIT, znver4)
   GC: Built with stock GC
 Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Status</span></span> `~/work/JumpProcesses.jl/JumpProcesses.jl/docs/Manifest.toml`
   <span class="sgr90">[47edcb42] </span>ADTypes v1.24.0
@@ -114,7 +114,7 @@ Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   <span class="sgr90">[692b3bcd] </span>JLLWrappers v1.8.0
   <span class="sgr90">[682c06a0] </span>JSON v1.8.0
   <span class="sgr90">[ae98c720] </span>Jieko v0.2.1
-  <span class="sgr90">[ccbc3e58] </span>JumpProcesses v9.32.4 `~/work/JumpProcesses.jl/JumpProcesses.jl`
+  <span class="sgr90">[ccbc3e58] </span>JumpProcesses v9.32.5 `~/work/JumpProcesses.jl/JumpProcesses.jl`
   <span class="sgr90">[ba0b0d4f] </span>Krylov v0.10.10
   <span class="sgr90">[2faa5264] </span>LHLFactorization v2.2.2
   <span class="sgr90">[b964fa9f] </span>LaTeXStrings v1.4.1
@@ -158,7 +158,7 @@ Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   <span class="sgr90">[d96e819e] </span>Parameters v0.13.1
   <span class="sgr90">[69de0a69] </span>Parsers v3.0.0
   <span class="sgr90">[ccf2f8ad] </span>PlotThemes v3.3.0
-  <span class="sgr90">[995b91a9] </span>PlotUtils v1.4.4
+  <span class="sgr90">[995b91a9] </span>PlotUtils v1.5.0
   <span class="sgr90">[91a5bcdd] </span>Plots v1.41.7
   <span class="sgr90">[af0b7596] </span>PointProcesses v0.5.0
   <span class="sgr90">[e409e4f3] </span>PoissonRandom v0.4.13
@@ -203,7 +203,7 @@ Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   <span class="sgr90">[276daf66] </span>SpecialFunctions v2.9.0
   <span class="sgr90">[860ef19b] </span>StableRNGs v1.0.4
   <span class="sgr90">[0c0c59c1] </span>StarAlgebras v0.3.0
-  <span class="sgr90">[90137ffa] </span>StaticArrays v1.9.20
+  <span class="sgr90">[90137ffa] </span>StaticArrays v1.9.21
   <span class="sgr90">[1e83bf80] </span>StaticArraysCore v1.4.4
   <span class="sgr90">[10745b16] </span>Statistics v1.11.5
   <span class="sgr90">[82ae8749] </span>StatsAPI v1.8.0
@@ -222,7 +222,7 @@ Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   <span class="sgr90">[49714585] </span>StochasticDiffEqRODE v2.1.0
   <span class="sgr90">[af2a2fcd] </span>StochasticDiffEqWeak v2.2.1
 <span class="sgr33">⌅</span> <span class="sgr90">[892a3eda] </span>StringManipulation v0.5.0
-  <span class="sgr90">[ec057cc2] </span>StructUtils v2.8.5
+  <span class="sgr90">[ec057cc2] </span>StructUtils v2.9.0
   <span class="sgr90">[2efcf032] </span>SymbolicIndexingInterface v0.3.55
   <span class="sgr90">[19f23fe9] </span>SymbolicLimits v1.2.1
   <span class="sgr90">[d1185830] </span>SymbolicUtils v4.46.6
@@ -376,4 +376,4 @@ Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   <span class="sgr90">[8e850b90] </span>libblastrampoline_jll v5.15.0+0
   <span class="sgr90">[8e850ede] </span>nghttp2_jll v1.67.1+0
   <span class="sgr90">[3f19e933] </span>p7zip_jll v17.8.2+0
-<span class="sgr36"><span class="sgr1">Info</span></span> Packages marked with <span class="sgr33">⌅</span> have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.32.4/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.32.4/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 15 September 2026 18:38">Tuesday 15 September 2026</span>. Using Julia version 1.13.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<span class="sgr36"><span class="sgr1">Info</span></span> Packages marked with <span class="sgr33">⌅</span> have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.32.5/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/JumpProcesses.jl/tree/gh-pages/v9.32.5/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorials/simple_poisson_process/">Simple Poisson Processes in JumpProcesses »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 16 September 2026 23:35">Wednesday 16 September 2026</span>. Using Julia version 1.13.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

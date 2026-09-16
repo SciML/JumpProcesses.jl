@@ -133,5 +133,20 @@ function set_bracketing!(p::AbstractSSAJumpAggregator, u, params, t)
     end
     p.sum_rate = sum_rate
 
+    validate_brackets(p, u, params, t)
+
+    nothing
+end
+
+function validate_brackets(p::AbstractSSAJumpAggregator, u, params, t)
+    num_majumps = get_num_majumps(p.ma_jumps)
+    @inbounds for rx in 1:(num_majumps + length(p.brackets))
+        lrate, urate = p.cur_rate_low[rx], p.cur_rate_high[rx]
+        (zero(lrate) <= lrate <= urate < Inf) ||
+            error("Invalid rate bounds for jump $rx: expected 0 <= lrate <= urate < Inf, got ($lrate, $urate).")
+        rate = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u, params, t, rx)
+        (lrate <= rate <= urate) ||
+            error("Rate bounds for jump $rx do not bracket the rate at the initial state: $rate ∉ [$lrate, $urate].")
+    end
     nothing
 end

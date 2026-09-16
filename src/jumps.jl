@@ -141,7 +141,7 @@ crj = ConstantRateJump(rate, affect!; bounds)
   and `uhigh`. These bounds are only correct if the rate is monotonic with respect to
   state, i.e. increasing in all species or decreasing in all species.
 """
-struct ConstantRateJump{F1, F2, B} <: AbstractJump
+struct ConstantRateJump{F1, F2, B <: Union{Nothing, RateBoundFunctions}} <: AbstractJump
     """Function `rate(u,p,t)` that returns the jump's current rate."""
     rate::F1
     """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
@@ -153,6 +153,10 @@ end
 function ConstantRateJump(rate, affect!; bounds = nothing, lrate = nothing, urate = nothing)
     if bounds === nothing && lrate === nothing && urate === nothing
         ConstantRateJump(rate, affect!, nothing)
+    elseif bounds isa RateBoundFunctions
+        (lrate === nothing && urate === nothing) ||
+            error("Pass either a `RateBoundFunctions` or individual `lrate`/`urate` functions, not both.")
+        ConstantRateJump(rate, affect!, bounds)
     else
         ConstantRateJump(rate, affect!, RateBoundFunctions(bounds, lrate, urate))
     end

@@ -301,7 +301,10 @@ aggregator requires various types of dependency graphs, see the next section):
     for very large reaction networks, it often offers the best performance of all
     methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).
     For `ConstantRateJump`s, `RSSA` and `RSSACR` require rate bounds, see
-    [`ConstantRateJump`](@ref).
+    [`ConstantRateJump`](@ref). When rate bounds are not supplied, they are computed
+    by evaluating the rate at `ulow` and `uhigh`. These bounds are only correct if the
+    rate is monotonic with respect to state, i.e. increasing in all species or
+    decreasing in all species.
   - `RSSACR`: The Rejection SSA (RSSA) with Composition-Rejection method of
     Thanh *et al.* [^7]. With `RSSA`, for very large reaction networks, it often offers
     the best performance of all methods. [Dependency graph required](@ref Jump-Aggregators-Requiring-Dependency-Graphs).

@@ -2,6 +2,8 @@
 
 ## JumpProcesses unreleased (master branch)
 
+  - Support for user-specified rate bounds for `ConstantRateJump`s, allowing non-monotonic jump rates to be used with rejection sampling aggregators like RSSA & RSSACR.
+
 ## 9.14
 
   - Added the constant complexity next reaction method (CCNRM).

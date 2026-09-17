@@ -1,5 +1,6 @@
-using JumpProcesses, Test
+using DiffEqBase, JumpProcesses, Statistics, StableRNGs, Test
 const JP = JumpProcesses
+rng = StableRNG(12345)
 
 fluctuation_rate = 0.1
 threshold = 25
@@ -8,7 +9,7 @@ bd = BracketData(fluctuation_rate, threshold, Δu)
 
 ### Getters ###
 species_index = 1
-# The fluctuation rate δ corresponds to species brackets (1-δ)*u, (1+δ)*u. So 0 < δ < 1. 
+# The fluctuation rate δ corresponds to species brackets (1-δ)*u, (1+δ)*u. So 0 < δ < 1.
 @test 0 < JP.getfr(bd, species_index) < 1
 # If u < threshold, then the brackets are (max(u-Δu, 0), u+Δu). So 0 <= threshold and 0 <= Δu.
 @test 0 <= JP.gettv(bd, species_index)
@@ -28,7 +29,7 @@ species_index = 3
 
 # Per-species brackets
 bdv = BracketData{Vector{Float64}, Vector{Int}}([0.0, 0.1], [0, 25], [0, 4])
-u = [7,7]
+u = [7, 7]
 @test JP.get_spec_brackets(bdv, 1, u) == (u[1], u[1])
 @test JP.get_spec_brackets(bdv, 2, u) == (u[2] - 4, u[2] + 4)
 
@@ -43,18 +44,23 @@ netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
     netstoch)
 reaction_index = 1
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] == majump_rates[1] * ulow[1] # low
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[2] == majump_rates[1] * uhigh[1] # high
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] ==
+      majump_rates[1] * ulow[1] # low
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[2] ==
+      majump_rates[1] * uhigh[1] # high
 
 # constant rate
 rate(u, params, t) = 1 / u[1]
+affect!(integrator) = nothing
+crj = ConstantRateJump(rate, affect!)
 params = nothing
 t = 0.0
-@test JP.get_cjump_brackets(ulow, uhigh, rate, params, t)[1] == 1 / 10 # low
-@test JP.get_cjump_brackets(ulow, uhigh, rate, params, t)[2] == 1 / 2 # high
+ucur = [5]
+@test JP.cjump_brackets(crj, ulow, uhigh, ucur, params, t)[1] == 1 / 10 # low
+@test JP.cjump_brackets(crj, ulow, uhigh, ucur, params, t)[2] == 1 / 2 # high
 
 ### Aggregator ###
-mutable struct DummyAggregator{T, M, R, BD} <:
+mutable struct DummyAggregator{T, M, R, CB, BD} <:
                JP.AbstractSSAJumpAggregator{T, M, R, Nothing, Nothing}
     ulow::Vector{Int}
     uhigh::Vector{Int}
@@ -63,13 +69,16 @@ mutable struct DummyAggregator{T, M, R, BD} <:
     sum_rate::T
     ma_jumps::M
     rates::R
+    brackets::CB
     bracket_data::BD
 end
 # one massaction jump, one constant rate jump
 cur_rate_low = [0.0, 0.0]
 cur_rate_high = [0.0, 0.0]
 sum_rate = 0.0
-p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, [rate], bd)
+brackets = JP.get_jump_bracket_fwrappers(ulow, params, t, (crj,), RSSA())
+p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
+    [rate], brackets, bd)
 
 u = [100]
 JP.update_u_brackets!(p, u)
@@ -77,13 +86,16 @@ JP.update_u_brackets!(p, u)
 @test p.uhigh[1]≈u[1] * (1 + fluctuation_rate) atol=1
 
 reaction_index = 1
-@test JP.get_jump_brackets(reaction_index, p, params, t)[1] == majump_rates[1] * p.ulow[1]
-@test JP.get_jump_brackets(reaction_index, p, params, t)[2] == majump_rates[1] * p.uhigh[1]
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[1] ==
+      majump_rates[1] * p.ulow[1]
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[2] ==
+      majump_rates[1] * p.uhigh[1]
 reaction_index = 2
-@test JP.get_jump_brackets(reaction_index, p, params, t)[1] == rate(p.uhigh, params, t)
-@test JP.get_jump_brackets(reaction_index, p, params, t)[2] == rate(p.ulow, params, t)
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[1] == rate(p.uhigh, params, t)
+@test JP.get_jump_brackets(reaction_index, p, u, params, t)[2] == rate(p.ulow, params, t)
 
-p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump, [rate], bd)
+p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
+    [rate], brackets, bd)
 JP.set_bracketing!(p, u, params, t)
 @test p.ulow[1]≈u[1] * (1 - fluctuation_rate) atol=1
 @test p.uhigh[1]≈u[1] * (1 + fluctuation_rate) atol=1
@@ -92,3 +104,74 @@ JP.set_bracketing!(p, u, params, t)
 @test p.cur_rate_low[2] == rate(p.uhigh, params, t)
 @test p.cur_rate_high[2] == rate(p.ulow, params, t)
 @test p.sum_rate ≈ sum(p.cur_rate_high)
+
+### user supplied rate bounds ###
+nonmonotonic_rate(u, p, t) = u[1] / (1 + u[2])
+function nonmonotonic_bounds(ulow, uhigh, u, p, t)
+    RateBounds(lrate = ulow[1] / (1 + uhigh[2]),
+        urate = uhigh[1] / (1 + ulow[2]))
+end
+
+joint_crj = ConstantRateJump(nonmonotonic_rate, affect!; bounds = nonmonotonic_bounds)
+
+box_low, box_high, box_cur = [2, 5], [6, 9], [4, 7]
+box_states = [[a, b] for a in box_low[1]:box_high[1], b in box_low[2]:box_high[2]]
+
+lo, hi = JP.cjump_brackets(joint_crj, box_low, box_high, box_cur, params, t)
+@test all(lo <= nonmonotonic_rate(u, params, t) <= hi for u in box_states)
+
+# one-sided rate bounds
+split_crj = ConstantRateJump(nonmonotonic_rate, affect!;
+    lrate = (ulow, uhigh, u, p, t) -> RateBounds(lrate = ulow[1] / (1 + uhigh[2])),
+    urate = (ulow, uhigh, u, p, t) -> RateBounds(urate = uhigh[1] / (1 + ulow[2])))
+
+lo = JP.lower_rate_bound(split_crj, box_low, box_high, box_cur, params, t)
+hi = JP.upper_rate_bound(split_crj, box_low, box_high, box_cur, params, t)
+@test all(lo <= nonmonotonic_rate(u, params, t) <= hi for u in box_states)
+
+wrapped_crj = ConstantRateJump(nonmonotonic_rate, affect!;
+    bounds = JP.RateBoundFunctions(bounds = nonmonotonic_bounds))
+@test JP.cjump_brackets(wrapped_crj, box_low, box_high, box_cur, params, t) ==
+      JP.cjump_brackets(joint_crj, box_low, box_high, box_cur, params, t)
+
+@test_throws ErrorException JP.get_jump_bracket_fwrappers(box_low, params, t,
+    (split_crj,), RSSA())
+@test_throws ErrorException JP.get_jump_lrate_fwrappers(box_low, params, t,
+    (joint_crj,), RSSA())
+@test_throws ErrorException JP.get_jump_urate_fwrappers(box_low, params, t,
+    (joint_crj,), RSSA())
+
+### end to end statistics with user supplied bounds ###
+function nonmonotonic_affect!(integrator)
+    integrator.u[1] -= 1
+    integrator.u[2] += 1
+end
+
+Nsims = 8000
+reltol = 0.01
+u0 = [10, 0]
+tf = 1.0
+vartojumps_map = [[1], [1]]
+jumptovars_map = [[1, 2]]
+
+function nonmonotonic_jump_prob(alg)
+    jump = ConstantRateJump(nonmonotonic_rate, nonmonotonic_affect!;
+        bounds = nonmonotonic_bounds)
+    prob = DiscreteProblem(u0, (0.0, tf))
+    JumpProblem(prob, alg, jump; save_positions = (false, false), rng, vartojumps_map,
+        jumptovars_map)
+end
+
+function runSSAs(jump_prob)
+    Asamp = zeros(Int, Nsims)
+    for i in 1:Nsims
+        Asamp[i] = solve(jump_prob, SSAStepper())[1, end]
+    end
+    mean(Asamp)
+end
+
+expected_avg = runSSAs(nonmonotonic_jump_prob(Direct()))
+for alg in (RSSA(), RSSACR())
+    means = runSSAs(nonmonotonic_jump_prob(alg))
+    @test abs(means - expected_avg) < reltol * expected_avg
+end

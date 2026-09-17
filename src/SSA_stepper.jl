@@ -385,9 +385,8 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
     @inbounds if integrator.saveat !== nothing && !isempty(integrator.saveat)
         # Split to help prediction
-        while integrator.cur_saveat < length(integrator.saveat) &&
+        while integrator.cur_saveat <= length(integrator.saveat) &&
             integrator.saveat[integrator.cur_saveat] < integrator.t
-            saved = true
             push!(integrator.sol.t, integrator.saveat[integrator.cur_saveat])
             push!(integrator.sol.u, copy(integrator.u))
             integrator.cur_saveat += 1

@@ -2,7 +2,54 @@
 
 ## JumpProcesses unreleased (master branch)
 
-  - Support for user-specified rate bounds for `ConstantRateJump`s, allowing non-monotonic jump rates to be used with rejection sampling aggregators like RSSA & RSSACR.
+## 9.33
+
+  - Added user-specified rate bounds for `ConstantRateJump`s, enabling rates that
+    are non-monotonic or increase in some species and decrease in others to be
+    used with `RSSA` and `RSSACR` ([#653](https://github.com/SciML/JumpProcesses.jl/pull/653)).
+    Pass `bounds(ulow, uhigh, u, p, t)` through the `bounds` keyword when
+    constructing the jump. Here `ulow` and `uhigh` define the current species
+    population bracket, and `u`, `p`, and `t` are the current state, parameters,
+    and time. The function returns `RateBounds(; lrate, urate)` with nonnegative,
+    finite bounds satisfying `lrate <= rate(v, p, t) <= urate` for every state
+    `v` in that bracket. These bounds must hold throughout the bracket, not just
+    at the current state. As with all `ConstantRateJump`s, the rate must remain
+    constant between jumps and must not explicitly depend on time.
+
+    For example, the following jump converts one particle of species 1 into
+    species 2 at a rate that increases with species 1 and decreases with species 2:
+
+    ```julia
+    using JumpProcesses
+
+    rate(u, p, t) = p[1] * u[1] / (1 + u[2])
+    function affect!(integrator)
+        integrator.u[1] -= 1
+        integrator.u[2] += 1
+        nothing
+    end
+    function bounds(ulow, uhigh, u, p, t)
+        RateBounds(
+            lrate = p[1] * ulow[1] / (1 + uhigh[2]),
+            urate = p[1] * uhigh[1] / (1 + ulow[2])
+        )
+    end
+
+    jump = ConstantRateJump(rate, affect!; bounds)
+    prob = DiscreteProblem([10, 0], (0.0, 10.0), [1.0])
+
+    # Each species affects the rate of jump 1; jump 1 changes both species.
+    vartojumps_map = [[1], [1]]
+    jumptovars_map = [[1, 2]]
+    jprob = JumpProblem(prob, RSSA(), jump; vartojumps_map, jumptovars_map)
+    sol = solve(jprob, SSAStepper())
+    ```
+
+    The same example works with `RSSACR()` in place of `RSSA()`. Omitting
+    `bounds` preserves the existing behavior: rate bounds are computed by
+    evaluating the rate at `ulow` and `uhigh`. This is valid for rates that are
+    nondecreasing in every species or nonincreasing in every species, but is not
+    generally valid for mixed dependence such as the example above.
 
 ## 9.14
 

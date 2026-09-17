@@ -2,6 +2,13 @@
 
 ## JumpProcesses unreleased (master branch)
 
+## 9.33.1
+
+  - Fixed `SSAStepper` saving the wrong state at the final requested `saveat`
+    time when it precedes a later jump. The observation now contains the state
+    at the requested time, and output times remain sorted when jump times are
+    also saved.
+
 ## 9.33
 
   - Added user-specified rate bounds for `ConstantRateJump`s, enabling rates that

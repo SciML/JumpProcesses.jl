@@ -2,6 +2,15 @@
 
 ## JumpProcesses unreleased (master branch)
 
+## 9.34
+
+  - Preserve `MassActionJump` in `JumpProblem` for tau-leaping instead of converting
+    to `RegularJump`. `SimpleTauLeaping` consumes native mass-action rates and
+    stoichiometry on CPU and in KernelAbstractions kernels; explicit `RegularJump`
+    input remains supported ([#652](https://github.com/SciML/JumpProcesses.jl/pull/652)).
+  - Added public `massaction_rates!`, `massaction_stoichiometry_mul!`, and
+    `massaction_drift!` operations for downstream leaping solvers.
+
 ## 9.33.1
 
   - Fixed `SSAStepper` saving the wrong state at the final requested `saveat`

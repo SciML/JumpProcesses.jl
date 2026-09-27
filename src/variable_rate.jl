@@ -98,7 +98,8 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps; rng = DEFAULT
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    specialize = SciMLBase.specialization(prob.f)
+    f = ODEFunction{isinplace(prob), specialize}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
@@ -134,7 +135,8 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps; rng = DEFAULT
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
+    specialize = SciMLBase.specialization(prob.f)
+    f = SDEFunction{isinplace(prob), specialize}(jump_f, jump_g; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, g = jump_g, u0)
 end
@@ -160,7 +162,8 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT
     end
 
     u0 = extend_u0(prob, length(jumps), rng)
-    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    specialize = SciMLBase.specialization(prob.f)
+    f = DDEFunction{isinplace(prob), specialize}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end

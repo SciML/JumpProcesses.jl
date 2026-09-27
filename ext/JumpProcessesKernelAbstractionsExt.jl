@@ -28,9 +28,27 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     # Validate that this is a PureLeaping JumpProblem
     JumpProcesses.validate_pure_leaping_inputs(jump_prob, alg) ||
         error("SimpleTauLeaping requires a PureLeaping JumpProblem with a MassActionJump or a RegularJump.")
-    prob = jump_prob.prob
 
-    probs = [remake(jump_prob) for _ in 1:trajectories]
+    # Mass-action rate constants are uploaded once from the template jump. A
+    # RegularJump rate closure still receives each trajectory's `p`, but a
+    # parameter-mapped MassActionJump cannot refresh those rates per trajectory.
+    if jump_prob.regular_jump === nothing &&
+       JumpProcesses.using_params(jump_prob.massaction_jump) &&
+       ensembleprob.prob_func !== SciMLBase.DEFAULT_PROB_FUNC
+        error("EnsembleGPUKernel with SimpleTauLeaping does not support MassActionJump \
+               rate constants that depend on parameters (`param_idxs` / `param_mapper`) \
+               together with a custom `prob_func`. Those rates are taken once from the \
+               template problem and ignore per-trajectory `p`. Use a RegularJump whose \
+               rate reads `p`, or a CPU ensemble algorithm such as EnsembleSerial.")
+    end
+
+    # Apply `prob_func` so RegularJump rates see per-trajectory `p` (and so
+    # mass-action trajectories can still vary `u0` / `tspan`).
+    probs = map(1:trajectories) do i
+        ctx = SciMLBase.EnsembleContext(i, 1, 0, nothing, nothing, nothing)
+        _prob = ensembleprob.safetycopy ? deepcopy(jump_prob) : jump_prob
+        ensembleprob.prob_func(_prob, ctx)
+    end
 
     # Run vectorized solve
     ts,

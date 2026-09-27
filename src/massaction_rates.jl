@@ -182,6 +182,18 @@ function massaction_rates!(rates, jump::MassActionJump, u)
     return rates
 end
 
+"""
+    massaction_propensity(constants, reactants, u, j)
+
+Propensity of reaction `j` at populations `u`, using combinatorially scaled
+`constants` and falling-factorial rate laws from `reactants`.
+
+If any reactant population is strictly below the reaction order for that
+species, the propensity is zero rather than negative. Under tau-leaping this
+means an overshoot that drives a population below zero (or below the order)
+stays there for that reaction: the propensity remains zero, so further leaps
+cannot pull the population back through this channel.
+"""
 @inline function massaction_propensity(constants, reactants, u, j)
     rate = one(eltype(u))
     for (species, order) in reactants[j]

@@ -1,6 +1,7 @@
 using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
 using FastBroadcast
 using ForwardDiff
+using RecursiveArrayTools
 using StableRNGs
 
 rng = StableRNG(123)
@@ -227,4 +228,39 @@ let
     @test Vector(u[:]) == [1.0, 2.0, 3.0, 4.0]
     @test similar(u) isa ExtendedJumpArray
     @test copy(u) isa ExtendedJumpArray
+end
+
+@testset "ArrayPartition VariableRateJump property forwarding" begin
+    eja = ExtendedJumpArray(ArrayPartition([1.0], [2.0]), [0.0])
+    @test eja.u isa ArrayPartition
+    @test eja.jump_u == [0.0]
+    @test eja.x === eja.u.x
+    @test allunique(propertynames(eja))
+    @test :u in propertynames(eja)
+    @test :jump_u in propertynames(eja)
+    @test :x in propertynames(eja)
+
+    for agg in (VR_FRM(), VR_Direct())
+        jumps = Ref(0)
+        function f!(du, u, p, t)
+            du.x[1][1] = -u.x[1][1]
+            du.x[2][1] = 0.0
+            nothing
+        end
+        function affect!(integrator)
+            jumps[] += 1
+            integrator.u.x[2][1] += 1.0
+            nothing
+        end
+        u0 = ArrayPartition([1.0], [1.0])
+        ode = ODEProblem(f!, u0, (0.0, 1.0))
+        jump = VariableRateJump((u, p, t) -> 10 * u[1], affect!)
+        jump_prob = JumpProblem(ode, Direct(), jump; vr_aggregator = agg,
+            rng = StableRNG(57))
+        sol = solve(jump_prob, Tsit5(); abstol = 1e-11, reltol = 1e-11)
+        @test sol.retcode == ReturnCode.Success
+        @test jumps[] > 0
+        @test isapprox(sol.u[end].x[1][1], exp(-1); rtol = 1e-9)
+        @test sol.u[end].x[2][1] ≈ 1 + jumps[]
+    end
 end

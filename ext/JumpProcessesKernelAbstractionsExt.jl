@@ -103,8 +103,7 @@ Adapt.@adapt_structure JumpData
 
 gpu_num_jumps(jump::JumpData) = jump.numjumps
 leaping_rates!(out, jump::JumpData, u, p, t) = jump.rate(out, u, p, t)
-leaping_change!(du, jump::JumpData, u, p, t, counts) =
-    jump.c(du, u, p, t, counts, nothing)
+leaping_change!(du, jump::JumpData, u, p, t, counts) = jump.c(du, u, p, t, counts, nothing)
 
 function leaping_rates!(out, jump::GPUMassActionJump, u, p, t)
     for j in eachindex(out)

@@ -159,10 +159,10 @@ function add_self_dependencies!(dg; dosort = true)
     end
 end
 
-@inline massaction_data(jump::MassActionJump) =
-    (jump.scaled_rates, jump.reactant_stoch, jump.net_stoch)
-@inline massaction_data(jump::MassActionJump{<:Number}) =
-    ((jump.scaled_rates,), (jump.reactant_stoch,), (jump.net_stoch,))
+@inline massaction_data(jump::MassActionJump) = (
+    jump.scaled_rates, jump.reactant_stoch, jump.net_stoch)
+@inline massaction_data(jump::MassActionJump{<:Number}) = (
+    (jump.scaled_rates,), (jump.reactant_stoch,), (jump.net_stoch,))
 
 """
     massaction_rates!(rates, jump::MassActionJump, u)
@@ -249,9 +249,11 @@ end
 
 leaping_rates!(out, jump::MassActionJump, u, p, t) = massaction_rates!(out, jump, u)
 leaping_rates!(out, jump::RegularJump, u, p, t) = jump.rate(out, u, p, t)
-leaping_change!(du, jump::MassActionJump, u, p, t, counts, mark) =
+function leaping_change!(du, jump::MassActionJump, u, p, t, counts, mark)
     massaction_stoichiometry_mul!(du, jump, counts)
-leaping_change!(du, jump::RegularJump, u, p, t, counts, mark) =
+end
+function leaping_change!(du, jump::RegularJump, u, p, t, counts, mark)
     jump.c(du, u, p, t, counts, mark)
+end
 leaping_num_jumps(jump::MassActionJump) = get_num_majumps(jump)
 leaping_num_jumps(jump::RegularJump) = jump.numjumps

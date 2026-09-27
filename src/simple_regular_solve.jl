@@ -241,14 +241,14 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
     end
     return jump_prob.prob isa DiscreteProblem &&
-        isempty(jump_prob.jump_callback.continuous_callbacks) &&
-        isempty(jump_prob.jump_callback.discrete_callbacks) &&
-        isempty(jump_prob.constant_jumps) &&
-        isempty(jump_prob.variable_jumps) &&
-        xor(
-        get_num_majumps(jump_prob.massaction_jump) > 0,
-        jump_prob.regular_jump !== nothing
-    )
+           isempty(jump_prob.jump_callback.continuous_callbacks) &&
+           isempty(jump_prob.jump_callback.discrete_callbacks) &&
+           isempty(jump_prob.constant_jumps) &&
+           isempty(jump_prob.variable_jumps) &&
+           xor(
+               get_num_majumps(jump_prob.massaction_jump) > 0,
+               jump_prob.regular_jump !== nothing
+           )
 end
 
 function validate_pure_leaping_inputs(

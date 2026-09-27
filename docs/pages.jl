@@ -3,6 +3,8 @@
 pages = ["index.md",
     "Tutorials" => Any["tutorials/simple_poisson_process.md",
         "tutorials/discrete_stochastic_example.md",
+        "tutorials/tau_leaping.md",
+        "tutorials/gpu.md",
         "tutorials/point_process_simulation.md",
         "tutorials/jump_diffusion.md",
         "tutorials/spatial.md"],

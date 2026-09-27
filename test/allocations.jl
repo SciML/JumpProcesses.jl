@@ -112,4 +112,44 @@ let
     end
 end
 
+# VR_Direct rate summation must stay non-allocating for more than 32 jumps
+# Measured through a function barrier: at non-function scope Julia 1.10's
+# `@allocated` counts the boxed Float64 return value (16 bytes).
+function alloc_total_rate(cache, u, p, t)
+    @allocated JumpProcesses.total_variable_rate(cache, u, p, t)
+end
+let
+    for n in (10, 40)
+        f!(du, u, p, t) = (du .= 0; nothing)
+        jumps = [VariableRateJump((u, p, t) -> p[1] * (1 + u[i]) * t,
+                     integ -> (integ.u[i] += 1; nothing)) for i in 1:n]
+        oprob = ODEProblem(f!, zeros(n), (0.0, 1.0), (0.5,))
+        jprob = JumpProblem(oprob, Direct(), jumps...; vr_aggregator = VR_Direct(),
+            rng = StableRNG(1))
+        cache = jprob.jump_callback.continuous_callbacks[1].condition
+        u, p, t = oprob.u0, oprob.p, 0.3
+        @test JumpProcesses.total_variable_rate(cache, u, p, t) ≈ n * 0.5 * 0.3
+        @test cache.cum_rate_sum ≈ (1:n) .* (0.5 * 0.3)
+        alloc_total_rate(cache, u, p, t)
+        @test alloc_total_rate(cache, u, p, t) == 0
+    end
+end
+
+# tuple-based constant rate aggregators must not allocate per step for more than 32 jumps
+let
+    n = 40
+    jumps = [ConstantRateJump((u, p, t) -> p[1], integ -> (integ.u[i] += 1; nothing))
+             for i in 1:n]
+    for agg in (Direct(), FRM())
+        nallocs = map((10.0, 100.0)) do T
+            dprob = DiscreteProblem(zeros(Int, n), (0.0, T), (0.5,))
+            jprob = JumpProblem(dprob, agg, jumps...; save_positions = (false, false),
+                rng = StableRNG(1))
+            solve(jprob, SSAStepper())
+            @allocations solve(jprob, SSAStepper())
+        end
+        @test nallocs[1] == nallocs[2]
+    end
+end
+
 nothing

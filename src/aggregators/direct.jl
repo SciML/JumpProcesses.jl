@@ -88,7 +88,7 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
     rates = p.rates
     if !isempty(rates)
         idx += 1
-        fill_cur_rates(u, params, t, cur_rates, idx, rates...)
+        fill_cur_rates(u, params, t, cur_rates, idx, rates)
         @inbounds for i in idx:length(cur_rates)
             cur_rates[i] = add_fast(cur_rates[i], prev_rate)
             prev_rate = cur_rates[i]
@@ -99,15 +99,15 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
     sum_rate, randexp(p.rng) / sum_rate
 end
 
-@inline function fill_cur_rates(u, p, t, cur_rates, idx, rate, rates...)
-    @inbounds cur_rates[idx] = rate(u, p, t)
-    idx += 1
-    fill_cur_rates(u, p, t, cur_rates, idx, rates...)
-end
-
-@inline function fill_cur_rates(u, p, t, cur_rates, idx, rate)
-    @inbounds cur_rates[idx] = rate(u, p, t)
-    nothing
+# Unrolled at compile time: recursive splatting over `rates...` is only inferred for
+# tuples of up to 32 elements, beyond which every rate evaluation is dynamically dispatched.
+@generated function fill_cur_rates(u, p, t, cur_rates, idx, rates::Tuple)
+    body = Expr(:block)
+    for i in 1:fieldcount(rates)
+        push!(body.args, :(@inbounds cur_rates[idx + $(i - 1)] = rates[$i](u, p, t)))
+    end
+    push!(body.args, :(return nothing))
+    return body
 end
 
 # function wrapper-based constant jumps

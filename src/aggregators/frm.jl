@@ -101,7 +101,7 @@ function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2, RNG}, u, pa
     nextrx = zero(Int)
     if !isempty(p.rates)
         idx = get_num_majumps(p.ma_jumps) + 1
-        fill_cur_rates(u, params, t, p.cur_rates, idx, p.rates...)
+        fill_cur_rates(u, params, t, p.cur_rates, idx, p.rates)
         @inbounds for i in idx:length(p.cur_rates)
             dt = randexp(p.rng) / p.cur_rates[i]
             if dt < ttnj

@@ -7,6 +7,8 @@ using PoissonRandom, Random
 
 include("ssa_stepper.jl")
 include("explicit_tau_leaping.jl")
+include("implicit_tau_leaping.jl")
+include("adaptive_tau_leaping.jl")
 
 function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         alg::SimpleTauLeaping,

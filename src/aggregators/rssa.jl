@@ -4,15 +4,15 @@
 # functions of the current population sizes (i.e. u)
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
-mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, CB, VJMAP, JVMAP, BD, U} <:
+mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, CB, VJMAP, JVMAP, BD, U, R} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
     end_time::T
-    cur_rate_low::Vector{T}
-    cur_rate_high::Vector{T}
-    sum_rate::T
+    cur_rate_low::Vector{R}
+    cur_rate_high::Vector{R}
+    sum_rate::R
     ma_jumps::S
     rates::F1
     affects!::F2
@@ -26,11 +26,11 @@ mutable struct RSSAJumpAggregation{T, S, F1, F2, RNG, CB, VJMAP, JVMAP, BD, U} <
     uhigh::U
 end
 
-function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{R}, sr::R,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; u::U, brackets, vartojumps_map = nothing,
         jumptovars_map = nothing,
-        bracket_data = nothing, kwargs...) where {T, S, F1, F2, RNG, U}
+        bracket_data = nothing, kwargs...) where {T, R, S, F1, F2, RNG, U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
@@ -65,7 +65,7 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
 
     affecttype = F2 <: Tuple ? F2 : Any
     RSSAJumpAggregation{T, S, F1, affecttype, RNG, typeof(brackets), typeof(vtoj_map),
-        typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
+        typeof(jtov_map), typeof(bd), U, R}(nj, nj, njt, et, crl_bnds,
         crh_bnds, sr, maj, rs, affs!, brackets, sps,
         rng, vtoj_map, jtov_map, bd, ulow,
         uhigh)

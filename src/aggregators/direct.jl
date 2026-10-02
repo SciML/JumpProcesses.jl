@@ -1,22 +1,22 @@
-mutable struct DirectJumpAggregation{T, S, F1, F2, RNG} <:
+mutable struct DirectJumpAggregation{T, S, F1, F2, RNG, R} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
     end_time::T
-    cur_rates::Vector{T}
-    sum_rate::T
+    cur_rates::Vector{R}
+    sum_rate::R
     ma_jumps::S
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
     rng::RNG
 end
-function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
+function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{R}, sr::R, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG;
-        kwargs...) where {T, S, F1, F2, RNG}
+        kwargs...) where {T, R, S, F1, F2, RNG}
     affecttype = F2 <: Tuple ? F2 : Any
-    DirectJumpAggregation{T, S, F1, affecttype, RNG}(nj, nj, njt, et, crs, sr, maj, rs,
+    DirectJumpAggregation{T, S, F1, affecttype, RNG, R}(nj, nj, njt, et, crs, sr, maj, rs,
         affs!, sps, rng)
 end
 
@@ -71,8 +71,8 @@ end
 # tuple-based constant jumps
 function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
         t) where {T, S, F1 <: Tuple}
-    prev_rate = zero(t)
-    new_rate = zero(t)
+    prev_rate = zero(eltype(p.cur_rates))
+    new_rate = zero(eltype(p.cur_rates))
     cur_rates = p.cur_rates
 
     # mass action rates
@@ -113,8 +113,8 @@ end
 # function wrapper-based constant jumps
 function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
         t) where {T, S, F1 <: AbstractArray}
-    prev_rate = zero(t)
-    new_rate = zero(t)
+    prev_rate = zero(eltype(p.cur_rates))
+    new_rate = zero(eltype(p.cur_rates))
     cur_rates = p.cur_rates
 
     # mass action rates

@@ -116,21 +116,24 @@ end
 
 Helper routine for setting up standard fields of SSA jump aggregations.
 """
+@inline ssa_rate_eltype(t) = typeof(inv(oneunit(t)))
+
 function build_jump_aggregation(jump_agg_type, u, p, t, end_time, ma_jumps, rates,
         affects!, save_positions, rng; kwargs...)
+    R = ssa_rate_eltype(t)
 
     # mass action jumps
     majumps = ma_jumps
     if majumps === nothing
-        majumps = MassActionJump(Vector{typeof(t)}(),
+        majumps = MassActionJump(Vector{R}(),
             Vector{Vector{Pair{Int, eltype(u)}}}(),
             Vector{Vector{Pair{Int, eltype(u)}}}())
     end
 
     # current jump rates, allows mass action rates and constant jumps
-    cur_rates = Vector{typeof(t)}(undef, get_num_majumps(majumps) + length(rates))
+    cur_rates = Vector{R}(undef, get_num_majumps(majumps) + length(rates))
 
-    sum_rate = zero(typeof(t))
+    sum_rate = zero(R)
     next_jump = 0
     next_jump_time = typemax(typeof(t))
     jump_agg_type(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
@@ -258,7 +261,7 @@ Check if the total rate is zero, and if it is, make the next jump time Inf.
 @inline function nomorejumps!(p, sum_rate)::Bool
     if sum_rate < eps(typeof(sum_rate))
         p.next_jump = zero(p.next_jump)
-        p.next_jump_time = convert(typeof(sum_rate), Inf)
+        p.next_jump_time = typemax(typeof(p.next_jump_time))
         return true
     end
     return false

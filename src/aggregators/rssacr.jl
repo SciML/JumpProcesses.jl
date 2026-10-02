@@ -5,15 +5,15 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
 mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, CB, U, VJMAP, JVMAP, BD,
-    P <: PriorityTable, W <: Function} <:
+    P <: PriorityTable, W <: Function, R} <:
                AbstractSSAJumpAggregator{F, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::F
     end_time::F
-    cur_rate_low::Vector{F}
-    cur_rate_high::Vector{F}
-    sum_rate::F
+    cur_rate_low::Vector{R}
+    cur_rate_high::Vector{R}
+    sum_rate::R
     ma_jumps::S
     rates::F1
     affects!::F2
@@ -25,18 +25,18 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, RNG, CB, U, VJMAP, JVMAP, BD,
     bracket_data::BD
     ulow::U
     uhigh::U
-    minrate::F
-    maxrate::F   # initial maxrate only, table can increase beyond it!
+    minrate::R
+    maxrate::R   # initial maxrate only, table can increase beyond it!
     rt::P #rate table
     ratetogroup::W
 end
 
-function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
+function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{R}, sum_rate::R, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool}, rng::RNG; u::U, brackets,
         vartojumps_map = nothing, jumptovars_map = nothing,
-        bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
-        maxrate = convert(F, Inf),
-        kwargs...) where {F, S, F1, F2, RNG, U}
+        bracket_data = nothing, minrate = convert(R, MINJUMPRATE),
+        maxrate = convert(R, Inf),
+        kwargs...) where {F, R, S, F1, F2, RNG, U}
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if vartojumps_map === nothing
         if (get_num_majumps(maj) == 0) || !isempty(rs)
@@ -78,12 +78,12 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable(ratetogroup, zeros(F, 1), minrate, 2 * minrate)
+    rt = PriorityTable(ratetogroup, zeros(R, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
     RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, RNG, typeof(brackets), U,
         typeof(vtoj_map), typeof(jtov_map), typeof(bd), typeof(rt),
-        typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
+        typeof(ratetogroup), R}(nj, nj, njt, et, crl_bnds, crh_bnds,
         sum_rate, maj, rs, affs!, brackets, sps, rng, vtoj_map,
         jtov_map, bd, ulow, uhigh, minrate, maxrate,
         rt, ratetogroup)

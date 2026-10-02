@@ -50,13 +50,7 @@ end
         @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
         @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
         @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end
-        @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
-        @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end
-        @time @safetestset "Topology" begin include("spatial/topology.jl") end
-        @time @safetestset "Spatial bracketing Tests" begin include("spatial/bracketing.jl") end
-        @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
-        @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
-        @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
+        @time @safetestset "Spatial Tests" begin include("spatial/run_spatial_tests.jl") end
         @time @safetestset "SSA kernel on the CPU backend" begin include("kernelabstractions_ssa.jl") end
         @time @safetestset "Explicit tau-leaping kernel on the CPU backend" begin include("kernelabstractions_explicit_tau.jl") end
     end
@@ -68,7 +62,4 @@ end
         @time @safetestset "GPU Explicit Tau Leaping test" begin include("gpu/explicit_tau.jl") end
     end
 
-    if GROUP == "Correctness"
-        activate_gpu_env()
-    end
 end

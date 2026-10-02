@@ -261,7 +261,7 @@ Check if the total rate is zero, and if it is, make the next jump time Inf.
 @inline function nomorejumps!(p, sum_rate)::Bool
     if sum_rate < eps(typeof(sum_rate))
         p.next_jump = zero(p.next_jump)
-        p.next_jump_time = typemax(typeof(p.next_jump_time))
+        p.next_jump_time = Inf * oneunit(p.next_jump_time)
         return true
     end
     return false

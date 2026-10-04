@@ -12,6 +12,7 @@ JumpProblem
 PureLeaping
 SSAStepper
 SplitCoupledJumpProblem
+BoundedSSA
 reset_aggregated_jumps!
 ```
 

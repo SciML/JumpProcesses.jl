@@ -8,7 +8,8 @@ pages = ["index.md",
         "tutorials/spatial.md"],
     "Applications" => Any["applications/advanced_point_process.md"],
     "Type Documentation" => Any["Jumps, JumpProblem, and Aggregators" => "jump_types.md",
-        "Jump solvers" => "jump_solve.md"],
+        "Jump solvers" => "jump_solve.md",
+        "Differentiable simulation with BoundedSSA" => "bounded_ssa.md"],
     "FAQ" => "faq.md",
     "API" => "api.md"
 ]

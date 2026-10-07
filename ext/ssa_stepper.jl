@@ -352,7 +352,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
 
     time = @elapsed sol = [begin
                                @views ensembleprob.output_func(
-                                   SciMLBase.build_solution(prob,
+                                   SciMLBase.build_solution(jump_prob,
                                        alg,
                                        save_times,
                                        [_us[i, :, j] for j in 1:nsave],

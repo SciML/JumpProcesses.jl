@@ -50,7 +50,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
                                    error("Batch solve failed")
                                end
                                @views ensembleprob.output_func(
-                                   SciMLBase.build_solution(probs[i].prob,
+                                   SciMLBase.build_solution(probs[i],
                                        alg,
                                        ts[1:sol_idx],
                                        [us[j, :] for j in 1:sol_idx],

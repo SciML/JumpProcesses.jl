@@ -267,7 +267,7 @@ function SciMLBase.__init(jump_prob::JumpProblem,
     end
     save_everystep = any(cb.save_positions)
 
-    sol = SciMLBase.build_solution(prob, alg, t, u, dense = save_everystep,
+    sol = SciMLBase.build_solution(jump_prob, alg, t, u, dense = save_everystep,
         calculate_error = false,
         stats = DiffEqBase.Stats(0),
         interp = SciMLBase.ConstantInterpolation(t, u))

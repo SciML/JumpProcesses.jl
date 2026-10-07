@@ -50,18 +50,18 @@ function __jump_init(_jump_prob::SciMLBase.AbstractJumpProblem{P}, alg;
         jump_prob = resetted_jump_problem(_jump_prob, seed)
     end
 
-    # DDEProblems do not have a recompile_flag argument
-    if jump_prob.prob isa SciMLBase.AbstractDDEProblem
-        # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg;
-            callback = CallbackSet(jump_prob.jump_callback, callback),
-            kwargs...)
-    else
-        # callback comes after jump consistent with SSAStepper
-        integrator = init(jump_prob.prob, alg;
-            callback = CallbackSet(jump_prob.jump_callback, callback),
-            kwargs...)
-    end
+    # callback comes after jump consistent with SSAStepper
+    _init_inner(jump_prob, alg;
+        callback = CallbackSet(jump_prob.jump_callback, callback), kwargs...)
+end
+
+# Solver packages may override this to init on `jump_prob` itself, so that
+# `integrator.sol.prob` records the `JumpProblem` rather than the wrapped problem.
+_init_inner(jump_prob, alg; kwargs...) = init(jump_prob.prob, alg; kwargs...)
+
+function SciMLBase.build_solution(jprob::JumpProblem, alg, t, u; kwargs...)
+    sol = SciMLBase.build_solution(getfield(jprob, :prob), alg, t, u; kwargs...)
+    SciMLBase.ConstructionBase.setproperties(sol, (; prob = jprob))
 end
 
 # Derive an independent seed from the caller's seed. When a caller (e.g. StochasticDiffEq)

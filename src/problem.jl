@@ -187,6 +187,31 @@ end
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip
 JumpProblem(prob::JumpProblem) = prob
 
+# Forward non-field properties to the wrapped problem (`sol.prob.u0` etc.).
+function Base.getproperty(jprob::JumpProblem, sym::Symbol)
+    sym === :ps && return SII.ParameterIndexingProxy(jprob)
+    hasfield(typeof(jprob), sym) && return getfield(jprob, sym)
+    return getproperty(getfield(jprob, :prob), sym)
+end
+
+function Base.hasproperty(jprob::JumpProblem, sym::Symbol)
+    sym === :ps || hasfield(typeof(jprob), sym) ||
+        hasproperty(getfield(jprob, :prob), sym)
+end
+
+function Base.propertynames(jprob::JumpProblem, private::Bool = false)
+    Tuple(unique!([
+        fieldnames(typeof(jprob))...,
+        :ps,
+        propertynames(getfield(jprob, :prob), private)...
+    ]))
+end
+
+# `@reset sol.prob.p = p` goes through `remake` so the wrapped problem is rebuilt.
+function SciMLBase.ConstructionBase.setproperties(jprob::JumpProblem, patch::NamedTuple)
+    DiffEqBase.remake(jprob; patch...)
+end
+
 function JumpProblem(prob, jumps::ConstantRateJump; kwargs...)
     JumpProblem(prob, JumpSet(jumps); kwargs...)
 end

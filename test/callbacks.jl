@@ -515,3 +515,40 @@ end
     n_continuous = length(integrator_vr.opts.callback.continuous_callbacks)
     @test n_continuous == 1
 end
+
+@testset "sol.prob stores the JumpProblem" begin
+    # init from sol.prob must restore jumps and user callbacks (issue #672)
+    f!(du, u, p, t) = (du[1] = u[1])
+    ode_prob = ODEProblem(f!, [1.0, 0.0], (0.0, Inf), [1.0])
+    jump = ConstantRateJump((u, p, t) -> p[1], int -> (int.u[2] += 1))
+    cb = ContinuousCallback((u, t, int) -> u[1] - 5, terminate!)
+    jump_prob = JumpProblem(ode_prob, Direct(), jump; rng, callback = cb)
+
+    int1 = init(jump_prob, Tsit5())
+    step!(int1, 10.0, true)
+    @test SciMLBase.done(int1)
+    @test int1.sol.prob === jump_prob
+    @test int1.sol.prob.tspan == (0.0, Inf)
+    @test int1.sol.prob.u0 == [1.0, 0.0]
+
+    # init from sol.prob rebuilds the jump integrator: terminates at u[1] == 5
+    int2 = init(int1.sol.prob, Tsit5())
+    step!(int2, 100.0, true)
+    @test SciMLBase.done(int2)
+    @test int2.u[1] ≈ 5
+    @test int2.sol.prob isa JumpProblem
+
+    sol = solve(jump_prob, Tsit5())
+    @test sol.prob === jump_prob
+
+    # SSAStepper solutions also store the JumpProblem
+    dprob = DiscreteProblem([10, 0], (0.0, 100.0), [0.1])
+    jprob = JumpProblem(dprob, Direct(), jump; rng)
+    ssa_int = init(jprob, SSAStepper())
+    @test ssa_int.sol.prob === jprob
+    step!(ssa_int)
+    @test ssa_int.sol.prob === jprob
+    ssa_sol = solve(jprob, SSAStepper())
+    @test ssa_sol.prob === jprob
+    @test ssa_sol.prob.tspan == (0.0, 100.0)
+end

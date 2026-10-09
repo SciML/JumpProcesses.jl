@@ -850,4 +850,3 @@ end
         @test cbs[1].interp_points == 0
     end
 end
-

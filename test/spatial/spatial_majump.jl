@@ -163,3 +163,23 @@ diff = mean_end_state - sol.u[end]
 for (i, d) in enumerate(diff)
     @test abs(d) < reltol * sol.u[end][i]
 end
+
+# Regression: matrix scalerates! must scale every reaction row (2A -> 0, A -> 0).
+@testset "matrix rate combinatoric scaling" begin
+    reactstoch_scale = [[1 => 2], [1 => 1]]
+    netstoch_scale = [[1 => -2], [1 => -1]]
+    rates_mat = ones(2, 2)
+    JumpProcesses.scalerates!(rates_mat, reactstoch_scale)
+    @test rates_mat ≈ [0.5 0.5; 1.0 1.0]
+
+    maj_mat = SpatialMassActionJump(ones(2, 2), reactstoch_scale, netstoch_scale)
+    maj_unif = SpatialMassActionJump([1.0, 1.0], reactstoch_scale, netstoch_scale)
+    @test maj_mat.spatial_rates ≈ [0.5 0.5; 1.0 1.0]
+    @test maj_unif.uniform_rates ≈ [0.5, 1.0]
+
+    u_site = reshape([10, 10], 1, 2)
+    @test JumpProcesses.evalrxrate(u_site, 1, maj_mat, 1) ≈
+          JumpProcesses.evalrxrate(u_site, 1, maj_unif, 1) ≈ 45.0
+    @test JumpProcesses.evalrxrate(u_site, 2, maj_mat, 1) ≈
+          JumpProcesses.evalrxrate(u_site, 2, maj_unif, 1) ≈ 10.0
+end

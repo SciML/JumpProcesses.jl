@@ -179,7 +179,7 @@ end
 
     u_site = reshape([10, 10], 1, 2)
     @test JumpProcesses.evalrxrate(u_site, 1, maj_mat, 1) ≈
-          JumpProcesses.evalrxrate(u_site, 1, maj_unif, 1) ≈ 45.0
+        JumpProcesses.evalrxrate(u_site, 1, maj_unif, 1) ≈ 45.0
     @test JumpProcesses.evalrxrate(u_site, 2, maj_mat, 1) ≈
-          JumpProcesses.evalrxrate(u_site, 2, maj_unif, 1) ≈ 10.0
+        JumpProcesses.evalrxrate(u_site, 2, maj_unif, 1) ≈ 10.0
 end

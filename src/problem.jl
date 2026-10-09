@@ -286,6 +286,12 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
 
+    # Validate stoichiometry / dependency-graph indices once before hot @inbounds paths.
+    validate_jumpproblem_inputs(u, maj, ndiscjumps;
+        dep_graph = get(kwargs, :dep_graph, nothing),
+        vartojumps_map = get(kwargs, :vartojumps_map, nothing),
+        jumptovars_map = get(kwargs, :jumptovars_map, nothing))
+
     # handle majs, crjs, and bounded vrjs
     if (ndiscjumps == 0) && !is_spatial(aggregator)
         disc_agg = nothing
@@ -345,11 +351,17 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     # No discrete jump aggregation or variable rate callbacks are created
     disc_agg = nothing
     jump_cbs = CallbackSet()
-    
+
     # Store all jump types for access by tau-leaping solver
     crjs = jumps.constant_jumps
     vrjs = jumps.variable_jumps
-    
+
+    validate_jumpproblem_inputs(prob.u0, maj,
+        get_num_majumps(maj) + num_crjs(jumps) + num_vrjs(jumps);
+        dep_graph = get(kwargs, :dep_graph, nothing),
+        vartojumps_map = get(kwargs, :vartojumps_map, nothing),
+        jumptovars_map = get(kwargs, :jumptovars_map, nothing))
+
     iip = isinplace_jump(prob, jumps.regular_jump)
     solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
 
@@ -360,6 +372,79 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
 end
 
 aggregator(jp::JumpProblem{iip, P, A}) where {iip, P, A} = A
+
+# Species / jump index validation at JumpProblem construction (not in hot loops).
+# Skips when u0 is unavailable rather than guessing a species range.
+function species_index_range(u0)
+    if u0 === nothing
+        return nothing
+    elseif u0 isa ExtendedJumpArray
+        return species_index_range(u0.u)
+    elseif u0 isa AbstractArray
+        return ndims(u0) == 1 ? eachindex(u0) : axes(u0, 1)
+    elseif u0 isa Number
+        return Base.OneTo(1)
+    else
+        return nothing
+    end
+end
+
+function validate_stoch_species!(stoch, species_range, label)
+    for (rx, rx_stoch) in enumerate(stoch)
+        for specstoch in rx_stoch
+            spec = specstoch[1]
+            if spec ∉ species_range
+                throw(ArgumentError(string(
+                    "MassActionJump ", label, " for reaction ", rx,
+                    " references species index ", spec,
+                    ", which is outside the valid species indices ", species_range, ".")))
+            end
+        end
+    end
+    nothing
+end
+
+function validate_massaction_species_indices(u0, maj)
+    maj === nothing && return nothing
+    species_range = species_index_range(u0)
+    species_range === nothing && return nothing
+    validate_stoch_species!(maj.reactant_stoch, species_range, "reactant_stoch")
+    validate_stoch_species!(maj.net_stoch, species_range, "net_stoch")
+    nothing
+end
+
+function validate_index_map!(map, mapname, outer_len, inner_range)
+    map === nothing && return nothing
+    if length(map) != outer_len
+        throw(ArgumentError(string(mapname, " has length ", length(map),
+            " but expected length ", outer_len, ".")))
+    end
+    for (i, deps) in enumerate(map)
+        for idx in deps
+            if idx ∉ inner_range
+                throw(ArgumentError(string(mapname, "[", i, "] contains index ",
+                    idx, ", which is outside the valid range ", inner_range, ".")))
+            end
+        end
+    end
+    nothing
+end
+
+function validate_jumpproblem_inputs(u0, maj, ndiscjumps; dep_graph = nothing,
+        vartojumps_map = nothing, jumptovars_map = nothing)
+    validate_massaction_species_indices(u0, maj)
+
+    jump_range = Base.OneTo(ndiscjumps)
+    validate_index_map!(dep_graph, "dep_graph", ndiscjumps, jump_range)
+
+    species_range = species_index_range(u0)
+    if species_range !== nothing
+        nspecs = length(species_range)
+        validate_index_map!(vartojumps_map, "vartojumps_map", nspecs, jump_range)
+        validate_index_map!(jumptovars_map, "jumptovars_map", ndiscjumps, species_range)
+    end
+    nothing
+end
 
 @inline function extend_tstops!(tstops, jp::JumpProblem) 
     !(jp.jump_callback.discrete_callbacks isa Tuple{}) &&

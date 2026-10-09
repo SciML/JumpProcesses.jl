@@ -137,3 +137,46 @@ js = JumpSet(maj1, maj2)
 @test all(getfield(maj, fn) == getfield(js.massaction_jump, fn)
 for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)
+
+# Construction-time index validation (species / dep graphs). Bad inputs must throw
+# ArgumentError at JumpProblem construction rather than OOB / hang / segfault in
+# @inbounds hot paths (see auditor probes netstoch_oob, reactstoch_oob, depgraph_oob).
+@testset "JumpProblem index validation" begin
+    dprob = DiscreteProblem([5], (0.0, 1.0))
+
+    # net_stoch species index out of range for u0
+    maj_net = MassActionJump([1.0, 0.1], [[0 => 1], [1 => 1]],
+        [[1 => 1, 2 => 1], [1 => -1]])
+    @test_throws ArgumentError JumpProblem(dprob, Direct(), maj_net; rng)
+
+    # reactant_stoch species index out of range for u0
+    maj_reac = MassActionJump([1.0, 0.1], [[0 => 1], [3 => 1]],
+        [[1 => 1], [1 => -1]])
+    @test_throws ArgumentError JumpProblem(dprob, Direct(), maj_reac; rng)
+
+    # dep_graph entry past the discrete jump count
+    r1(u, p, t) = 1.0
+    a1!(i) = (i.u[1] += 1; nothing)
+    r2(u, p, t) = 0.1 * u[1]
+    a2!(i) = (i.u[1] -= 1; nothing)
+    @test_throws ArgumentError JumpProblem(dprob, NRM(),
+        ConstantRateJump(r1, a1!), ConstantRateJump(r2, a2!);
+        dep_graph = [[1, 2, 7], [2]], rng)
+
+    # vartojumps_map / jumptovars_map out of range
+    maj_ok = MassActionJump([1.0, 0.1], [[0 => 1], [1 => 1]],
+        [[1 => 1], [1 => -1]])
+    @test_throws ArgumentError JumpProblem(dprob, RSSA(), maj_ok;
+        vartojumps_map = [[1, 2, 9]], jumptovars_map = [[1], [1]], rng)
+    @test_throws ArgumentError JumpProblem(dprob, RSSA(), maj_ok;
+        vartojumps_map = [[1, 2]], jumptovars_map = [[1], [3]], rng)
+
+    # Valid indices still construct
+    maj_ok2 = MassActionJump([1.0, 0.1], [[0 => 1], [1 => 1]],
+        [[1 => 1], [1 => -1]])
+    jp = JumpProblem(dprob, Direct(), maj_ok2; rng)
+    @test jp.massaction_jump !== nothing
+    jp2 = JumpProblem(dprob, NRM(), maj_ok2;
+        dep_graph = [[1, 2], [1, 2]], rng)
+    @test jp2.discrete_jump_aggregation !== nothing
+end

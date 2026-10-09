@@ -230,6 +230,88 @@ let
     @test copy(u) isa ExtendedJumpArray
 end
 
+# Field-forwarding copy / copyto! / fill!: must dispatch on ExtendedJumpArray
+# (not AbstractArray scalar getindex) and match the generic path's values/types.
+@testset "ExtendedJumpArray copy/copyto!/fill!" begin
+    function generic_copy(A::ExtendedJumpArray)
+        B = similar(A)
+        @inbounds for i in eachindex(A)
+            B[i] = A[i]
+        end
+        return B
+    end
+    function generic_copyto!(dest::ExtendedJumpArray, src::ExtendedJumpArray)
+        @inbounds for i in eachindex(src)
+            dest[i] = src[i]
+        end
+        return dest
+    end
+    function generic_fill!(A::ExtendedJumpArray, x)
+        @inbounds for i in eachindex(A)
+            A[i] = x
+        end
+        return A
+    end
+
+    let rng = StableRNG(850)
+        src = ExtendedJumpArray(rand(rng, 5), rand(rng, 2))
+        @test which(copy, (typeof(src),)).module === JumpProcesses
+        @test which(copyto!, (typeof(src), typeof(src))).module === JumpProcesses
+        @test which(fill!, (typeof(src), Float64)).module === JumpProcesses
+
+        c = copy(src)
+        g = generic_copy(src)
+        @test c isa ExtendedJumpArray
+        @test typeof(c) === typeof(g) === typeof(src)
+        @test c == g == src
+        @test c.u == src.u && c.jump_u == src.jump_u
+        @test c.u !== src.u && c.jump_u !== src.jump_u
+
+        dest = ExtendedJumpArray(zeros(5), zeros(2))
+        dest_g = ExtendedJumpArray(zeros(5), zeros(2))
+        @test copyto!(dest, src) === dest
+        @test dest == generic_copyto!(dest_g, src) == src
+
+        # Shape mismatch falls back to scalar indexed copy
+        dest_mismatch = ExtendedJumpArray(zeros(4), zeros(3))
+        @test length(dest_mismatch) == length(src)
+        copyto!(dest_mismatch, src)
+        @test Vector(dest_mismatch) == Vector(src)
+
+        filled = ExtendedJumpArray(rand(rng, 5), rand(rng, 2))
+        filled_g = ExtendedJumpArray(copy(filled.u), copy(filled.jump_u))
+        @test fill!(filled, 3.14) === filled
+        @test filled == generic_fill!(filled_g, 3.14)
+        @test all(==(3.14), filled.u) && all(==(3.14), filled.jump_u)
+
+        z = zero(src)
+        @test z isa ExtendedJumpArray
+        @test all(iszero, z.u) && all(iszero, z.jump_u)
+        @test RecursiveArrayTools.recursivecopy(src) == src
+        @test RecursiveArrayTools.recursivecopy(src) isa ExtendedJumpArray
+    end
+
+    # Matrix-valued u: field copy must preserve shape/type like the generic path
+    let rng = StableRNG(851)
+        src = ExtendedJumpArray(rand(rng, 2, 3), rand(rng, 2))
+        c = copy(src)
+        g = generic_copy(src)
+        @test c isa ExtendedJumpArray
+        @test typeof(c.u) === typeof(src.u) === Matrix{Float64}
+        @test size(c.u) == size(src.u) == (2, 3)
+        @test c == g == src
+        @test c.u == src.u && c.jump_u == src.jump_u
+
+        dest = ExtendedJumpArray(zeros(2, 3), zeros(2))
+        copyto!(dest, src)
+        @test dest == src
+        @test dest.u isa Matrix{Float64} && size(dest.u) == (2, 3)
+
+        fill!(dest, 0.0)
+        @test all(iszero, dest) && all(iszero, dest.u) && all(iszero, dest.jump_u)
+    end
+end
+
 @testset "ArrayPartition VariableRateJump property forwarding" begin
     eja = ExtendedJumpArray(ArrayPartition([1.0], [2.0]), [0.0])
     @test eja.u isa ArrayPartition

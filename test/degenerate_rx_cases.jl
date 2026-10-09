@@ -138,9 +138,7 @@ js = JumpSet(maj1, maj2)
 for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)
 
-# Construction-time index validation (species / dep graphs). Bad inputs must throw
-# ArgumentError at JumpProblem construction rather than OOB / hang / segfault in
-# @inbounds hot paths (see auditor probes netstoch_oob, reactstoch_oob, depgraph_oob).
+# Construction-time index validation (species / dependency maps).
 @testset "JumpProblem index validation" begin
     dprob = DiscreteProblem([5], (0.0, 1.0))
 
@@ -154,7 +152,7 @@ for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
         [[1 => 1], [1 => -1]])
     @test_throws ArgumentError JumpProblem(dprob, Direct(), maj_reac; rng)
 
-    # dep_graph entry past the discrete jump count
+    # dep_graph entry past the discrete jump count (aggregator that consumes it)
     r1(u, p, t) = 1.0
     a1!(i) = (i.u[1] += 1; nothing)
     r2(u, p, t) = 0.1 * u[1]
@@ -179,4 +177,25 @@ for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
     jp2 = JumpProblem(dprob, NRM(), maj_ok2;
         dep_graph = [[1, 2], [1, 2]], rng)
     @test jp2.discrete_jump_aggregation !== nothing
+
+    # Aggregators that ignore dep_graph still accept unused maps
+    maj_one = MassActionJump([1.0], [[1 => 1]], [[1 => -1]])
+    jp_direct = JumpProblem(dprob, Direct(), maj_one; dep_graph = [[1, 5]], rng)
+    @test jp_direct.discrete_jump_aggregation !== nothing
+    sol_direct = solve(jp_direct, SSAStepper())
+    @test sol_direct.retcode == ReturnCode.Success
+
+    # RSSA may use a vartojumps_map shorter than length(u0) when only some species update
+    dprob2 = DiscreteProblem([10, 0], (0.0, 1.0))
+    jp_rssa = JumpProblem(dprob2, RSSA(), maj_one;
+        vartojumps_map = [[1]], jumptovars_map = [[1]], rng)
+    sol_rssa = solve(jp_rssa, SSAStepper())
+    @test sol_rssa.retcode == ReturnCode.Success
+    @test sol_rssa.u[end][2] == 0
+    @test sol_rssa.u[end][1] <= 10
+
+    # PureLeaping builds no discrete aggregation and ignores unused dep graphs
+    jp_pl = JumpProblem(dprob, PureLeaping(), maj_one; dep_graph = [[1, 5]], rng)
+    @test jp_pl.discrete_jump_aggregation === nothing
+    @test jp_pl.massaction_jump !== nothing
 end

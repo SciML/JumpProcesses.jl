@@ -286,17 +286,16 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
 
-    # Validate stoichiometry / dependency-graph indices once before hot @inbounds paths.
-    validate_jumpproblem_inputs(u, maj, ndiscjumps;
-        dep_graph = get(kwargs, :dep_graph, nothing),
-        vartojumps_map = get(kwargs, :vartojumps_map, nothing),
-        jumptovars_map = get(kwargs, :jumptovars_map, nothing))
-
     # handle majs, crjs, and bounded vrjs
     if (ndiscjumps == 0) && !is_spatial(aggregator)
         disc_agg = nothing
         constant_jump_callback = CallbackSet()
+        validate_jumpproblem_inputs(u, maj, ndiscjumps, aggregator; validate_maps = false)
     else
+        validate_jumpproblem_inputs(u, maj, ndiscjumps, aggregator;
+            dep_graph = get(kwargs, :dep_graph, nothing),
+            vartojumps_map = get(kwargs, :vartojumps_map, nothing),
+            jumptovars_map = get(kwargs, :jumptovars_map, nothing))
         disc_agg = aggregate(aggregator, u, prob.p, t, end_time, crjs, maj,
             save_positions, rng; kwargs...)
         constant_jump_callback = DiscreteCallback(disc_agg)
@@ -351,16 +350,12 @@ function JumpProblem(prob, aggregator::PureLeaping, jumps::JumpSet;
     # No discrete jump aggregation or variable rate callbacks are created
     disc_agg = nothing
     jump_cbs = CallbackSet()
-
+    
     # Store all jump types for access by tau-leaping solver
     crjs = jumps.constant_jumps
     vrjs = jumps.variable_jumps
-
-    validate_jumpproblem_inputs(prob.u0, maj,
-        get_num_majumps(maj) + num_crjs(jumps) + num_vrjs(jumps);
-        dep_graph = get(kwargs, :dep_graph, nothing),
-        vartojumps_map = get(kwargs, :vartojumps_map, nothing),
-        jumptovars_map = get(kwargs, :jumptovars_map, nothing))
+    
+    validate_massaction_species_indices(prob.u0, maj)
 
     iip = isinplace_jump(prob, jumps.regular_jump)
     solkwargs = tstops === nothing ? make_kwarg(; callback) : make_kwarg(; callback, tstops)
@@ -381,7 +376,7 @@ function species_index_range(u0)
     elseif u0 isa ExtendedJumpArray
         return species_index_range(u0.u)
     elseif u0 isa AbstractArray
-        return ndims(u0) == 1 ? eachindex(u0) : axes(u0, 1)
+        return eachindex(u0)
     elseif u0 isa Number
         return Base.OneTo(1)
     else
@@ -430,18 +425,57 @@ function validate_index_map!(map, mapname, outer_len, inner_range)
     nothing
 end
 
-function validate_jumpproblem_inputs(u0, maj, ndiscjumps; dep_graph = nothing,
-        vartojumps_map = nothing, jumptovars_map = nothing)
-    validate_massaction_species_indices(u0, maj)
-
+function validate_rssa_maps!(vartojumps_map, jumptovars_map, ndiscjumps, u0)
     jump_range = Base.OneTo(ndiscjumps)
-    validate_index_map!(dep_graph, "dep_graph", ndiscjumps, jump_range)
+    if vartojumps_map !== nothing
+        for (i, deps) in enumerate(vartojumps_map)
+            for idx in deps
+                if idx ∉ jump_range
+                    throw(ArgumentError(string("vartojumps_map[", i,
+                        "] contains index ", idx,
+                        ", which is outside the valid range ", jump_range, ".")))
+                end
+            end
+        end
+    end
+    if jumptovars_map !== nothing
+        if length(jumptovars_map) != ndiscjumps
+            throw(ArgumentError(string("jumptovars_map has length ",
+                length(jumptovars_map), " but expected length ", ndiscjumps, ".")))
+        end
+        vtoj_range = vartojumps_map === nothing ? nothing : eachindex(vartojumps_map)
+        species_range = species_index_range(u0)
+        for (i, specs) in enumerate(jumptovars_map)
+            for spec in specs
+                if vtoj_range !== nothing && spec ∉ vtoj_range
+                    throw(ArgumentError(string("jumptovars_map[", i,
+                        "] contains species index ", spec,
+                        ", which is outside eachindex(vartojumps_map) = ",
+                        vtoj_range, ".")))
+                end
+                if species_range !== nothing && spec ∉ species_range
+                    throw(ArgumentError(string("jumptovars_map[", i,
+                        "] contains species index ", spec,
+                        ", which is outside the valid species indices ",
+                        species_range, ".")))
+                end
+            end
+        end
+    end
+    nothing
+end
 
-    species_range = species_index_range(u0)
-    if species_range !== nothing
-        nspecs = length(species_range)
-        validate_index_map!(vartojumps_map, "vartojumps_map", nspecs, jump_range)
-        validate_index_map!(jumptovars_map, "jumptovars_map", ndiscjumps, species_range)
+function validate_jumpproblem_inputs(u0, maj, ndiscjumps, aggregator;
+        dep_graph = nothing, vartojumps_map = nothing, jumptovars_map = nothing,
+        validate_maps = true)
+    validate_massaction_species_indices(u0, maj)
+    validate_maps || return nothing
+
+    if needs_depgraph(aggregator)
+        validate_index_map!(dep_graph, "dep_graph", ndiscjumps, Base.OneTo(ndiscjumps))
+    end
+    if needs_vartojumps_map(aggregator)
+        validate_rssa_maps!(vartojumps_map, jumptovars_map, ndiscjumps, u0)
     end
     nothing
 end

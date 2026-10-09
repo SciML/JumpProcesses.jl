@@ -77,12 +77,12 @@ end
 function scalerates!(unscaled_rates::AbstractMatrix{U},
         stochmat::AbstractVector{V}) where {U, S, T, W <: Pair{S, T},
         V <: AbstractVector{W}}
-    @inbounds for i in size(unscaled_rates, 1)
+    @inbounds for i in axes(unscaled_rates, 1)
         coef = one(T)
         @inbounds for specstoch in stochmat[i]
             coef *= factorial(specstoch[2])
         end
-        unscaled_rates[i, :] /= coef
+        @view(unscaled_rates[i, :]) ./= coef
     end
     nothing
 end

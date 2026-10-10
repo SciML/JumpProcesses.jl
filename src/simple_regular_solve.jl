@@ -1,10 +1,13 @@
 """
     SimpleTauLeaping()
 
-Fixed-step tau-leaping algorithm for pure [`RegularJump`](@ref) problems.
+Fixed-step tau-leaping algorithm for pure [`MassActionJump`](@ref) or
+[`RegularJump`](@ref) problems.
 
-Use `SimpleTauLeaping` with `JumpProblem(prob, PureLeaping(), regular_jump)` and pass
-the timestep through the `dt` keyword to `solve`.
+Use `SimpleTauLeaping` with `JumpProblem(prob, PureLeaping(), jump)`, where `jump` is
+a `MassActionJump` or a `RegularJump`, and pass the timestep through `dt` to `solve`.
+Both representations also support `EnsembleGPUKernel`; custom regular-jump rate
+and update functions must be compatible with the selected device.
 
 ## Keyword Arguments
 
@@ -237,12 +240,15 @@ function validate_pure_leaping_inputs(jump_prob::JumpProblem, alg)
         JumpProblem, i.e. call JumpProblem(::DiscreteProblem, PureLeaping(),...). \
         Passing $(jump_prob.aggregator) is deprecated and will be removed in the next breaking release."
     end
-    isempty(jump_prob.jump_callback.continuous_callbacks) &&
+    return jump_prob.prob isa DiscreteProblem &&
+        isempty(jump_prob.jump_callback.continuous_callbacks) &&
         isempty(jump_prob.jump_callback.discrete_callbacks) &&
         isempty(jump_prob.constant_jumps) &&
         isempty(jump_prob.variable_jumps) &&
-        get_num_majumps(jump_prob.massaction_jump) == 0 &&
+        xor(
+        get_num_majumps(jump_prob.massaction_jump) > 0,
         jump_prob.regular_jump !== nothing
+    )
 end
 
 function validate_pure_leaping_inputs(
@@ -304,17 +310,16 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
         seed = nothing, dt = error("dt is required for SimpleTauLeaping."),
         saveat = nothing, save_start = nothing, save_end = nothing)
     validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only RegularJumps.")
+        error("SimpleTauLeaping requires a PureLeaping JumpProblem with a MassActionJump or a RegularJump.")
 
     (; prob, rng) = jump_prob
     (seed !== nothing) && seed!(rng, seed)
 
     rj = jump_prob.regular_jump
-    rate = rj.rate # rate function rate(out,u,p,t)
-    numjumps = rj.numjumps # used for size information (# of jump processes)
-    c = rj.c # matrix-free operator c(u_buffer, uprev, tprev, counts, p, mark)
+    jump = rj === nothing ? jump_prob.massaction_jump : rj
+    numjumps = leaping_num_jumps(jump)
 
-    if !isnothing(rj.mark_dist) == nothing # https://github.com/JuliaDiffEq/DifferentialEquations.jl/issues/250
+    if rj !== nothing && !isnothing(rj.mark_dist)
         error("Mark distributions are currently not supported in SimpleTauLeaping")
     end
 
@@ -346,10 +351,10 @@ function DiffEqBase.solve(jump_prob::JumpProblem, alg::SimpleTauLeaping;
     for i in 2:n
         tprev = tspan[1] + (i - 2) * dt
         t_new = tprev + dt
-        rate(rate_cache, uprev, p, tprev)
+        leaping_rates!(rate_cache, jump, uprev, p, tprev)
         rate_cache .*= dt
         counts .= pois_rand.((rng,), rate_cache)
-        c(du, uprev, p, tprev, counts, mark)
+        leaping_change!(du, jump, uprev, p, tprev, counts, nothing)
         u_new .= du .+ uprev
 
         # Save logic — only allocate (via copy) when actually saving
@@ -1098,7 +1103,13 @@ end
     EnsembleGPUKernel()
     EnsembleGPUKernel(backend)
 
-Ensemble algorithm marker for GPU execution of tau-leaping ensemble simulations.
+Ensemble algorithm for pure-jump simulations with [`SSAStepper`](@ref),
+[`SimpleExplicitTauLeaping`](@ref), or [`SimpleTauLeaping`](@ref).
+
+Load `KernelAbstractions` and `Adapt` to activate the extension, and pass an explicit
+backend such as `CUDABackend()` from CUDA for GPU execution. The default is the
+KernelAbstractions CPU backend. See [GPU ensembles](@ref gpu_ensembles) for supported
+problem representations, required solve options, and limitations.
 
 ## Arguments
 

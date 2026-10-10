@@ -198,4 +198,21 @@ for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
     jp_pl = JumpProblem(dprob, PureLeaping(), maj_one; dep_graph = [[1, 5]], rng)
     @test jp_pl.discrete_jump_aggregation === nothing
     @test jp_pl.massaction_jump !== nothing
+
+    # Longer-than-needed maps are unused extra nodes and must still construct/solve
+    jp_long_dg = JumpProblem(dprob, NRM(), maj_ok2;
+        dep_graph = [[1, 2], [1, 2], [1]], rng)
+    sol_long_dg = solve(jp_long_dg, SSAStepper())
+    @test sol_long_dg.retcode == ReturnCode.Success
+    jp_long_jtov = JumpProblem(dprob2, RSSA(), maj_one;
+        vartojumps_map = [[1]], jumptovars_map = [[1], [1]], rng)
+    sol_long_jtov = solve(jp_long_jtov, SSAStepper())
+    @test sol_long_jtov.retcode == ReturnCode.Success
+
+    # Too-short maps remain rejected
+    @test_throws ArgumentError JumpProblem(dprob, NRM(),
+        ConstantRateJump(r1, a1!), ConstantRateJump(r2, a2!);
+        dep_graph = [[1, 2]], rng)
+    @test_throws ArgumentError JumpProblem(dprob, RSSA(), maj_ok;
+        vartojumps_map = [[1], [2]], jumptovars_map = [[1]], rng)
 end

@@ -410,9 +410,9 @@ end
 
 function validate_index_map!(map, mapname, outer_len, inner_range)
     map === nothing && return nothing
-    if length(map) != outer_len
+    if length(map) < outer_len
         throw(ArgumentError(string(mapname, " has length ", length(map),
-            " but expected length ", outer_len, ".")))
+            " but expected at least ", outer_len, ".")))
     end
     for (i, deps) in enumerate(map)
         for idx in deps
@@ -439,9 +439,9 @@ function validate_rssa_maps!(vartojumps_map, jumptovars_map, ndiscjumps, u0)
         end
     end
     if jumptovars_map !== nothing
-        if length(jumptovars_map) != ndiscjumps
+        if length(jumptovars_map) < ndiscjumps
             throw(ArgumentError(string("jumptovars_map has length ",
-                length(jumptovars_map), " but expected length ", ndiscjumps, ".")))
+                length(jumptovars_map), " but expected at least ", ndiscjumps, ".")))
         end
         vtoj_range = vartojumps_map === nothing ? nothing : eachindex(vartojumps_map)
         species_range = species_index_range(u0)

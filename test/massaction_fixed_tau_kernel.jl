@@ -1,0 +1,73 @@
+using JumpProcesses, KernelAbstractions, Adapt, Test, Statistics
+
+function test_massaction_fixed_tau_kernel(backend)
+    @testset "Fixed-step mass-action kernel ($T)" for T in (Float64, Int)
+        maj = MassActionJump([0.2], [[1 => 1]], [[1 => -1, 2 => 1]])
+        jp = JumpProblem(DiscreteProblem(T[1001, 0], (0.0, 1.0)), PureLeaping(), maj)
+        sol = solve(
+            EnsembleProblem(jp), SimpleTauLeaping(), EnsembleGPUKernel(backend);
+            trajectories = 2000, dt = 0.01
+        )
+        @test length(sol.u) == 2000
+        @test all(s -> successful_retcode(s), sol.u)
+        @test all(s -> s.t[end] ≈ 1.0, sol.u)
+        @test all(s -> all(u -> sum(u) ≈ 1001, s.u), sol.u)
+        @test mean(s.u[end][1] for s in sol.u) ≈ 1001 * (1 - 0.2 * 0.01)^100 rtol = 0.01
+
+        births = MassActionJump([10.0], [Pair{Int, Int}[]], [[1 => 1]])
+        jp = JumpProblem(DiscreteProblem(T[0], (0.0, 1.0)), PureLeaping(), births)
+        sol = solve(
+            EnsembleProblem(jp), SimpleTauLeaping(), EnsembleGPUKernel(backend);
+            trajectories = 2000, dt = 0.01
+        )
+        @test mean(s.u[end][1] for s in sol.u) ≈ 10 rtol = 0.05
+    end
+
+    # Parameter-mapped MassActionJump rates are uploaded once from the template
+    # problem; a custom `prob_func` that varies `p` cannot refresh them, unlike
+    # RegularJump rates which receive per-trajectory `p`.
+    @testset "Parameter-dependent mass-action rates with prob_func" begin
+        maj = MassActionJump([[1 => 1]], [[1 => -1]]; param_idxs = [1])
+        jp = JumpProblem(DiscreteProblem([50.0], (0.0, 1.0), [0.2]), PureLeaping(), maj)
+        varying = EnsembleProblem(jp;
+            prob_func = (prob, ctx) -> remake(prob; p = [0.1 * ctx.sim_id]))
+        err = try
+            solve(varying, SimpleTauLeaping(), EnsembleGPUKernel(backend);
+                trajectories = 2, dt = 0.1)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ErrorException
+        @test occursin("param_idxs", err.msg) || occursin("param_mapper", err.msg)
+        @test occursin("prob_func", err.msg)
+    end
+
+    # RegularJump rates read per-trajectory `p` from `prob_func`. First-order
+    # decay A --k--> ∅ with leap mean u0 * (1 - k*dt)^(t/dt).
+    @testset "RegularJump per-trajectory p via prob_func" begin
+        rate! = (out, u, p, t) -> (out[1] = p[1] * u[1]; nothing)
+        change! = (du, u, p, t, counts, mark) -> (du[1] = -counts[1]; nothing)
+        rj = RegularJump(rate!, change!, 1)
+        u0 = 1000.0
+        tspan = (0.0, 1.0)
+        dt = 0.01
+        nsteps = Int((tspan[2] - tspan[1]) / dt)
+        jp = JumpProblem(DiscreteProblem([u0], tspan, [0.0]), PureLeaping(), rj)
+        n_per = 2000
+        function prob_func(prob, ctx)
+            # first n_per trajectories use p=0, the rest use p=1
+            remake(prob; p = [ctx.sim_id <= n_per ? 0.0 : 1.0])
+        end
+        sol = solve(
+            EnsembleProblem(jp; prob_func), SimpleTauLeaping(),
+            EnsembleGPUKernel(backend); trajectories = 2 * n_per, dt
+        )
+        mean0 = mean(s.u[end][1] for s in sol.u[1:n_per])
+        mean1 = mean(s.u[end][1] for s in sol.u[(n_per + 1):end])
+        @test mean0 ≈ u0 atol = 1e-8
+        # E[u] ≈ u0 * (1 - p*dt)^nsteps with p = 1 → 1000 * 0.99^100 ≈ 366.032
+        @test mean1 ≈ u0 * (1 - dt)^nsteps rtol = 0.02
+    end
+    return nothing
+end

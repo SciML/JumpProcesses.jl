@@ -17,6 +17,7 @@ end
     if GROUP == "All" || GROUP == "InterfaceI"
         @time @safetestset "Precompile workload" begin include("precompile_workload.jl") end
         @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
+        @time @safetestset "Rate vs time type Tests" begin include("rate_time_types.jl") end
         @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
         @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
         @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end

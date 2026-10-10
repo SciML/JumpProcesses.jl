@@ -2,14 +2,14 @@
 # "The sorting direct method for stochastic simulation of biochemical systems with varying reaction execution behavior"
 # Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
-mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
+mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR, R} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
     end_time::T
-    cur_rates::Vector{T}
-    sum_rate::T
+    cur_rates::Vector{R}
+    sum_rate::R
     ma_jumps::S
     rates::F1
     affects!::F2
@@ -20,10 +20,10 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, RNG, DEPGR} <:
     jump_search_idx::Int
 end
 
-function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{R}, sr::R,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; num_specs, dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        kwargs...) where {T, R, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -42,7 +42,7 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
-    SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg)}(nj, nj, njt, et,
+    SortingDirectJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), R}(nj, nj, njt, et,
         crs, sr, maj, rs,
         affs!, sps, rng,
         dg, jtoidx,

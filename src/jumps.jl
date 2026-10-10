@@ -953,7 +953,7 @@ function get_jump_info_tuples(jumps)
 end
 
 function get_jump_info_fwrappers(u, p, t, jumps)
-    RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
+    RateWrapper = FunctionWrappers.FunctionWrapper{ssa_rate_eltype(t),
         Tuple{typeof(u), typeof(p), typeof(t)}}
 
     if (jumps !== nothing) && !isempty(jumps)

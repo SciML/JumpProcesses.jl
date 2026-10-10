@@ -11,32 +11,32 @@ by S. Mauch and M. Stalzer, ACM Trans. Comp. Biol. and Bioinf., 8, No. 1, 27-35 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
 mutable struct DirectCRJumpAggregation{T, S, F1, F2, RNG, DEPGR, U <: PriorityTable,
-    W <: Function} <:
+    W <: Function, R} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
     end_time::T
-    cur_rates::Vector{T}
-    sum_rate::T
+    cur_rates::Vector{R}
+    sum_rate::R
     ma_jumps::S
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
     rng::RNG
     dep_gr::DEPGR
-    minrate::T
-    maxrate::T   # initial maxrate only, table can increase beyond it!
+    minrate::R
+    maxrate::R   # initial maxrate only, table can increase beyond it!
     rt::U
     ratetogroup::W
 end
 
-function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{R}, sr::R,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; num_specs, dep_graph = nothing,
-        minrate = convert(T, MINJUMPRATE),
-        maxrate = convert(T, Inf),
-        kwargs...) where {T, S, F1, F2, RNG}
+        minrate = convert(R, MINJUMPRATE),
+        maxrate = convert(R, Inf),
+        kwargs...) where {T, R, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -60,11 +60,11 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
-    rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
+    rt = PriorityTable(ratetogroup, zeros(R, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
     DirectCRJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg),
-        typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
+        typeof(rt), typeof(ratetogroup), R}(nj, nj, njt, et, crs, sr, maj,
         rs, affs!, sps, rng, dg,
         minrate, maxrate, rt,
         ratetogroup)

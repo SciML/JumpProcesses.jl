@@ -1,14 +1,14 @@
 # Implementation the original Next Reaction Method
 # Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
 
-mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
+mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ, R} <:
                AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
     next_jump::Int
     prev_jump::Int
     next_jump_time::T
     end_time::T
-    cur_rates::Vector{T}
-    sum_rate::T
+    cur_rates::Vector{R}
+    sum_rate::R
     ma_jumps::S
     rates::F1
     affects!::F2
@@ -18,10 +18,10 @@ mutable struct NRMJumpAggregation{T, S, F1, F2, RNG, DEPGR, PQ} <:
     pq::PQ
 end
 
-function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
+function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{R}, sr::R,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool},
         rng::RNG; num_specs, dep_graph = nothing,
-        kwargs...) where {T, S, F1, F2, RNG}
+        kwargs...) where {T, R, S, F1, F2, RNG}
 
     # a dependency graph is needed and must be provided if there are constant rate jumps
     if dep_graph === nothing
@@ -40,7 +40,7 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     pq = MutableBinaryMinHeap{T}()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    NRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(pq)}(nj, nj, njt, et,
+    NRMJumpAggregation{T, S, F1, affecttype, RNG, typeof(dg), typeof(pq), R}(nj, nj, njt, et,
         crs, sr, maj,
         rs, affs!, sps,
         rng, dg, pq)

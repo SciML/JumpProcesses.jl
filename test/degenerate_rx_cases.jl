@@ -137,3 +137,82 @@ js = JumpSet(maj1, maj2)
 @test all(getfield(maj, fn) == getfield(js.massaction_jump, fn)
 for fn in [:scaled_rates, :reactant_stoch, :net_stoch])
 @test all(maj.param_mapper.param_idxs .== js.massaction_jump.param_mapper.param_idxs)
+
+# Construction-time index validation (species / dependency maps).
+@testset "JumpProblem index validation" begin
+    dprob = DiscreteProblem([5], (0.0, 1.0))
+
+    # net_stoch species index out of range for u0
+    maj_net = MassActionJump([1.0, 0.1], [[0 => 1], [1 => 1]],
+        [[1 => 1, 2 => 1], [1 => -1]])
+    @test_throws ArgumentError JumpProblem(dprob, Direct(), maj_net; rng)
+
+    # reactant_stoch species index out of range for u0
+    maj_reac = MassActionJump([1.0, 0.1], [[0 => 1], [3 => 1]],
+        [[1 => 1], [1 => -1]])
+    @test_throws ArgumentError JumpProblem(dprob, Direct(), maj_reac; rng)
+
+    # dep_graph entry past the discrete jump count (aggregator that consumes it)
+    r1(u, p, t) = 1.0
+    a1!(i) = (i.u[1] += 1; nothing)
+    r2(u, p, t) = 0.1 * u[1]
+    a2!(i) = (i.u[1] -= 1; nothing)
+    @test_throws ArgumentError JumpProblem(dprob, NRM(),
+        ConstantRateJump(r1, a1!), ConstantRateJump(r2, a2!);
+        dep_graph = [[1, 2, 7], [2]], rng)
+
+    # vartojumps_map / jumptovars_map out of range
+    maj_ok = MassActionJump([1.0, 0.1], [[0 => 1], [1 => 1]],
+        [[1 => 1], [1 => -1]])
+    @test_throws ArgumentError JumpProblem(dprob, RSSA(), maj_ok;
+        vartojumps_map = [[1, 2, 9]], jumptovars_map = [[1], [1]], rng)
+    @test_throws ArgumentError JumpProblem(dprob, RSSA(), maj_ok;
+        vartojumps_map = [[1, 2]], jumptovars_map = [[1], [3]], rng)
+
+    # Valid indices still construct
+    maj_ok2 = MassActionJump([1.0, 0.1], [[0 => 1], [1 => 1]],
+        [[1 => 1], [1 => -1]])
+    jp = JumpProblem(dprob, Direct(), maj_ok2; rng)
+    @test jp.massaction_jump !== nothing
+    jp2 = JumpProblem(dprob, NRM(), maj_ok2;
+        dep_graph = [[1, 2], [1, 2]], rng)
+    @test jp2.discrete_jump_aggregation !== nothing
+
+    # Aggregators that ignore dep_graph still accept unused maps
+    maj_one = MassActionJump([1.0], [[1 => 1]], [[1 => -1]])
+    jp_direct = JumpProblem(dprob, Direct(), maj_one; dep_graph = [[1, 5]], rng)
+    @test jp_direct.discrete_jump_aggregation !== nothing
+    sol_direct = solve(jp_direct, SSAStepper())
+    @test sol_direct.retcode == ReturnCode.Success
+
+    # RSSA may use a vartojumps_map shorter than length(u0) when only some species update
+    dprob2 = DiscreteProblem([10, 0], (0.0, 1.0))
+    jp_rssa = JumpProblem(dprob2, RSSA(), maj_one;
+        vartojumps_map = [[1]], jumptovars_map = [[1]], rng)
+    sol_rssa = solve(jp_rssa, SSAStepper())
+    @test sol_rssa.retcode == ReturnCode.Success
+    @test sol_rssa.u[end][2] == 0
+    @test sol_rssa.u[end][1] <= 10
+
+    # PureLeaping builds no discrete aggregation and ignores unused dep graphs
+    jp_pl = JumpProblem(dprob, PureLeaping(), maj_one; dep_graph = [[1, 5]], rng)
+    @test jp_pl.discrete_jump_aggregation === nothing
+    @test jp_pl.massaction_jump !== nothing
+
+    # Longer-than-needed maps are unused extra nodes and must still construct/solve
+    jp_long_dg = JumpProblem(dprob, NRM(), maj_ok2;
+        dep_graph = [[1, 2], [1, 2], [1]], rng)
+    sol_long_dg = solve(jp_long_dg, SSAStepper())
+    @test sol_long_dg.retcode == ReturnCode.Success
+    jp_long_jtov = JumpProblem(dprob2, RSSA(), maj_one;
+        vartojumps_map = [[1]], jumptovars_map = [[1], [1]], rng)
+    sol_long_jtov = solve(jp_long_jtov, SSAStepper())
+    @test sol_long_jtov.retcode == ReturnCode.Success
+
+    # Too-short maps remain rejected
+    @test_throws ArgumentError JumpProblem(dprob, NRM(),
+        ConstantRateJump(r1, a1!), ConstantRateJump(r2, a2!);
+        dep_graph = [[1, 2]], rng)
+    @test_throws ArgumentError JumpProblem(dprob, RSSA(), maj_ok;
+        vartojumps_map = [[1], [2]], jumptovars_map = [[1]], rng)
+end

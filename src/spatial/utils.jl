@@ -6,13 +6,19 @@ A file with helper functions for spatial simulations
 stores info for a spatial jump
 """
 struct SpatialJump{J}
-    "source location"
+    """
+    source location
+    """
     src::J
 
-    "index of jump as a hop or reaction"
+    """
+    index of jump as a hop or reaction
+    """
     jidx::Int
 
-    "destination location, equal to src for within-site reactions"
+    """
+    destination location, equal to src for within-site reactions
+    """
     dst::J
 end
 
@@ -23,18 +29,18 @@ end
 
 ######################## helper routines for all spatial SSAs ########################
 """
-    sample_jump_direct(p, site)
+    sample_jump_direct(p, site, rng)
 
 sample jump at site with direct method
 """
-function sample_jump_direct(p, site)
-    if rand(p.rng) * (total_site_rate(p.rx_rates, p.hop_rates, site)) <
+function sample_jump_direct(p, site, rng)
+    if rand(rng) * (total_site_rate(p.rx_rates, p.hop_rates, site)) <
        total_site_rx_rate(p.rx_rates, site)
-        rx = sample_rx_at_site(p.rx_rates, site, p.rng)
+        rx = sample_rx_at_site(p.rx_rates, site, rng)
         return SpatialJump(site, rx + p.numspecies, site)
     else
         species_to_diffuse,
-        target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
+        target_site = sample_hop_at_site(p.hop_rates, site, rng,
             p.spatial_system)
         return SpatialJump(site, species_to_diffuse, target_site)
     end

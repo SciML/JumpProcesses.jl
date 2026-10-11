@@ -38,10 +38,10 @@ prob = DiscreteProblem(starting_state, tspan, rates)
 hopping_constants = [hopping_rate for i in starting_state]
 # algs = [NSM(), DirectCRDirect()]
 
-function get_mean_end_state(jump_prob, Nsims)
+function get_mean_end_state(jump_prob, Nsims; rng = nothing)
     end_state = zeros(size(jump_prob.prob.u0))
     for i in 1:Nsims
-        sol = solve(jump_prob, SSAStepper())
+        sol = solve(jump_prob, SSAStepper(); rng)
         end_state .+= sol.u[end]
     end
     end_state / Nsims
@@ -52,19 +52,19 @@ grids = [CartesianGridRej(dims), Graphs.grid(dims)]
 jump_problems = JumpProblem[JumpProblem(prob, NSM(), majumps,
                                 hopping_constants = hopping_constants,
                                 spatial_system = grid,
-                                save_positions = (false, false), rng = rng)
+                                save_positions = (false, false))
                             for grid in grids]
 push!(jump_problems,
     JumpProblem(prob, DirectCRDirect(), majumps, hopping_constants = hopping_constants,
-        spatial_system = grids[1], save_positions = (false, false), rng = rng))
+        spatial_system = grids[1], save_positions = (false, false)))
 # setup flattenned jump prob
 push!(jump_problems,
     JumpProblem(prob, NRM(), majumps, hopping_constants = hopping_constants,
-        spatial_system = grids[1], save_positions = (false, false), rng = rng))
+        spatial_system = grids[1], save_positions = (false, false)))
 # test
 for spatial_jump_prob in jump_problems
-    solution = solve(spatial_jump_prob, SSAStepper())
-    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims)
+    solution = solve(spatial_jump_prob, SSAStepper(); rng)
+    mean_end_state = get_mean_end_state(spatial_jump_prob, Nsims; rng)
     mean_end_state = reshape(mean_end_state, num_species, num_nodes)
     diff = sum(mean_end_state, dims = 2) - non_spatial_mean
     for (i, d) in enumerate(diff)

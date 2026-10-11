@@ -18,8 +18,8 @@ end
 jump2 = ConstantRateJump(rate, affect!)
 
 prob = DiscreteProblem([999.0, 1.0, 0.0], (0.0, 250.0))
-jump_prob = JumpProblem(prob, Direct(), jump, jump2; rng = rng)
-integrator = init(jump_prob, FunctionMap())
+jump_prob = JumpProblem(prob, Direct(), jump, jump2)
+integrator = init(jump_prob, FunctionMap(); rng)
 
 condition(u, t, integrator) = t == 100
 function purge_affect!(integrator)
@@ -27,8 +27,8 @@ function purge_affect!(integrator)
     reset_aggregated_jumps!(integrator)
 end
 cb = DiscreteCallback(condition, purge_affect!, save_positions = (false, false))
-sol = solve(jump_prob, FunctionMap(), callback = cb, tstops = [100])
-sol = solve(jump_prob, SSAStepper(), callback = cb, tstops = [100])
+sol = solve(jump_prob, FunctionMap(); callback = cb, tstops = [100], rng)
+sol = solve(jump_prob, SSAStepper(); callback = cb, tstops = [100], rng)
 
 # test README example using the auto-solver selection runs
 let

@@ -6,10 +6,21 @@
 
 <!-- [![Coverage Status](https://coveralls.io/repos/github/SciML/JumpProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/SciML/JumpProcesses.jl?branch=master)
 [![codecov](https://codecov.io/gh/SciML/JumpProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/JumpProcesses.jl) -->
+
 <!-- [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged) -->
+
 [![Build Status](https://github.com/SciML/JumpProcesses.jl/workflows/CI/badge.svg)](https://github.com/SciML/JumpProcesses.jl/actions?query=workflow%3ACI)
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
+
+> [!WARNING]
+> **JumpProcesses 10.0 is a transitional release.** StochasticDiffEq, ModelingToolkit, and
+> Catalyst do not yet support it and cannot be installed alongside it, so environments that
+> include them will keep JumpProcesses 9.x. We recommend waiting for JumpProcesses 10.0.1,
+> which will follow once those packages are updated, unless you use JumpProcesses on its
+> own. Jump problems coupled to delay differential equations (DDEs) are not supported in
+> JumpProcesses 10.0 at this time. See [HISTORY.md](HISTORY.md) for the breaking changes in
+> 10.0.
 
 JumpProcesses.jl provides methods for simulating jump processes, known as
 stochastic simulation algorithms (SSAs), Doob's method, Gillespie methods, or
@@ -17,9 +28,7 @@ Kinetic Monte Carlo methods across different fields of science. It also enables 
 incorporation of jump processes into hybrid jump-ODE and jump-SDE models,
 including piecewise deterministic Markov processes (PDMPs) and jump diffusions.
 
-JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem,
-and one of the core solver libraries included in
-[DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl).
+JumpProcesses is a component package in the [SciML](https://sciml.ai/) ecosystem.
 
 For information on using the package,
 [see the stable documentation](https://docs.sciml.ai/JumpProcesses/stable/). Use the
@@ -38,31 +47,24 @@ The documentation includes
 
 ## Contributions welcomed!
 
-
 Contact us in sciml-bridged on Slack to discuss where to get started, the [`Help wanted`](https://github.com/SciML/JumpProcesses.jl/issues/431) issue, or just open a PR to address an open issue or add new functionality. Contributions, no matter how small, are always welcome and appreciated,
 including documentation editing/writing. See also the [contribution section](#contributing-and-getting-help).
 
 ## Installation
 
-There are two ways to install `JumpProcesses.jl`. First, users may install the meta
-`DifferentialEquations.jl` package, which installs and wraps `OrdinaryDiffEq.jl`
-for solving ODEs, `StochasticDiffEq.jl` for solving SDEs, and `JumpProcesses.jl`,
-along with a number of other useful packages for solving models involving ODEs,
-SDEs and/or jump process. This single install will provide the user with all of
-the facilities for developing and solving Jump problems.
-
-To install the `DifferentialEquations.jl` package, refer to the following link
-for complete [installation
-details](https://docs.sciml.ai/DiffEqDocs/stable/).
-
-If the user wishes to separately install the `JumpProcesses.jl` library, which is a
-lighter dependency than `DifferentialEquations.jl`, then the following code will
-install `JumpProcesses.jl` using the Julia package manager:
+Install `JumpProcesses.jl` with the Julia package manager:
 
 ```julia
 using Pkg
 Pkg.add("JumpProcesses")
 ```
+
+`JumpProcesses.jl` includes `SSAStepper` for pure jump processes. To couple jumps to ODEs
+or SDEs, also install a solver package, for example `OrdinaryDiffEqTsit5` for the `Tsit5`
+ODE solver or `StochasticDiffEqHighOrder` for the `SRIW1` SDE solver. See the
+[OrdinaryDiffEq.jl](https://docs.sciml.ai/OrdinaryDiffEq/stable/) and
+[StochasticDiffEq.jl](https://docs.sciml.ai/DiffEqDocs/stable/solvers/sde_solve/)
+documentation for the available solvers and the packages that provide them.
 
 ## Examples
 
@@ -131,7 +133,7 @@ Let's solve an ODE for exponential growth, but coupled to a constant rate jump
 (Poisson) process that halves the solution each time it fires
 
 ```julia
-using DifferentialEquations, Plots
+using JumpProcesses, OrdinaryDiffEqTsit5, Plots
 
 # du/dt = u is the ODE part
 function f(du, u, p, t)
@@ -167,8 +169,9 @@ plot(sol)
     for guidance on PRs, issues, and other matters relating to contributing to SciML.
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
+
   - There are a few community forums for getting help and asking questions:
-    
+
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the

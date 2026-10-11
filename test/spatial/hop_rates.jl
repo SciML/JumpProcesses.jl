@@ -121,7 +121,8 @@ for hop_rates in hop_rates_structs
             target_propensities[target] = sum([hop_constants[species, site][i]
                                                for species in 1:num_species])
         end
-        statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u, site, g, rng, rel_tol)
+        statistical_test(hop_rates, spec_propensities, target_propensities,
+            num_species, u, site, g, rng, rel_tol)
     end
 end
 test_reset(hop_rates, num_nodes)
@@ -152,7 +153,8 @@ for hop_rates in hop_rates_structs
                                                site_hop_constants[site][i]
                                                for species in 1:num_species])
         end
-        statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u, site, g, rng, rel_tol)
+        statistical_test(hop_rates, spec_propensities, target_propensities,
+            num_species, u, site, g, rng, rel_tol)
     end
 end
 test_reset(hop_rates, num_nodes)
@@ -175,14 +177,16 @@ hop_rates_structs = [
 for hop_rates in hop_rates_structs
     show(io, "text/plain", hop_rates)
     for site in 1:num_nodes
-        spec_propensities = [species_hop_constants[species, site] * sum(site_hop_constants[site]) for species in 1:num_species]
+        spec_propensities = [species_hop_constants[species, site] *
+                             sum(site_hop_constants[site]) for species in 1:num_species]
         target_propensities = Dict{Int, Float64}()
         for (i, target) in enumerate(JP.neighbors(g, site))
             target_propensities[target] = sum([species_hop_constants[species, site] *
                                                site_hop_constants[site][i]
                                                for species in 1:num_species])
         end
-        statistical_test(hop_rates, spec_propensities, target_propensities, num_species, u, site, g, rng, rel_tol)
+        statistical_test(hop_rates, spec_propensities, target_propensities,
+            num_species, u, site, g, rng, rel_tol)
     end
 end
 test_reset(hop_rates, num_nodes)

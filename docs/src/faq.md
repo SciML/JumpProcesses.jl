@@ -22,7 +22,22 @@ instead of an ODE/SDE time stepper can give a significant performance boost.
 In [Remaking `JumpProblem`s](@ref) we show how to modify parameters, the initial
 condition, and other components of a generated `JumpProblem`. This can be useful
 when trying to call `solve` many times while avoiding reallocations of the
-internal aggregators for each new parameter value or initial condition.
+internal aggregators for each new parameter value or initial condition. Remade
+problems share the original's jump state, so they can be solved one after
+another but not concurrently. The
+[ensembles and problem reuse tutorial](@ref ensembles_problem_reuse) shows how
+to combine `remake` with `EnsembleProblem`s safely.
+
+## Can I solve the same `JumpProblem` from multiple threads or tasks?
+
+Not directly. Solvers owned by JumpProcesses reuse a `JumpProblem`'s jump
+aggregator and callbacks rather than copying them, so one problem supports one
+active solve or integrator at a time. For concurrent solves, give each task its
+own `deepcopy` of the problem, made once per task and reused for that task's
+solves, or use an `EnsembleProblem`, which makes these copies for you. Problems
+created with `remake` share the original's jump state and are not independent.
+See [Jump state ownership and problem reuse](@ref jump_state_ownership) and the
+[ensembles and problem reuse tutorial](@ref ensembles_problem_reuse).
 
 ## How can I define collections of many different jumps and pass them to `JumpProblem`?
 
@@ -55,21 +70,31 @@ jset = JumpSet(; constant_jumps = cjvec, variable_jumps = vjtuple,
 
 ## How can I set the random number generator used in the jump process sampling algorithms (SSAs)?
 
-Random number generators can be passed to `JumpProblem` via the `rng` keyword
+Random number generators can be passed to `solve` or `init` via the `rng` keyword
 argument. Continuing the previous example:
 
 ```julia
-#] add RandomNumbers
-using RandomNumbers
-jprob = JumpProblem(dprob, Direct(), maj,
-    rng = Xorshifts.Xoroshiro128Star(rand(UInt64)))
+using Random
+jprob = JumpProblem(dprob, Direct(), maj)
+sol = solve(jprob, SSAStepper(); rng = Xoshiro(1234))
 ```
 
-uses the `Xoroshiro128Star` generator from
-[RandomNumbers.jl](https://github.com/JuliaRandom/RandomNumbers.jl).
+Any `AbstractRNG` can be used. For example, to use a generator from
+[StableRNGs.jl](https://github.com/JuliaRandom/StableRNGs.jl):
 
-On version 1.7 and up, JumpProcesses uses Julia's built-in random number generator by
-default. On versions below 1.7 it uses `Xoroshiro128Star`.
+```julia
+using StableRNGs
+sol = solve(jprob, SSAStepper(); rng = StableRNG(1234))
+```
+
+A `seed` keyword argument is also supported as a shorthand for creating a `Xoshiro`
+generator: `solve(jprob, SSAStepper(); seed = 1234)`.
+
+By default, `SSAStepper`, the OrdinaryDiffEq ODE/DAE pathway, and all five CPU
+tau-leaping solvers use Julia's built-in `Random.default_rng()`.
+SDE/RODE solvers follow StochasticDiffEq's RNG/seed policy, and GPU kernel
+ensembles have backend-specific controls; see
+[Random Number Generator Control](@ref).
 
 ## What are these aggregators and aggregations in JumpProcesses?
 
@@ -122,10 +147,25 @@ Callbacks can be used with `ConstantRateJump`s, `MassActionJump`s, and
 discrete callbacks can be used (otherwise a different time stepper is needed).
 When using an ODE or SDE time stepper, any callback should work.
 
+Pass callbacks to `solve` or `init`, as in the example below, or to the
+`JumpProblem` constructor with its `callback` keyword.
+
+!!! warning "Callbacks on the wrapped problem are not supported"
+
+    Do not store callbacks on the problem a `JumpProblem` wraps, such as the
+    `DiscreteProblem` or `ODEProblem` passed to `JumpProblem`. The `JumpProblem`
+    constructor raises an `ArgumentError` if that problem stores a `callback`; see
+    [Defining a `JumpProblem`](@ref defining_jump_problem).
+
 *Note, when modifying `u` or `p` within a callback, you must call
 [`reset_aggregated_jumps!`](@ref) after making updates.* This ensures that the
 underlying jump simulation algorithms know to reinitialize their internal data
 structures. Omitting this call will lead to incorrect behavior!
+
+The reset refreshes parameter-mapped mass-action working rates from the current
+parameters. The former `update_jump_params` keyword is no longer accepted; no
+flag is needed. Fixed coefficients remain fixed. See the
+[10.0 migration guide](@ref migration_v10) for mapper and constructor changes.
 
 A simple example that uses a `MassActionJump` and changes the parameters at a
 specified time in the simulation using a `DiscreteCallback` is
@@ -160,10 +200,34 @@ of `u[1]`, giving
 
 When using an ODE or SDE time-stepper that conforms to the [integrator
 interface](https://docs.sciml.ai/DiffEqDocs/stable/basics/integrator/), one
-can simply use `integrator.uprev`. For efficiency reasons, the pure jump
-[`SSAStepper`](@ref) integrator does not have such a field. If one needs
-solution components at earlier times, one can save them within the callback
-condition by making a functor:
+can simply use `integrator.uprev`. The pure jump [`SSAStepper`](@ref) provides
+the same field when the problem is solved with `SSAStepper(; save_uprev = true)`:
+`integrator.uprev` then holds the state at the start of the current step, at
+time `integrator.tprev`, and the integrator can be evaluated anywhere in
+`[integrator.tprev, integrator.t]`. For example, to remove one unit of `u[4]`
+whenever `u[2]` decreases:
+
+```julia
+condition(u, t, integrator) = u[2] < integrator.uprev[2]
+function affect!(integrator)
+    integrator.u[4] -= 1
+    reset_aggregated_jumps!(integrator)
+    nothing
+end
+sol = solve(jprob, SSAStepper(; save_uprev = true);
+    callback = DiscreteCallback(condition, affect!))
+```
+
+The option also enables `get_tmp_cache`, which callbacks that evaluate the
+integrator in place need, such as a `SavingCallback` or `FunctionCallingCallback`
+with save times for a vector state. Keeping `uprev` copies the state on every
+step, so `SSAStepper()` does not; see [Saving with callbacks and evaluating the
+integrator](@ref ssa_integrator_evaluation) for the trade-offs, and for the
+alternative of passing the save times as `tstops`, which needs neither.
+
+If only a few components are needed, storing them in the callback avoids copying
+the whole state on every step. For example, a functor can record the previous
+value of `u[2]`:
 
 ```julia
 # stores the previous value of u[2] and represents the callback functions
@@ -186,9 +250,20 @@ end
 # affect!
 function (upc::UprevCondition)(integrator)
     integrator.u[4] -= 1
+    reset_aggregated_jumps!(integrator)
     nothing
 end
 
 upc = UprevCondition(u0[2])
 cb = DiscreteCallback(upc, upc)
 ```
+
+## Which state types can I use with `SSAStepper`?
+
+`SSAStepper` fully supports a `Vector` or an `SVector` of integers or floats, and,
+for spatial problems, a species × sites `Matrix{Int}`, which `NSM` and
+`DirectCRDirect` keep and other aggregators flatten into a `Vector`. Models without `MassActionJump`s can also use an integer or float
+scalar state, with every non-spatial aggregator except `RSSA` and `RSSACR`.
+Bounded `VariableRateJump`s require `Coevolve`. Other state types, such as nested
+arrays, are not supported, even when a model built from user-written jumps appears
+to work. See [Supported state types](@ref ssa_state_types) for details.

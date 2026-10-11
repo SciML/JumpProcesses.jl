@@ -5,10 +5,12 @@ pages = ["index.md",
         "tutorials/discrete_stochastic_example.md",
         "tutorials/point_process_simulation.md",
         "tutorials/jump_diffusion.md",
-        "tutorials/spatial.md"],
+        "tutorials/spatial.md",
+        "tutorials/ensembles_and_problem_reuse.md"],
     "Applications" => Any["applications/advanced_point_process.md"],
     "Type Documentation" => Any["Jumps, JumpProblem, and Aggregators" => "jump_types.md",
         "Jump solvers" => "jump_solve.md"],
     "FAQ" => "faq.md",
+    "Migrating to 10.0" => "migration.md",
     "API" => "api.md"
 ]

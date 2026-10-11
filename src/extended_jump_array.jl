@@ -54,17 +54,23 @@ sol = solve(jprob, Tsit5())
   - In a system with `VariableRateJump`s all callback, `ConstantRateJump`, and
     `VariableRateJump` `affect!` functions will receive integrators with
     `integrator.u` an `ExtendedJumpArray`.
+
   - As such, `affect!` functions that wish to modify the state via vector
     operations should use `ueja.u.u` to obtain the aliased state object.
+
   - `:u` and `:jump_u` always refer to the `ExtendedJumpArray` fields. Any other
     property access (and `propertynames`) is forwarded to the wrapped state
     `ueja.u`, so e.g. `ueja.x` works when `ueja.u` is an `ArrayPartition`.
 """
 struct ExtendedJumpArray{T3 <: Number, T1, T <: AbstractArray{T3, T1}, T2} <:
        AbstractArray{T3, 1}
-    """The current state."""
+    """
+    The current state.
+    """
     u::T
-    """The current rate (i.e. hazard, intensity, or propensity) values for the `VariableRateJump`s."""
+    """
+    The current rate (i.e. hazard, intensity, or propensity) values for the `VariableRateJump`s.
+    """
     jump_u::T2
 end
 
@@ -122,11 +128,14 @@ function _mul_extended_jump_array!(c::ExtendedJumpArray, A::AbstractVecOrMat,
     end
 end
 
-LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector) =
+function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector)
     _mul_extended_jump_array!(c, A, u)
+end
 
-LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
-    u::AbstractVector) = _mul_extended_jump_array!(c, A, u)
+function LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
+        u::AbstractVector)
+    _mul_extended_jump_array!(c, A, u)
+end
 
 # Whole-array copies stay ExtendedJumpArrays. A subset getindex asks `similar`
 # for a container of the index shape, which no longer matches this array's axes;

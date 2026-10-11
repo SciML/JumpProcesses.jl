@@ -1,7 +1,7 @@
 name = "JumpProcesses"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
-version = "9.33.1"
+version = "10.0.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -52,21 +52,34 @@ OrdinaryDiffEq = "7.0.0, 7"
 OrdinaryDiffEqCore = "4.3.0, 4"
 OrdinaryDiffEqFunctionMap = "2.0.0, 2"
 Pkg = "1"
-PoissonRandom = "0.4"
+PoissonRandom = "0.4.8"
 PrecompileTools = "1.2.1"
 Random = "1"
 RecursiveArrayTools = "4.3.0, 4"
 SafeTestsets = "0.1"
-SciMLBase = "3.18.0, 3.1"
+SciMLBase = "3.34"
 SciMLTesting = "2.8"
 SimpleNonlinearSolve = "2, 3"
 StableRNGs = "1"
 StaticArrays = "1.9.18"
 Statistics = "1"
 StochasticDiffEq = "7.0.0, 7"
+StochasticDiffEqCore = "2.2.3"
+StochasticDiffEqImplicit = "2.2.1"
+StochasticDiffEqLeaping = "2.1.0"
 SymbolicIndexingInterface = "0.3.48"
 Test = "1"
 julia = "1.10"
+
+[sources]
+# Temporary: tests use a commit of the StochasticDiffEq branch for JumpProcesses 10
+# (OrdinaryDiffEq.jl#4836), which removes the need for a JumpProcesses StochasticDiffEqCore
+# extension. Implicit and Leaping are pinned too, since their registered versions do not
+# admit JumpProcesses 10. Remove when those releases are registered. Julia 1.10 ignores
+# [sources]; see test/test_groups.toml.
+StochasticDiffEqCore = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqCore"}
+StochasticDiffEqImplicit = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqImplicit"}
+StochasticDiffEqLeaping = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqLeaping"}
 
 [extras]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -83,7 +96,10 @@ SciMLTesting = "09d9d899-5365-40a9-917a-5f67fddea283"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StochasticDiffEq = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
+StochasticDiffEqCore = "19c5a474-6cd1-4a5f-be79-46dc34e54d7f"
+StochasticDiffEqImplicit = "5080b986-4c76-4669-b5dc-373a41579d5b"
+StochasticDiffEqLeaping = "aefaaa88-39f2-4e89-b162-d61b7e8cc81b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Adapt", "FastBroadcast", "ForwardDiff", "KernelAbstractions", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "SciMLTesting", "StableRNGs", "Statistics", "StochasticDiffEq", "Test"]
+test = ["Adapt", "FastBroadcast", "ForwardDiff", "KernelAbstractions", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "SciMLTesting", "StableRNGs", "Statistics", "StochasticDiffEq", "StochasticDiffEqCore", "StochasticDiffEqImplicit", "StochasticDiffEqLeaping", "Test"]

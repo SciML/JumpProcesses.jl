@@ -27,6 +27,7 @@ installed via
 using Pkg
 Pkg.add("JumpProcesses")
 Pkg.add("Plots")
+Pkg.add("SciMLBase")
 ```
 
 Let's also load our packages and set some defaults for our plot formatting
@@ -317,20 +318,18 @@ are essentially defining a combined ODE-jump process, i.e., a [piecewise
 deterministic Markov
 process](https://en.wikipedia.org/wiki/Piecewise-deterministic_Markov_process),
 but one where the ODE is trivial and does not change the state. To use this
-problem type and the ODE solvers, we first load `OrdinaryDiffEq.jl` or
-`DifferentialEquations.jl`. If neither is installed, we first
+problem type we need an ODE solver; here we use `Tsit5` from the
+`OrdinaryDiffEqTsit5` package. If it is not installed, we first
 
 ```julia
 using Pkg
-Pkg.add("OrdinaryDiffEq")
-# or Pkg.add("DifferentialEquations")
+Pkg.add("OrdinaryDiffEqTsit5")
 ```
 
 and then load it via
 
 ```@example tut1
-using OrdinaryDiffEq
-# or using DifferentialEquations
+using OrdinaryDiffEqTsit5
 ```
 
 We can then construct our ODE problem with a trivial ODE derivative component.
@@ -371,29 +370,24 @@ with ``N(t)`` a Poisson counting process with constant transition rate
 ``\lambda``, and the ``C_i`` independent and identical samples from a uniform
 distribution over ``\{-1,1\}``. We can simulate such a process as follows.
 
-We first ensure that we use the same random number generator as JumpProcesses. We
-can either pass one as an input to [`JumpProblem`](@ref) via the `rng` keyword
-argument, and make sure it is the same one we use in our `affect!` function, or
-we can just use the default generator chosen by JumpProcesses if one is not
-specified, `JumpProcesses.DEFAULT_RNG`. Let's do the latter
-
-```@example tut1
-rng = JumpProcesses.DEFAULT_RNG
-```
+The affect function can use `SciMLBase.get_rng(integrator)` to draw from the
+same random number generator as the jump solver. Custom RNGs can be passed to
+`solve` or `init` via the `rng` keyword argument.
 
 Let's assume `u[1]` is ``N(t)`` and `u[2]` is ``G(t)``. We now proceed as in the
 previous examples
 
 ```@example tut1
+using SciMLBase
+
 rate3(u, p, t) = p.λ
 
-# define the affect function via a closure
-affect3! = integrator -> let rng = rng
+function affect3!(integrator)
     # N(t) <-- N(t) + 1
     integrator.u[1] += 1
 
     # G(t) <-- G(t) + C_{N(t)}
-    integrator.u[2] += rand(rng, (-1, 1))
+    integrator.u[2] += rand(SciMLBase.get_rng(integrator), (-1, 1))
     nothing
 end
 crj = ConstantRateJump(rate3, affect3!)

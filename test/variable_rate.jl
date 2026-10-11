@@ -30,11 +30,11 @@ f = function (du, u, p, t)
 end
 
 prob = ODEProblem(f, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
-integrator = init(jump_prob, Tsit5())
-sol = solve(jump_prob, Tsit5())
-sol = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
-sol = solve(jump_prob, Rosenbrock23())
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM())
+integrator = init(jump_prob, Tsit5(); rng)
+sol = solve(jump_prob, Tsit5(); rng)
+sol = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()); rng)
+sol = solve(jump_prob, Rosenbrock23(); rng)
 
 function vrfrm_trajectory(default_seed)
     task = @task begin
@@ -45,9 +45,8 @@ function vrfrm_trajectory(default_seed)
             integrator -> (integrator.u[1] += 1))
         jump2 = VariableRateJump((u, p, t) -> 10.0,
             integrator -> (integrator.u[1] += 1))
-        jump_prob = JumpProblem(ode_prob, jump1, jump2; vr_aggregator = VR_FRM(),
-            rng = local_rng)
-        solve(jump_prob, Tsit5(); saveat = 0.0:0.05:1.0).u
+        jump_prob = JumpProblem(ode_prob, jump1, jump2; vr_aggregator = VR_FRM())
+        solve(jump_prob, Tsit5(); saveat = 0.0:0.05:1.0, rng = local_rng).u
     end
     schedule(task)
     return fetch(task)
@@ -55,9 +54,9 @@ end
 
 @test vrfrm_trajectory(123) == vrfrm_trajectory(456)
 
-jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
-integrator = init(jump_prob_gill, Tsit5())
-sol_gill = solve(jump_prob_gill, Tsit5())
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct())
+integrator = init(jump_prob_gill, Tsit5(); rng)
+sol_gill = solve(jump_prob_gill, Tsit5(); rng)
 sol_gill = solve(jump_prob, Rosenbrock23(autodiff = AutoFiniteDiff()))
 sol_gill = solve(jump_prob, Rosenbrock23())
 @test maximum([sol.u[i][2] for i in 1:length(sol.u)]) <= 1e-12
@@ -67,10 +66,10 @@ g = function (du, u, p, t)
     du[1] = u[1]
 end
 prob = SDEProblem(f, g, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng = rng)
-sol = solve(jump_prob, SRIW1())
-jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng = rng)
-sol_gill = solve(jump_prob_gill, SRIW1())
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM())
+sol = solve(jump_prob, SRIW1(); rng)
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct())
+sol_gill = solve(jump_prob_gill, SRIW1(); rng)
 @test maximum([sol.u[i][2] for i in 1:length(sol.u)]) <= 1e-12
 @test maximum([sol.u[i][3] for i in 1:length(sol.u)]) <= 1e-12
 
@@ -93,10 +92,10 @@ function affect_switch!(integrator)
 end
 jump_switch = VariableRateJump(rate_switch, affect_switch!)
 prob = SDEProblem(ff, gg, ones(2), (0.0, 1.0), 0, noise_rate_prototype = zeros(2, 2))
-jump_prob = JumpProblem(prob, jump_switch; vr_aggregator = VR_FRM(), rng)
-jump_prob_gill = JumpProblem(prob, jump_switch; vr_aggregator = VR_Direct(), rng)
-sol = solve(jump_prob, SRA1(), dt = 1.0)
-sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0)
+jump_prob = JumpProblem(prob, jump_switch; vr_aggregator = VR_FRM())
+jump_prob_gill = JumpProblem(prob, jump_switch; vr_aggregator = VR_Direct())
+sol = solve(jump_prob, SRA1(), dt = 1.0; rng)
+sol_gill = solve(jump_prob_gill, SRA1(), dt = 1.0; rng)
 
 ## Some integration tests
 
@@ -107,10 +106,10 @@ prob = ODEProblem(f2, [0.2], (0.0, 10.0))
 rate2(u, p, t) = 2
 affect2!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = ConstantRateJump(rate2, affect2!)
-jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
-jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
-sol = solve(jump_prob, Tsit5())
-sol_gill = solve(jump_prob_gill, Tsit5())
+jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM())
+jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct())
+sol = solve(jump_prob, Tsit5(); rng)
+sol_gill = solve(jump_prob_gill, Tsit5(); rng)
 sol(4.0)
 sol.u[4]
 
@@ -118,10 +117,10 @@ rate2b(u, p, t) = u[1]
 affect2b!(integrator) = (integrator.u[1] = integrator.u[1] / 2)
 jump = VariableRateJump(rate2b, affect2b!)
 jump2 = deepcopy(jump)
-jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
-jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
-sol = solve(jump_prob, Tsit5())
-sol_gill = solve(jump_prob_gill, Tsit5())
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM())
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct())
+sol = solve(jump_prob, Tsit5(); rng)
+sol_gill = solve(jump_prob_gill, Tsit5(); rng)
 sol(4.0)
 sol.u[4]
 
@@ -129,10 +128,10 @@ function g2(du, u, p, t)
     du[1] = u[1]
 end
 prob = SDEProblem(f2, g2, [0.2], (0.0, 10.0))
-jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM(), rng)
-jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct(), rng)
-sol = solve(jump_prob, SRIW1())
-sol_gill = solve(jump_prob_gill, SRIW1())
+jump_prob = JumpProblem(prob, jump, jump2; vr_aggregator = VR_FRM())
+jump_prob_gill = JumpProblem(prob, jump, jump2; vr_aggregator = VR_Direct())
+sol = solve(jump_prob, SRIW1(); rng)
+sol_gill = solve(jump_prob_gill, SRIW1(); rng)
 sol(4.0)
 sol.u[4]
 
@@ -148,10 +147,10 @@ function affect3!(integrator)
         integrator.u[4] = 1)
 end
 jump = VariableRateJump(rate3, affect3!)
-jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
-jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
-sol = solve(jump_prob, Tsit5())
-sol_gill = solve(jump_prob_gill, Tsit5())
+jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM())
+jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct())
+sol = solve(jump_prob, Tsit5(); rng)
+sol_gill = solve(jump_prob_gill, Tsit5(); rng)
 
 # test for https://discourse.julialang.org/t/differentialequations-jl-package-variable-rate-jumps-with-complex-variables/80366/2
 function f4(dx, x, p, t)
@@ -165,10 +164,10 @@ jump = VariableRateJump(rate4, affect4!)
 x₀ = 1.0 + 0.0im
 Δt = (0.0, 6.0)
 prob = ODEProblem(f4, [x₀], Δt)
-jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM(), rng)
-jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct(), rng)
-sol = solve(jump_prob, Tsit5())
-sol_gill = solve(jump_prob_gill, Tsit5())
+jump_prob = JumpProblem(prob, jump; vr_aggregator = VR_FRM())
+jump_prob_gill = JumpProblem(prob, jump; vr_aggregator = VR_Direct())
+sol = solve(jump_prob, Tsit5(); rng)
+sol_gill = solve(jump_prob_gill, Tsit5(); rng)
 
 # Out of place test
 drift(x, p, t) = p * x
@@ -177,7 +176,7 @@ affect!2(integrator) = (integrator.u ./= 2; nothing)
 x0 = rand(2)
 prob = ODEProblem(drift, x0, (0.0, 10.0), 2.0)
 jump = VariableRateJump(rate2c, affect!2)
-jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM(), rng)
+jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
 
 # test to check lack of dependency graphs is caught in Coevolve for systems with non-maj
 # jumps
@@ -275,12 +274,12 @@ let
     d_jump = VariableRateJump(d_rate, death!)
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
-    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VR_FRM(), rng)
+    sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator = VR_FRM())
     # After callback initialize, integrator.u.jump_u should have unique thresholds
     # that differ between sequential solves (RNG advances each time).
     jump_u_old = zeros(length(sjm_prob.prob.u0.jump_u))
     for i in 1:Nsims
-        integrator = init(sjm_prob, Tsit5(); saveat = tspan[2])
+        integrator = init(sjm_prob, Tsit5(); saveat = tspan[2], rng)
         @test allunique(integrator.u.jump_u)
         @test integrator.u.jump_u != jump_u_old
         jump_u_old .= integrator.u.jump_u
@@ -290,9 +289,9 @@ end
 
 # accuracy test based on 
 # https://github.com/SciML/JumpProcesses.jl/issues/320
-function getmean(Nsims, prob, alg, tsave, seed)
+function getmean(Nsims, prob, alg, tsave, rng)
     umean = zeros(length(tsave))
-    integrator = init(prob, alg; saveat = tsave, seed)
+    integrator = init(prob, alg; saveat = tsave, rng)
     solve!(integrator)
     for j in eachindex(umean)
         umean[j] += integrator.sol.u[j][1]
@@ -309,8 +308,7 @@ function getmean(Nsims, prob, alg, tsave, seed)
 end
 
 let
-    seed = 12345
-    rng = StableRNG(seed)
+    rng_seed = 12345
     b = 2.0
     d = 1.0
     n0 = 1.0
@@ -342,12 +340,12 @@ let
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     tsave = range(tspan[1], tspan[2]; step = 0.1)
     for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
-        sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator, rng)
+        sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
-            umean = getmean(Nsims, sjm_prob, alg, tsave, seed)
+            umean = getmean(Nsims, sjm_prob, alg, tsave, StableRNG(rng_seed))
             @test all(abs.(umean .- n.(tsave)) .< 0.05 * n.(tsave))
-            seed += Nsims
+            rng_seed += Nsims
         end
     end
 end
@@ -357,10 +355,10 @@ end
 # Function to run ensemble and compute statistics
 function run_ensemble(prob, alg, jumps...; vr_aggregator = VR_FRM(), Nsims = 8000)
     rng = StableRNG(12345)
-    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator, rng)
+    jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator)
     total = 0.0
     for i in 1:Nsims
-        sol = solve(jump_prob, alg; save_everystep = false)
+        sol = solve(jump_prob, alg; save_everystep = false, rng)
         total += sol.u[end][1]
     end
     return total / Nsims
@@ -458,10 +456,10 @@ let
         jump_counts = zeros(Int, Nsims)
         p = [0.0, 0.0, 0]
         prob = ODEProblem(f, u0, tspan, p)
-        jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator, rng)
+        jump_prob = JumpProblem(prob, Direct(), birth_jump, death_jump; vr_aggregator)
 
         for i in 1:Nsims
-            sol = solve(jump_prob, Tsit5(); save_everystep = false)
+            sol = solve(jump_prob, Tsit5(); save_everystep = false, rng)
             jump_counts[i] = jump_prob.prob.p[3]
             jump_prob.prob.p[3] = 0
         end
@@ -516,8 +514,8 @@ let
     ]
 
     for agg in aggregators
-        local jprob = JumpProblem(prob, agg, maj, vrj; rng)
-        local sol = solve(jprob, Tsit5())
+        local jprob = JumpProblem(prob, agg, maj, vrj)
+        local sol = solve(jprob, Tsit5(); rng)
         @test SciMLBase.successful_retcode(sol)
         # Verify conservation: total population should be conserved
         @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
@@ -547,8 +545,8 @@ let
     prob = ODEProblem(f!, u0, tspan)
 
     # Test with Direct aggregator (most common case)
-    jprob = JumpProblem(prob, Direct(), crj, vrj; rng)
-    sol = solve(jprob, Tsit5())
+    jprob = JumpProblem(prob, Direct(), crj, vrj)
+    sol = solve(jprob, Tsit5(); rng)
     @test SciMLBase.successful_retcode(sol)
     @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
 end
@@ -579,8 +577,8 @@ let
 
     # Test RSSA and RSSACR specifically (the aggregators that had the bug)
     for agg in [RSSA(), RSSACR()]
-        local jprob = JumpProblem(prob, agg, maj, vrj1, vrj2; rng)
-        local sol = solve(jprob, Tsit5())
+        local jprob = JumpProblem(prob, agg, maj, vrj1, vrj2)
+        local sol = solve(jprob, Tsit5(); rng)
         @test SciMLBase.successful_retcode(sol)
         @test sol.u[end][1] + sol.u[end][2] ≈ u0[1] + u0[2]
     end
@@ -636,9 +634,9 @@ let
     u0 = [150.0]
     tspan = (0.0, 10.0)
     sde_prob = SDEProblem(f!, g!, u0, tspan, p; noise_rate_prototype = zeros(1, 2))
-    jprob = JumpProblem(sde_prob, Direct(), birth, death; vr_aggregator = VR_FRM(), rng)
+    jprob = JumpProblem(sde_prob, Direct(), birth, death; vr_aggregator = VR_FRM())
 
-    sol = solve(jprob, LambaEM(); callback = switch_cb, adaptive = true)
+    sol = solve(jprob, LambaEM(); rng, callback = switch_cb, adaptive = true)
     @test SciMLBase.successful_retcode(sol)
     @test sol.t[end] == tspan[2]
     # The bug drove `jump_u` past ±1e15 within a few steps; with the fix it

@@ -13,7 +13,7 @@ const REEXPORTED_API = (
     :ReturnCode, :SDEFunction, :SDEProblem, :VectorContinuousCallback, :add_saveat!,
     :add_tstop!, :derivative_discontinuity!, :init, :neighbors, :outdegree, :reinit!,
     :remake, :savevalues!, :set_proposed_dt!, :set_t!, :set_u!, :solve, :solve!, :step!,
-    :successful_retcode, :terminate!, :u_modified!,
+    :successful_retcode, :terminate!, :u_modified!
 )
 
 # The ExplicitImports ignore-lists below are names owned by other packages whose
@@ -28,33 +28,33 @@ run_qa(
         # Names not (yet) declared public in their owner package's released API.
         all_qualified_accesses_are_public = (;
             ignore = (
-                # Base / Base.Broadcast / Base.FastMath internals
-                Symbol("@pure"), :BroadcastStyle, :Broadcasted, :Cartesian,
-                :DefaultArrayStyle, :FastMath, :Unknown, :result_style, :sqrt_fast,
-                # SciMLBase non-public
-                :ConstantInterpolation, :DISCRETE_INPLACE_DEFAULT,
-                :__init, :__solve, :get_colorizers, :isdenseplot,
-                :parameterless_type, :plottable_indices, :save_discretes_if_enabled!,
-                :save_final_discretes!, :solution_new_retcode, :unwrapped_f,
-                :updated_u0_p,
-                # DiffEqBase non-public
-                :Stats,
-                # ForwardDiff: Dual is the AD number type used in
-                # ext/JumpProcessesForwardDiffExt.jl. It is exported but not
-                # declared `public` in ForwardDiff's released API.
-                :Dual,
-                # LinearAlgebra non-public
-                :AbstractQ, :AdjointQ, :QRPackedQ,
-                # FunctionWrappers non-public
-                :FunctionWrapper,
-            ),
+            # Base / Base.Broadcast / Base.FastMath internals
+            Symbol("@pure"), :BroadcastStyle, :Broadcasted, :Cartesian,
+            :DefaultArrayStyle, :FastMath, :Unknown, :result_style, :sqrt_fast,
+            # SciMLBase non-public
+            :ConstantInterpolation, :DISCRETE_INPLACE_DEFAULT,
+            :__init, :__solve, :get_colorizers, :isdenseplot,
+            :parameterless_type, :plottable_indices, :save_discretes_if_enabled!,
+            :save_final_discretes!, :solution_new_retcode, :unwrapped_f,
+            :updated_u0_p,
+            # DiffEqBase non-public
+            :Stats,
+            # ForwardDiff: Dual is the AD number type used in
+            # ext/JumpProcessesForwardDiffExt.jl. It is exported but not
+            # declared `public` in ForwardDiff's released API.
+            :Dual,
+            # LinearAlgebra non-public
+            :AbstractQ, :AdjointQ, :QRPackedQ,
+            # FunctionWrappers non-public
+            :FunctionWrapper
+        ),
         ),
         all_explicit_imports_are_public = (;
             ignore = (
-                :add_fast,                      # Base.FastMath non-public
-                :gauss_points, :gauss_weights,  # DiffEqCallbacks non-public
-                :plot_indices,                  # SciMLBase non-public
-            ),
+            :add_fast,                      # Base.FastMath non-public
+            :gauss_points, :gauss_weights,  # DiffEqCallbacks non-public
+            :plot_indices                  # SciMLBase non-public
         ),
+        )
     )
 )

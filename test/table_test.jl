@@ -1,5 +1,6 @@
 using DiffEqBase, JumpProcesses
 using Test
+using StableRNGs
 const DJ = JumpProcesses
 
 # test data
@@ -53,11 +54,12 @@ priorities[10] = 0.0
 @test pt.groups[1].numpids == 2
 
 # test sampling
+rng = StableRNG(12345)
 cnt = 0
 Nsamps = Int(1e7)
 for i in 1:Nsamps
     global cnt
-    pid = DJ.sample(pt, priorities)
+    pid = DJ.sample(pt, priorities, rng)
     (pid == 8) && (cnt += 1)
 end
 @test abs(cnt // Nsamps - 0.008968535978248484) / 0.008968535978248484 < 0.05

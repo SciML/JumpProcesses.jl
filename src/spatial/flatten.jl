@@ -15,7 +15,9 @@ function flatten(ma_jump, prob::DiscreteProblem, spatial_system, hopping_constan
     netstoch = ma_jump.net_stoch
     reactstoch = ma_jump.reactant_stoch
     rx_rates = if isa(ma_jump, MassActionJump)
-        ma_jump.scaled_rates
+        rates_init = Vector{typeof(tspan[1])}(undef, get_num_majumps(ma_jump))
+        fill_scaled_rates!(rates_init, ma_jump, prob.p)
+        rates_init
     elseif isa(ma_jump, SpatialMassActionJump)
         num_nodes = num_sites(spatial_system)
         if isnothing(ma_jump.uniform_rates) && isnothing(ma_jump.spatial_rates)
@@ -49,7 +51,8 @@ function flatten(netstoch::AbstractArray, reactstoch::AbstractArray,
     hop_constants = Matrix{Vector{F}}(undef, size(hopping_constants))
     for ci in CartesianIndices(hop_constants)
         (species, site) = Tuple(ci)
-        hop_constants[ci] = hopping_constants[species, site] * ones(outdegree(spatial_system, site))
+        hop_constants[ci] = hopping_constants[species, site] *
+                            ones(outdegree(spatial_system, site))
     end
     flatten(netstoch, reactstoch, rx_rates, spatial_system, u0, tspan, hop_constants;
         kwargs...)

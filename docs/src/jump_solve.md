@@ -62,6 +62,38 @@ algorithms are optimized for pure jump problems.
     [`SSAStepper`](@ref) generated-solution uses piecewise constant
     interpolation, and can therefore exactly evaluate the sampled solution
     path at any time when only saving the post-jump state for each jump.
+    `SSAStepper` supports the common `alias` keyword argument for `u0`, `p`,
+    and `tstops`, and reuses the problem's jump state rather than copying it;
+    see [Jump state ownership and problem reuse](@ref jump_state_ownership).
+    Callbacks can only evaluate an `SSAStepper` integrator at its current time,
+    unless the problem is solved with `SSAStepper(; save_uprev = true)`; see
+    [Saving with callbacks and evaluating the integrator](@ref ssa_integrator_evaluation).
+
+### [Supported state types](@id ssa_state_types)
+
+`SSAStepper` supports the following types for the state `u`:
+
+| State `u`                                                                  | Jump types and aggregators                                                                                                                                                                                                                                                                                | Status                              |
+|:-------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------- |
+| `Vector` of integers or floats                                             | `MassActionJump`s and `ConstantRateJump`s with every non-spatial aggregator; bounded `VariableRateJump`s with `Coevolve`                                                                                                                                                                                  | Fully supported                     |
+| `SVector` (from StaticArrays.jl) of integers or floats                     | As for `Vector`                                                                                                                                                                                                                                                                                           | Fully supported                     |
+| `Matrix{Int}` of species × sites                                           | Spatial problems: `MassActionJump`s plus hopping, from a `JumpProblem` with `hopping_constants` and a `spatial_system`. `NSM` and `DirectCRDirect` keep the matrix; any other aggregator flattens the problem into a `Vector` state, which requires per-species or per-species-and-site hopping constants | Fully supported                     |
+| Integer or float scalar                                                    | `ConstantRateJump`s with every non-spatial aggregator except `RSSA` and `RSSACR`; bounded `VariableRateJump`s with `Coevolve`. `MassActionJump`s are not supported.                                                                                                                                       | Supported without mass-action jumps |
+| Anything else, for example nested arrays, `MVector`s, or `ArrayPartition`s | None                                                                                                                                                                                                                                                                                                      | Not supported                       |
+
+Notes:
+
+  - Bounded `VariableRateJump`s require the `Coevolve` aggregator for every state type.
+  - Spatial problems are described in the [spatial tutorial](tutorials/spatial.md).
+  - An `SVector` or a scalar cannot be modified in place, so `ConstantRateJump` and
+    `VariableRateJump` `affect!` functions must assign a new value to `integrator.u`,
+    for example `integrator.u = setindex(integrator.u, integrator.u[1] + 1, 1)` or
+    `integrator.u += 1`. Their rate functions receive the scalar or `SVector` state.
+  - Some aggregators need dependency graphs when a model has `ConstantRateJump`s or
+    `VariableRateJump`s; see the aggregator docstrings.
+  - Other state types are not supported, even when a model built from user-written jumps
+    appears to work with them.
+  - Coupled ODE and SDE problems follow the state-type rules of their solvers.
 
 ## RegularJump Compatible Methods
 

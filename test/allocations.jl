@@ -35,17 +35,17 @@ let
     u₀ = [999, 10, 0]
     tspan = (0.0, 250.0)
     dprob = DiscreteProblem(u₀, tspan, p)
-    jprob = JumpProblem(dprob, Direct(), maj, jump, jump2; save_positions, rng)
-    sol = solve(jprob, SSAStepper())
+    jprob = JumpProblem(dprob, Direct(), maj, jump, jump2; save_positions)
+    sol = solve(jprob, SSAStepper(); rng)
 
-    al1 = @allocations solve(jprob, SSAStepper())
+    al1 = @allocations solve(jprob, SSAStepper(); rng)
 
     tspan2 = (0.0, 2500.0)
     dprob2 = DiscreteProblem(u₀, tspan2, p)
-    jprob2 = JumpProblem(dprob2, Direct(), maj, jump, jump2; save_positions, rng)
-    sol2 = solve(jprob2, SSAStepper())
+    jprob2 = JumpProblem(dprob2, Direct(), maj, jump, jump2; save_positions)
+    sol2 = solve(jprob2, SSAStepper(); rng)
 
-    al2 = @allocations solve(jprob2, SSAStepper())
+    al2 = @allocations solve(jprob2, SSAStepper(); rng)
 
     @test al1 == al2
 end
@@ -56,7 +56,7 @@ let
     end
 
     function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false),
-            graphkwargs = (;), rng)
+            graphkwargs = (;))
         r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
         r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
         r3(u, p, t) = p[3] * u[1]
@@ -86,7 +86,7 @@ let
             ConstantRateJump(r3, aff3!),
             ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
             ConstantRateJump(r6, aff6!);
-            save_positions, rng, graphkwargs...)
+            save_positions, graphkwargs...)
         return jprob
     end
 
@@ -99,15 +99,15 @@ let
     graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
-        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs, rng = StableRNG(1234))
+        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs)
         stepper = SSAStepper()
-        sol1 = solve(jprob1, stepper)
-        sol1 = solve(jprob1, stepper)
-        al1 = @allocated solve(jprob1, stepper)
-        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs, rng = StableRNG(1234))
-        sol2 = solve(jprob2, stepper)
-        sol2 = solve(jprob2, stepper)
-        al2 = @allocated solve(jprob2, stepper)
+        sol1 = solve(jprob1, stepper; rng = StableRNG(1234))
+        sol1 = solve(jprob1, stepper; rng = StableRNG(1234))
+        al1 = @allocated solve(jprob1, stepper; rng = StableRNG(1234))
+        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs)
+        sol2 = solve(jprob2, stepper; rng = StableRNG(1234))
+        sol2 = solve(jprob2, stepper; rng = StableRNG(1234))
+        al2 = @allocated solve(jprob2, stepper; rng = StableRNG(1234))
         @test al1 == al2
     end
 end
@@ -124,8 +124,7 @@ let
         jumps = [VariableRateJump((u, p, t) -> p[1] * (1 + u[i]) * t,
                      integ -> (integ.u[i] += 1; nothing)) for i in 1:n]
         oprob = ODEProblem(f!, zeros(n), (0.0, 1.0), (0.5,))
-        jprob = JumpProblem(oprob, Direct(), jumps...; vr_aggregator = VR_Direct(),
-            rng = StableRNG(1))
+        jprob = JumpProblem(oprob, Direct(), jumps...; vr_aggregator = VR_Direct())
         cache = jprob.jump_callback.continuous_callbacks[1].condition
         u, p, t = oprob.u0, oprob.p, 0.3
         @test JumpProcesses.total_variable_rate(cache, u, p, t) ≈ n * 0.5 * 0.3
@@ -143,10 +142,9 @@ let
     for agg in (Direct(), FRM())
         nallocs = map((10.0, 100.0)) do T
             dprob = DiscreteProblem(zeros(Int, n), (0.0, T), (0.5,))
-            jprob = JumpProblem(dprob, agg, jumps...; save_positions = (false, false),
-                rng = StableRNG(1))
-            solve(jprob, SSAStepper())
-            @allocations solve(jprob, SSAStepper())
+            jprob = JumpProblem(dprob, agg, jumps...; save_positions = (false, false))
+            solve(jprob, SSAStepper(); rng = StableRNG(1))
+            @allocations solve(jprob, SSAStepper(); rng = StableRNG(1))
         end
         @test nallocs[1] == nallocs[2]
     end
@@ -160,10 +158,8 @@ let
     net_stoich = [[1 => 1], [1 => -1]]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs = rateidxs)
     dprob = DiscreteProblem([10], (0.0, 1.0), [1.0, 0.1])
-    jprob = JumpProblem(
-        dprob, RDirect(), maj; save_positions = (false, false),
-        rng = StableRNG(1), counter_threshold = Int32(2)
-    )
+    jprob = JumpProblem(dprob, RDirect(), maj; save_positions = (false, false),
+        counter_threshold = Int32(2))
     agg = jprob.discrete_jump_aggregation
     @test fieldtype(typeof(agg), :counter_threshold) === Int
     @test agg.counter_threshold isa Int

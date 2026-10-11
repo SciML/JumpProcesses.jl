@@ -213,10 +213,19 @@ trajectory takes is not known in advance and the solution is sampled onto a fixe
 time grid instead. Each returned solution therefore contains exactly the grid
 points, as if the problem had been built with `save_positions = (false, false)`.
 
-Randomness comes from the backend's own device RNG rather than the `rng` stored
-in the `JumpProblem`. `seed` is applied to the ambient generator, so it makes a
-run reproducible on backends that draw from it, such as `CPU()`; seeding a GPU
-backend is done through that backend's own `seed!`.
+For multiple trajectories, randomness comes from the backend's own RNG. `seed`
+is supported with `CPU()` and seeds Julia's task-local generator. CPU-kernel replay
+with the same seed requires the same thread count, workload (including trajectory
+count), CPU backend settings, and Julia and package versions. Identical trajectories
+across thread counts are not guaranteed. These conditions apply to CPU kernel
+execution; CPU ensemble algorithms that explicitly assign RNGs to trajectories
+have their own RNG behavior.
+
+Device backends must be seeded through their own API before calling `solve`
+(for example, `CUDA.seed!`). Passing a host `rng` or `rng_func`, or `seed` with a
+device backend, raises `ArgumentError`. With `trajectories = 1`, execution delegates
+to `EnsembleSerial()` on the CPU and accepts its usual `rng`, `seed`, and ensemble
+`rng_func` keywords.
 
 The reaction data is uploaded to the device once and shared by every thread, so
 all trajectories solve the same problem and a `prob_func` is not supported.
@@ -226,24 +235,24 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         ensemblealg::EnsembleGPUKernel;
         trajectories,
         seed = nothing,
+        rng = nothing,
         dtmin = nothing,
         saveat = nothing,
         save_start = true,
         save_end = true,
         callback = nothing,
         kwargs...)
+    callback === nothing ||
+        error("EnsembleGPUKernel with SimpleExplicitTauLeaping does not support callbacks.")
+
     if trajectories == 1
         return SciMLBase.__solve(ensembleprob, alg, EnsembleSerial(); trajectories = 1,
-            seed, dtmin, saveat, save_start, save_end, callback, kwargs...)
+            seed, rng, dtmin, saveat, save_start, save_end, kwargs...)
     end
 
-    callback === nothing ||
-        error("EnsembleGPUKernel with SimpleExplicitTauLeaping does not support callbacks, \
-               since they would have to run inside the GPU kernel.")
-
-    seed !== nothing && Random.seed!(seed)
-
     ensemblealg.backend === nothing ? backend = CPU() : backend = ensemblealg.backend
+    reject_kernel_alias_kwargs(ensembleprob.prob, kwargs)
+    seed_kernel_backend!(backend, seed, rng, kwargs)
 
     jump_prob = ensembleprob.prob
     jump_prob isa JumpProblem ||
@@ -289,7 +298,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     # lives in registers rather than being uploaded once per thread.
     u0 = SVector{state_dim, ET}(prob.u0)
     saveat_gpu = adapt(backend, save_times)
-    maj_gpu = GPUMassActionJump(maj, backend, TT)
+    maj_gpu = GPUMassActionJump(maj, prob.p, backend, TT)
 
     # g_i depends only on the reactant stoichiometry, so the per-species highest
     # order and largest stoichiometry are precomputed once on the host.

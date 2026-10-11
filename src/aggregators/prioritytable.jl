@@ -20,13 +20,19 @@ the interval to the next group. i.e. maxpriority -> N+1
 One group (i.e. bin) of priority ids within the table
 """
 mutable struct PriorityGroup{T, W <: AbstractVector}
-    "(strict) upper bound for priorities in this group"
+    """
+    (strict) upper bound for priorities in this group
+    """
     maxpriority::T
 
-    "number of priority ids"
+    """
+    number of priority ids
+    """
     numpids::Int
 
-    "priority ids associated with group"
+    """
+    priority ids associated with group
+    """
     pids::W
 end
 PriorityGroup{U}(maxpriority::T) where {T, U} = PriorityGroup(maxpriority, 0, Vector{U}())
@@ -74,25 +80,39 @@ Table to store the groups.
 abstract type AbstractPriorityTable end
 
 mutable struct PriorityTable{F, S, T, U <: Function} <: AbstractPriorityTable
-    "non-zero values below this are binned together, static"
+    """
+    non-zero values below this are binned together, static
+    """
     minpriority::F
 
-    "values above this cause new groups to be added"
+    """
+    values above this cause new groups to be added
+    """
     maxpriority::F
 
-    "bins storing priority ids within a given range"
+    """
+    bins storing priority ids within a given range
+    """
     groups::Vector{PriorityGroup{F, Vector{S}}}
 
-    "stores the sums of the priorities within each group"
+    """
+    stores the sums of the priorities within each group
+    """
     gsums::Vector{F}
 
-    "stores the sum of the group sums"
+    """
+    stores the sum of the group sums
+    """
     gsum::F
 
-    "maps priority id to group and idx within the group"
+    """
+    maps priority id to group and idx within the group
+    """
     pidtogroup::Vector{Tuple{T, T}}
 
-    "mapping from priority value to group id that stores it"
+    """
+    mapping from priority value to group id that stores it
+    """
     priortogid::U
 end
 
@@ -269,7 +289,7 @@ end
     return gid - mingid + 2
 end
 
-@inline function sample(pg::PriorityGroup, priorities, rng = DEFAULT_RNG)
+@inline function sample(pg::PriorityGroup, priorities, rng)
     (; maxpriority, numpids, pids) = pg
 
     pididx = 0
@@ -289,7 +309,7 @@ end
     pid
 end
 
-function sample(pt::PriorityTable, priorities, rng = DEFAULT_RNG)
+function sample(pt::PriorityTable, priorities, rng)
     (; groups, gsum, gsums) = pt
 
     # return id zero if total priority is zero

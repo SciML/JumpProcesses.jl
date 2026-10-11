@@ -5,6 +5,51 @@ using KernelAbstractions, Adapt
 using StaticArrays
 using PoissonRandom, Random
 
+# Kernels draw from the backend's own RNG; a host RNG object cannot be used
+# inside device code. CPU kernels use Julia's task-local generator, which can be
+# seeded here. Device generators must be seeded with their backend's API before
+# calling solve (for example, CUDA.seed! for CUDA).
+function seed_kernel_backend!(backend, seed, rng, kwargs)
+    rng === nothing || throw(ArgumentError(
+        "EnsembleGPUKernel does not support a host `rng` with multiple trajectories. " *
+        "Use `seed` with the CPU backend or seed the device RNG through its backend API."))
+    haskey(kwargs, :rng_func) && throw(ArgumentError(
+        "EnsembleGPUKernel does not support `rng_func` with multiple trajectories. " *
+        "Kernels draw from the backend's own RNG."))
+    if seed !== nothing
+        backend isa CPU || throw(ArgumentError(
+            "EnsembleGPUKernel only supports the `seed` keyword with the CPU backend. " *
+            "Seed the device RNG through its backend API before calling solve."))
+        Random.seed!(seed)
+    end
+    return nothing
+end
+
+# Keywords stored on the problem wrapped by a `JumpProblem`, e.g. `DiscreteProblem(...;
+# alias_jump = true)`.
+wrapped_problem_kwargs(jump_prob::JumpProblem) = wrapped_problem_kwargs(jump_prob.prob)
+wrapped_problem_kwargs(prob) = hasproperty(prob, :kwargs) ? prob.kwargs : (;)
+
+# Kernels always build device-owned state, so the removed `alias_jump` keyword and
+# `alias` controls are rejected rather than silently ignored, whether passed to `solve`
+# or stored on the wrapped problem. These paths bypass SciMLBase's keyword validation, so
+# the never-supported plural spelling is rejected here too, passed or stored.
+function reject_kernel_alias_kwargs(jump_prob, kwargs)
+    stored = wrapped_problem_kwargs(jump_prob)
+    (haskey(kwargs, :alias_jump) || haskey(stored, :alias_jump)) &&
+        throw(ArgumentError(JumpProcesses.ALIAS_JUMP_REMOVED_MSG))
+    (haskey(kwargs, :alias_jumps) || haskey(stored, :alias_jumps)) && throw(ArgumentError(
+        "`alias_jumps` is not a keyword argument; it is a field of some alias " *
+        "specifiers. EnsembleGPUKernel always builds device-owned jump state."))
+    (get(kwargs, :alias, nothing) === nothing &&
+     get(stored, :alias, nothing) === nothing) ||
+        throw(ArgumentError(
+            "EnsembleGPUKernel does not support the `alias` keyword, whether passed to " *
+            "`solve` or stored on the problem, with multiple trajectories, since kernels " *
+            "always build device-owned state."))
+    return nothing
+end
+
 include("ssa_stepper.jl")
 include("explicit_tau_leaping.jl")
 
@@ -13,15 +58,18 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         ensemblealg::EnsembleGPUKernel;
         trajectories,
         seed = nothing,
+        rng = nothing,
         dt = error("dt is required for SimpleTauLeaping."),
         kwargs...)
     if trajectories == 1
         return SciMLBase.__solve(ensembleprob, alg, EnsembleSerial(); trajectories = 1,
-            seed, dt, kwargs...)
+            seed, rng, dt, kwargs...)
     end
 
     ensemblealg.backend === nothing ? backend = CPU() :
     backend = ensemblealg.backend
+    reject_kernel_alias_kwargs(ensembleprob.prob, kwargs)
+    seed_kernel_backend!(backend, seed, rng, kwargs)
 
     jump_prob = ensembleprob.prob
 
@@ -35,7 +83,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     # Run vectorized solve
     ts,
     us = vectorized_solve(
-        probs, jump_prob, SimpleTauLeaping(); backend, trajectories, seed, dt)
+        probs, jump_prob, SimpleTauLeaping(); backend, trajectories, dt)
 
     # Convert to CPU for inspection
     _ts = Array(ts)
@@ -84,8 +132,7 @@ end
 # SimpleTauLeaping kernel
 @kernel function simple_tau_leaping_kernel(
         @Const(probs_data), _us, _ts, dt, @Const(rj_data),
-        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf,
-        seed::UInt64)
+        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf)
     i = @index(Global, Linear)
 
     # Get thread-local buffers
@@ -117,7 +164,7 @@ end
 
     # Get input/output arrays
     ts_view = @inbounds view(_ts, :, i)
-    us_view = @inbounds view(_us,:,:,i)
+    us_view = @inbounds view(_us, :, :, i)
 
     # Initialize first time step and state
     @inbounds ts_view[1] = tspan[1]
@@ -152,7 +199,7 @@ end
 
 # Vectorized solve function
 function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
-        backend, trajectories, seed, dt, kwargs...)
+        backend, trajectories, dt, kwargs...)
     # Extract common jump data
     rj = prob.regular_jump
     rj_data = JumpData(rj.rate, rj.c, rj.numjumps)
@@ -199,13 +246,10 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
     init_event = init_kernel(probs_data_gpu, current_u_buf; ndrange = n_trajectories)
     KernelAbstractions.synchronize(backend)
 
-    # Seed for Poisson sampling
-    seed = seed === nothing ? UInt64(12345) : UInt64(seed);
-
     # Launch main kernel
     kernel = simple_tau_leaping_kernel(backend)
     main_event = kernel(probs_data_gpu, us, ts, dt, rj_data_gpu,
-        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf, seed;
+        current_u_buf, rate_cache_buf, counts_buf, local_dc_buf;
         ndrange = n_trajectories)
     KernelAbstractions.synchronize(backend)
 

@@ -41,17 +41,43 @@ SUITE["construct"]["jumpproblem_constantrate"] = @benchmarkable JumpProblem(
     $dprob, Direct(), $jump1, $jump2
 )
 
+# The benchmark job runs this script against both this branch and the base branch.
+# JumpProcesses 10 takes the RNG at `solve`, and `JumpProblem(...; rng)` raises an
+# `ArgumentError`; earlier versions store it in the `JumpProblem` and reject it in `solve`.
+# Either way, every sample simulates the same trajectory, from a `StableRNG` seeded with
+# 12345, so the two branches' timings are comparable.
+const RNG_AT_SOLVE = try
+    JumpProblem(dprob, Direct(), maj; rng = StableRNG(1))
+    false
+catch err
+    err isa ArgumentError || rethrow()
+    true
+end
+
+if RNG_AT_SOLVE
+    jump_problem(args...) = JumpProblem(args...)
+    function benchmark_solve(jprob)
+        @benchmarkable solve($jprob, SSAStepper(); rng) setup=(rng=StableRNG(12345)) evals=1
+    end
+else
+    # `seed` reseeds the problem's RNG.
+    jump_problem(args...) = JumpProblem(args...; rng = StableRNG(12345))
+    function benchmark_solve(jprob)
+        @benchmarkable solve($jprob, SSAStepper(); seed = 12345) evals=1
+    end
+end
+
 # =============================================================================
-# Solves (SSAStepper, fixed rng for reproducibility)
+# Solves (SSAStepper, seeded RNG)
 # =============================================================================
 
 SUITE["solve"] = BenchmarkGroup()
 
-jprob_maj = JumpProblem(dprob, Direct(), maj; rng = StableRNG(12345))
-jprob_cr = JumpProblem(dprob, Direct(), jump1, jump2; rng = StableRNG(12345))
+jprob_maj = jump_problem(dprob, Direct(), maj)
+jprob_cr = jump_problem(dprob, Direct(), jump1, jump2)
 
-SUITE["solve"]["massaction"] = @benchmarkable solve($jprob_maj, SSAStepper())
-SUITE["solve"]["constantrate"] = @benchmarkable solve($jprob_cr, SSAStepper())
+SUITE["solve"]["massaction"] = benchmark_solve(jprob_maj)
+SUITE["solve"]["constantrate"] = benchmark_solve(jprob_cr)
 
 # =============================================================================
 # Aggregators
@@ -59,12 +85,10 @@ SUITE["solve"]["constantrate"] = @benchmarkable solve($jprob_cr, SSAStepper())
 
 SUITE["aggregators"] = BenchmarkGroup()
 
-jprob_rdirect = JumpProblem(dprob, RDirect(), maj; rng = StableRNG(12345))
-jprob_sorting = JumpProblem(dprob, SortingDirect(), maj; rng = StableRNG(12345))
-jprob_nrm = JumpProblem(dprob, NRM(), maj; rng = StableRNG(12345))
+jprob_rdirect = jump_problem(dprob, RDirect(), maj)
+jprob_sorting = jump_problem(dprob, SortingDirect(), maj)
+jprob_nrm = jump_problem(dprob, NRM(), maj)
 
-SUITE["aggregators"]["RDirect"] = @benchmarkable solve($jprob_rdirect, SSAStepper())
-SUITE["aggregators"]["SortingDirect"] = @benchmarkable solve(
-    $jprob_sorting, SSAStepper()
-)
-SUITE["aggregators"]["NRM"] = @benchmarkable solve($jprob_nrm, SSAStepper())
+SUITE["aggregators"]["RDirect"] = benchmark_solve(jprob_rdirect)
+SUITE["aggregators"]["SortingDirect"] = benchmark_solve(jprob_sorting)
+SUITE["aggregators"]["NRM"] = benchmark_solve(jprob_nrm)

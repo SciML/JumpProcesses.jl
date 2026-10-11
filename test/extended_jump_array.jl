@@ -211,9 +211,9 @@ let
     affect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rate, affect!)
     oprob = ODEProblem(f!, [0.0], (0.0, 1.0))
-    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM(),
+    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM())
+    sol = solve(jprob, Rodas5P(linsolve = QRFactorization());
         rng = StableRNG(789))
-    sol = solve(jprob, Rodas5P(linsolve = QRFactorization()))
     @test sol.retcode == ReturnCode.Success
 end
 
@@ -255,9 +255,8 @@ end
         u0 = ArrayPartition([1.0], [1.0])
         ode = ODEProblem(f!, u0, (0.0, 1.0))
         jump = VariableRateJump((u, p, t) -> 10 * u[1], affect!)
-        jump_prob = JumpProblem(ode, Direct(), jump; vr_aggregator = agg,
-            rng = StableRNG(57))
-        sol = solve(jump_prob, Tsit5(); abstol = 1e-11, reltol = 1e-11)
+        jump_prob = JumpProblem(ode, Direct(), jump; vr_aggregator = agg)
+        sol = solve(jump_prob, Tsit5(); abstol = 1e-11, reltol = 1e-11, rng = StableRNG(57))
         @test sol.retcode == ReturnCode.Success
         @test jumps[] > 0
         @test isapprox(sol.u[end].x[1][1], exp(-1); rtol = 1e-9)

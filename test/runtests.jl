@@ -23,6 +23,8 @@ end
         @time @safetestset "Monte Carlo Tests" begin include("monte_carlo_test.jl") end
         @time @safetestset "Split Coupled Tests" begin include("splitcoupled.jl") end
         @time @safetestset "SSA Tests" begin include("ssa_tests.jl") end
+        @time @safetestset "SSA Aggregator Smoke Tests" begin include("ssa_aggregator_smoke.jl") end
+        @time @safetestset "SortingDirect retained search order" begin include("sortingdirect_reuse.jl") end
         @time @safetestset "Tau Leaping Tests" begin include("regular_jumps.jl") end
         @time @safetestset "Simple SSA Callback Test" begin include("ssa_callback_test.jl") end
         @time @safetestset "SIR Discrete Callback Test" begin include("sir_model.jl") end
@@ -33,6 +35,7 @@ end
         @time @safetestset "Mass Action Jump Tests; Special Cases" begin include("degenerate_rx_cases.jl") end
         @time @safetestset "Mass Action Jump Tests; Floating Point Inputs" begin include("fp_unknowns.jl") end
         @time @safetestset "scale_rates Field Tests" begin include("scale_rates_field_test.jl") end
+        @time @safetestset "Mass-action working state" begin include("massaction_state.jl") end
         @time @safetestset "Direct allocations test" begin include("allocations.jl") end
         @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
         @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
@@ -40,9 +43,12 @@ end
     end
     if GROUP == "All" || GROUP == "InterfaceII"
         @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
+        @time @safetestset "SSAIntegrator evaluation and save_uprev" begin include("ssa_integrator_evaluation.jl") end
         @time @safetestset "Save_positions test" begin include("save_positions.jl") end
+        @time @safetestset "RNG kwarg tests" begin include("rng_kwarg_tests.jl") end
+        @time @safetestset "Stochastic dispatch tests" begin include("stochastic_dispatch.jl") end
+        @time @safetestset "Jump-state ownership and alias controls" begin include("jump_state_ownership.jl") end
         @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
-        @time @safetestset "Thread Safety test" begin include("thread_safety.jl") end
         @time @safetestset "Ensemble Problem Tests" begin include("ensemble_problems.jl") end
         @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
         @time @safetestset "Remake tests" begin include("remake_test.jl") end
@@ -59,6 +65,11 @@ end
         @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
         @time @safetestset "SSA kernel on the CPU backend" begin include("kernelabstractions_ssa.jl") end
         @time @safetestset "Explicit tau-leaping kernel on the CPU backend" begin include("kernelabstractions_explicit_tau.jl") end
+    end
+
+    if GROUP == "All" || GROUP == "ThreadSafety"
+        @time @safetestset "Thread Safety test (threaded)" begin include("thread_safety.jl") end
+        @time @safetestset "Jump-state ownership (threaded)" begin include("jump_state_ownership.jl") end
     end
 
     if GROUP == "CUDA"

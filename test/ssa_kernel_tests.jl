@@ -1,6 +1,7 @@
 using JumpProcesses
 using Test, Statistics
 using KernelAbstractions, Adapt
+include("kernel_contract_tests.jl")
 
 # Body of the SSA kernel tests, run against both a GPU backend and the
 # KernelAbstractions CPU backend so the same behaviour is covered without a GPU.
@@ -60,6 +61,7 @@ function run_ssa_kernel_tests(backend, nsims)
 
         @test sol_kernel.u[1].t == sol_serial.u[1].t
         for k in eachindex(sol_kernel.u[1].t), s in 1:3
+
             mean_kernel = mean(sol_kernel.u[i].u[k][s] for i in 1:nsims)
             mean_serial = mean(sol_serial.u[i].u[k][s] for i in 1:nsims)
             @test isapprox(mean_kernel, mean_serial, rtol = 0.05, atol = 0.5)
@@ -69,7 +71,8 @@ function run_ssa_kernel_tests(backend, nsims)
     # Second order reaction 2A -> B. Exercises the falling factorial A(A-1) in the
     # propensity and the combinatoric prefactor folded into `scaled_rates`.
     let
-        jump_prob = majump_prob([0.01], [[1 => 2]], [[1 => -2, 2 => 1]], [100, 0], (0.0, 5.0))
+        jump_prob = majump_prob(
+            [0.01], [[1 => 2]], [[1 => -2, 2 => 1]], [100, 0], (0.0, 5.0))
 
         sol_kernel = solve(EnsembleProblem(jump_prob), SSAStepper(),
             EnsembleGPUKernel(backend); trajectories = nsims, saveat = 1.0)
@@ -77,6 +80,7 @@ function run_ssa_kernel_tests(backend, nsims)
             trajectories = nsims, saveat = 1.0)
 
         for k in eachindex(sol_kernel.u[1].t), s in 1:2
+
             mean_kernel = mean(sol_kernel.u[i].u[k][s] for i in 1:nsims)
             mean_serial = mean(sol_serial.u[i].u[k][s] for i in 1:nsims)
             @test isapprox(mean_kernel, mean_serial, rtol = 0.05, atol = 0.5)
@@ -88,7 +92,8 @@ function run_ssa_kernel_tests(backend, nsims)
 
     # Third order reaction 3A -> B, checking the deeper falling factorial.
     let
-        jump_prob = majump_prob([1e-4], [[1 => 3]], [[1 => -3, 2 => 1]], [60, 0], (0.0, 5.0))
+        jump_prob = majump_prob(
+            [1e-4], [[1 => 3]], [[1 => -3, 2 => 1]], [60, 0], (0.0, 5.0))
 
         sol_kernel = solve(EnsembleProblem(jump_prob), SSAStepper(),
             EnsembleGPUKernel(backend); trajectories = nsims, saveat = 2.5)
@@ -114,6 +119,7 @@ function run_ssa_kernel_tests(backend, nsims)
             trajectories = nsims, saveat = 5.0)
 
         for k in eachindex(sol_kernel.u[1].t), s in 1:3
+
             mean_kernel = mean(sol_kernel.u[i].u[k][s] for i in 1:nsims)
             mean_serial = mean(sol_serial.u[i].u[k][s] for i in 1:nsims)
             @test isapprox(mean_kernel, mean_serial, rtol = 0.05, atol = 0.5)
@@ -197,5 +203,10 @@ function run_ssa_kernel_tests(backend, nsims)
         @test_throws ErrorException solve(varying, SSAStepper(),
             EnsembleGPUKernel(backend); trajectories = 5, saveat = 1.0)
     end
+    run_kernel_massaction_rate_tests(backend, SSAStepper(), Direct())
+    rng_prob = majump_prob([5.0], [Pair{Int, Int}[]], [[1 => 1]], [0], (0.0, 4.0))
+    run_kernel_rng_tests(backend, SSAStepper(), rng_prob; saveat = 1.0)
+    run_kernel_alias_tests(backend, SSAStepper(), rng_prob; saveat = 1.0)
+    run_regular_kernel_rng_tests(backend)
     return nothing
 end

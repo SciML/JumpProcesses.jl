@@ -43,10 +43,12 @@ reactstoch = [[1 => 1]]
 netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
     netstoch)
+maj_rates_work = Vector{Float64}(undef, JP.get_num_majumps(majump))
+JP.fill_scaled_rates!(maj_rates_work, majump, nothing)
 reaction_index = 1
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[1] ==
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump, maj_rates_work)[1] ==
       majump_rates[1] * ulow[1] # low
-@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump)[2] ==
+@test JP.get_majump_brackets(ulow, uhigh, reaction_index, majump, maj_rates_work)[2] ==
       majump_rates[1] * uhigh[1] # high
 
 # constant rate
@@ -61,13 +63,14 @@ ucur = [5]
 
 ### Aggregator ###
 mutable struct DummyAggregator{T, M, R, CB, BD} <:
-               JP.AbstractSSAJumpAggregator{T, M, R, Nothing, Nothing}
+               JP.AbstractSSAJumpAggregator{T, M, R, Nothing}
     ulow::Vector{Int}
     uhigh::Vector{Int}
     cur_rate_low::Vector{T}
     cur_rate_high::Vector{T}
     sum_rate::T
     ma_jumps::M
+    maj_rates::Vector{T}
     rates::R
     brackets::CB
     bracket_data::BD
@@ -78,7 +81,7 @@ cur_rate_high = [0.0, 0.0]
 sum_rate = 0.0
 brackets = JP.get_jump_bracket_fwrappers(ulow, params, t, (crj,), RSSA())
 p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
-    [rate], brackets, bd)
+    maj_rates_work, [rate], brackets, bd)
 
 u = [100]
 JP.update_u_brackets!(p, u)
@@ -95,7 +98,7 @@ reaction_index = 2
 @test JP.get_jump_brackets(reaction_index, p, u, params, t)[2] == rate(p.ulow, params, t)
 
 p = DummyAggregator([0], [0], cur_rate_low, cur_rate_high, sum_rate, majump,
-    [rate], brackets, bd)
+    maj_rates_work, [rate], brackets, bd)
 JP.set_bracketing!(p, u, params, t)
 @test p.ulow[1]≈u[1] * (1 - fluctuation_rate) atol=1
 @test p.uhigh[1]≈u[1] * (1 + fluctuation_rate) atol=1
@@ -158,14 +161,14 @@ function nonmonotonic_jump_prob(alg)
     jump = ConstantRateJump(nonmonotonic_rate, nonmonotonic_affect!;
         bounds = nonmonotonic_bounds)
     prob = DiscreteProblem(u0, (0.0, tf))
-    JumpProblem(prob, alg, jump; save_positions = (false, false), rng, vartojumps_map,
+    JumpProblem(prob, alg, jump; save_positions = (false, false), vartojumps_map,
         jumptovars_map)
 end
 
 function runSSAs(jump_prob)
     Asamp = zeros(Int, Nsims)
     for i in 1:Nsims
-        Asamp[i] = solve(jump_prob, SSAStepper())[1, end]
+        Asamp[i] = solve(jump_prob, SSAStepper(); rng)[1, end]
     end
     mean(Asamp)
 end

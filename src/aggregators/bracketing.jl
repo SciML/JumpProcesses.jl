@@ -79,8 +79,8 @@ end
 @inline get_spec_brackets(bd, i, u::AbstractVector) = get_spec_brackets(bd, i, u[i])
 
 # Get propensity brackets of massaction jump k.
-@inline function get_majump_brackets(ulow, uhigh, k, majumps)
-    evalrxrate(ulow, k, majumps), evalrxrate(uhigh, k, majumps)
+@inline function get_majump_brackets(ulow, uhigh, k, majumps, maj_rates)
+    evalrxrate(ulow, k, majumps, maj_rates), evalrxrate(uhigh, k, majumps, maj_rates)
 end
 
 """
@@ -90,7 +90,7 @@ get brackets for the rate of reaction rx by first checking if the reaction is a 
     ma_jumps = p.ma_jumps
     num_majumps = get_num_majumps(ma_jumps)
     if rx <= num_majumps
-        return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps)
+        return get_majump_brackets(p.ulow, p.uhigh, rx, ma_jumps, p.maj_rates)
     else
         @inbounds return p.brackets[rx - num_majumps](p.ulow, p.uhigh, u, params, t)
     end
@@ -144,7 +144,8 @@ function validate_brackets(p::AbstractSSAJumpAggregator, u, params, t)
         lrate, urate = p.cur_rate_low[rx], p.cur_rate_high[rx]
         (zero(lrate) <= lrate <= urate < Inf) ||
             error("Invalid rate bounds for jump $rx: expected 0 <= lrate <= urate < Inf, got ($lrate, $urate).")
-        rate = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u, params, t, rx)
+        rate = calculate_jump_rate(p.ma_jumps, num_majumps, p.rates, u, params, t, rx,
+            p.maj_rates)
         (lrate <= rate <= urate) ||
             error("Rate bounds for jump $rx do not bracket the rate at the initial state: $rate ∉ [$lrate, $urate].")
     end

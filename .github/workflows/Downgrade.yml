@@ -13,7 +13,11 @@ on:
 jobs:
   downgrade:
     name: "Downgrade"
-    # Runs strict (allow_reresolve=false); expected RED until the upstream fix
-    # ForwardDiff/LogExpFunctions — red until ForwardDiff 1.3.4 (#811). Auto-greens on upstream release.
+    # The downgrade action discards URL sources. Restore this job after the
+    # StochasticDiffEqCore branch for JumpProcesses 10 is released and the
+    # temporary pin is removed.
+    if: ${{ false }}
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
+    with:
+      group: All
     secrets: "inherit"

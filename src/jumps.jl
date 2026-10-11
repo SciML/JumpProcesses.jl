@@ -17,13 +17,17 @@ $(FIELDS)
 ## Examples
 
 Increasing rate in one species but decreasing in another:
+
 ```julia
 rate(u, p, t) = p[1] * u[1] / (1 + u[2])
-bounds(ulow, uhigh, u, p, t) = RateBounds(lrate = p[1] * ulow[1] / (1 + uhigh[2]),
-                                          urate = p[1] * uhigh[1] / (1 + ulow[2]))
+function bounds(ulow, uhigh, u, p, t)
+    RateBounds(lrate = p[1] * ulow[1] / (1 + uhigh[2]),
+        urate = p[1] * uhigh[1] / (1 + ulow[2]))
+end
 ```
 
 Extremas lying inside the bracket:
+
 ```julia
 rate(u, p, t) = p[1] * u[1] * (p[2] - u[1])
 function bounds(ulow, uhigh, u, p, t)
@@ -35,26 +39,33 @@ end
 ```
 
 Rate that depends on time:
+
 ```julia
 rate(u, p, t) = p[1] * u[1] * exp(-p[2] * t)
 function bounds(ulow, uhigh, u, p, t)
     Δ = p[3]
     RateBounds(lrate = p[1] * ulow[1] * exp(-p[2] * (t + Δ)),
-               urate = p[1] * uhigh[1] * exp(-p[2] * t),
-               rateinterval = Δ)
+        urate = p[1] * uhigh[1] * exp(-p[2] * t),
+        rateinterval = Δ)
 end
 ```
 """
 struct RateBounds{R, T}
-    """Lower bound of the rate."""
+    """
+    Lower bound of the rate.
+    """
     lrate::R
-    """Upper bound of the rate."""
+    """
+    Upper bound of the rate.
+    """
     urate::R
-    """Time window over which the bounds hold."""
+    """
+    Time window over which the bounds hold.
+    """
     rateinterval::T
 end
 
-function RateBounds(; lrate=nothing, urate=nothing, rateinterval = Inf)
+function RateBounds(; lrate = nothing, urate = nothing, rateinterval = Inf)
     (lrate === nothing && urate === nothing) &&
         error("`RateBounds` requires at least one of `lrate` or `urate`.")
     l = lrate === nothing ? zero(urate) : lrate
@@ -78,16 +89,23 @@ $(FIELDS)
   - All fields are optional, but an aggregator errors at initialization if the form it consumes is missing.
 """
 struct RateBoundFunctions{B, L, U}
-    """Computes both bounds in a single call."""
+    """
+    Computes both bounds in a single call.
+    """
     bounds::B
-    """Computes the lower bound."""
+    """
+    Computes the lower bound.
+    """
     lrate::L
-    """Computes the upper bound."""
+    """
+    Computes the upper bound.
+    """
     urate::U
 end
 
-RateBoundFunctions(; bounds = nothing, lrate = nothing, urate = nothing) =
+function RateBoundFunctions(; bounds = nothing, lrate = nothing, urate = nothing)
     RateBoundFunctions(bounds, lrate, urate)
+end
 
 hasbounds(::Nothing) = false
 hasbounds(::RateBoundFunctions{Nothing}) = false
@@ -108,45 +126,58 @@ Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that
 does not *explicitly* depend on time. More precisely, one where the rate
 function is constant *between* the occurrence of jumps. For detailed examples
 and usage information, see the
-- [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+
+  - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 ## Fields
 
 $(FIELDS)
 
 ## Examples
+
 Suppose `u[1]` gives the number of particles and `p[1]` the probability per time
 each particle can decay away. A corresponding `ConstantRateJump` for this jump
 process is
+
 ```julia
-rate(u,p,t) = p[1]*u[1]
+rate(u, p, t) = p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
 crj = ConstantRateJump(rate, affect!)
 ```
+
 Notice, here that `rate` changes in time, but is constant between the occurrence
 of jumps (when `u[1]` will decrease).
 
 Rate bounds may be supplied separately, for use with bracketing aggregators such as `RSSA`:
+
 ```julia
 rate(u, p, t) = p[1] * u[1] / (1 + u[2])
 affect!(integrator) = integrator.u[1] -= 1
-bounds(ulow, uhigh, u, p, t) = RateBounds(lrate=p[1]*ulow[1] / (1+uhigh[2]),
-                                          urate=p[1]*uhigh[1] / (1+ulow[2]))
+function bounds(ulow, uhigh, u, p, t)
+    RateBounds(lrate = p[1]*ulow[1] / (1+uhigh[2]),
+        urate = p[1]*uhigh[1] / (1+ulow[2]))
+end
 crj = ConstantRateJump(rate, affect!; bounds)
 ```
 
 ## Notes
 
-- When rate bounds are not supplied, they are computed by evaluating the rate at `ulow`
-  and `uhigh`. These bounds are only correct if the rate is monotonic with respect to
-  state, i.e. increasing in all species or decreasing in all species.
+  - When rate bounds are not supplied, they are computed by evaluating the rate at `ulow`
+    and `uhigh`. These bounds are only correct if the rate is monotonic with respect to
+    state, i.e. increasing in all species or decreasing in all species.
 """
 struct ConstantRateJump{F1, F2, B <: Union{Nothing, RateBoundFunctions}} <: AbstractJump
-    """Function `rate(u,p,t)` that returns the jump's current rate."""
+    """
+    Function `rate(u,p,t)` that returns the jump's current rate.
+    """
     rate::F1
-    """Function `affect(integrator)` that updates the state for one occurrence of the jump."""
+    """
+    Function `affect(integrator)` that updates the state for one occurrence of the jump.
+    """
     affect!::F2
-    """Optional `RateBoundFunctions` holding user supplied bracketing functions."""
+    """
+    Optional `RateBoundFunctions` holding user supplied bracketing functions.
+    """
     bounds::B
 end
 
@@ -194,22 +225,21 @@ end
 # fallback assumes the rate is monotonic in the state; it would be cleaner to demand
 # user-specified bounds for decreasing rates and only handle the increasing case by default
 @inline function cjump_brackets(c::ConstantRateJump{F1, F2, Nothing},
-    ulow, uhigh, u, p, t) where {F1, F2}
+        ulow, uhigh, u, p, t) where {F1, F2}
     rlow = c.rate(ulow, p, t)
     rhigh = c.rate(uhigh, p, t)
     rlow <= rhigh ? (rlow, rhigh) : (rhigh, rlow)
 end
 
-@inline lower_rate_bound(c::ConstantRateJump, ulow, uhigh, u, p, t) =
-    c.bounds.lrate(ulow, uhigh, u, p, t).lrate
+@inline lower_rate_bound(c::ConstantRateJump, ulow, uhigh, u, p, t) = c.bounds.lrate(
+    ulow, uhigh, u, p, t).lrate
 @inline lower_rate_bound(c::ConstantRateJump{F1, F2, Nothing}, ulow, uhigh, u, p,
-        t) where {F1, F2} = min(c.rate(ulow, p, t), c.rate(uhigh, p, t))
+    t) where {F1, F2} = min(c.rate(ulow, p, t), c.rate(uhigh, p, t))
 
-@inline upper_rate_bound(c::ConstantRateJump, ulow, uhigh, u, p, t) =
-    c.bounds.urate(ulow, uhigh, u, p, t).urate
+@inline upper_rate_bound(c::ConstantRateJump, ulow, uhigh, u, p, t) = c.bounds.urate(
+    ulow, uhigh, u, p, t).urate
 @inline upper_rate_bound(c::ConstantRateJump{F1, F2, Nothing}, ulow, uhigh, u, p,
-        t) where {F1, F2} = max(c.rate(ulow, p, t), c.rate(uhigh, p, t))
-
+    t) where {F1, F2} = max(c.rate(ulow, p, t), c.rate(uhigh, p, t))
 
 """
 $(TYPEDEF)
@@ -217,94 +247,104 @@ $(TYPEDEF)
 Defines a jump process with a rate (i.e. hazard, intensity, or propensity) that may
 explicitly depend on time. More precisely, one where the rate function is allowed to change
 *between* the occurrence of jumps. For detailed examples and usage information, see the
-- [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+
+  - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 Note that two types of `VariableRateJump`s are currently supported, with different
 performance characteritistics.
-- A general `VariableRateJump` or `VariableRateJump` will refer to one in which only `rate`
-  and `affect` functions are specified.
 
-    * These are the most general in what they can represent, but require the use of an
-      `ODEProblem` or `SDEProblem` whose underlying timestepper handles their evolution in
-      time (via the callback interface).
-    * This is the least performant jump type in simulations.
+  - A general `VariableRateJump` or `VariableRateJump` will refer to one in which only `rate`
+    and `affect` functions are specified.
 
-- Bounded `VariableRateJump`s require passing the keyword arguments `urate` and
-  `rateinterval`, corresponding to functions `urate(u, p, t)` and `rateinterval(u, p, t)`,
-  see below. These must calculate a time window over which the rate function is bounded by a
-  constant. Note that it is ok if the rate bound would be violated within the time interval
-  due to a change in `u` arising from another `ConstantRateJump`, `MassActionJump` or
-  *bounded* `VariableRateJump` being executed, as the chosen aggregator will then handle
-  recalculating the rate bound and interval. *However, if the bound could be violated within
-  the time interval due to a change in `u` arising from continuous dynamics such as a
-  coupled ODE, SDE, or a general `VariableRateJump`, bounds should not be given.* This
-  ensures the jump is classified as a general `VariableRateJump` and properly handled. One
-  can also optionally provide a lower bound function, `lrate(u, p, t)`, via the `lrate`
-  keyword argument. This can lead to increased performance. The validity of the lower bound
-  should hold under the same conditions and rate interval as `urate`.
+      + These are the most general in what they can represent, but require the use of an
+        `ODEProblem` or `SDEProblem` whose underlying timestepper handles their evolution in
+        time (via the callback interface).
+      + This is the least performant jump type in simulations.
 
-    * Bounded `VariableRateJump`s can currently be used in the `Coevolve` aggregator, and
-      can therefore be efficiently simulated in pure-jump `DiscreteProblem`s using the
-      `SSAStepper` time-stepper.
-    * These can be substantially more performant than general `VariableRateJump`s without
-      the rate bound functions.
+  - Bounded `VariableRateJump`s require passing the keyword arguments `urate` and
+    `rateinterval`, corresponding to functions `urate(u, p, t)` and `rateinterval(u, p, t)`,
+    see below. These must calculate a time window over which the rate function is bounded by a
+    constant. Note that it is ok if the rate bound would be violated within the time interval
+    due to a change in `u` arising from another `ConstantRateJump`, `MassActionJump` or
+    *bounded* `VariableRateJump` being executed, as the chosen aggregator will then handle
+    recalculating the rate bound and interval. *However, if the bound could be violated within
+    the time interval due to a change in `u` arising from continuous dynamics such as a
+    coupled ODE, SDE, or a general `VariableRateJump`, bounds should not be given.* This
+    ensures the jump is classified as a general `VariableRateJump` and properly handled. One
+    can also optionally provide a lower bound function, `lrate(u, p, t)`, via the `lrate`
+    keyword argument. This can lead to increased performance. The validity of the lower bound
+    should hold under the same conditions and rate interval as `urate`.
+
+      + Bounded `VariableRateJump`s can currently be used in the `Coevolve` aggregator, and
+        can therefore be efficiently simulated in pure-jump `DiscreteProblem`s using the
+        `SSAStepper` time-stepper.
+      + These can be substantially more performant than general `VariableRateJump`s without
+        the rate bound functions.
 
 Reemphasizing, the additional user provided functions leveraged by bounded
-`VariableRateJumps`, `urate(u, p, t)`, `rateinterval(u, p, t)`, and the optional `lrate(u,
-p, t)` require that
-- For `s` in `[t, t + rateinterval(u, p, t)]`, we have that `lrate(u, p, t) <= rate(u, p, s)
-  <= urate(u, p, t)`.
-- It is ok if these bounds would be violated during the time window due to another
-  `ConstantRateJump`, `MassActionJump` or bounded `VariableRateJump` occurring. However,
-  they must remain valid if `u` changes for any other reason (for example, due to
-  continuous dynamics like ODEs, SDEs, or general `VariableRateJump`s).
+`VariableRateJumps`, `urate(u, p, t)`, `rateinterval(u, p, t)`, and the optional `lrate(u, p, t)` require that
+
+  - For `s` in `[t, t + rateinterval(u, p, t)]`, we have that `lrate(u, p, t) <= rate(u, p, s) <= urate(u, p, t)`.
+  - It is ok if these bounds would be violated during the time window due to another
+    `ConstantRateJump`, `MassActionJump` or bounded `VariableRateJump` occurring. However,
+    they must remain valid if `u` changes for any other reason (for example, due to
+    continuous dynamics like ODEs, SDEs, or general `VariableRateJump`s).
 
 ## Fields
 
 $(FIELDS)
 
 ## Examples
+
 Suppose `u[1]` gives the number of particles and `t*p[1]` the probability per time each
 particle can decay away. A corresponding `VariableRateJump` for this jump process is
+
 ```julia
-rate(u,p,t) = t*p[1]*u[1]
+rate(u, p, t) = t*p[1]*u[1]
 affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!)
 ```
 
 To define a bounded `VariableRateJump` that can be used with supporting aggregators such as
 `Coevolve`, we must define bounds and a rate interval:
+
 ```julia
-rateinterval(u,p,t) = (1 / p[1]) * 2
-rate(u,p,t) = t * p[1] * u[1]
+rateinterval(u, p, t) = (1 / p[1]) * 2
+rate(u, p, t) = t * p[1] * u[1]
 lrate(u, p, t) = rate(u, p, t)
-urate(u,p,t) = rate(u, p, t + rateinterval(u,p,t))
+urate(u, p, t) = rate(u, p, t + rateinterval(u, p, t))
 affect!(integrator) = integrator.u[1] -= 1
 vrj = VariableRateJump(rate, affect!; lrate = lrate, urate = urate,
-                                      rateinterval = rateinterval)
+    rateinterval = rateinterval)
 ```
 
 ## Notes
-- When using an aggregator that supports bounded `VariableRateJump`s, `DiscreteProblem` can
-  be used. Otherwise, `ODEProblem` or `SDEProblem` must be used.
-- **When not using aggregators that support bounded `VariableRateJump`s, or when there are
-  general `VariableRateJump`s, `integrator`s store an effective state type that wraps the
-  main state vector.** See [`ExtendedJumpArray`](@ref) for details on using this object. In
-  this case all `ConstantRateJump`, `VariableRateJump` and callback `affect!` functions
-  receive an integrator with `integrator.u` an [`ExtendedJumpArray`](@ref).
-- Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of coupled
-  chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
-  DOI:10.1063/1.1835951 is used for calculating jump times with `VariableRateJump`s within
-  ODE/SDE integrators.
+
+  - When using an aggregator that supports bounded `VariableRateJump`s, `DiscreteProblem` can
+    be used. Otherwise, `ODEProblem` or `SDEProblem` must be used.
+  - **When not using aggregators that support bounded `VariableRateJump`s, or when there are
+    general `VariableRateJump`s, `integrator`s store an effective state type that wraps the
+    main state vector.** See [`ExtendedJumpArray`](@ref) for details on using this object. In
+    this case all `ConstantRateJump`, `VariableRateJump` and callback `affect!` functions
+    receive an integrator with `integrator.u` an [`ExtendedJumpArray`](@ref).
+  - Salis H., Kaznessis Y.,  Accurate hybrid stochastic simulation of a system of coupled
+    chemical or biochemical reactions, Journal of Chemical Physics, 122 (5),
+    DOI:10.1063/1.1835951 is used for calculating jump times with `VariableRateJump`s within
+    ODE/SDE integrators.
 """
 struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
-    """Function `rate(u,p,t)` that returns the jump's current rate given state
-    `u`, parameters `p` and time `t`."""
+    """
+    Function `rate(u,p,t)` that returns the jump's current rate given state
+    `u`, parameters `p` and time `t`.
+    """
     rate::R
-    """Function `affect!(integrator)` that updates the state for one occurrence
-    of the jump given `integrator`."""
+    """
+    Function `affect!(integrator)` that updates the state for one occurrence
+    of the jump given `integrator`.
+    """
     affect!::F
-    """Optional function `lrate(u, p, t)` that computes a lower bound on the rate in the
+    """
+    Optional function `lrate(u, p, t)` that computes a lower bound on the rate in the
     interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and parameters
     `p`. This bound must rigorously hold during the time interval as long as another
     `ConstantRateJump`, `MassActionJump`, or *bounded* `VariableRateJump` has not been
@@ -312,21 +352,25 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     `Coevolve`, providing a lower-bound can lead to improved performance.
     """
     lrate::R2
-    """Optional function `urate(u, p, t)` for general `VariableRateJump`s, but is required
+    """
+    Optional function `urate(u, p, t)` for general `VariableRateJump`s, but is required
     to define a bounded `VariableRateJump`, which can be used with supporting aggregators,
-     currently only `Coevolve`, and offers improved computational performance. Computes an
+    currently only `Coevolve`, and offers improved computational performance. Computes an
     upper bound for the rate in the interval `t` to `t + rateinterval(u, p, t)` at time `t`
     given state `u` and parameters `p`. This bound must rigorously hold during the time
     interval as long as another `ConstantRateJump`, `MassActionJump`, or *bounded*
-    `VariableRateJump` has not been sampled. """
+    `VariableRateJump` has not been sampled.
+    """
     urate::R3
-    """Optional function `rateinterval(u, p, t)` for general `VariableRateJump`s, but is
+    """
+    Optional function `rateinterval(u, p, t)` for general `VariableRateJump`s, but is
     required to define a bounded `VariableRateJump`, which can be used with supporting
-     aggregators, currently only `Coevolve`, and offers improved computational performance.
+    aggregators, currently only `Coevolve`, and offers improved computational performance.
     Computes the time interval from time `t` over which the `urate` and `lrate` bounds will
     hold, `t` to `t + rateinterval(u, p, t)`, given state `u` and parameters `p`. This bound
     must rigorously hold during the time interval as long as another `ConstantRateJump`,
-    `MassActionJump`, or *bounded* `VariableRateJump` has not been sampled. """
+    `MassActionJump`, or *bounded* `VariableRateJump` has not been sampled.
+    """
     rateinterval::R4
     idxs::I
     rootfind::Bool
@@ -380,13 +424,15 @@ Representation for encoding rates and multiple simultaneous jumps for use in τ-
 methods.
 
 ### Constructors
-- `RegularJump(rate, c, numjumps; mark_dist = nothing)`
+
+  - `RegularJump(rate, c, numjumps; mark_dist = nothing)`
 
 ## Fields
 
 $(FIELDS)
 
 ## Examples
+
 ```julia
 function rate!(out, u, p, t)
     out[1] = (0.1 / 1000.0) * u[1] * u[2]
@@ -417,9 +463,13 @@ struct RegularJump{iip, R, C, MD}
     saving the output in `du[i]`.
     """
     c::C
-    """ Number of jumps in the system."""
+    """
+    Number of jumps in the system.
+    """
     numjumps::Int
-    """ A distribution for marks. Not currently used or supported. """
+    """
+    A distribution for marks. Not currently used or supported.
+    """
     mark_dist::MD
     function RegularJump{iip}(rate, c, numjumps::Int; mark_dist = nothing) where {iip}
         new{iip, typeof(rate), typeof(c), typeof(mark_dist)}(rate, c, numjumps, mark_dist)
@@ -448,12 +498,14 @@ $(TYPEDEF)
 Optimized representation for `ConstantRateJump`s that can be represented in mass
 action form, offering improved performance within jump algorithms compared to
 `ConstantRateJump`. For detailed examples and usage information, see the
-- [Main
-  Docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump)
-- [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
+
+  - [Main
+    Docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump)
+  - [Tutorial](https://docs.sciml.ai/JumpProcesses/stable/tutorials/discrete_stochastic_example/)
 
 ### Constructors
-- `MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = nothing)`
+
+  - `MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = nothing)`
 
 Here `reactant_stoich` denotes the reactant stoichiometry for each reaction and
 `net_stoich` the net stoichiometry for each reaction.
@@ -463,64 +515,95 @@ Here `reactant_stoich` denotes the reactant stoichiometry for each reaction and
 $(FIELDS)
 
 ## Keyword Arguments
-- `scale_rates = true`, whether to rescale the reaction rate constants according
-  to the stoichiometry.
-- `nocopy = false`, whether the `MassActionJump` can alias the `scaled_rates` and
-  `reactant_stoch` from the input. Note, if `scale_rates=true` this will
-  potentially modify both of these.
-- `param_idxs = nothing`, indexes in the parameter vector, `JumpProblem.prob.p`,
-  that correspond to each reaction's rate.
+
+  - `scale_rates = true`, whether to rescale the reaction rate constants according
+    to the stoichiometry.
+  - `nocopy = false`, whether the `MassActionJump` can alias the `scaled_rates` and
+    `reactant_stoch` from the input. Note, if `scale_rates=true` this will
+    potentially modify both of these.
+  - `param_idxs = nothing`, indexes in the parameter vector, `JumpProblem.prob.p`,
+    that correspond to each reaction's rate; a scalar index is accepted for one reaction.
+  - `param_mapper = nothing`, an alternative to `param_idxs`: a callable
+    `(dest, maj, params)` that fills the final scaled working rates in `dest` and
+    returns `nothing`. It must not mutate the definition or input parameters.
+  - `rescale_rates_on_update = scale_rates`, the scaling policy used by the built-in
+    parameter mapper. Custom mappers implement their own scaling and should honor
+    this policy when mapping unscaled coefficients; pre-scaled output must not be
+    scaled again.
 
 See the tutorial and main docs for details.
 
 ## Examples
+
 An SIR model with `S + I --> 2I` at rate β as the first reaction and `I --> R`
 at rate ν as the second reaction can be encoded by
+
 ```julia
-p        = (β=1e-4, ν=.01)
-u0       = [999, 1, 0]       # (S,I,R)
-tspan    = (0.0, 250.0)
+p = (β = 1e-4, ν = 0.01)
+u0 = [999, 1, 0]       # (S,I,R)
+tspan = (0.0, 250.0)
 rateidxs = [1, 2]           # i.e. [β,ν]
 reactant_stoich = [
-  [1 => 1, 2 => 1],         # 1*S and 1*I
-  [2 => 1]                  # 1*I
+    [1 => 1, 2 => 1],         # 1*S and 1*I
+    [2 => 1]                  # 1*I
 ]
 net_stoich = [
-  [1 => -1, 2 => 1],        # -1*S and 1*I
-  [2 => -1, 3 => 1]         # -1*I and 1*R
+    [1 => -1, 2 => 1],        # -1*S and 1*I
+    [2 => -1, 3 => 1]         # -1*I and 1*R
 ]
-maj = MassActionJump(reactant_stoich, net_stoich; param_idxs=rateidxs)
+maj = MassActionJump(reactant_stoich, net_stoich; param_idxs = rateidxs)
 prob = DiscreteProblem(u0, tspan, p)
 jprob = JumpProblem(prob, Direct(), maj)
 ```
 
 ## Notes
-- By default, reaction rates are rescaled when constructing the `MassActionJump`
-  as explained in the [main
-  docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump).
-  Disable this with the kwarg `scale_rates=false`.
-- Also see the [main
-  docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump)
-  for how to specify reactions with no products or no reactants.
 
-
+  - By default, fixed reaction rates are rescaled when constructing the `MassActionJump`;
+    the built-in parameter mapper rescales rates when filling each solver's working
+    buffer at initialization/reset, as explained in the [main
+    docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump).
+    Disable this with the kwarg `scale_rates=false`.
+  - Also see the [main
+    docs](https://docs.sciml.ai/JumpProcesses/stable/jump_types/#Defining-a-Mass-Action-Jump)
+    for how to specify reactions with no products or no reactants.
+  - For non-spatial problems the state `u` must be a `Vector` or an `SVector` of integers
+    or floats; scalar and other states are not supported. Spatial problems, built by
+    passing `hopping_constants` and a `spatial_system` to `JumpProblem`, use a species ×
+    sites `Matrix{Int}`. `NSM` and `DirectCRDirect` keep the matrix, while other
+    aggregators flatten it into a `Vector`. See the [supported state
+    types](https://docs.sciml.ai/JumpProcesses/stable/jump_solve/#ssa_state_types).
 """
 struct MassActionJump{T, S, U, V} <: AbstractMassActionJump
-    """The (scaled) reaction rate constants."""
+    """
+    The stored (scaled) fixed reaction rate constants, or `nothing` for a
+    parameter-mapped definition. Numeric working rates live in solver/aggregator
+    buffers and are refreshed at initialization/reset. Stored definition arrays
+    can be shared across remade problems; do not mutate them during concurrent
+    solves. Prefer parameter indices or a custom mapper for rates that change.
+    """
     scaled_rates::T
-    """The reactant stoichiometry vectors."""
+    """
+    The reactant stoichiometry vectors.
+    """
     reactant_stoch::S
-    """The net stoichiometry vectors."""
+    """
+    The net stoichiometry vectors.
+    """
     net_stoch::U
-    """Parameter mapping functor to identify reaction rate constants with parameters in `p` vectors."""
+    """
+    Parameter mapping functor to identify reaction rate constants with parameters in `p` vectors.
+    """
     param_mapper::V
-    """Whether `update_parameters!` should apply stoichiometric scaling to rates."""
+    """
+    Whether the built-in mapper callable should apply stoichiometric scaling to rates.
+    """
     rescale_rates_on_update::Bool
 
     function MassActionJump{T, S, U, V}(rates::T, rs_in::S, ns::U, pmapper::V,
             scale_rates::Bool, useiszero::Bool,
             nocopy::Bool,
-            rescale_rates_on_update::Bool = scale_rates) where {T <: AbstractVector, S, U, V}
+            rescale_rates_on_update::Bool = scale_rates) where {
+            T <: AbstractVector, S, U, V}
         sr = nocopy ? rates : copy(rates)
         rs = nocopy ? rs_in : copy(rs_in)
         for i in eachindex(rs)
@@ -596,7 +679,8 @@ function MassActionJump(rs, ns; param_idxs = nothing, param_mapper = nothing,
     if param_mapper === nothing
         (param_idxs === nothing) &&
             error("If no parameter indices are given via param_idxs, an explicit parameter mapping must be passed in via param_mapper.")
-        pmapper = MassActionJumpParamMapper(param_idxs)
+        pmapper = MassActionJumpParamMapper(param_idxs isa Integer ? [param_idxs] :
+                                            param_idxs)
     else
         (param_idxs !== nothing) &&
             error("Only one of param_idxs and param_mapper should be passed.")
@@ -637,34 +721,45 @@ get_num_majumps(nothing) == 0
 @inline get_num_majumps(maj::MassActionJump) = length(maj.net_stoch)
 @inline get_num_majumps(maj::Nothing) = 0
 
+"""
+    MassActionJumpParamMapper{U}
+
+Default parameter mapper for parameterized `MassActionJump`s (those constructed
+with `param_idxs` instead of explicit `scaled_rates`). Stores the indices into
+the parameter vector `p` that correspond to each reaction's rate constant.
+
+Implements the in-place mapper callable API:
+
+    (mapper)(dest::AbstractVector, maj::MassActionJump, params)
+
+which is called by [`fill_scaled_rates!`](@ref) during aggregator initialization
+and reinitialization to populate the working rate vector from parameters.
+
+`dest` must contain the final scaled coefficients for each reaction. The
+built-in mapper extracts parameter values and applies stoichiometric scaling
+via `scalerates!` when `maj.rescale_rates_on_update` is `true`.
+
+Custom mappers (e.g. ModelingToolkitBase's `JumpSysMajParamMapper`) should
+implement this 3-arg callable to support parameterized `MassActionJump`s.
+They own their scaling policy: `fill_scaled_rates!` does not scale their output
+again. A mapper producing pre-scaled coefficients should use `scale_rates = false`
+and avoid applying the stoichiometric factors a second time.
+"""
 struct MassActionJumpParamMapper{U}
     param_idxs::U
 end
 
-# create the initial parameter vector for use in a MassActionJump
-# Note these are unscaled
-function (ratemap::MassActionJumpParamMapper{U})(params) where {U <: AbstractArray}
-    [params[pidx] for pidx in ratemap.param_idxs]
-end
-
-# Note this is unscaled
-function (ratemap::MassActionJumpParamMapper{U})(params) where {U <: Int}
-    params[ratemap.param_idxs]
-end
-
-# update a maj with parameter vectors
-function (ratemap::MassActionJumpParamMapper{U})(maj::MassActionJump, newparams;
-        scale_rates,
-        kwargs...) where {U <: AbstractArray}
-    for i in 1:get_num_majumps(maj)
-        maj.scaled_rates[i] = newparams[ratemap.param_idxs[i]]
+function (mapper::MassActionJumpParamMapper{U})(dest::AbstractVector,
+        maj::MassActionJump, params) where {U <: AbstractArray}
+    @inbounds for i in eachindex(dest)
+        dest[i] = params[mapper.param_idxs[i]]
     end
-    scale_rates && scalerates!(maj.scaled_rates, maj.reactant_stoch)
+    maj.rescale_rates_on_update && scalerates!(dest, maj.reactant_stoch)
     nothing
 end
 
-function to_collection(ratemap::MassActionJumpParamMapper{Int})
-    MassActionJumpParamMapper([ratemap.param_idxs])
+function to_collection(ratemap::MassActionJumpParamMapper)
+    MassActionJumpParamMapper(copy(ratemap.param_idxs))
 end
 
 function Base.merge!(pmap1::MassActionJumpParamMapper{U},
@@ -672,35 +767,27 @@ function Base.merge!(pmap1::MassActionJumpParamMapper{U},
     append!(pmap1.param_idxs, pmap2.param_idxs)
 end
 
-function Base.merge!(pmap1::MassActionJumpParamMapper{U},
-        pmap2::MassActionJumpParamMapper{V}) where {U <: AbstractVector,
-        V <: Int}
-    push!(pmap1.param_idxs, pmap2.param_idxs)
-end
-
-function Base.merge(pmap1::MassActionJumpParamMapper{Int},
-        pmap2::MassActionJumpParamMapper{Int})
-    MassActionJumpParamMapper([pmap1.param_idxs, pmap2.param_idxs])
-end
-
 """
-update_parameters!(maj::MassActionJump, newparams; scale_rates=maj.rescale_rates_on_update)
+    fill_scaled_rates!(dest::AbstractVector, maj::MassActionJump, params)
 
-Updates the passed in MassActionJump with the parameter values in `newparams`.
+Fill `dest` with the current scaled rates for the mass action jump. Dispatches on the
+`scaled_rates` type parameter of `maj`:
 
-Notes:
-
-  - Requires the jump to have been constructed with a user-passed `param_idxs` or `param_mapper`.
-  - `scale_rates` defaults to `maj.rescale_rates_on_update`, which itself defaults to the
-    `scale_rates` value used when constructing the jump. When `true`, the parameter
-    representing the jump rate will be scaled by an appropriate combinatoric factor, i.e.
-    for 3A --> B at rate k it will scale k --> k/3!.
+  - `T = Nothing` (parameterized MAJ): delegates to `maj.param_mapper(dest, maj, params)`.
+  - `T <: AbstractVector` (non-parameterized MAJ): copies `maj.scaled_rates` into `dest`.
 """
-function update_parameters!(maj::MassActionJump, newparams; scale_rates = maj.rescale_rates_on_update, kwargs...)
-    (maj.param_mapper === nothing) &&
-        error("MassActionJumps must be constructed with param_idxs or a param_mapper to be updateable.")
-    maj.param_mapper(maj, newparams; scale_rates, kwargs)
+function fill_scaled_rates!(dest::AbstractVector, maj::MassActionJump{Nothing}, params)
+    maj.param_mapper(dest, maj, params)
+    nothing
 end
+
+function fill_scaled_rates!(dest::AbstractVector, maj::MassActionJump{T},
+        params) where {T <: AbstractVector}
+    dest .= maj.scaled_rates
+    nothing
+end
+
+fill_scaled_rates!(dest, maj::Nothing, params) = nothing
 
 """
 $(TYPEDEF)
@@ -712,22 +799,24 @@ Defines a collection of jumps that should collectively be included in a simulati
 $(FIELDS)
 
 ## Examples
+
 Here we construct two jumps, store them in a `JumpSet`, and then simulate the resulting
 process.
+
 ```julia
 using JumpProcesses, OrdinaryDiffEq
 
-rate1(u,p,t) = p[1]
+rate1(u, p, t) = p[1]
 affect1!(integrator) = (integrator.u[1] += 1)
 crj = ConstantRateJump(rate1, affect1!)
 
-rate2(u,p,t) = (t/(1+t))*p[2]*u[1]
+rate2(u, p, t) = (t/(1+t))*p[2]*u[1]
 affect2!(integrator) = (integrator.u[1] -= 1)
 vrj = VariableRateJump(rate2, affect2!)
 
 jset = JumpSet(crj, vrj)
 
-f!(du,u,p,t) = (du .= 0)
+f!(du, u, p, t) = (du .= 0)
 u0 = [0.0]
 p = (20.0, 2.0)
 tspan = (0.0, 200.0)
@@ -737,13 +826,21 @@ sol = solve(jprob, Tsit5())
 ```
 """
 struct JumpSet{T1, T2, T3, T4} <: AbstractJump
-    """Collection of [`VariableRateJump`](@ref)s"""
+    """
+    Collection of [`VariableRateJump`](@ref)s
+    """
     variable_jumps::T1
-    """Collection of [`ConstantRateJump`](@ref)s"""
+    """
+    Collection of [`ConstantRateJump`](@ref)s
+    """
     constant_jumps::T2
-    """Collection of [`RegularJump`](@ref)s"""
+    """
+    Collection of [`RegularJump`](@ref)s
+    """
     regular_jump::T3
-    """Collection of [`MassActionJump`](@ref)s"""
+    """
+    Collection of [`MassActionJump`](@ref)s
+    """
     massaction_jump::T4
 end
 function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
@@ -751,6 +848,16 @@ function JumpSet(vj, cj, rj, maj::MassActionJump{S, T, U, V}) where {S <: Number
 end
 function JumpSet(vj::AbstractJump, cj::AbstractJump, rj::AbstractJump,
         maj::MassActionJump{S, T, U, V}) where {S <: Number, T, U, V}
+    JumpSet(vj, cj, rj, check_majump_type(maj))
+end
+function JumpSet(vj, cj, rj,
+        maj::MassActionJump{Nothing, T, U, V}) where {
+        T <: AbstractArray{<:Pair}, U <: AbstractArray{<:Pair}, V}
+    JumpSet(vj, cj, rj, check_majump_type(maj))
+end
+function JumpSet(vj::AbstractJump, cj::AbstractJump, rj::AbstractJump,
+        maj::MassActionJump{Nothing, T, U, V}) where {
+        T <: AbstractArray{<:Pair}, U <: AbstractArray{<:Pair}, V}
     JumpSet(vj, cj, rj, check_majump_type(maj))
 end
 
@@ -773,6 +880,11 @@ end
 function JumpSet(vjs, cjs, rj, majv::Vector{T}) where {T <: MassActionJump}
     if isempty(majv)
         error("JumpSets do not accept empty mass action jump collections; use \"nothing\" instead.")
+    end
+
+    if any(m -> using_params(m) && !(m.param_mapper isa MassActionJumpParamMapper), majv)
+        error("Cannot merge MassActionJumps backed by custom parameter mappers. " *
+              "Construct a single MassActionJump with all reactions instead.")
     end
 
     sr_val = majv[1].rescale_rates_on_update
@@ -849,10 +961,13 @@ function check_majump_type(maj::MassActionJump{Nothing, T, U, V}) where {T, U, V
 end
 
 # if given containers of rates and stoichiometry directly create a jump
-function setup_majump_to_merge(sr::T, rs::AbstractVector{S}, ns::AbstractVector{U}, pmapper,
+# copy arrays since majump_merge! will mutate them in-place
+function setup_majump_to_merge(
+        sr::T, rs::AbstractVector{S}, ns::AbstractVector{U}, pmapper,
         rescale_rates_on_update::Bool) where {T <: AbstractVector, S <: AbstractArray,
         U <: AbstractArray}
-    MassActionJump(sr, rs, ns, pmapper; scale_rates = false, rescale_rates_on_update)
+    MassActionJump(copy(sr), copy(rs), copy(ns), pmapper;
+        scale_rates = false, nocopy = true, rescale_rates_on_update)
 end
 
 # if just given the data for one jump (and not in a container) wrap in a vector
@@ -864,7 +979,17 @@ function setup_majump_to_merge(sr::S, rs::T, ns::U, pmapper,
         scale_rates = false, rescale_rates_on_update)
 end
 
-# if no rate field setup yet
+# if no rate field setup yet — collection case (rs is already Vector{<:AbstractArray})
+# copy arrays and mapper since majump_merge! will mutate them in-place
+function setup_majump_to_merge(::Nothing, rs::AbstractVector{S}, ns::AbstractVector{U},
+        pmapper,
+        rescale_rates_on_update::Bool) where {S <: AbstractArray, U <: AbstractArray}
+    pm = (pmapper === nothing) ? nothing : deepcopy(pmapper)
+    MassActionJump(nothing, copy(rs), copy(ns), pm;
+        scale_rates = false, nocopy = true, rescale_rates_on_update)
+end
+
+# if no rate field setup yet — single reaction case (wrap in a vector)
 function setup_majump_to_merge(::Nothing, rs::T, ns::U, pmapper,
         rescale_rates_on_update::Bool) where {T <: AbstractArray, U <: AbstractArray}
     MassActionJump(nothing, [rs], [ns],
@@ -930,9 +1055,26 @@ function majump_merge!(maj::MassActionJump{T, S, U, V}, sr::T, rs::S, ns::U,
 end
 
 massaction_jump_combine(maj1::MassActionJump, maj2::Nothing) = maj1
-massaction_jump_combine(maj1::Nothing, maj2::MassActionJump) = maj2
 massaction_jump_combine(maj1::Nothing, maj2::Nothing) = maj1
+# copy the MAJ so it is safe to mutate during subsequent merges
+function massaction_jump_combine(maj1::Nothing, maj2::MassActionJump)
+    setup_majump_to_merge(maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch,
+        maj2.param_mapper, maj2.rescale_rates_on_update)
+end
+function uses_custom_mapper(maj)
+    using_params(maj) && !(maj.param_mapper isa MassActionJumpParamMapper)
+end
+
 function massaction_jump_combine(maj1::MassActionJump, maj2::MassActionJump)
+    # Check the two jumps separately: looping over a tuple of differently typed jumps
+    # allocates on every merge.
+    (uses_custom_mapper(maj1) || uses_custom_mapper(maj2)) &&
+        error("Cannot merge MassActionJumps backed by custom parameter mappers. " *
+              "Construct a single MassActionJump with all reactions instead.")
+    (using_params(maj1) == using_params(maj2)) ||
+        error("Cannot merge a MassActionJump that has fixed rates with one that has a " *
+              "parameter mapping (`param_idxs` or `param_mapper`). Give every jump " *
+              "fixed rates, or every jump a parameter mapping.")
     (maj1.rescale_rates_on_update == maj2.rescale_rates_on_update) ||
         error("Cannot merge MassActionJumps with different rescale_rates_on_update settings.")
     majump_merge!(maj1, maj2.scaled_rates, maj2.reactant_stoch, maj2.net_stoch,
@@ -981,8 +1123,9 @@ function get_jump_bracket_fwrappers(u, p, t, jumps, agg)
     end
 end
 
-make_bracket_fn(c::ConstantRateJump) =
+function make_bracket_fn(c::ConstantRateJump)
     (ulow, uhigh, u, p, t) -> cjump_brackets(c, ulow, uhigh, u, p, t)
+end
 
 function get_jump_lrate_fwrappers(u, p, t, jumps, agg)
     BoundWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
@@ -1012,8 +1155,10 @@ function get_jump_urate_fwrappers(u, p, t, jumps, agg)
     end
 end
 
-make_lrate_fn(c::ConstantRateJump) =
+function make_lrate_fn(c::ConstantRateJump)
     (ulow, uhigh, u, p, t) -> lower_rate_bound(c, ulow, uhigh, u, p, t)
+end
 
-make_urate_fn(c::ConstantRateJump) =
+function make_urate_fn(c::ConstantRateJump)
     (ulow, uhigh, u, p, t) -> upper_rate_bound(c, ulow, uhigh, u, p, t)
+end

@@ -123,13 +123,19 @@ end
 ############## hopping rates of form D_s ################
 
 struct HopRatesGraphDs{F} <: AbstractHopRates
-    "hopping_constants[i] is the hop constant of species i"
+    """
+    hopping_constants[i] is the hop constant of species i
+    """
     hopping_constants::Vector{F}
 
-    "rates[i,j] is total hopping rate of species i at site j"
+    """
+    rates[i,j] is total hopping rate of species i at site j
+    """
     rates::Matrix{F}
 
-    "sum_rates[j] is the sum of hopping rates at site j"
+    """
+    sum_rates[j] is the sum of hopping rates at site j
+    """
     sum_rates::Vector{F}
 end
 
@@ -157,18 +163,25 @@ end
 return hopping rate of species at site
 """
 function evalhoprate(hop_rates::HopRatesGraphDs, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.hopping_constants[species] * outdegree(spatial_system, site)
+    @inbounds u[species, site] * hop_rates.hopping_constants[species] *
+              outdegree(spatial_system, site)
 end
 
 ############## hopping rates of form D_{s,i} ################
 struct HopRatesGraphDsi{F} <: AbstractHopRates
-    "hopping_constants[i,j] is the hop constant of species i at site j"
+    """
+    hopping_constants[i,j] is the hop constant of species i at site j
+    """
     hopping_constants::Matrix{F}
 
-    "rates[i,j] is total hopping rate of species i at site j"
+    """
+    rates[i,j] is total hopping rate of species i at site j
+    """
     rates::Matrix{F}
 
-    "sum_rates[j] is the sum of hopping rates at site j"
+    """
+    sum_rates[j] is the sum of hopping rates at site j
+    """
     sum_rates::Vector{F}
 end
 
@@ -196,18 +209,25 @@ end
 return hopping rate of species at site
 """
 function evalhoprate(hop_rates::HopRatesGraphDsi, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.hopping_constants[species, site] * outdegree(spatial_system, site)
+    @inbounds u[species, site] * hop_rates.hopping_constants[species, site] *
+              outdegree(spatial_system, site)
 end
 
 ############## hopping rates of form D_{s,i,j} ################
 struct HopRatesGraphDsij{F} <: AbstractHopRates
-    "hop_const_cumulative_sums[s,i] is the vector of cumulative sums of hopping constants of species s at site i"
+    """
+    hop_const_cumulative_sums[s,i] is the vector of cumulative sums of hopping constants of species s at site i
+    """
     hop_const_cumulative_sums::Matrix{Vector{F}}
 
-    "rates[s,i] is the total hopping rate of species s at site i"
+    """
+    rates[s,i] is the total hopping rate of species s at site i
+    """
     rates::Matrix{F}
 
-    "sum_rates[i] is the total hopping rate out of site i"
+    """
+    sum_rates[i] is the total hopping rate out of site i
+    """
     sum_rates::Vector{F}
 end
 
@@ -246,13 +266,19 @@ end
 Analogue of HopRatesGraphDsij, optimized for CartesianGrid
 """
 struct HopRatesGridDsij{F} <: AbstractHopRates
-    "hop_const_cumulative_sums[:,s,i] is the vector of cumulative sums of hopping constants of species s at site i. Out-of-bounds neighbors are treated as having zero propensity."
+    """
+    hop_const_cumulative_sums[:,s,i] is the vector of cumulative sums of hopping constants of species s at site i. Out-of-bounds neighbors are treated as having zero propensity.
+    """
     hop_const_cumulative_sums::Array{F, 3}
 
-    "rates[s,i] is the total hopping rate of species s at site i"
+    """
+    rates[s,i] is the total hopping rate of species s at site i
+    """
     rates::Matrix{F}
 
-    "sum_rates[i] is the total hopping rate out of site i"
+    """
+    sum_rates[i] is the total hopping rate out of site i
+    """
     sum_rates::Vector{F}
 end
 
@@ -299,16 +325,24 @@ end
 
 ############## hopping rates of form D_s * L_{i,j} ################
 struct HopRatesGraphDsLij{F} <: AbstractHopRates
-    "hopping constants of species -- D_s"
+    """
+    hopping constants of species -- D_s
+    """
     species_hop_constants::Vector{F}
 
-    "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
+    """
+    nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors
+    """
     hop_const_cumulative_sums::Vector{Vector{F}}
 
-    "rates[s,i] is the total hopping rate of species s at site i"
+    """
+    rates[s,i] is the total hopping rate of species s at site i
+    """
     rates::Matrix{F}
 
-    "sum_rates[i] is the total hopping rate out of site i"
+    """
+    sum_rates[i] is the total hopping rate out of site i
+    """
     sum_rates::Vector{F}
 end
 
@@ -342,21 +376,30 @@ function sample_target_site(hop_rates::HopRatesGraphDsLij, site, species, rng,
 end
 
 function evalhoprate(hop_rates::HopRatesGraphDsLij, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species] * hop_rates.hop_const_cumulative_sums[site][end]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species] *
+              hop_rates.hop_const_cumulative_sums[site][end]
 end
 
 ############## hopping rates of form D_s * L_{i,j} optimized for cartesian grid ################
 struct HopRatesGridDsLij{F} <: AbstractHopRates
-    "hopping constants of species -- D_s"
+    """
+    hopping constants of species -- D_s
+    """
     species_hop_constants::Vector{F}
 
-    "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
+    """
+    nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors
+    """
     hop_const_cumulative_sums::Matrix{F}
 
-    "rates[s,i] is the total hopping rate of species s at site i"
+    """
+    rates[s,i] is the total hopping rate of species s at site i
+    """
     rates::Matrix{F}
 
-    "sum_rates[i] is the total hopping rate out of site i"
+    """
+    sum_rates[i] is the total hopping rate out of site i
+    """
     sum_rates::Vector{F}
 end
 
@@ -395,21 +438,30 @@ function sample_target_site(hop_rates::HopRatesGridDsLij, site, species, rng, gr
 end
 
 function evalhoprate(hop_rates::HopRatesGridDsLij, u, species, site, grid)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species] * hop_rates.hop_const_cumulative_sums[end, site]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species] *
+              hop_rates.hop_const_cumulative_sums[end, site]
 end
 
 ############## hopping rates of form D_{s,i} * L_{i,j} ################
 struct HopRatesGraphDsiLij{F} <: AbstractHopRates
-    "hopping constants of species -- D_s"
+    """
+    hopping constants of species -- D_s
+    """
     species_hop_constants::Matrix{F}
 
-    "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
+    """
+    nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors
+    """
     hop_const_cumulative_sums::Vector{Vector{F}}
 
-    "rates[s,i] is the total hopping rate of species s at site i"
+    """
+    rates[s,i] is the total hopping rate of species s at site i
+    """
     rates::Matrix{F}
 
-    "sum_rates[i] is the total hopping rate out of site i"
+    """
+    sum_rates[i] is the total hopping rate out of site i
+    """
     sum_rates::Vector{F}
 end
 
@@ -437,21 +489,30 @@ function sample_target_site(hop_rates::HopRatesGraphDsiLij, site, species, rng,
 end
 
 function evalhoprate(hop_rates::HopRatesGraphDsiLij, u, species, site, spatial_system)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] * hop_rates.hop_const_cumulative_sums[site][end]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] *
+              hop_rates.hop_const_cumulative_sums[site][end]
 end
 
 ############## hopping rates of form D_{s,i} * L_{i,j} optimized for cartesian grid ################
 struct HopRatesGridDsiLij{F} <: AbstractHopRates
-    "hopping constants of species -- D_s"
+    """
+    hopping constants of species -- D_s
+    """
     species_hop_constants::Matrix{F}
 
-    "nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors"
+    """
+    nbs_cumulative[i] is the vector of cumulative sums of hopping constants from site i to its neighbors
+    """
     hop_const_cumulative_sums::Matrix{F}
 
-    "rates[s,i] is the total hopping rate of species s at site i"
+    """
+    rates[s,i] is the total hopping rate of species s at site i
+    """
     rates::Matrix{F}
 
-    "sum_rates[i] is the total hopping rate out of site i"
+    """
+    sum_rates[i] is the total hopping rate out of site i
+    """
     sum_rates::Vector{F}
 end
 
@@ -492,5 +553,6 @@ function sample_target_site(hop_rates::HopRatesGridDsiLij, site, species, rng, g
 end
 
 function evalhoprate(hop_rates::HopRatesGridDsiLij, u, species, site, grid)
-    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] * hop_rates.hop_const_cumulative_sums[end, site]
+    @inbounds u[species, site] * hop_rates.species_hop_constants[species, site] *
+              hop_rates.hop_const_cumulative_sums[end, site]
 end

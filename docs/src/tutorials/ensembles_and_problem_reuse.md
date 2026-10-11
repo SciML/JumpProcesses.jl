@@ -34,11 +34,29 @@ nothing # hide
 Solving the same problem repeatedly in a loop is the fastest way to generate many
 samples: each solve re-initializes the problem's jump state from the problem's
 current initial condition and parameters, so nothing needs to be copied or rebuilt.
+No seed is needed either. Each solve draws from Julia's default random number
+generator, whose state advances from one solve to the next:
 
 ```@example reuse
-final_counts = [solve(jprob, SSAStepper(); seed).u[end][1] for seed in 1:1000]
+using Random # hide
+Random.seed!(1) # hide
+final_counts = [solve(jprob, SSAStepper()).u[end][1] for _ in 1:1000]
 sum(final_counts) / length(final_counts)
 ```
+
+To make the samples reproducible, create one generator and pass it to every solve.
+Each solve continues the generator's stream, so the samples still differ:
+
+```@example reuse
+using Random
+rng = Xoshiro(1234)
+final_counts = [solve(jprob, SSAStepper(); rng).u[end][1] for _ in 1:1000]
+sum(final_counts) / length(final_counts)
+```
+
+Do not create a new generator with the same seed for each solve, for example
+`solve(jprob, SSAStepper(); rng = Xoshiro(1234))` inside the loop: every solve would
+then follow the same path.
 
 ## Parameter sweeps with `remake`
 
@@ -55,9 +73,10 @@ Since every solve re-initializes the shared state from the problem being solved,
 problems can be solved one after another:
 
 ```@example reuse
+Random.seed!(2) # hide
 mean_counts = map([0.5, 1.0, 2.0]) do birth_rate
     prob = remake(jprob; p = [birth_rate, 0.1])
-    sum(solve(prob, SSAStepper(); seed).u[end][1] for seed in 1:500) / 500
+    sum(solve(prob, SSAStepper()).u[end][1] for _ in 1:500) / 500
 end
 ```
 
@@ -81,7 +100,7 @@ handles the copying needed to run trajectories safely:
 
 ```@example reuse
 ensemble = EnsembleProblem(jprob)
-esol = solve(ensemble, SSAStepper(), EnsembleThreads(); trajectories = 1000, seed = 1)
+esol = solve(ensemble, SSAStepper(), EnsembleThreads(); trajectories = 1000)
 length(esol.u)  # the trajectories
 ```
 
@@ -154,10 +173,10 @@ per task and reused for all of that task's solves:
 ```@example reuse
 nsims = 1000
 chunks = Iterators.partition(1:nsims, cld(nsims, Threads.nthreads()))
-tasks = map(chunks) do seeds
+tasks = map(chunks) do chunk
     Threads.@spawn begin
         local_prob = deepcopy(jprob)  # one independent copy per task
-        [solve(local_prob, SSAStepper(); seed).u[end][1] for seed in seeds]
+        [solve(local_prob, SSAStepper()).u[end][1] for _ in chunk]
     end
 end
 final_counts = reduce(vcat, fetch.(tasks))
@@ -169,8 +188,9 @@ at the same time. For the same reason, integrators that are alive at the same ti
 independent problems:
 
 ```@example reuse
-integrator1 = init(deepcopy(jprob), SSAStepper(); seed = 1)
-integrator2 = init(deepcopy(jprob), SSAStepper(); seed = 2)
+Random.seed!(3) # hide
+integrator1 = init(deepcopy(jprob), SSAStepper())
+integrator2 = init(deepcopy(jprob), SSAStepper())
 step!(integrator1)
 step!(integrator2)
 integrator1.t, integrator2.t
@@ -212,8 +232,9 @@ Permitting `u0` to be aliased avoids a copy, but the solve then mutates the prob
 `u0`, so the next solve starts from the final state of the previous one:
 
 ```@example reuse
+Random.seed!(4) # hide
 prob_u0 = deepcopy(jprob)
-solve(prob_u0, SSAStepper(); seed = 1, alias = SciMLBase.DiscreteAliasSpecifier(alias_u0 = true))
+solve(prob_u0, SSAStepper(); alias = SciMLBase.DiscreteAliasSpecifier(alias_u0 = true))
 prob_u0.prob.u0
 ```
 

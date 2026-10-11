@@ -24,7 +24,7 @@ DiffEqCallbacks = "4.17.0"
 Distributions = "0.25"
 Documenter = "1.1"
 Graphs = "1.9"
-JumpProcesses = "9.13.2"
+JumpProcesses = "10"
 ModelingToolkitBase = "1.77"
 SciMLBase = "3"
 OrdinaryDiffEqFunctionMap = "1, 2"
@@ -37,9 +37,10 @@ StochasticDiffEqCore = "2.2.3"
 StochasticDiffEqHighOrder = "2"
 
 [sources]
-# Temporary: build the docs against the JumpProcesses 10 branches of Catalyst,
-# ModelingToolkitBase, and StochasticDiffEqCore (SciML/OrdinaryDiffEq.jl#4836). Pin exact
-# commits for the 10.0 release build, and remove once those releases are registered.
-Catalyst = {url = "https://github.com/isaacsas/Catalyst.jl.git", rev = "catalyst/jumpprocesses-v10"}
-ModelingToolkitBase = {url = "https://github.com/isaacsas/ModelingToolkit.jl.git", rev = "mtkbase/jumpprocesses-v10", subdir = "lib/ModelingToolkitBase"}
-StochasticDiffEqCore = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "sdecore/jumpprocesses-v10", subdir = "lib/StochasticDiffEqCore"}
+# Temporary: build the 10.0 docs against commits of the JumpProcesses 10 branches of
+# Catalyst (SciML/Catalyst.jl#1572), ModelingToolkitBase (SciML/ModelingToolkit.jl#5269),
+# and StochasticDiffEqCore (SciML/OrdinaryDiffEq.jl#4836). Remove once those releases are
+# registered.
+Catalyst = {url = "https://github.com/isaacsas/Catalyst.jl.git", rev = "6efbc9b8ea8aff6d1bd64904f0027f562b8e2a64"}
+ModelingToolkitBase = {url = "https://github.com/isaacsas/ModelingToolkit.jl.git", rev = "13113b635fb8f1307e7e8511e0c707dac7171272", subdir = "lib/ModelingToolkitBase"}
+StochasticDiffEqCore = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqCore"}

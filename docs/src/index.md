@@ -1,5 +1,16 @@
 # JumpProcesses.jl: Stochastic Simulation Algorithms for Jump Processes, Jump-ODEs, and Jump-Diffusions
 
+!!! warning "JumpProcesses 10.0 is a transitional release"
+
+    StochasticDiffEq, ModelingToolkit, and Catalyst do not yet support JumpProcesses 10
+    and cannot be installed alongside it, so environments that include them will keep
+    JumpProcesses 9.x. We recommend waiting for JumpProcesses 10.0.1, which will follow
+    once those packages are updated, unless you use JumpProcesses on its own. Jump
+    problems coupled to delay differential equations (DDEs) are not supported in
+    JumpProcesses 10.0 at this time. See the
+    [release notes](https://github.com/SciML/JumpProcesses.jl/blob/master/HISTORY.md)
+    for the breaking changes in 10.0.
+
 JumpProcesses.jl provides methods for simulating jump and point processes.
 Across different fields of science, such methods are also known as stochastic
 simulation algorithms (SSAs), Doob's method, Gillespie methods, Kinetic Monte

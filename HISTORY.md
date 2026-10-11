@@ -2,9 +2,11 @@
 
 ## 10.0 (Breaking)
 
-This section describes the forthcoming 10.0 release. During integration,
-`Project.toml` retains version 9.33.1 for development and testing; these breaking
-changes are not intended for a 9.x release.
+JumpProcesses 10.0 is a transitional release. StochasticDiffEq, ModelingToolkit, and
+Catalyst do not yet support it, so environments that include them keep JumpProcesses
+9.x until their updates, and JumpProcesses 10.0.1, are released. Jump problems coupled
+to delay differential equations (DDEs) are not supported in JumpProcesses 10.0 at this
+time.
 
   - **Breaking**: The `rng` keyword argument has been removed from
     `JumpProblem`. Pass `rng` to `solve` or `init` instead:

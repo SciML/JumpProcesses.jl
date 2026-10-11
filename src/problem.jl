@@ -238,7 +238,8 @@ function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
                 resolved_u0, _ = SciMLBase.updated_u0_p(
                     prob, u0, missing; interpret_symbolicmap, use_defaults)
 
-                # Extract state values and wrap with fresh jump_u (resampled)
+                # Extract state values and wrap with a zeroed jump_u; the `VR_FRM` callbacks
+                # draw new thresholds from the integrator's RNG at every `init`.
                 # This handles both:
                 #   - symbolic maps (resolved_u0 is ExtendedJumpArray with updated u)
                 #   - numeric arrays (resolved_u0 is Vector{Float64})

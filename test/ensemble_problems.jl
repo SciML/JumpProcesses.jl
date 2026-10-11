@@ -55,6 +55,8 @@ first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
             trajectories = 3, rng = StableRNG(12345))
         times = [first_jump_time(sol.u[i]) for i in 1:3]
         @test allunique(times)
+        finals = [sol.u[i].u[end][1] for i in 1:3]
+        @test allunique(finals)
     end
 
     # EM() uses a fixed time grid so jump event times aren't directly visible
@@ -127,6 +129,8 @@ end
         sols = [solve(jprob, Tsit5(); rng = StableRNG(s)) for s in (100, 200, 300)]
         times = [first_jump_time(s) for s in sols]
         @test allunique(times)
+        finals = [s.u[end][1] for s in sols]
+        @test allunique(finals)
     end
 end
 

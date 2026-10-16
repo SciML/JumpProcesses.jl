@@ -6,4 +6,4 @@ KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 [compat]
 Adapt = "4.6.0"
 CUDA = "6.1.0"
-KernelAbstractions = "0.9.41"
+KernelAbstractions = "0.9.41, 0.10"

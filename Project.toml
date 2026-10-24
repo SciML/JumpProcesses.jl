@@ -73,13 +73,13 @@ julia = "1.10"
 
 [sources]
 # Temporary: tests use a commit of the StochasticDiffEq branch for JumpProcesses 10
-# (OrdinaryDiffEq.jl#4836), which removes the need for a JumpProcesses StochasticDiffEqCore
+# (OrdinaryDiffEq.jl#4914), which removes the need for a JumpProcesses StochasticDiffEqCore
 # extension. Implicit and Leaping are pinned too, since their registered versions do not
 # admit JumpProcesses 10. Remove when those releases are registered. Julia 1.10 ignores
 # [sources]; see test/test_groups.toml.
-StochasticDiffEqCore = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqCore"}
-StochasticDiffEqImplicit = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqImplicit"}
-StochasticDiffEqLeaping = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqLeaping"}
+StochasticDiffEqCore = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "f5acc71d90afcc7188b016f8d6a1bb0734dbdc26", subdir = "lib/StochasticDiffEqCore"}
+StochasticDiffEqImplicit = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "f5acc71d90afcc7188b016f8d6a1bb0734dbdc26", subdir = "lib/StochasticDiffEqImplicit"}
+StochasticDiffEqLeaping = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "f5acc71d90afcc7188b016f8d6a1bb0734dbdc26", subdir = "lib/StochasticDiffEqLeaping"}
 
 [extras]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"

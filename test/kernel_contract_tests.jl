@@ -171,21 +171,12 @@ function run_kernel_massaction_rate_tests(backend, alg, aggregator)
             active = remake(jp; p = RT[0.06])
             kernel_solve(prob) = solve(EnsembleProblem(prob), alg,
                 EnsembleGPUKernel(backend); trajectories = 16, saveat = one(RT))
-            if alg isa SimpleExplicitTauLeaping && RT === Float32 &&
-               !(backend isa KernelAbstractions.CPU)
-                # PoissonRandom's sampler for larger rates is not type-stable for Float32
-                # rates (its `procf` mixes Float32 and Float64 results), so this kernel
-                # fails to compile for Float32 on GPU backends; the CPU backend tolerates
-                # the dynamic dispatch. An unexpected pass means the sampler was fixed.
-                @test_broken (kernel_solve(active); true)
-            else
-                inactive_sol = kernel_solve(jp)
-                active_sol = kernel_solve(active)
-                @test all(traj -> all(u -> u == u0, traj.u), inactive_sol.u)
-                @test any(traj -> traj.u[end][2] > 0, active_sol.u)
-                @test all(traj -> all(u -> u[1] + 3u[2] == 30, traj.u), active_sol.u)
-                @test all(SciMLBase.successful_retcode, active_sol.u)
-            end
+            inactive_sol = kernel_solve(jp)
+            active_sol = kernel_solve(active)
+            @test all(traj -> all(u -> u == u0, traj.u), inactive_sol.u)
+            @test any(traj -> traj.u[end][2] > 0, active_sol.u)
+            @test all(traj -> all(u -> u[1] + 3u[2] == 30, traj.u), active_sol.u)
+            @test all(SciMLBase.successful_retcode, active_sol.u)
             @test jp.prob.p == RT[0]
             @test jp.massaction_jump.scaled_rates === nothing
             @test active.massaction_jump.scaled_rates === nothing

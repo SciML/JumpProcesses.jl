@@ -59,8 +59,11 @@ sol = solve(jprob, Tsit5())
 struct VR_FRM <: VariableRateAggregator end
 
 function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs)
-    new_prob = extend_problem(prob, cvrjs)
-    variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...)
+    # a Vector of jumps is converted here, once, so that the extended right-hand side
+    # evaluates the rates through the type-stable, unrolled `update_jumps!`
+    vrjs = Tuple(cvrjs)
+    new_prob = extend_problem(prob, vrjs)
+    variable_jump_callback = build_variable_callback(CallbackSet(), 0, vrjs...)
     return new_prob, variable_jump_callback
 end
 
@@ -70,6 +73,19 @@ function extend_u0(prob, Njumps)
     ttype = eltype(prob.tspan)
     u0 = ExtendedJumpArray(prob.u0, zeros(ttype, Njumps))
     return u0
+end
+
+# The function that `extend_problem` rebuilds keeps the specialization of `prob.f` if it is
+# `FullSpecialize` or `NoSpecialize`. Other policies become the default, `AutoSpecialize`, as
+# before: under `AutoDespecialize` and `AutoRespecialize` the integrator would pass the jump
+# callbacks a parameter container instead of `prob.p`, and `FunctionWrapperSpecialize` can only
+# be set by a problem constructor.
+function extended_specialization(f)
+    spec = SciMLBase.specialization(f)
+    if spec === SciMLBase.FullSpecialize || spec === SciMLBase.NoSpecialize
+        return spec
+    end
+    return SciMLBase.AutoSpecialize
 end
 
 function extend_problem(prob::SciMLBase.AbstractDiscreteProblem, jumps)
@@ -83,21 +99,22 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
                 du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = ODEFunction{isinplace(prob), spec}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
@@ -109,14 +126,14 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
                 du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
@@ -133,7 +150,8 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps)
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = SDEFunction{isinplace(prob), spec}(jump_f, jump_g; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, g = jump_g, u0)
 end
@@ -145,21 +163,22 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(du.u, u.u, h, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, h, p, t)
                 du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = DDEFunction{isinplace(prob), spec}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
@@ -172,21 +191,22 @@ function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps)
         jump_f = let _f = _f
             function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(out, du.u, u.u, h, p, t)
-                update_jumps!(out, u, p, t, length(u.u), jumps...)
+                update_jumps!(out, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (du, u::ExtendedJumpArray, h, p, t)
                 out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = DAEFunction{isinplace(prob), spec}(jump_f, sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
@@ -238,15 +258,15 @@ function build_variable_callback(cb, idx, jump)
     CallbackSet(cb, wrap_jump_in_callback(idx, jump))
 end
 
-@inline function update_jumps!(du, u, p, t, idx, jump)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
-end
-
-@inline function update_jumps!(du, u, p, t, idx, jump, jumps...)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
-    update_jumps!(du, u, p, t, idx, jumps...)
+# Unrolled at compile time: recursive splatting over `jumps...` is only inferred for
+# tuples of up to 32 elements, beyond which every rate evaluation is dynamically dispatched.
+@generated function update_jumps!(du, u, p, t, idx, jumps::Tuple)
+    body = Expr(:block)
+    for i in 1:fieldcount(jumps)
+        push!(body.args, :(du[idx + $i] = jumps[$i].rate(u.u, p, t)))
+    end
+    push!(body.args, :(return nothing))
+    return body
 end
 
 ################################### VR_Direct and VR_DirectFW ####################################
@@ -402,8 +422,11 @@ end
     nothing
 end
 
+uses_rate_wrappers(cache::VR_DirectEventCache) = holds_rate_wrappers(cache.rate_funcs)
+
 # Wrapper for initialize to match ContinuousCallback signature
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
+    check_parameters(cb.condition, integrator.p)
     concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
     derivative_discontinuity!(integrator, false)

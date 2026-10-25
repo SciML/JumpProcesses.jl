@@ -23,6 +23,12 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, GR, PQ} <:
     cur_lrates::Vector{T}             # the last computed lower rate for each rate
 end
 
+# Coevolve stores the rates of `ConstantRateJump`s in `urates`, and of `VariableRateJump`s
+# in `rates`.
+function uses_rate_wrappers(p::CoevolveJumpAggregation)
+    holds_rate_wrappers(p.rates) || holds_rate_wrappers(p.urates)
+end
+
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),

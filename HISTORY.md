@@ -1,5 +1,23 @@
 # Breaking updates and feature summaries across releases
 
+## Unreleased
+
+  - `VR_FRM` now keeps `SciMLBase.FullSpecialize` and `SciMLBase.NoSpecialize` when it
+    rebuilds the problem's function. Previously every specialization became
+    `AutoSpecialize`. With `FullSpecialize`, `VR_FRM` solves allocate less and are often
+    faster, but each new model takes longer to compile.
+  - `VR_FRM` no longer slows down with more than 32 `VariableRateJump`s. Its rate
+    evaluation recursed over the jumps, which Julia only infers for up to 32 elements, so
+    with more jumps every rate evaluation was dynamically dispatched and allocated.
+    `VariableRateJump`s passed as a `Vector`, for example through
+    `JumpSet(; variable_jumps)`, are now converted to a `Tuple` once, when the
+    `JumpProblem` is built, so their rates are evaluated the same type-stable way.
+  - Under `SciMLBase.AutoDespecialize`, the integrator passes the jumps a
+    `SciMLBase.DespecializedParameters`. The aggregators that store rate functions in
+    `FunctionWrapper`s now throw an `ArgumentError` saying to use `FullSpecialize`,
+    instead of a `MethodError` at the first rate evaluation.
+  - The SciMLBase compat lower bound is now 3.46.
+
 ## 10.0 (Breaking)
 
 JumpProcesses 10.0 is a transitional release. StochasticDiffEq, ModelingToolkit, and

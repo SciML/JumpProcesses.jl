@@ -134,6 +134,27 @@ let
     end
 end
 
+# VR_FRM's extended right-hand side must stay non-allocating for more than 32 jumps
+function alloc_rhs(f, du, u, p, t)
+    @allocated f(du, u, p, t)
+end
+let
+    for n in (10, 40)
+        f!(du, u, p, t) = (du .= 0; nothing)
+        jumps = [VariableRateJump((u, p, t) -> p[1] * (1 + u[i]) * t,
+                     integ -> (integ.u[i] += 1; nothing)) for i in 1:n]
+        oprob = ODEProblem(f!, zeros(n), (0.0, 1.0), (0.5,))
+        jprob = JumpProblem(oprob, Direct(), jumps...; vr_aggregator = VR_FRM())
+        f = jprob.prob.f
+        u, p, t = copy(jprob.prob.u0), oprob.p, 0.3
+        du = similar(u)
+        f(du, u, p, t)
+        @test du.u == zeros(n)
+        @test du.jump_u ≈ fill(0.5 * 0.3, n)
+        @test alloc_rhs(f, du, u, p, t) == 0
+    end
+end
+
 # tuple-based constant rate aggregators must not allocate per step for more than 32 jumps
 let
     n = 40

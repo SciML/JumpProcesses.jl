@@ -96,14 +96,14 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
                 du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
@@ -123,14 +123,14 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
                 du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
@@ -160,14 +160,14 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(du.u, u.u, h, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, h, p, t)
                 du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
@@ -188,14 +188,14 @@ function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps)
         jump_f = let _f = _f
             function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(out, du.u, u.u, h, p, t)
-                update_jumps!(out, u, p, t, length(u.u), jumps...)
+                update_jumps!(out, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (du, u::ExtendedJumpArray, h, p, t)
                 out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
@@ -255,15 +255,22 @@ function build_variable_callback(cb, idx, jump)
     CallbackSet(cb, wrap_jump_in_callback(idx, jump))
 end
 
-@inline function update_jumps!(du, u, p, t, idx, jump)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
+# Unrolled at compile time: recursive splatting over `jumps...` is only inferred for
+# tuples of up to 32 elements, beyond which every rate evaluation is dynamically dispatched.
+@generated function update_jumps!(du, u, p, t, idx, jumps::Tuple)
+    body = Expr(:block)
+    for i in 1:fieldcount(jumps)
+        push!(body.args, :(du[idx + $i] = jumps[$i].rate(u.u, p, t)))
+    end
+    push!(body.args, :(return nothing))
+    return body
 end
 
-@inline function update_jumps!(du, u, p, t, idx, jump, jumps...)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
-    update_jumps!(du, u, p, t, idx, jumps...)
+function update_jumps!(du, u, p, t, idx, jumps)
+    for (i, jump) in enumerate(jumps)
+        du[idx + i] = jump.rate(u.u, p, t)
+    end
+    return nothing
 end
 
 ################################### VR_Direct and VR_DirectFW ####################################

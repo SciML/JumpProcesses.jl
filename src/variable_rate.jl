@@ -59,8 +59,11 @@ sol = solve(jprob, Tsit5())
 struct VR_FRM <: VariableRateAggregator end
 
 function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs)
-    new_prob = extend_problem(prob, cvrjs)
-    variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...)
+    # a Vector of jumps is converted here, once, so that the extended right-hand side
+    # evaluates the rates through the type-stable, unrolled `update_jumps!`
+    vrjs = Tuple(cvrjs)
+    new_prob = extend_problem(prob, vrjs)
+    variable_jump_callback = build_variable_callback(CallbackSet(), 0, vrjs...)
     return new_prob, variable_jump_callback
 end
 
@@ -264,13 +267,6 @@ end
     end
     push!(body.args, :(return nothing))
     return body
-end
-
-function update_jumps!(du, u, p, t, idx, jumps)
-    for (i, jump) in enumerate(jumps)
-        du[idx + i] = jump.rate(u.u, p, t)
-    end
-    return nothing
 end
 
 ################################### VR_Direct and VR_DirectFW ####################################

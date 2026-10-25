@@ -134,7 +134,8 @@ let
     end
 end
 
-# VR_FRM's extended right-hand side must stay non-allocating for more than 32 jumps
+# VR_FRM's extended right-hand side must stay non-allocating for more than 32 jumps, and
+# when the jumps are passed as a Vector with an abstract element type
 function alloc_rhs(f, du, u, p, t)
     @allocated f(du, u, p, t)
 end
@@ -143,15 +144,26 @@ let
         f!(du, u, p, t) = (du .= 0; nothing)
         jumps = [VariableRateJump((u, p, t) -> p[1] * (1 + u[i]) * t,
                      integ -> (integ.u[i] += 1; nothing)) for i in 1:n]
+        # two rate function types, so the Vector's element type is abstract
+        mixed_jumps = VariableRateJump[isodd(i) ? jumps[i] :
+                                       VariableRateJump(
+                                           (u, p, t) -> 2 * p[1] * (1 + u[i]) * t,
+                                           jumps[i].affect!) for i in 1:n]
         oprob = ODEProblem(f!, zeros(n), (0.0, 1.0), (0.5,))
-        jprob = JumpProblem(oprob, Direct(), jumps...; vr_aggregator = VR_FRM())
-        f = jprob.prob.f
-        u, p, t = copy(jprob.prob.u0), oprob.p, 0.3
-        du = similar(u)
-        f(du, u, p, t)
-        @test du.u == zeros(n)
-        @test du.jump_u ≈ fill(0.5 * 0.3, n)
-        @test alloc_rhs(f, du, u, p, t) == 0
+        rates = fill(0.5 * 0.3, n)
+        mixed_rates = [isodd(i) ? 0.5 * 0.3 : 0.5 * 0.6 for i in 1:n]
+        cases = ((JumpSet(jumps...), rates),
+            (JumpSet(; variable_jumps = mixed_jumps), mixed_rates))
+        for (jset, expected_rates) in cases
+            jprob = JumpProblem(oprob, Direct(), jset; vr_aggregator = VR_FRM())
+            f = jprob.prob.f
+            u, p, t = copy(jprob.prob.u0), oprob.p, 0.3
+            du = similar(u)
+            f(du, u, p, t)
+            @test du.u == zeros(n)
+            @test du.jump_u ≈ expected_rates
+            @test alloc_rhs(f, du, u, p, t) == 0
+        end
     end
 end
 

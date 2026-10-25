@@ -9,6 +9,9 @@
   - `VR_FRM` no longer slows down with more than 32 `VariableRateJump`s. Its rate
     evaluation recursed over the jumps, which Julia only infers for up to 32 elements, so
     with more jumps every rate evaluation was dynamically dispatched and allocated.
+    `VariableRateJump`s passed as a `Vector`, for example through
+    `JumpSet(; variable_jumps)`, are now converted to a `Tuple` once, when the
+    `JumpProblem` is built, so their rates are evaluated the same type-stable way.
   - Under `SciMLBase.AutoDespecialize`, the integrator passes the jumps a
     `SciMLBase.DespecializedParameters`. The aggregators that store rate functions in
     `FunctionWrapper`s now throw an `ArgumentError` saying to use `FullSpecialize`,

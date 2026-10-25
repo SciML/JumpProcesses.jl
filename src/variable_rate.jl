@@ -72,6 +72,19 @@ function extend_u0(prob, Njumps)
     return u0
 end
 
+# The function that `extend_problem` rebuilds keeps the specialization of `prob.f` if it is
+# `FullSpecialize` or `NoSpecialize`. Other policies become the default, `AutoSpecialize`, as
+# before: under `AutoDespecialize` and `AutoRespecialize` the integrator would pass the jump
+# callbacks a parameter container instead of `prob.p`, and `FunctionWrapperSpecialize` can only
+# be set by a problem constructor.
+function extended_specialization(f)
+    spec = SciMLBase.specialization(f)
+    if spec === SciMLBase.FullSpecialize || spec === SciMLBase.NoSpecialize
+        return spec
+    end
+    return SciMLBase.AutoSpecialize
+end
+
 function extend_problem(prob::SciMLBase.AbstractDiscreteProblem, jumps)
     error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
@@ -97,7 +110,8 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps)
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = ODEFunction{isinplace(prob), spec}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
@@ -133,7 +147,8 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps)
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = SDEFunction{isinplace(prob), spec}(jump_f, jump_g; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, g = jump_g, u0)
 end
@@ -159,7 +174,8 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps)
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = DDEFunction{isinplace(prob), spec}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
@@ -186,7 +202,8 @@ function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps)
     end
 
     u0 = extend_u0(prob, length(jumps))
-    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
+    spec = extended_specialization(prob.f)
+    f = DAEFunction{isinplace(prob), spec}(jump_f, sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end

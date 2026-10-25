@@ -46,3 +46,28 @@ end
     jprob = JumpProblem(odeprob(SciMLBase.FullSpecialize), RSSA(), maj, crj; deps...)
     @test SciMLBase.successful_retcode(solve(jprob, Tsit5(); rng))
 end
+
+@testset "VR_FRM keeps the problem's specialization" begin
+    for (spec, kept) in ((SciMLBase.FullSpecialize, SciMLBase.FullSpecialize),
+        (SciMLBase.NoSpecialize, SciMLBase.NoSpecialize),
+        (SciMLBase.AutoSpecialize, SciMLBase.AutoSpecialize),
+        (SciMLBase.AutoDespecialize, SciMLBase.AutoSpecialize),
+        (SciMLBase.FunctionWrapperSpecialize, SciMLBase.AutoSpecialize))
+        jprob = JumpProblem(odeprob(spec), Direct(), vrj; vr_aggregator = VR_FRM())
+        @test SciMLBase.specialization(jprob.prob.f) === kept
+        @test SciMLBase.successful_retcode(solve(jprob, Tsit5(); rng))
+    end
+
+    # `AutoDespecialize` becomes `AutoSpecialize`, so the jump callbacks get `prob.p`
+    jprob = JumpProblem(odeprob(SciMLBase.AutoDespecialize), RSSA(), crj, vrj;
+        vr_aggregator = VR_FRM(), dep_graph = [[1]], vartojumps_map = [Int[], [1]],
+        jumptovars_map = [[1, 2]])
+    @test init(jprob, Tsit5(); rng).p isa Vector{Float64}
+    @test SciMLBase.successful_retcode(solve(jprob, Tsit5(); rng))
+
+    sprob = SDEProblem{true, SciMLBase.FullSpecialize}(f!, g!, [10.0, 10.0], (0.0, 5.0),
+        [1.0, 1.0])
+    jprob = JumpProblem(sprob, Direct(), vrj; vr_aggregator = VR_FRM())
+    @test SciMLBase.specialization(jprob.prob.f) === SciMLBase.FullSpecialize
+    @test SciMLBase.successful_retcode(solve(jprob, SRIW1(); rng))
+end

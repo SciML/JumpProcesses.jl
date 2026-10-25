@@ -59,8 +59,33 @@ end
     nothing
 end
 
+const DESPECIALIZED_PARAMETERS_MSG = """
+    The integrator passes the jumps a `SciMLBase.DespecializedParameters`, which this \
+    aggregator cannot use: it stores the jump rate functions in `FunctionWrapper`s typed on \
+    the problem's parameter type. Integrators do this when the problem's function uses \
+    `SciMLBase.AutoDespecialize`, the default for ModelingToolkit `ODEProblem`s. Build the \
+    problem with `SciMLBase.FullSpecialize` instead, e.g. \
+    `ODEProblem{true, SciMLBase.FullSpecialize}(...)`."""
+
+# `FunctionWrapper`-based aggregators type their rate wrappers on `typeof(prob.p)`, so they
+# cannot be called with the `SciMLBase.DespecializedParameters` that supporting integrators
+# pass under `SciMLBase.AutoDespecialize`. Without a check, the first rate evaluation throws
+# a `MethodError` from inside the wrapper.
+holds_rate_wrappers(rates) = false
+function holds_rate_wrappers(rates::AbstractVector{<:FunctionWrappers.FunctionWrapper})
+    !isempty(rates)
+end
+uses_rate_wrappers(p::AbstractSSAJumpAggregator) = holds_rate_wrappers(p.rates)
+
+check_parameters(agg, params) = nothing
+function check_parameters(agg, ::SciMLBase.DespecializedParameters)
+    uses_rate_wrappers(agg) && throw(ArgumentError(DESPECIALIZED_PARAMETERS_MSG))
+    nothing
+end
+
 # setting up a new simulation
 function (p::AbstractSSAJumpAggregator)(dj, u, t, integrator) # initialize
+    check_parameters(p, integrator.p)
     concretize_affects!(p, integrator)
     initialize!(p, integrator, u, integrator.p, t)
     register_next_jump_time!(integrator, p, integrator.t)

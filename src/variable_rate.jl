@@ -402,8 +402,11 @@ end
     nothing
 end
 
+uses_rate_wrappers(cache::VR_DirectEventCache) = holds_rate_wrappers(cache.rate_funcs)
+
 # Wrapper for initialize to match ContinuousCallback signature
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
+    check_parameters(cb.condition, integrator.p)
     concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
     derivative_discontinuity!(integrator, false)

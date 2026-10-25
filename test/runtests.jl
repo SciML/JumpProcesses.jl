@@ -20,6 +20,7 @@ end
         @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
         @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
         @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end
+        @time @safetestset "Specialization Tests" begin include("specialization.jl") end
         @time @safetestset "Monte Carlo Tests" begin include("monte_carlo_test.jl") end
         @time @safetestset "Split Coupled Tests" begin include("splitcoupled.jl") end
         @time @safetestset "SSA Tests" begin include("ssa_tests.jl") end

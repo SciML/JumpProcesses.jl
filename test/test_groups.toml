@@ -1,8 +1,5 @@
 [InterfaceI]
-# Restore "lts" when the temporary StochasticDiffEq pins are removed: Julia 1.10
-# ignores [sources], and registered StochasticDiffEq packages do not admit
-# JumpProcesses 10, so the test environment cannot resolve.
-versions = ["1", "pre"]
+versions = ["lts", "1", "pre"]
 
 ["InterfaceI 32-bit"]
 group = "InterfaceI"
@@ -11,10 +8,7 @@ os = ["ubuntu-latest"]
 arch = "x86"
 
 [InterfaceII]
-# Restore "lts" when the temporary StochasticDiffEq pins are removed: Julia 1.10
-# ignores [sources], and registered StochasticDiffEq packages do not admit
-# JumpProcesses 10, so the test environment cannot resolve.
-versions = ["1", "pre"]
+versions = ["lts", "1", "pre"]
 
 [QA]
 versions = ["lts", "1"]

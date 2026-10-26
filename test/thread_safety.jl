@@ -57,6 +57,32 @@ firstrx_time2 = [sol2.u[i].t[findfirst(>(sol2.u[i].t[1]), sol2.u[i].t)]
     end
 end
 
+@testset "Threaded jump-diffusion ensemble RNG and seed controls" begin
+    # As above, for a jump-diffusion solved with StochasticDiffEq, whose initializer copies
+    # or reuses the jump state of each solve.
+    f!(du, u, p, t) = (du .= 0; nothing)
+    g!(du, u, p, t) = (du .= 0.1; nothing)
+    birth!(integrator) = (integrator.u[1] += 1; nothing)
+    sde_jprob = JumpProblem(SDEProblem(f!, g!, [0.0], (0.0, 2.0), [5.0]), Direct(),
+        ConstantRateJump((u, p, t) -> p[1], birth!))
+    paths(sol) = [(trajectory.t, trajectory.u) for trajectory in sol.u]
+    for safetycopy in (false, true), input in (:rng, :seed)
+
+        @testset "safetycopy=$safetycopy, $input" begin
+            rng_options(seed) = input === :rng ? (; rng = StableRNG(seed)) : (; seed)
+            ensemble = EnsembleProblem(sde_jprob; safetycopy)
+            serial = solve(ensemble, EM(), EnsembleSerial(); dt = 0.01,
+                trajectories = 64, rng_options(12345)...)
+            threaded = solve(ensemble, EM(), EnsembleThreads(); dt = 0.01,
+                trajectories = 64, rng_options(12345)...)
+
+            @test all(SciMLBase.successful_retcode, threaded.u)
+            @test paths(threaded) == paths(serial)
+            @test allunique(trajectory.u[end] for trajectory in serial.u)
+        end
+    end
+end
+
 # test for https://github.com/SciML/JumpProcesses.jl/issues/472
 let
     function f!(du, u, p, t)

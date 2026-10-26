@@ -64,22 +64,12 @@ StableRNGs = "1"
 StaticArrays = "1.9.18"
 Statistics = "1"
 StochasticDiffEq = "7.0.0, 7"
-StochasticDiffEqCore = "2.2.3"
-StochasticDiffEqImplicit = "2.2.1"
-StochasticDiffEqLeaping = "2.1.0"
+StochasticDiffEqCore = "2.2.5"
+StochasticDiffEqImplicit = "2.2.2"
+StochasticDiffEqLeaping = "2.1.1"
 SymbolicIndexingInterface = "0.3.48"
 Test = "1"
 julia = "1.10"
-
-[sources]
-# Temporary: tests use a commit of the StochasticDiffEq branch for JumpProcesses 10
-# (OrdinaryDiffEq.jl#4836), which removes the need for a JumpProcesses StochasticDiffEqCore
-# extension. Implicit and Leaping are pinned too, since their registered versions do not
-# admit JumpProcesses 10. Remove when those releases are registered. Julia 1.10 ignores
-# [sources]; see test/test_groups.toml.
-StochasticDiffEqCore = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqCore"}
-StochasticDiffEqImplicit = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqImplicit"}
-StochasticDiffEqLeaping = {url = "https://github.com/isaacsas/OrdinaryDiffEq.jl.git", rev = "1de403a5e59474fab9a43bf60d376391734eb65b", subdir = "lib/StochasticDiffEqLeaping"}
 
 [extras]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"

@@ -13,10 +13,6 @@ on:
 jobs:
   downgrade:
     name: "Downgrade"
-    # The downgrade action discards URL sources. Restore this job after the
-    # StochasticDiffEqCore branch for JumpProcesses 10 is released and the
-    # temporary pin is removed.
-    if: ${{ false }}
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
       group: All

@@ -2,7 +2,7 @@
 
 julia_version = "1.13.3"
 manifest_format = "2.1"
-project_hash = "b783a29774fe73e35ccdca69b680386fa13ff072"
+project_hash = "847fc08cd772695a3ca85fd437228a39d6695fa4"
 
 [[deps.ADTypes]]
 deps = ["PrecompileTools"]
@@ -242,11 +242,10 @@ version = "1.18.8+1"
 
 [[deps.Catalyst]]
 deps = ["Combinatorics", "DataStructures", "DiffEqBase", "DocStringExtensions", "DynamicQuantities", "EnumX", "Graphs", "JumpProcesses", "LaTeXStrings", "Latexify", "LinearAlgebra", "MacroTools", "ModelingToolkitBase", "Parameters", "Reexport", "RuntimeGeneratedFunctions", "SciMLBase", "SciMLPublic", "Setfield", "SparseArrays", "SymbolicIndexingInterface", "SymbolicUtils", "Symbolics"]
-git-tree-sha1 = "d1c4296e5a91ed1a1cfc3664861bf27a86899a53"
-repo-rev = "6efbc9b8ea8aff6d1bd64904f0027f562b8e2a64"
-repo-url = "https://github.com/isaacsas/Catalyst.jl.git"
+git-tree-sha1 = "6e81e81564aabb5fc26c0bffc5d36d733e4b9680"
+registries = "General"
 uuid = "479239e8-5488-4da2-87a7-35f2df7eef83"
-version = "16.5.0"
+version = "17.0.0"
 
     [deps.Catalyst.extensions]
     CatalystBifurcationKitExtension = "BifurcationKit"
@@ -1174,7 +1173,7 @@ version = "1.12.0"
 deps = ["ADTypes", "ArrayInterface", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "FunctionWrappers", "Graphs", "LinearAlgebra", "PoissonRandom", "PrecompileTools", "Random", "RecursiveArrayTools", "SciMLBase", "SimpleNonlinearSolve", "StaticArrays", "SymbolicIndexingInterface"]
 path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
-version = "10.0.0"
+version = "10.0.1"
 
     [deps.JumpProcesses.extensions]
     JumpProcessesForwardDiffExt = "ForwardDiff"
@@ -1541,12 +1540,10 @@ version = "1.11.0"
 
 [[deps.ModelingToolkitBase]]
 deps = ["ADTypes", "AbstractTrees", "ArrayInterface", "BandedMatrices", "BipartiteGraphs", "BlockArrays", "Combinatorics", "CommonSolve", "Compat", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DiffRules", "DifferentiationInterface", "DocStringExtensions", "DomainSets", "EnumX", "EnzymeCore", "ExprTools", "FillArrays", "ForwardDiff", "FunctionWrappers", "FunctionWrappersWrappers", "Graphs", "ImplicitDiscreteSolve", "InteractiveUtils", "IntervalSets", "JumpProcesses", "Libdl", "LinearAlgebra", "Moshi", "NaNMath", "NonlinearSolveBase", "OffsetArrays", "OrderedCollections", "PreallocationTools", "PrecompileTools", "Printf", "REPL", "Random", "ReadOnlyDicts", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SCCNonlinearSolve", "SciMLBase", "SciMLPublic", "SciMLStructures", "Serialization", "Setfield", "SimpleNonlinearSolve", "SparseArrays", "SpecialFunctions", "StaticArrays", "StaticArraysCore", "SymbolicIndexingInterface", "SymbolicUtils", "Symbolics", "TaskLocalValues", "TermInterface", "UnPack"]
-git-tree-sha1 = "f45d9c201e0db66614aadc7beb8e52bb6528ae53"
-repo-rev = "13113b635fb8f1307e7e8511e0c707dac7171272"
-repo-subdir = "lib/ModelingToolkitBase"
-repo-url = "https://github.com/isaacsas/ModelingToolkit.jl.git"
+git-tree-sha1 = "04ae98a3e5db8a3cbbad33ee4bbed58474f7c0e1"
+registries = "General"
 uuid = "7771a370-6774-4173-bd38-47e70ca0b839"
-version = "1.77.3"
+version = "1.78.0"
 
     [deps.ModelingToolkitBase.extensions]
     MTKBifurcationKitExt = "BifurcationKit"
@@ -2144,10 +2141,10 @@ version = "0.5.2+0"
 
 [[deps.Roots]]
 deps = ["Accessors", "CommonSolve", "Printf"]
-git-tree-sha1 = "e6ffa7bd4f8d0b8744d18f219304738d952f9a37"
+git-tree-sha1 = "9f6402fd1b22472ba0a846e7f7d6cf356855d537"
 registries = "General"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "3.0.11"
+version = "3.0.12"
 
     [deps.Roots.extensions]
     RootsChainRulesCoreExt = "ChainRulesCore"

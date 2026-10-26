@@ -24,8 +24,6 @@ mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/require", "[tex]/ma
 makedocs(
     sitename = "JumpProcesses.jl", authors = "Chris Rackauckas", modules = [JumpProcesses],
     clean = true, linkcheck = true, checkdocs = :exports,
-    # The stable docs have this tutorial only once the 10.0 docs are deployed; remove then.
-    linkcheck_ignore = [r"^https://docs\.sciml\.ai/JumpProcesses/stable/tutorials/ensembles_and_problem_reuse/?$"],
     format = Documenter.HTML(; assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/JumpProcesses/",
         prettyurls = (get(ENV, "CI", nothing) == "true"),

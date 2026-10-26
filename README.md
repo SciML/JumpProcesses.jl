@@ -13,14 +13,9 @@
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
-> [!WARNING]
-> **JumpProcesses 10.0 is a transitional release.** ModelingToolkit and Catalyst do not yet
-> support it and cannot be installed alongside it, so environments that include them will
-> keep JumpProcesses 9.x. StochasticDiffEq supports it from StochasticDiffEqCore 2.2.5,
-> StochasticDiffEqImplicit 2.2.2, and StochasticDiffEqLeaping 2.1.1. We recommend waiting
-> for JumpProcesses 10.0.1, which will follow once ModelingToolkit and Catalyst are updated,
-> unless you use JumpProcesses on its own or with StochasticDiffEq. Jump problems coupled to delay differential equations (DDEs) are not supported in
-> JumpProcesses 10.0 at this time. See [HISTORY.md](HISTORY.md) for the breaking changes in
+> [!NOTE]
+> Jump problems coupled to delay differential equations (DDEs) are not supported in
+> JumpProcesses 10 at this time. See [HISTORY.md](HISTORY.md) for the breaking changes in
 > 10.0.
 
 JumpProcesses.jl provides methods for simulating jump processes, known as

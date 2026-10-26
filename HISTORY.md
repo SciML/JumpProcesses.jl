@@ -1,7 +1,10 @@
 # Breaking updates and feature summaries across releases
 
-## Unreleased
+## 10.0.1
 
+  - StochasticDiffEq, ModelingToolkit, and Catalyst now support JumpProcesses 10 (see the
+    10.0 notes below), so the transitional-release notices are removed. The tests and
+    docs use only registered packages.
   - `VR_FRM` now keeps `SciMLBase.FullSpecialize` and `SciMLBase.NoSpecialize` when it
     rebuilds the problem's function. Previously every specialization became
     `AutoSpecialize`. With `FullSpecialize`, `VR_FRM` solves allocate less and are often
@@ -20,13 +23,11 @@
 
 ## 10.0 (Breaking)
 
-JumpProcesses 10.0 is a transitional release. ModelingToolkit and Catalyst do not yet
-support it, so environments that include them keep JumpProcesses 9.x until their
-updates, and JumpProcesses 10.0.1, are released. StochasticDiffEq supports it from
-StochasticDiffEqCore 2.2.5, StochasticDiffEqImplicit 2.2.2, and StochasticDiffEqLeaping
-2.1.1. Jump problems coupled
-to delay differential equations (DDEs) are not supported in JumpProcesses 10.0 at this
-time.
+JumpProcesses 10.0 was released as a transitional release, before its downstream packages
+supported it. They now do, from StochasticDiffEqCore 2.2.5, StochasticDiffEqImplicit
+2.2.2, and StochasticDiffEqLeaping 2.1.1, ModelingToolkitBase 1.78 (ModelingToolkit
+11.46), and Catalyst 17. Jump problems coupled to delay differential equations (DDEs) are
+not supported in JumpProcesses 10 at this time.
 
   - **Breaking**: The `rng` keyword argument has been removed from
     `JumpProblem`. Pass `rng` to `solve` or `init` instead:

@@ -23,9 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          # Restore "lts" when the temporary StochasticDiffEq pins are removed: Julia 1.10
-          # ignores [sources], and registered StochasticDiffEq packages do not admit
-          # JumpProcesses 10, so the test environment cannot resolve.
+          - "lts"
           - "1"
           - "pre"
     runs-on: ubuntu-latest

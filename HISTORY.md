@@ -20,9 +20,11 @@
 
 ## 10.0 (Breaking)
 
-JumpProcesses 10.0 is a transitional release. StochasticDiffEq, ModelingToolkit, and
-Catalyst do not yet support it, so environments that include them keep JumpProcesses
-9.x until their updates, and JumpProcesses 10.0.1, are released. Jump problems coupled
+JumpProcesses 10.0 is a transitional release. ModelingToolkit and Catalyst do not yet
+support it, so environments that include them keep JumpProcesses 9.x until their
+updates, and JumpProcesses 10.0.1, are released. StochasticDiffEq supports it from
+StochasticDiffEqCore 2.2.5, StochasticDiffEqImplicit 2.2.2, and StochasticDiffEqLeaping
+2.1.1. Jump problems coupled
 to delay differential equations (DDEs) are not supported in JumpProcesses 10.0 at this
 time.
 

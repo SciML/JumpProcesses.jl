@@ -49,7 +49,8 @@ first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
         @test allunique(times)
     end
 
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = false),
+        VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
             trajectories = 3, rng = StableRNG(12345))
@@ -82,7 +83,8 @@ end
         @test allunique(times)
     end
 
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = false),
+        VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         rng = StableRNG(12345)
         sols = [solve(jprob, Tsit5(); rng) for _ in 1:3]
@@ -116,7 +118,8 @@ end
         @test allunique(times)
     end
 
-    @testset "ODE + VR ($agg): same seed → same trajectory" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    @testset "ODE + VR ($agg): same seed → same trajectory" for agg in (VR_FRM(),
+        VR_FRM(; vector_callback = false), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol1 = solve(jprob, Tsit5(); rng = StableRNG(42))
         sol2 = solve(jprob, Tsit5(); rng = StableRNG(42))
@@ -124,7 +127,8 @@ end
         @test sol1.u[end] ≈ sol2.u[end]
     end
 
-    @testset "ODE + VR ($agg): different seeds → different trajectories" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    @testset "ODE + VR ($agg): different seeds → different trajectories" for agg in (VR_FRM(),
+        VR_FRM(; vector_callback = false), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sols = [solve(jprob, Tsit5(); rng = StableRNG(s)) for s in (100, 200, 300)]
         times = [first_jump_time(s) for s in sols]
@@ -142,7 +146,8 @@ end
         @test length(sol.u) == 4
     end
 
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = false),
+        VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleThreads();
             trajectories = 4, save_everystep = false)
@@ -183,12 +188,13 @@ end
 # 5. Variable-rate: jump_u thresholds are unique per trajectory
 #
 # For VR_FRM, each trajectory's first jump time is determined by the initial
-# jump_u threshold (set to -randexp() by the VR_FRMEventCallback initialize).
+# jump_u threshold (set to -randexp() by the VR_FRM callbacks' initialize).
 # We verify both the thresholds (via init) and the resulting event times.
 # ==========================================================================
 
-@testset "VR_FRM: jump_u thresholds unique per trajectory (EnsembleSerial)" begin
-    jprob = make_vr_jump_prob(VR_FRM())
+@testset "$agg: jump_u thresholds unique per trajectory (EnsembleSerial)" for agg in (
+    VR_FRM(), VR_FRM(; vector_callback = false))
+    jprob = make_vr_jump_prob(agg)
 
     # Check jump_u thresholds directly via init (callback sets them during initialization)
     rng = StableRNG(12345)

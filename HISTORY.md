@@ -1,5 +1,26 @@
 # Breaking updates and feature summaries across releases
 
+## Unreleased
+
+  - `VR_FRM` is faster with many `VariableRateJump`s, and compiles faster. `VR_FRM()` now
+    handles all the jumps with one `VectorContinuousCallback`, instead of one
+    `ContinuousCallback` per jump, and its callback interpolates only the jumps' integrated
+    intensities, instead of the whole state. With 64 jumps, solves are about 13 times faster,
+    and building and first solving a problem about 3 times faster.
+  - `VR_FRM(; vector_callback = false)` keeps one `ContinuousCallback` per jump, now also
+    interpolating only that jump's integrated intensity. This can be faster with one or two
+    jumps. `VR_FRM` is now a parametric type, `VR_FRM{vector_callback}`, and methods for
+    `::VR_FRM` match both versions.
+  - With `vector_callback = true`, jumps whose callback options (`rootfind`,
+    `interp_points`, `save_positions`, `abstol` and `reltol`) differ are handled by one
+    `VectorContinuousCallback` per set of options.
+  - Both versions draw the same random numbers as before, so a given seed gives the same
+    trajectory, up to rounding in the event times.
+  - `VR_FRM` now ignores the `idxs` field of `VariableRateJump`s. Setting it previously
+    caused an error.
+  - Solving a `VR_FRM` problem that was remade with a state of a different length now throws
+    an `ArgumentError`. Create a new `JumpProblem` instead.
+
 ## 10.0.1
 
   - StochasticDiffEq, ModelingToolkit, and Catalyst now support JumpProcesses 10 (see the

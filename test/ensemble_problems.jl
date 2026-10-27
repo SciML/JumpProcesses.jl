@@ -49,7 +49,7 @@ first_jump_time(traj) = traj.t[findfirst(>(traj.t[1]), traj.t)]
         @test allunique(times)
     end
 
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = false),
+    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = true),
         VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleSerial();
@@ -83,7 +83,7 @@ end
         @test allunique(times)
     end
 
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = false),
+    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = true),
         VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         rng = StableRNG(12345)
@@ -119,7 +119,7 @@ end
     end
 
     @testset "ODE + VR ($agg): same seed → same trajectory" for agg in (VR_FRM(),
-        VR_FRM(; vector_callback = false), VR_Direct(), VR_DirectFW())
+        VR_FRM(; vector_callback = true), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol1 = solve(jprob, Tsit5(); rng = StableRNG(42))
         sol2 = solve(jprob, Tsit5(); rng = StableRNG(42))
@@ -128,7 +128,7 @@ end
     end
 
     @testset "ODE + VR ($agg): different seeds → different trajectories" for agg in (VR_FRM(),
-        VR_FRM(; vector_callback = false), VR_Direct(), VR_DirectFW())
+        VR_FRM(; vector_callback = true), VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sols = [solve(jprob, Tsit5(); rng = StableRNG(s)) for s in (100, 200, 300)]
         times = [first_jump_time(s) for s in sols]
@@ -146,7 +146,7 @@ end
         @test length(sol.u) == 4
     end
 
-    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = false),
+    @testset "ODE + VR ($agg)" for agg in (VR_FRM(), VR_FRM(; vector_callback = true),
         VR_Direct(), VR_DirectFW())
         jprob = make_vr_jump_prob(agg)
         sol = solve(EnsembleProblem(jprob), Tsit5(), EnsembleThreads();
@@ -193,7 +193,7 @@ end
 # ==========================================================================
 
 @testset "$agg: jump_u thresholds unique per trajectory (EnsembleSerial)" for agg in (
-    VR_FRM(), VR_FRM(; vector_callback = false))
+    VR_FRM(), VR_FRM(; vector_callback = true))
     jprob = make_vr_jump_prob(agg)
 
     # Check jump_u thresholds directly via init (callback sets them during initialization)

@@ -25,14 +25,16 @@ execute the affect associated with the jump at that time.
 ## Constructor
 
 ```julia
-VR_FRM(; vector_callback = true)
+VR_FRM(; vector_callback = nothing)
 ```
 
   - `vector_callback = true`: one `VectorContinuousCallback` handles all the jumps. Jumps
     whose callback options (`rootfind`, `interp_points`, `save_positions`, `abstol` and
     `reltol`) differ are handled by one `VectorContinuousCallback` per set of options.
-  - `vector_callback = false`: one `ContinuousCallback` handles each jump. This can be
-    faster with one or two jumps, but is slower with more, and takes longer to compile.
+  - `vector_callback = false`: one `ContinuousCallback` handles each jump. This is faster
+    with up to about three jumps, but with more it is slower and takes longer to compile.
+  - `vector_callback = nothing` (the default): `JumpProblem` chooses `false` if `VR_FRM`
+    handles at most three jumps, and `true` otherwise.
 
 The choice is stored as the type parameter, `VR_FRM{vector_callback}`.
 
@@ -71,7 +73,13 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_FRM{V} <: VariableRateAggregator end
 
-VR_FRM(; vector_callback::Bool = true) = VR_FRM{vector_callback}()
+VR_FRM(; vector_callback::Union{Nothing, Bool} = nothing) = VR_FRM{vector_callback}()
+
+# per-jump callbacks were faster in benchmarks with up to three jumps
+function configure_jump_problem(prob, ::VR_FRM{nothing}, jumps, cvrjs)
+    vr_aggregator = VR_FRM{length(cvrjs) > 3}()
+    configure_jump_problem(prob, vr_aggregator, jumps, cvrjs)
+end
 
 function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs)
     # a Vector of jumps is converted here, once, so that the extended right-hand side

@@ -240,7 +240,7 @@ end
     @test :jump_u in propertynames(eja)
     @test :x in propertynames(eja)
 
-    for agg in (VR_FRM(), VR_FRM(; vector_callback = false), VR_Direct())
+    for agg in (VR_FRM(), VR_FRM(; vector_callback = true), VR_Direct())
         jumps = Ref(0)
         function f!(du, u, p, t)
             du.x[1][1] = -u.x[1][1]

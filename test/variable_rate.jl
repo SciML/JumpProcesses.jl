@@ -340,7 +340,7 @@ let
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     tsave = range(tspan[1], tspan[2]; step = 0.1)
     for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM(),
-        VR_FRM(; vector_callback = false))
+        VR_FRM(; vector_callback = true))
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
@@ -649,12 +649,16 @@ let
     @test sol.u[end].u[1] != 95.0
 end
 
-# `VR_FRM()` handles the jumps with one `VectorContinuousCallback` per set of callback
-# options, and `VR_FRM(; vector_callback = false)` with one `ContinuousCallback` per jump.
-# Both draw the same random numbers in the same order, so a seed gives the same trajectory.
+# `VR_FRM(; vector_callback = true)` handles the jumps with one `VectorContinuousCallback` per
+# set of callback options, and `VR_FRM(; vector_callback = false)` with one
+# `ContinuousCallback` per jump. `VR_FRM()` uses the latter for up to three jumps. Both draw
+# the same random numbers in the same order, so a seed gives the same trajectory.
 @testset "VR_FRM vector and per-jump callbacks" begin
-    @test VR_FRM() === VR_FRM{true}()
+    @test VR_FRM() === VR_FRM{nothing}()
+    @test VR_FRM(; vector_callback = true) === VR_FRM{true}()
     @test VR_FRM(; vector_callback = false) === VR_FRM{false}()
+    vector_agg = VR_FRM(; vector_callback = true)
+    per_jump_agg = VR_FRM(; vector_callback = false)
 
     # u[1:N] count the firings of each jump, u[N + 1] = c(t) drives the rates
     function vr_frm_prob(N, vr_aggregator; sde = false, opts = i -> (;))
@@ -671,20 +675,29 @@ end
     mixed = i -> isodd(i) ? (;) : (; save_positions = (false, false), interp_points = 5)
 
     # callbacks and the components of the extended state they interpolate
-    ccs = vr_frm_prob(3, VR_FRM()).jump_callback.continuous_callbacks
+    ccs = vr_frm_prob(3, vector_agg).jump_callback.continuous_callbacks
     @test length(ccs) == 1
     @test ccs[1] isa VectorContinuousCallback
     @test ccs[1].idxs === 5:7
-    ccs = vr_frm_prob(3, VR_FRM(; vector_callback = false)).jump_callback.continuous_callbacks
+    ccs = vr_frm_prob(3, per_jump_agg).jump_callback.continuous_callbacks
     @test length(ccs) == 3
     @test all(cb -> cb isa ContinuousCallback, ccs)
     @test [cb.idxs for cb in ccs] == [5, 6, 7]
-    ccs = vr_frm_prob(5, VR_FRM(); opts = mixed).jump_callback.continuous_callbacks
+    ccs = vr_frm_prob(5, vector_agg; opts = mixed).jump_callback.continuous_callbacks
     @test length(ccs) == 2
     @test ccs[1].idxs == [7, 9, 11]
     @test ccs[2].idxs == [8, 10]
     @test ccs[2].interp_points == 5
     @test ccs[2].save_positions == [false, false]
+
+    # `VR_FRM()` chooses by the number of jumps
+    ccs = vr_frm_prob(3, VR_FRM()).jump_callback.continuous_callbacks
+    @test length(ccs) == 3
+    @test all(cb -> cb isa ContinuousCallback, ccs)
+    ccs = vr_frm_prob(4, VR_FRM()).jump_callback.continuous_callbacks
+    @test length(ccs) == 1
+    @test ccs[1] isa VectorContinuousCallback
+    @test ccs[1].idxs === 6:9
 
     # more than 32 jumps; non-contiguous `idxs` from the mixed options
     same = i -> (;)
@@ -694,9 +707,8 @@ end
         (3, true, SRIW1(), same),
         (5, false, Tsit5(), mixed))
     for (N, sde, alg, opts) in cases
-        sol = solve(vr_frm_prob(N, VR_FRM(); sde, opts), alg; rng = StableRNG(7))
-        sol_pj = solve(vr_frm_prob(N, VR_FRM(; vector_callback = false); sde, opts), alg;
-            rng = StableRNG(7))
+        sol = solve(vr_frm_prob(N, vector_agg; sde, opts), alg; rng = StableRNG(7))
+        sol_pj = solve(vr_frm_prob(N, per_jump_agg; sde, opts), alg; rng = StableRNG(7))
         @test SciMLBase.successful_retcode(sol)
         @test all(>(0), sol.u[end].u[1:N])
         @test sol.t ≈ sol_pj.t
@@ -704,7 +716,7 @@ end
     end
 
     # the callbacks index the extended state, so they reject a state of a different length
-    for vr_aggregator in (VR_FRM(), VR_FRM(; vector_callback = false))
+    for vr_aggregator in (vector_agg, per_jump_agg)
         jprob = vr_frm_prob(2, vr_aggregator)
         sol = solve(remake(jprob; u0 = [0.0, 0.0, 1.0]), Tsit5(); rng = StableRNG(1))
         @test SciMLBase.successful_retcode(sol)

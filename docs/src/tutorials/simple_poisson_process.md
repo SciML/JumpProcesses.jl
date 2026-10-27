@@ -302,7 +302,7 @@ assumption, we would define a general `VariableRateJump` as following:
 vrj2 = VariableRateJump(rate1, affect1!)
 ```
 
-Since the death rate now depends on a variable, `u[2]`, modified by a general
+Since the death rate now depends on a variable, `u[1]`, modified by a general
 `VariableRateJump` (i.e., one that is not bounded), we also need to redefine the
 death jump process as a general `VariableRateJump`
 

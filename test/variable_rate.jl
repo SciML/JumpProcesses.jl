@@ -492,6 +492,29 @@ let
     end
 end
 
+# Test 6: Rates that vary within the solver's steps. The ODE part is constant, so it doesn't
+# limit the step size, and VR_Direct's integral of the total rate must resolve the rates'
+# variation itself. This tests the fix for
+# https://github.com/SciML/JumpProcesses.jl/issues/692
+let
+    λ = 0.1
+    f = (du, u, p, t) -> (du[1] = 0.0; nothing)
+    affect! = (integrator) -> (integrator.u[1] += 1; nothing)
+    prob = ODEProblem(f, [0.0], (0.0, 10.0))
+
+    # a rate that oscillates throughout, and one that starts oscillating at t = 5
+    rates = ((u, p, t) -> λ * (1 + sin(10 * t)),
+        (u, p, t) -> t < 5 ? λ : λ * (1 + sin(10 * (t - 5))))
+    analytical_means = (λ * (10 + (1 - cos(100)) / 10), λ * (10 + (1 - cos(50)) / 10))
+    for (rate, analytical_mean) in zip(rates, analytical_means)
+        jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+        for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+            mean_jumps = run_ensemble(prob, Tsit5(), jump; vr_aggregator)
+            @test isapprox(mean_jumps, analytical_mean, rtol = 0.05)
+        end
+    end
+end
+
 # Test combining MassActionJump with VariableRateJump for all aggregators
 # This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
 # where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to

@@ -6,6 +6,17 @@
     doesn't start at zero. Their first step integrated the total rate from time zero
     instead of from the start time, which lost jumps: with a constant rate of 0.5 on
     `(5.0, 15.0)`, the mean number of jumps was 0.43 instead of 5.
+  - `VR_Direct` and `VR_DirectFW` no longer give biased jump statistics when a rate varies
+    within a solver step, for example when the ODE part is constant and doesn't limit the
+    step size (#692). They integrated the total rate over each step with 4-point
+    Gauss-Legendre quadrature, which the solver's error control doesn't see. They now fit
+    the total rate once per step with piecewise Chebyshev interpolants, refined until the
+    integral is within the solver's `abstol` and `reltol`, and root finding uses the fit
+    instead of evaluating the rates again. When the steps were already short enough,
+    solves are faster: 1.2 to 2.9 times with `VR_Direct` and 1.4 to 3.5 times with
+    `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they weren't, solves take
+    longer, since the rates' variation within each step is now resolved.
+  - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1
 

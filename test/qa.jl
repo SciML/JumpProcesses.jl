@@ -52,7 +52,6 @@ run_qa(
         all_explicit_imports_are_public = (;
             ignore = (
             :add_fast,                      # Base.FastMath non-public
-            :gauss_points, :gauss_weights,  # DiffEqCallbacks non-public
             :plot_indices                  # SciMLBase non-public
         ),
         )

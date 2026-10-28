@@ -1,5 +1,12 @@
 # Breaking updates and feature summaries across releases
 
+## Unreleased
+
+  - `VR_Direct` and `VR_DirectFW` now give correct jump statistics when the time span
+    doesn't start at zero. Their first step integrated the total rate from time zero
+    instead of from the start time, which lost jumps: with a constant rate of 0.5 on
+    `(5.0, 15.0)`, the mean number of jumps was 0.43 instead of 5.
+
 ## 10.0.1
 
   - StochasticDiffEq, ModelingToolkit, and Catalyst now support JumpProcesses 10 (see the

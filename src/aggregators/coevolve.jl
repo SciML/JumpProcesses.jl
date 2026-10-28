@@ -68,10 +68,14 @@ function num_constant_rate_jumps(aggregator::CoevolveJumpAggregation)
     length(aggregator.urates)
 end
 
-# condition for jump to occur
+# condition for jump to occur; candidates tied with the current time (e.g. at shared
+# `rateinterval` ends) are tested here too, as a tstop at the current time is never reached
 function (p::CoevolveJumpAggregation)(u, t, integrator)
-    p.next_jump_time == t &&
-        accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t)
+    while p.next_jump_time == t
+        accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t) &&
+            return true
+    end
+    return false
 end
 
 # executing jump at the next jump time

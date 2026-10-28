@@ -6,6 +6,12 @@
     doesn't start at zero. Their first step integrated the total rate from time zero
     instead of from the start time, which lost jumps: with a constant rate of 0.5 on
     `(5.0, 15.0)`, the mean number of jumps was 0.43 instead of 5.
+  - `Coevolve` no longer stops firing jumps in ODE and SDE problems when a candidate time
+    equals the current time, as happens when bounded `VariableRateJump`s with the same
+    `rateinterval` are renewed together. Such a candidate became a solver stop at the
+    current time, which was never reached, and after it no `Coevolve` jump fired. With
+    two rate-1 jumps and `rateinterval = 0.1` on `(0.0, 10.0)`, each fired 1.9 times on
+    average instead of 10.
 
 ## 10.0.1
 

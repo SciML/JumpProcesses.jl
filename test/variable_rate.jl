@@ -245,6 +245,30 @@ let
     end
 end
 
+# Coevolve in continuous integrators must test candidates tied with the current time, such as
+# the shared `rateinterval` ends of jumps whose bounds were computed together. A tstop at the
+# current time is never reached, so a tied candidate used to stall every Coevolve jump.
+let
+    f!(du, u, p, t) = (du .= 0; nothing)
+    g!(du, u, p, t) = (du .= 0; nothing)
+    rate(u, p, t) = 1.0
+    urate(u, p, t) = 1.0
+    rateinterval(u, p, t) = 0.1
+    jump1 = VariableRateJump(rate, integ -> (integ.u[1] += 1); urate, rateinterval)
+    jump2 = VariableRateJump(rate, integ -> (integ.u[2] += 1); urate, rateinterval)
+    u0 = [0.0, 0.0]
+    tspan = (0.0, 10.0)
+    Nsims = 1000
+    for (prob, alg) in ((ODEProblem(f!, u0, tspan), Tsit5()),
+        (SDEProblem(f!, g!, u0, tspan), SRIW1()))
+        jprob = JumpProblem(prob, Coevolve(), jump1, jump2; dep_graph = [[1], [2]])
+        counts = [solve(jprob, alg; rng, save_everystep = false).u[end] for _ in 1:Nsims]
+        # each jump fires Poisson(10) times
+        @test mean(c -> c[1], counts)≈10 atol=0.5
+        @test mean(c -> c[2], counts)≈10 atol=0.5
+    end
+end
+
 # test u0 resets correctly
 let
     b = 2.0

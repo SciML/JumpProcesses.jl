@@ -446,7 +446,7 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps)
     end
 
     return ContinuousCallback(cache, cache; initialize = initialize_vr_direct_wrapper,
-        save_positions, abstol, reltol)
+        save_positions, abstol, reltol, interp_points = 0)
 end
 
 function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs)

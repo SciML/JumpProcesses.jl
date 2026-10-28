@@ -663,3 +663,18 @@ let
     # gets pinned at the switch threshold (95) forever.
     @test sol.u[end].u[1] != 95.0
 end
+
+@testset "VR_Direct ContinuousCallback uses interp_points=0" begin
+    rate = (u, p, t) -> 0.01 * (1 + sin(t))
+    affect! = (integrator) -> (integrator.u[1] += 0.1; nothing)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+    @test jump.interp_points == 10
+    f = (du, u, p, t) -> (du[1] = -u[1]; nothing)
+    prob = ODEProblem(f, [1.0], (0.0, 1.0))
+    for agg in (VR_Direct(), VR_DirectFW())
+        jp = JumpProblem(prob, Direct(), jump; vr_aggregator = agg, rng = StableRNG(1))
+        cbs = jp.jump_callback.continuous_callbacks
+        @test length(cbs) == 1
+        @test cbs[1].interp_points == 0
+    end
+end

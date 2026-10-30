@@ -26,6 +26,12 @@
     caused an error.
   - Solving a `VR_FRM` problem that was remade with a state of a different length now throws
     an `ArgumentError`. Create a new `JumpProblem` instead.
+  - `Coevolve` no longer stops firing jumps in ODE and SDE problems when a candidate time
+    equals the current time, as happens when bounded `VariableRateJump`s with the same
+    `rateinterval` are renewed together. Such a candidate became a solver stop at the
+    current time, which was never reached, and after it no `Coevolve` jump fired. With
+    two rate-1 jumps and `rateinterval = 0.1` on `(0.0, 10.0)`, each fired 1.9 times on
+    average instead of 10.
 
 ## 10.0.1
 

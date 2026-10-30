@@ -214,10 +214,12 @@ Note that
     `Coevolve` aggregator.
   - Any `JumpProblem` with `VariableRateJump` that *does not use* the
     `Coevolve` aggregator  must be coupled to a continuous problem type such as
-    an `ODEProblem` to handle time-stepping. Continuous time-stepper will ignore
-    the provided aggregator and treat *all* `VariableRateJump`s as
-    `ContinuousCallback`s, using the `rate(u, p, t)` function to construct the
-    `condition` function that triggers a callback.
+    an `ODEProblem` to handle time-stepping. The `VariableRateJump`s are then
+    handled not by the provided aggregator, but by the variable rate aggregator
+    chosen with the `vr_aggregator` keyword argument of `JumpProblem`: one of
+    [`VR_FRM`](@ref) (the default), [`VR_Direct`](@ref) and
+    [`VR_DirectFW`](@ref). These use callbacks of the continuous solver to
+    determine when the jumps occur.
   - When using `Coevolve` with a `JumpProblem` coupled to a continuous problem
     such as an `ODEProblem`, the aggregator will handle the jumps in same way
     that it does with `SSAStepper`. However, *ensure that given `t` the bounds

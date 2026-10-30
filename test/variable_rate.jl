@@ -724,3 +724,54 @@ end
         @test_throws ArgumentError solve(longer, Tsit5(); rng = StableRNG(1))
     end
 end
+
+# Mean jump counts against their exact values. Jump i has rate k c(t) (1 + sin(t + i)), where
+# c' = -decay c, so its count over [0, T] has mean k ∫ exp(-decay t) (1 + sin(t + i)) dt. With
+# two jumps `VR_FRM()` uses one `ContinuousCallback` per jump, and with six one
+# `VectorContinuousCallback`; each size also forces the other kind. In the SDE problems c is a
+# geometric Brownian motion, so E[c(t)], and with it each mean count, is unchanged.
+@testset "VariableRateJump mean counts vs exact" begin
+    decay, k, T = 0.1, 2.0, 10.0
+    # an antiderivative of exp(-decay t) (1 + sin(t + i))
+    F(t, i) = -exp(-decay * t) / decay +
+              exp(-decay * t) * (-decay * sin(t + i) - cos(t + i)) / (1 + decay^2)
+    exact_mean(i) = k * (F(T, i) - F(0.0, i))
+
+    function counts_prob(N, vr_aggregator; sde = false, opts = i -> (;))
+        f!(du, u, p, t) = (du .= 0; du[end] = -decay * u[end]; nothing)
+        g!(du, u, p, t) = (du .= 0; du[end] = 0.1 * u[end]; nothing)
+        u0 = [zeros(N); 1.0]
+        prob = sde ? SDEProblem(f!, g!, u0, (0.0, T), [k]) :
+               ODEProblem(f!, u0, (0.0, T), [k])
+        jumps = [VariableRateJump((u, p, t) -> p[1] * u[end] * (1 + sin(t + i)),
+                     integ -> (integ.u[i] += 1; nothing); opts(i)...) for i in 1:N]
+        JumpProblem(prob, JumpSet(; variable_jumps = jumps); vr_aggregator)
+    end
+    # odd and even jumps get different callback options, so `VR_FRM` builds two callbacks
+    mixed = i -> isodd(i) ? (;) : (; save_positions = (false, false), interp_points = 5)
+    same = i -> (;)
+
+    cases = Any[(N, agg, false, Tsit5(), same)
+                for N in (2, 6)
+                for agg in (VR_FRM(), VR_FRM(; vector_callback = N <= 3), VR_Direct(),
+        VR_DirectFW())]
+    push!(cases, (6, VR_FRM(), false, Tsit5(), mixed))
+    push!(cases, (6, VR_FRM(), true, SRIW1(), same))
+    push!(cases, (6, VR_Direct(), true, SRIW1(), same))
+
+    Nsims = 4000
+    for (N, vr_aggregator, sde, alg, opts) in cases
+        jprob = counts_prob(N, vr_aggregator; sde, opts)
+        rng = StableRNG(12345)
+        counts = zeros(Nsims, N)
+        for n in 1:Nsims
+            sol = solve(jprob, alg; rng, save_everystep = false)
+            for i in 1:N
+                counts[n, i] = sol.u[end][i]
+            end
+        end
+        z = [(mean(c) - exact_mean(i)) / sqrt(var(c) / Nsims)
+             for (i, c) in enumerate(eachcol(counts))]
+        @test all(<(4), abs.(z))
+    end
+end

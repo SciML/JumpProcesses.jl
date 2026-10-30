@@ -625,6 +625,28 @@ let
     end
 end
 
+# Test 9: Another callback's event cuts solver steps short. u[1] decays and is reset from 0.5
+# to 1 by a ContinuousCallback, and the rate is 2u[1], so each cycle of length log(2) adds one
+# expected jump. VR_Direct used to integrate the rest of a cut step with the state from
+# before the event, giving about 10.4 jumps instead of 14.5.
+let
+    f = (du, u, p, t) -> (du[1] = -u[1]; du[2] = 0; nothing)
+    reset = ContinuousCallback((u, t, integrator) -> u[1] - 0.5,
+        integrator -> (integrator.u[1] = 1.0; nothing))
+    jump = VariableRateJump((u, p, t) -> 2 * u[1],
+        integrator -> (integrator.u[2] += 1; nothing); save_positions = (false, false))
+    prob = ODEProblem(f, [1.0, 0.0], (0.0, 10.0))
+    analytical_mean = 14 + 2 * (1 - exp(-(10 - 14 * log(2))))
+    Nsims = 2000
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+        jprob = JumpProblem(prob, jump; vr_aggregator, callback = reset)
+        rng = StableRNG(12345)
+        mean_jumps = mean(solve(jprob, Tsit5(); rng, save_everystep = false).u[end][2]
+        for _ in 1:Nsims)
+        @test isapprox(mean_jumps, analytical_mean, rtol = 0.05)
+    end
+end
+
 # Test combining MassActionJump with VariableRateJump for all aggregators
 # This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
 # where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to

@@ -785,13 +785,16 @@ end
 
 # Condition functor defined directly on the cache
 function (cache::VR_DirectEventCache)(u, t, integrator)
-    if integrator.t < cache.current_time
-        error("integrator.t < cache.current_time. $(integrator.t) < $(cache.current_time). This is not supported in the `VR_Direct` handling")
-    end
-
     if integrator.t != cache.current_time
-        cache.prev_time = cache.current_time
-        cache.prev_threshold = cache.current_threshold
+        # The step being checked starts at `integrator.tprev`. That is before the end of the
+        # previous fit if another callback's event cut the previous step short, so the
+        # threshold there comes from that fit, and the rest of it is discarded.
+        tprev = integrator.tprev
+        if tprev < cache.prev_time
+            error("The solver step starts at $tprev, before $(cache.prev_time), where `VR_Direct` last integrated the total rate from. This is not supported.")
+        end
+        cache.prev_threshold -= fitted_rate_integral(cache.rate_fit, tprev)
+        cache.prev_time = tprev
         cache.current_time = integrator.t
         fit_step!(cache, integrator)
     end
@@ -842,5 +845,7 @@ function (cache::VR_DirectEventCache)(integrator)
     cache.current_threshold = randexp(rng)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
+    # the integral up to the jump is used up, and the next step starts at the jump
+    empty_panels!(cache.rate_fit)
     return nothing
 end

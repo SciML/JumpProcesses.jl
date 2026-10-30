@@ -45,6 +45,10 @@
     resolved. In SDE problems, a rate that depends on a component driven by noise still
     needs steps that are short compared with its variation, for example set with `dtmax`;
     `VR_FRM` doesn't.
+  - `VR_Direct` and `VR_DirectFW` now handle another callback's event cutting a solver step
+    short. They integrated the rest of the cut step with the state from before the event,
+    which biased the jump statistics when the rates depend on what the event changed: with
+    a rate that doubles at each event, a model expecting 14.5 jumps gave 10.4.
   - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1

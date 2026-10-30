@@ -69,9 +69,11 @@ function num_constant_rate_jumps(aggregator::CoevolveJumpAggregation)
 end
 
 # condition for jump to occur; candidates tied with the current time (e.g. at shared
-# `rateinterval` ends) are tested here too, as a tstop at the current time is never reached
+# `rateinterval` ends) are tested here too, as a tstop at the current time is never reached.
+# As with `register_next_jump_time!` and `SSAStepper`, nothing is tested at the end time,
+# where a `rateinterval` ending there would renew with zero length forever.
 function (p::CoevolveJumpAggregation)(u, t, integrator)
-    while p.next_jump_time == t
+    while p.next_jump_time == t && t < p.end_time
         accept_next_jump!(p, integrator, integrator.u, integrator.p, integrator.t) &&
             return true
     end

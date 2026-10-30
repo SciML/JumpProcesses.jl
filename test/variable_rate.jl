@@ -269,6 +269,26 @@ let
     end
 end
 
+# A `rateinterval` that ends at the end time, as `1 - t` does on (0, 1), must not be renewed
+# there: its window would have zero length, so testing tied candidates would never stop.
+let
+    f!(du, u, p, t) = (du .= 0; nothing)
+    g!(du, u, p, t) = (du .= 0; nothing)
+    rate(u, p, t) = 1.0
+    urate(u, p, t) = 1.0
+    rateinterval(u, p, t) = 1.0 - t
+    jump = VariableRateJump(rate, integ -> (integ.u[1] += 1); urate, rateinterval)
+    tspan = (0.0, 1.0)
+    Nsims = 1000
+    for (prob, alg) in ((ODEProblem(f!, [0.0], tspan), Tsit5()),
+        (SDEProblem(f!, g!, [0.0], tspan), SRIW1()))
+        jprob = JumpProblem(prob, Coevolve(), jump; dep_graph = [[1]])
+        counts = [solve(jprob, alg; rng, save_everystep = false).u[end][1] for _ in 1:Nsims]
+        # the jump fires Poisson(1) times
+        @test mean(counts)≈1 atol=0.15
+    end
+end
+
 # test u0 resets correctly
 let
     b = 2.0

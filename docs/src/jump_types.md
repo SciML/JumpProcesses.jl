@@ -197,7 +197,10 @@ must also specify
     interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and
     parameters `p`.
   - `rateinterval(u, p, t)`, a function which computes a time interval `t` to `t + rateinterval(u, p, t)` given state `u` and parameters `p` over which the
-    `urate` bound will hold (and `lrate` bound if provided, see below).
+    `urate` bound will hold (and `lrate` bound if provided, see below). It must be
+    positive, with `t + rateinterval(u, p, t) > t`, at every time `t` before the end
+    time `T` of the time span, though it may reach zero at `T`, as `T - t` does. A
+    zero-length interval before then is invalid and can make the solve loop forever.
 
 For increased performance, one can also specify a lower bound that should be
 valid over the same `rateinterval`

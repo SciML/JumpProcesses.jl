@@ -285,6 +285,9 @@ Reemphasizing, the additional user provided functions leveraged by bounded
 `VariableRateJumps`, `urate(u, p, t)`, `rateinterval(u, p, t)`, and the optional `lrate(u, p, t)` require that
 
   - For `s` in `[t, t + rateinterval(u, p, t)]`, we have that `lrate(u, p, t) <= rate(u, p, s) <= urate(u, p, t)`.
+  - `rateinterval(u, p, t)` is positive, with `t + rateinterval(u, p, t) > t`, at every time
+    `t` before the end time `T` of the time span. It may reach zero at `T`, as `T - t` does.
+    A zero-length interval before then is invalid and can make the solve loop forever.
   - It is ok if these bounds would be violated during the time window due to another
     `ConstantRateJump`, `MassActionJump` or bounded `VariableRateJump` occurring. However,
     they must remain valid if `u` changes for any other reason (for example, due to
@@ -369,7 +372,9 @@ struct VariableRateJump{R, F, R2, R3, R4, I, T, T2} <: AbstractJump
     Computes the time interval from time `t` over which the `urate` and `lrate` bounds will
     hold, `t` to `t + rateinterval(u, p, t)`, given state `u` and parameters `p`. This bound
     must rigorously hold during the time interval as long as another `ConstantRateJump`,
-    `MassActionJump`, or *bounded* `VariableRateJump` has not been sampled.
+    `MassActionJump`, or *bounded* `VariableRateJump` has not been sampled. The interval
+    must be positive at every time before the end of the time span; a zero-length interval
+    is invalid.
     """
     rateinterval::R4
     idxs::I

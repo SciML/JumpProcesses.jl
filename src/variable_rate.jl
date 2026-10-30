@@ -474,10 +474,12 @@ struct VR_DirectFW <: VariableRateAggregator end
 # interpolant of it, fit the first time the condition sees the step. Each panel's interpolant
 # uses the rates at NUM_CHEB_NODES Chebyshev points, and panels are halved, at most
 # MAX_CHEB_DEPTH times, until the estimated error of their integral is within the solver's
-# tolerances. Root finding then evaluates the interpolant's antiderivative, with no further
-# rate evaluations.
+# tolerances. Fitting stops at the panel where the threshold is reached, since the step then
+# ends at the jump; that panel may be halved up to MAX_CHEB_CROSSING_DEPTH times. Root
+# finding then evaluates the interpolant's antiderivative, with no further rate evaluations.
 const NUM_CHEB_NODES = 8
 const MAX_CHEB_DEPTH = 12
+const MAX_CHEB_CROSSING_DEPTH = 40
 # Chebyshev points of the first kind on [-1, 1]
 const CHEB_NODES = [cos(π * (j - 1 / 2) / NUM_CHEB_NODES) for j in 1:NUM_CHEB_NODES]
 # maps the rates at CHEB_NODES to the coefficients cₖ of their interpolant
@@ -703,23 +705,39 @@ function push_panel!(fit::TotalRateFit, a, b, integral)
     nothing
 end
 
+# Bound on the rounding error of evaluating the antiderivative of the interpolant in
+# `fit.rate_coefs` on [a, b]: its coefficients scale with the rates on the panel, so a small
+# integral near the panel's start is a difference of much larger terms
+function antiderivative_rounding(fit::TotalRateFit, a, b)
+    (b - a) * (NUM_CHEB_NODES + 1) * eps(eltype(fit.rate_coefs)) * sum(abs, fit.rate_coefs)
+end
+
 # Fits the total rate on [a, b], halving the interval until the estimated error of each
-# panel's integral is within the tolerance the solver would use if the threshold minus the
-# integral were a state component. `integral` is the integral from the start of the step
-# to `a`; returns the integral to `b`.
+# panel's integral is within the tolerance the solver would use if the remaining threshold
+# were a state component. `integral` is the integral from the start of the step to `a`.
+# Returns the integral to the end of the last panel fitted, and whether the threshold was
+# reached there. Fitting stops at that panel, since the step ends at the jump. The jump time
+# is where the remaining threshold minus the integral crosses zero, so that panel must also
+# be accurate relative to the remaining threshold, including the antiderivative's rounding.
 function fit_panels!(cache::VR_DirectEventCache, integrator, a, b, integral, depth,
         abstol, reltol)
     I, err = fit_total_rate!(cache, integrator, a, b)
-    threshold = cache.prev_threshold - integral
-    tol = abstol + reltol * max(abs(threshold), abs(threshold - I))
-    if err > tol && depth < MAX_CHEB_DEPTH
-        tmid = (a + b) / 2
-        integral = fit_panels!(
+    remaining = cache.prev_threshold - integral
+    tol = abstol + reltol * abs(remaining)
+    crossed = I >= remaining
+    if crossed
+        err = max(err, antiderivative_rounding(cache.rate_fit, a, b))
+    end
+    tmid = (a + b) / 2
+    maxdepth = crossed ? MAX_CHEB_CROSSING_DEPTH : MAX_CHEB_DEPTH
+    if err > tol && depth < maxdepth && a < tmid < b
+        integral, crossed = fit_panels!(
             cache, integrator, a, tmid, integral, depth + 1, abstol, reltol)
+        crossed && return integral, crossed
         return fit_panels!(cache, integrator, tmid, b, integral, depth + 1, abstol, reltol)
     end
     push_panel!(cache.rate_fit, a, b, integral)
-    return integral + I
+    return integral + I, crossed
 end
 
 # the solver's tolerances can be given per state component
@@ -747,13 +765,15 @@ function chebyshev_sum(C, offset, x)
     return C[offset + 1] + x * b1 - b2
 end
 
-# the interpolant's integral from the start of the step to `t`
+# the interpolant's integral from the start of the step to `t`; past the last panel, which
+# ends before the step does if the threshold was reached, it is the integral to that panel's
+# end, so the condition keeps its sign there without extrapolating the interpolant
 function fitted_rate_integral(fit::TotalRateFit, t)
     (; panel_starts, panel_ends, panel_integrals, panel_coefs) = fit
     isempty(panel_ends) && return zero(t)
     i = min(searchsortedfirst(panel_ends, t), length(panel_ends))
     a, b = panel_starts[i], panel_ends[i]
-    x = (2t - a - b) / (b - a)
+    x = min((2t - a - b) / (b - a), one(t))
     return panel_integrals[i] +
            (b - a) / 2 * chebyshev_sum(panel_coefs, (i - 1) * (NUM_CHEB_NODES + 1), x)
 end

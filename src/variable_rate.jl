@@ -430,6 +430,11 @@ sol = solve(jprob, Tsit5())
     (Chebyshev) interpolant of it, refined until the integral's estimated error is within
     the solver's `abstol` and `reltol`. Rates that vary within long solver steps, for
     example when the ODE part is constant, are resolved without limiting the step size.
+  - The rates are evaluated along the solver's interpolant between steps. In SDE problems
+    that doesn't resolve the noise within a step, so a rate that depends on a component
+    driven by noise needs steps that are short compared with its variation, for example
+    by setting `dtmax`. `VR_FRM` integrates each rate as a component of the state instead,
+    so the solver's error control covers it.
 """
 struct VR_Direct <: VariableRateAggregator end
 """

@@ -36,12 +36,15 @@
     within a solver step, for example when the ODE part is constant and doesn't limit the
     step size (#692). They integrated the total rate over each step with 4-point
     Gauss-Legendre quadrature, which the solver's error control doesn't see. They now fit
-    the total rate once per step with piecewise Chebyshev interpolants, refined until the
-    integral is within the solver's `abstol` and `reltol`, and root finding uses the fit
-    instead of evaluating the rates again. When the steps were already short enough,
-    solves are faster: 1.2 to 2.9 times with `VR_Direct` and 1.4 to 3.5 times with
-    `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they weren't, solves take
-    longer, since the rates' variation within each step is now resolved.
+    the total rate on each step, up to the next jump, with piecewise Chebyshev
+    interpolants, refined until the integral is within the solver's `abstol` and `reltol`,
+    and root finding uses the fit instead of evaluating the rates again. When the steps
+    were already short enough, solves are faster: 1.1 to 2.9 times with `VR_Direct` and
+    1.3 to 3.7 times with `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they
+    weren't, solves take longer, since the rates' variation within each step is now
+    resolved. In SDE problems, a rate that depends on a component driven by noise still
+    needs steps that are short compared with its variation, for example set with `dtmax`;
+    `VR_FRM` doesn't.
   - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1

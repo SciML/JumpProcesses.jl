@@ -477,6 +477,22 @@ let
     @test isapprox(mean_jumps_vrcb, mean_jumps_vrcbfw, rtol = 0.1)
 end
 
+# Test 5: Time span that doesn't start at zero
+let
+    λ = 0.5
+    f = (du, u, p, t) -> (du[1] = 0.0; nothing)
+    rate = (u, p, t) -> λ
+    affect! = (integrator) -> (integrator.u[1] += 1; nothing)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+
+    prob = ODEProblem(f, [0.0], (5.0, 15.0))
+    analytical_mean = λ * 10.0
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+        mean_jumps = run_ensemble(prob, Tsit5(), jump; vr_aggregator)
+        @test isapprox(mean_jumps, analytical_mean, rtol = 0.05)
+    end
+end
+
 # Test combining MassActionJump with VariableRateJump for all aggregators
 # This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
 # where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+  - `VR_Direct` and `VR_DirectFW` now give correct jump statistics when the time span
+    doesn't start at zero. Their first step integrated the total rate from time zero
+    instead of from the start time, which lost jumps: with a constant rate of 0.5 on
+    `(5.0, 15.0)`, the mean number of jumps was 0.43 instead of 5.
   - `VR_FRM` is faster with many `VariableRateJump`s, and compiles faster. With more than
     three jumps, `VR_FRM()` now handles them all with one `VectorContinuousCallback`, instead
     of one `ContinuousCallback` per jump, and its callback interpolates only the jumps'

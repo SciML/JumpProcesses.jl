@@ -510,8 +510,8 @@ end
 # Initialization function for VR_DirectEventCache
 function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrator)
     rng = get_rng(integrator)
-    cache.prev_time = zero(integrator.t)
-    cache.current_time = zero(integrator.t)
+    cache.prev_time = t
+    cache.current_time = t
     cache.prev_threshold = randexp(rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
     cache.total_rate = zero(integrator.t)

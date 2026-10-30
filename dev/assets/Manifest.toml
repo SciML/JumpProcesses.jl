@@ -2,7 +2,7 @@
 
 julia_version = "1.13.3"
 manifest_format = "2.1"
-project_hash = "e96a1f68480d217efa9edbc04e8b85426db043ca"
+project_hash = "847fc08cd772695a3ca85fd437228a39d6695fa4"
 
 [[deps.ADTypes]]
 deps = ["PrecompileTools"]
@@ -1139,10 +1139,10 @@ version = "1.8.0"
 
 [[deps.JSON]]
 deps = ["Dates", "Logging", "Parsers", "PrecompileTools", "StructUtils", "UUIDs", "Unicode"]
-git-tree-sha1 = "92b7118cc7b8c4ee2563e090bdca8552e8ba9461"
+git-tree-sha1 = "06d90f699285d055e34f0b014636a75a17ff2252"
 registries = "General"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "1.13.2"
+version = "1.13.4"
 
     [deps.JSON.extensions]
     JSONArrowExt = ["ArrowTypes"]
@@ -1173,7 +1173,7 @@ version = "1.12.0"
 
 [[deps.JumpProcesses]]
 deps = ["ADTypes", "ArrayInterface", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DocStringExtensions", "FunctionWrappers", "Graphs", "LinearAlgebra", "PoissonRandom", "PrecompileTools", "Random", "RecursiveArrayTools", "SciMLBase", "SimpleNonlinearSolve", "StaticArrays", "SymbolicIndexingInterface"]
-path = "/home/runner/_work/JumpProcesses.jl/JumpProcesses.jl"
+path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 version = "10.0.1"
 
@@ -1728,10 +1728,10 @@ version = "2.0.3"
 
 [[deps.OrdinaryDiffEqCore]]
 deps = ["ADTypes", "Accessors", "Adapt", "ArrayInterface", "BinaryHeaps", "CommonSolve", "ConstructionBase", "DiffEqBase", "DocStringExtensions", "EnumX", "EnzymeCore", "FastBroadcast", "FastClosures", "FastPower", "FindFirstFunctions", "FunctionWrappers", "FunctionWrappersWrappers", "InteractiveUtils", "LinearAlgebra", "Logging", "MacroTools", "MuladdMacro", "PrecompileTools", "Preferences", "Printf", "Random", "RecursiveArrayTools", "Reexport", "SciMLBase", "SciMLLogging", "SciMLOperators", "SciMLStructures", "SymbolicIndexingInterface", "TruncatedStacktraces"]
-git-tree-sha1 = "5a995982a30ce31999c5504569234ecb91a6e0ef"
+git-tree-sha1 = "5765dd5605c88f1db2b3630df6f291751a96cd16"
 registries = "General"
 uuid = "bbf590c4-e513-4bbe-9b18-05decba2e5d8"
-version = "4.19.0"
+version = "4.19.1"
 
     [deps.OrdinaryDiffEqCore.extensions]
     OrdinaryDiffEqCoreMooncakeExt = "Mooncake"
@@ -1813,10 +1813,10 @@ version = "0.13.1"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools"]
-git-tree-sha1 = "610915fdeab587d89d6e9f2768b7268674ceb62b"
+git-tree-sha1 = "91503bbab255aec9374145accd1b09c7e108cd54"
 registries = "General"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "3.0.3"
+version = "3.0.5"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]

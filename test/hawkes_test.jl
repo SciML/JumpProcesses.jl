@@ -153,7 +153,8 @@ end
 # test disabling bounded jumps and using continuous integrator
 Nsims = 500
 let alg = Coevolve()
-    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+    for vr_aggregator in (VR_FRM(), VR_FRM(; vector_callback = true), VR_Direct(),
+        VR_DirectFW())
         oprob = ODEProblem(f!, u0, tspan, p)
         jumps = hawkes_jump(u0, g, h)
         jprob = JumpProblem(

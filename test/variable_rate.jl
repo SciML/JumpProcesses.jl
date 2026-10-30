@@ -560,6 +560,71 @@ let
     end
 end
 
+# Test 7: First jump times against the analytically integrated rate. A solve stops at its
+# first jump, which happens when the integrated rate reaches the first exponential threshold
+# the aggregator draws, so the exact time follows from the same seed. In both cases a
+# solver step integrates to many times the threshold: a Float32 rate over one fixed step,
+# where the step's interpolant must stay accurate near the step's start, and a quickly
+# oscillating rate over long adaptive steps.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    jump(rate) = VariableRateJump(rate, integrator -> terminate!(integrator))
+    # the time at which the increasing function Λ reaches E, by bisection
+    function invert(Λ, E, a, b)
+        while b - a > eps(b)
+            m = (a + b) / 2
+            Λ(m) < E ? (a = m) : (b = m)
+        end
+        return (a + b) / 2
+    end
+    Λ(t) = 500 * (t + 0.95 * (1 - cos(1000 * t)) / 1000)
+    for vr_aggregator in (VR_Direct(), VR_DirectFW()), seed in 1:20
+        # 1f8 t^4 integrates to 2f7 t^5
+        prob = ODEProblem(f, [0.0f0], (0.0f0, 1.0f0))
+        jprob = JumpProblem(prob, jump((u, p, t) -> 1.0f8 * t^4); vr_aggregator)
+        sol = solve(jprob, Tsit5(); dt = 1.0f0, adaptive = false, abstol = 1.0f-8,
+            reltol = 1.0f-5, rng = StableRNG(seed))
+        exact = (Float64(randexp(StableRNG(seed), Float32)) / 2e7)^(1 / 5)
+        @test sol.t[end]≈exact rtol=1e-5
+
+        prob = ODEProblem(f, [0.0], (0.0, 1.0))
+        jprob = JumpProblem(prob, jump((u, p, t) -> 500 * (1 + 0.95 * sin(1000 * t)));
+            vr_aggregator)
+        sol = solve(jprob, Tsit5(); abstol = 1e-8, reltol = 1e-6, rng = StableRNG(seed))
+        exact = invert(Λ, randexp(StableRNG(seed)), 0.0, 1.0)
+        @test sol.t[end]≈exact rtol=1e-6
+    end
+end
+
+# Test 8: A rate driven by noise. With dX = dB, X(0) = 0 and rate 2X², the mean number of
+# jumps by time t is t². VR_FRM integrates the rate as a component of the SDE's state, so it
+# is accurate with SRIW1's default steps. VR_Direct and VR_DirectFW integrate the rate along
+# the solver's interpolant between steps, which doesn't resolve the noise within a step, so
+# they need steps that are short compared with the rate's variation, set here by `dtmax`.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    g = (du, u, p, t) -> (du[1] = 1; du[2] = 0; nothing)
+    jump = VariableRateJump((u, p, t) -> 2 * u[1]^2,
+        integrator -> (integrator.u[2] += 1; nothing); save_positions = (false, false))
+    prob = SDEProblem(f, g, [0.0, 0.0], (0.0, 2.0))
+    ts = [0.5, 1.0, 2.0]
+    Nsims = 4000
+    # the counts at `ts`, the last three saves whether or not the start is saved
+    counts_at(sol) = [u[2] for u in sol.u[(end - 2):end]]
+    cases = ((VR_FRM(), (;)), (VR_Direct(), (; dtmax = 0.05)),
+        (VR_Direct(), (; dtmax = 0.01)), (VR_DirectFW(), (; dtmax = 0.01)))
+    for (vr_aggregator, kwargs) in cases
+        jprob = JumpProblem(prob, jump; vr_aggregator)
+        rng = StableRNG(12345)
+        counts = reduce(hcat,
+            [counts_at(solve(jprob, SRIW1(); rng, saveat = ts, kwargs...)) for _ in 1:Nsims])
+        for (i, t) in enumerate(ts)
+            z = (mean(counts[i, :]) - t^2) / sqrt(var(counts[i, :]) / Nsims)
+            @test abs(z) < 4
+        end
+    end
+end
+
 # Test combining MassActionJump with VariableRateJump for all aggregators
 # This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
 # where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to

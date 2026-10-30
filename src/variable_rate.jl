@@ -317,13 +317,13 @@ struct VR_FRMVectorCallback{A}
     init_all::Bool          # whether `initialize` draws the thresholds of all the jumps
 end
 
-# calls `affects[k](integrator)` through one branch per affect, so each call is static
+# calls `affects[k](integrator)` through one branch per affect, so each call is static; `k` is
+# always in `1:length(affects)`, so the last affect needs no test
 @generated function vr_frm_affect!(affects::Tuple, k, integrator)
-    ex = :(throw(BoundsError(affects, k)))
-    for i in fieldcount(affects):-1:1
-        ex = Expr(:if, :(k == $i), :(affects[$i](integrator)), ex)
+    quote
+        Base.Cartesian.@nif $(fieldcount(affects)) i -> (i == k) i -> (@inbounds affects[i](integrator)) i -> (@inbounds affects[$(fieldcount(affects))](integrator))
+        return nothing
     end
-    return :($ex; return nothing)
 end
 
 # affect: (integrator, events); `events[k]` is nonzero if the `k`th jump of the callback

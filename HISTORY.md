@@ -6,6 +6,26 @@
     doesn't start at zero. Their first step integrated the total rate from time zero
     instead of from the start time, which lost jumps: with a constant rate of 0.5 on
     `(5.0, 15.0)`, the mean number of jumps was 0.43 instead of 5.
+  - `VR_FRM` is faster with many `VariableRateJump`s, and compiles faster. With more than
+    three jumps, `VR_FRM()` now handles them all with one `VectorContinuousCallback`, instead
+    of one `ContinuousCallback` per jump, and its callback interpolates only the jumps'
+    integrated intensities, instead of the whole state. With 64 jumps, solves are about 13
+    times faster, and building and first solving a problem about 3 times faster.
+  - With up to three jumps, where it was faster in benchmarks, `VR_FRM()` keeps one
+    `ContinuousCallback` per jump, now also interpolating only that jump's integrated
+    intensity. `VR_FRM(; vector_callback = true)` and `VR_FRM(; vector_callback = false)`
+    select one version whatever the number of jumps. `VR_FRM` is now a parametric type,
+    `VR_FRM{vector_callback}`, where `VR_FRM()` is `VR_FRM{nothing}`, and methods for
+    `::VR_FRM` match all of them.
+  - With `vector_callback = true`, jumps whose callback options (`rootfind`,
+    `interp_points`, `save_positions`, `abstol` and `reltol`) differ are handled by one
+    `VectorContinuousCallback` per set of options.
+  - Both versions draw the same random numbers as before, so a given seed gives the same
+    trajectory, up to rounding in the event times.
+  - `VR_FRM` now ignores the `idxs` field of `VariableRateJump`s. Setting it previously
+    caused an error.
+  - Solving a `VR_FRM` problem that was remade with a state of a different length now throws
+    an `ArgumentError`. Create a new `JumpProblem` instead.
   - `Coevolve` no longer stops firing jumps in ODE and SDE problems when a candidate time
     equals the current time, as happens when bounded `VariableRateJump`s with the same
     `rateinterval` are renewed together. Such a candidate became a solver stop at the

@@ -363,7 +363,8 @@ let
 
     ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
     tsave = range(tspan[1], tspan[2]; step = 0.1)
-    for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM())
+    for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM(),
+        VR_FRM(; vector_callback = true))
         sjm_prob = JumpProblem(ode_prob, b_jump, d_jump; vr_aggregator)
 
         for alg in (Tsit5(), Rodas5P(linsolve = QRFactorization()))
@@ -686,4 +687,131 @@ let
     # SSA jumps must actually fire after the mode switch — without the fix u
     # gets pinned at the switch threshold (95) forever.
     @test sol.u[end].u[1] != 95.0
+end
+
+# `VR_FRM(; vector_callback = true)` handles the jumps with one `VectorContinuousCallback` per
+# set of callback options, and `VR_FRM(; vector_callback = false)` with one
+# `ContinuousCallback` per jump. `VR_FRM()` uses the latter for up to three jumps. Both draw
+# the same random numbers in the same order, so a seed gives the same trajectory.
+@testset "VR_FRM vector and per-jump callbacks" begin
+    @test VR_FRM() === VR_FRM{nothing}()
+    @test VR_FRM(; vector_callback = true) === VR_FRM{true}()
+    @test VR_FRM(; vector_callback = false) === VR_FRM{false}()
+    vector_agg = VR_FRM(; vector_callback = true)
+    per_jump_agg = VR_FRM(; vector_callback = false)
+
+    # u[1:N] count the firings of each jump, u[N + 1] = c(t) drives the rates
+    function vr_frm_prob(N, vr_aggregator; sde = false, opts = i -> (;))
+        f!(du, u, p, t) = (du .= 0; du[end] = -0.1 * u[end]; nothing)
+        g!(du, u, p, t) = (du .= 0; du[end] = 0.05 * u[end]; nothing)
+        u0 = [zeros(N); 1.0]
+        prob = sde ? SDEProblem(f!, g!, u0, (0.0, 10.0), [2.0]) :
+               ODEProblem(f!, u0, (0.0, 10.0), [2.0])
+        jumps = [VariableRateJump((u, p, t) -> p[1] * u[end] * (1 + sin(t + i)),
+                     integ -> (integ.u[i] += 1; nothing); opts(i)...) for i in 1:N]
+        JumpProblem(prob, JumpSet(; variable_jumps = jumps); vr_aggregator)
+    end
+    # odd and even jumps get different callback options
+    mixed = i -> isodd(i) ? (;) : (; save_positions = (false, false), interp_points = 5)
+
+    # callbacks and the components of the extended state they interpolate
+    ccs = vr_frm_prob(3, vector_agg).jump_callback.continuous_callbacks
+    @test length(ccs) == 1
+    @test ccs[1] isa VectorContinuousCallback
+    @test ccs[1].idxs === 5:7
+    ccs = vr_frm_prob(3, per_jump_agg).jump_callback.continuous_callbacks
+    @test length(ccs) == 3
+    @test all(cb -> cb isa ContinuousCallback, ccs)
+    @test [cb.idxs for cb in ccs] == [5, 6, 7]
+    ccs = vr_frm_prob(5, vector_agg; opts = mixed).jump_callback.continuous_callbacks
+    @test length(ccs) == 2
+    @test ccs[1].idxs == [7, 9, 11]
+    @test ccs[2].idxs == [8, 10]
+    @test ccs[2].interp_points == 5
+    @test ccs[2].save_positions == [false, false]
+
+    # `VR_FRM()` chooses by the number of jumps
+    ccs = vr_frm_prob(3, VR_FRM()).jump_callback.continuous_callbacks
+    @test length(ccs) == 3
+    @test all(cb -> cb isa ContinuousCallback, ccs)
+    ccs = vr_frm_prob(4, VR_FRM()).jump_callback.continuous_callbacks
+    @test length(ccs) == 1
+    @test ccs[1] isa VectorContinuousCallback
+    @test ccs[1].idxs === 6:9
+
+    # more than 32 jumps; non-contiguous `idxs` from the mixed options
+    same = i -> (;)
+    cases = ((3, false, Tsit5(), same),
+        (40, false, Tsit5(), same),
+        (3, false, Rodas5P(), same),
+        (3, true, SRIW1(), same),
+        (5, false, Tsit5(), mixed))
+    for (N, sde, alg, opts) in cases
+        sol = solve(vr_frm_prob(N, vector_agg; sde, opts), alg; rng = StableRNG(7))
+        sol_pj = solve(vr_frm_prob(N, per_jump_agg; sde, opts), alg; rng = StableRNG(7))
+        @test SciMLBase.successful_retcode(sol)
+        @test all(>(0), sol.u[end].u[1:N])
+        @test sol.t ≈ sol_pj.t
+        @test sol.u[end] ≈ sol_pj.u[end]
+    end
+
+    # the callbacks index the extended state, so they reject a state of a different length
+    for vr_aggregator in (vector_agg, per_jump_agg)
+        jprob = vr_frm_prob(2, vr_aggregator)
+        sol = solve(remake(jprob; u0 = [0.0, 0.0, 1.0]), Tsit5(); rng = StableRNG(1))
+        @test SciMLBase.successful_retcode(sol)
+        longer = remake(jprob; u0 = [0.0, 0.0, 0.0, 1.0])
+        @test_throws ArgumentError solve(longer, Tsit5(); rng = StableRNG(1))
+    end
+end
+
+# Mean jump counts against their exact values. Jump i has rate k c(t) (1 + sin(t + i)), where
+# c' = -decay c, so its count over [0, T] has mean k ∫ exp(-decay t) (1 + sin(t + i)) dt. With
+# two jumps `VR_FRM()` uses one `ContinuousCallback` per jump, and with six one
+# `VectorContinuousCallback`; each size also forces the other kind. In the SDE problems c is a
+# geometric Brownian motion, so E[c(t)], and with it each mean count, is unchanged.
+@testset "VariableRateJump mean counts vs exact" begin
+    decay, k, T = 0.1, 2.0, 10.0
+    # an antiderivative of exp(-decay t) (1 + sin(t + i))
+    F(t, i) = -exp(-decay * t) / decay +
+              exp(-decay * t) * (-decay * sin(t + i) - cos(t + i)) / (1 + decay^2)
+    exact_mean(i) = k * (F(T, i) - F(0.0, i))
+
+    function counts_prob(N, vr_aggregator; sde = false, opts = i -> (;))
+        f!(du, u, p, t) = (du .= 0; du[end] = -decay * u[end]; nothing)
+        g!(du, u, p, t) = (du .= 0; du[end] = 0.1 * u[end]; nothing)
+        u0 = [zeros(N); 1.0]
+        prob = sde ? SDEProblem(f!, g!, u0, (0.0, T), [k]) :
+               ODEProblem(f!, u0, (0.0, T), [k])
+        jumps = [VariableRateJump((u, p, t) -> p[1] * u[end] * (1 + sin(t + i)),
+                     integ -> (integ.u[i] += 1; nothing); opts(i)...) for i in 1:N]
+        JumpProblem(prob, JumpSet(; variable_jumps = jumps); vr_aggregator)
+    end
+    # odd and even jumps get different callback options, so `VR_FRM` builds two callbacks
+    mixed = i -> isodd(i) ? (;) : (; save_positions = (false, false), interp_points = 5)
+    same = i -> (;)
+
+    cases = Any[(N, agg, false, Tsit5(), same)
+                for N in (2, 6)
+                for agg in (VR_FRM(), VR_FRM(; vector_callback = N <= 3), VR_Direct(),
+        VR_DirectFW())]
+    push!(cases, (6, VR_FRM(), false, Tsit5(), mixed))
+    push!(cases, (6, VR_FRM(), true, SRIW1(), same))
+    push!(cases, (6, VR_Direct(), true, SRIW1(), same))
+
+    Nsims = 4000
+    for (N, vr_aggregator, sde, alg, opts) in cases
+        jprob = counts_prob(N, vr_aggregator; sde, opts)
+        rng = StableRNG(12345)
+        counts = zeros(Nsims, N)
+        for n in 1:Nsims
+            sol = solve(jprob, alg; rng, save_everystep = false)
+            for i in 1:N
+                counts[n, i] = sol.u[end][i]
+            end
+        end
+        z = [(mean(c) - exact_mean(i)) / sqrt(var(c) / Nsims)
+             for (i, c) in enumerate(eachcol(counts))]
+        @test all(<(4), abs.(z))
+    end
 end

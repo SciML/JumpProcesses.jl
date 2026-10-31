@@ -32,6 +32,24 @@
     current time, which was never reached, and after it no `Coevolve` jump fired. With
     two rate-1 jumps and `rateinterval = 0.1` on `(0.0, 10.0)`, each fired 1.9 times on
     average instead of 10.
+  - `VR_Direct` and `VR_DirectFW` no longer give biased jump statistics when a rate varies
+    within a solver step, for example when the ODE part is constant and doesn't limit the
+    step size (#692). They integrated the total rate over each step with 4-point
+    Gauss-Legendre quadrature, which the solver's error control doesn't see. They now fit
+    the total rate on each step, up to the next jump, with piecewise Chebyshev
+    interpolants, refined until the integral is within the solver's `abstol` and `reltol`,
+    and root finding uses the fit instead of evaluating the rates again. When the steps
+    were already short enough, solves are faster: 1.1 to 2.9 times with `VR_Direct` and
+    1.3 to 3.7 times with `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they
+    weren't, solves take longer, since the rates' variation within each step is now
+    resolved. In SDE problems, a rate that depends on a component driven by noise still
+    needs steps that are short compared with its variation, for example set with `dtmax`;
+    `VR_FRM` doesn't.
+  - `VR_Direct` and `VR_DirectFW` now handle another callback's event cutting a solver step
+    short. They integrated the rest of the cut step with the state from before the event,
+    which biased the jump statistics when the rates depend on what the event changed: with
+    a rate that doubles at each event, a model expecting 14.5 jumps gave 10.4.
+  - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1
 

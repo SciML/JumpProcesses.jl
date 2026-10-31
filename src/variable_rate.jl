@@ -426,6 +426,15 @@ sol = solve(jprob, Tsit5())
 ## Notes
 
   - `VR_Direct` and `VR_DirectFW` are expected to generally be more performant than `VR_FRM`.
+  - The total rate is integrated over each solver step with a piecewise polynomial
+    (Chebyshev) interpolant of it, refined until the integral's estimated error is within
+    the solver's `abstol` and `reltol`. Rates that vary within long solver steps, for
+    example when the ODE part is constant, are resolved without limiting the step size.
+  - The rates are evaluated along the solver's interpolant between steps. In SDE problems
+    that doesn't resolve the noise within a step, so a rate that depends on a component
+    driven by noise needs steps that are short compared with its variation, for example
+    by setting `dtmax`. `VR_FRM` integrates each rate as a component of the state instead,
+    so the solver's error control covers it.
 """
 struct VR_Direct <: VariableRateAggregator end
 """
@@ -466,6 +475,52 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_DirectFW <: VariableRateAggregator end
 
+# The condition integrates the total rate over each solver step with a piecewise Chebyshev
+# interpolant of it, fit the first time the condition sees the step. Each panel's interpolant
+# uses the rates at NUM_CHEB_NODES Chebyshev points, and panels are halved, at most
+# MAX_CHEB_DEPTH times, until the estimated error of their integral is within the solver's
+# tolerances. Fitting stops at the panel where the threshold is reached, since the step then
+# ends at the jump; that panel may be halved up to MAX_CHEB_CROSSING_DEPTH times. Root
+# finding then evaluates the interpolant's antiderivative, with no further rate evaluations.
+const NUM_CHEB_NODES = 8
+const MAX_CHEB_DEPTH = 12
+const MAX_CHEB_CROSSING_DEPTH = 40
+# Chebyshev points of the first kind on [-1, 1]
+const CHEB_NODES = [cos(π * (j - 1 / 2) / NUM_CHEB_NODES) for j in 1:NUM_CHEB_NODES]
+# maps the rates at CHEB_NODES to the coefficients cₖ of their interpolant
+# c₀ / 2 + ∑ₖ cₖ Tₖ(x), k = 1:(NUM_CHEB_NODES - 1)
+const CHEB_TRANSFORM = [2 * cos(π * k * (j - 1 / 2) / NUM_CHEB_NODES) / NUM_CHEB_NODES
+                        for k in 0:(NUM_CHEB_NODES - 1), j in 1:NUM_CHEB_NODES]
+# the interpolant's integral over [-1, 1] is ∑ₖ CHEB_INTEGRAL_WEIGHTS[k + 1] cₖ
+const CHEB_INTEGRAL_WEIGHTS = [k == 0 ? 1.0 : isodd(k) ? 0.0 : 2 / (1 - k^2)
+                               for k in 0:(NUM_CHEB_NODES - 1)]
+
+# The total rate's interpolant over the current step, and buffers for fitting it
+struct TotalRateFit{T}
+    panel_starts::Vector{T}
+    panel_ends::Vector{T}
+    # integral of the interpolant from the start of the step to the start of each panel
+    panel_integrals::Vector{T}
+    # coefficients of the interpolant's antiderivative on each panel, NUM_CHEB_NODES + 1
+    # per panel
+    panel_coefs::Vector{T}
+    rate_samples::Vector{T}
+    rate_coefs::Vector{T}
+end
+
+function TotalRateFit{T}() where {T}
+    TotalRateFit{T}(T[], T[], T[], T[], Vector{T}(undef, NUM_CHEB_NODES),
+        Vector{T}(undef, NUM_CHEB_NODES))
+end
+
+function empty_panels!(fit::TotalRateFit)
+    empty!(fit.panel_starts)
+    empty!(fit.panel_ends)
+    empty!(fit.panel_integrals)
+    empty!(fit.panel_coefs)
+    nothing
+end
+
 mutable struct VR_DirectEventCache{T, F1, F2}
     prev_time::T
     prev_threshold::T
@@ -475,6 +530,7 @@ mutable struct VR_DirectEventCache{T, F1, F2}
     rate_funcs::F1
     affect_funcs::F2
     cum_rate_sum::Vector{T}
+    rate_fit::TotalRateFit{T}
 end
 
 function VR_DirectEventCache(
@@ -488,7 +544,7 @@ function VR_DirectEventCache(
 
     VR_DirectEventCache{T, typeof(rate_funcs), typeof(affect_funcs)}(zero(T),
         zero(T), zero(T), zero(T), zero(T), rate_funcs,
-        affect_funcs, cum_rate_sum)
+        affect_funcs, cum_rate_sum, TotalRateFit{T}())
 end
 
 function VR_DirectEventCache(
@@ -504,7 +560,7 @@ function VR_DirectEventCache(
 
     VR_DirectEventCache{T, typeof(rate_funcs), Any}(zero(T),
         zero(T), zero(T), zero(T), zero(T), rate_funcs,
-        affect_funcs, cum_rate_sum)
+        affect_funcs, cum_rate_sum, TotalRateFit{T}())
 end
 
 # Initialization function for VR_DirectEventCache
@@ -516,6 +572,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     cache.current_threshold = cache.prev_threshold
     cache.total_rate = zero(integrator.t)
     cache.cum_rate_sum .= 0
+    empty_panels!(cache.rate_fit)
     nothing
 end
 
@@ -605,19 +662,144 @@ function total_variable_rate(
     return sum_rate
 end
 
-# how many quadrature points to use (i.e. determines the degree of the quadrature rule)
-const NUM_GAUSS_QUAD_NODES = 4
+# Interpolates the total rate on [a, b], leaving the coefficients in `rate_fit.rate_coefs`.
+# Returns the interpolant's integral over [a, b], and an estimate of its error from the last
+# two coefficients.
+function fit_total_rate!(cache::VR_DirectEventCache, integrator, a, b)
+    (; rate_samples, rate_coefs) = cache.rate_fit
+    p = integrator.p
+    u_τ = first(SciMLBase.get_tmp_cache(integrator))
+    tmid = (a + b) / 2
+    halfdt = (b - a) / 2
+    for j in 1:NUM_CHEB_NODES
+        τ = halfdt * CHEB_NODES[j] + tmid
+        integrator(u_τ, τ)
+        rate_samples[j] = total_variable_rate(cache, u_τ, p, τ)
+    end
+    integral = zero(eltype(rate_coefs))
+    for k in 1:NUM_CHEB_NODES
+        c = zero(eltype(rate_coefs))
+        for j in 1:NUM_CHEB_NODES
+            c += CHEB_TRANSFORM[k, j] * rate_samples[j]
+        end
+        rate_coefs[k] = c
+        integral += CHEB_INTEGRAL_WEIGHTS[k] * c
+    end
+    err = (b - a) * (abs(rate_coefs[end]) + abs(rate_coefs[end - 1]))
+    return halfdt * integral, err
+end
+
+# Adds the panel [a, b], whose interpolant is in `fit.rate_coefs`, with the coefficients of
+# the interpolant's antiderivative ∑ⱼ Cⱼ Tⱼ(x), Cⱼ = (cⱼ₋₁ - cⱼ₊₁) / 2j, which is zero at
+# x = -1. `integral` is the integral from the start of the step to `a`.
+function push_panel!(fit::TotalRateFit, a, b, integral)
+    (; rate_coefs, panel_coefs) = fit
+    push!(fit.panel_starts, a)
+    push!(fit.panel_ends, b)
+    push!(fit.panel_integrals, integral)
+    i0 = length(panel_coefs) + 1
+    resize!(panel_coefs, length(panel_coefs) + NUM_CHEB_NODES + 1)
+    C0 = zero(eltype(panel_coefs))
+    for j in 1:NUM_CHEB_NODES
+        cnext = j + 2 <= NUM_CHEB_NODES ? rate_coefs[j + 2] : zero(C0)
+        C = (rate_coefs[j] - cnext) / (2j)
+        panel_coefs[i0 + j] = C
+        C0 += isodd(j) ? C : -C
+    end
+    panel_coefs[i0] = C0
+    nothing
+end
+
+# Bound on the rounding error of evaluating the antiderivative of the interpolant in
+# `fit.rate_coefs` on [a, b]: its coefficients scale with the rates on the panel, so a small
+# integral near the panel's start is a difference of much larger terms
+function antiderivative_rounding(fit::TotalRateFit, a, b)
+    (b - a) * (NUM_CHEB_NODES + 1) * eps(eltype(fit.rate_coefs)) * sum(abs, fit.rate_coefs)
+end
+
+# Fits the total rate on [a, b], halving the interval until the estimated error of each
+# panel's integral is within the tolerance the solver would use if the remaining threshold
+# were a state component. `integral` is the integral from the start of the step to `a`.
+# Returns the integral to the end of the last panel fitted, and whether the threshold was
+# reached there. Fitting stops at that panel, since the step ends at the jump. The jump time
+# is where the remaining threshold minus the integral crosses zero, so that panel must also
+# be accurate relative to the remaining threshold, including the antiderivative's rounding.
+function fit_panels!(cache::VR_DirectEventCache, integrator, a, b, integral, depth,
+        abstol, reltol)
+    I, err = fit_total_rate!(cache, integrator, a, b)
+    remaining = cache.prev_threshold - integral
+    tol = abstol + reltol * abs(remaining)
+    crossed = I >= remaining
+    if crossed
+        err = max(err, antiderivative_rounding(cache.rate_fit, a, b))
+    end
+    tmid = (a + b) / 2
+    maxdepth = crossed ? MAX_CHEB_CROSSING_DEPTH : MAX_CHEB_DEPTH
+    if err > tol && depth < maxdepth && a < tmid < b
+        integral, crossed = fit_panels!(
+            cache, integrator, a, tmid, integral, depth + 1, abstol, reltol)
+        crossed && return integral, crossed
+        return fit_panels!(cache, integrator, tmid, b, integral, depth + 1, abstol, reltol)
+    end
+    push_panel!(cache.rate_fit, a, b, integral)
+    return integral + I, crossed
+end
+
+# the solver's tolerances can be given per state component
+scalar_tolerance(tol::Number) = tol
+scalar_tolerance(tol) = minimum(tol)
+
+# Fits the total rate over the step just taken, from `cache.prev_time` to `integrator.t`
+function fit_step!(cache::VR_DirectEventCache, integrator)
+    empty_panels!(cache.rate_fit)
+    a, b = cache.prev_time, integrator.t
+    if b > a
+        abstol = scalar_tolerance(integrator.opts.abstol)
+        reltol = scalar_tolerance(integrator.opts.reltol)
+        fit_panels!(cache, integrator, a, b, zero(cache.prev_threshold), 0, abstol, reltol)
+    end
+    nothing
+end
+
+# ∑ⱼ C[offset + j + 1] Tⱼ(x) for j = 0:NUM_CHEB_NODES, by Clenshaw's recurrence
+function chebyshev_sum(C, offset, x)
+    b1 = b2 = zero(x)
+    for j in (NUM_CHEB_NODES + 1):-1:2
+        b1, b2 = C[offset + j] + 2x * b1 - b2, b1
+    end
+    return C[offset + 1] + x * b1 - b2
+end
+
+# the interpolant's integral from the start of the step to `t`; past the last panel, which
+# ends before the step does if the threshold was reached, it is the integral to that panel's
+# end, so the condition keeps its sign there without extrapolating the interpolant
+function fitted_rate_integral(fit::TotalRateFit, t)
+    (; panel_starts, panel_ends, panel_integrals, panel_coefs) = fit
+    isempty(panel_ends) && return zero(t)
+    i = min(searchsortedfirst(panel_ends, t), length(panel_ends))
+    a, b = panel_starts[i], panel_ends[i]
+    x = min((2t - a - b) / (b - a), one(t))
+    return panel_integrals[i] +
+           (b - a) / 2 * chebyshev_sum(panel_coefs, (i - 1) * (NUM_CHEB_NODES + 1), x)
+end
 
 # Condition functor defined directly on the cache
 function (cache::VR_DirectEventCache)(u, t, integrator)
-    if integrator.t < cache.current_time
-        error("integrator.t < cache.current_time. $(integrator.t) < $(cache.current_time). This is not supported in the `VR_Direct` handling")
-    end
-
-    if integrator.t != cache.current_time
-        cache.prev_time = cache.current_time
-        cache.prev_threshold = cache.current_threshold
+    # DiffEqBase evaluates the condition only while checking a step, [tprev, t], so the fit
+    # is current when both ends match. A step after another callback's event can end where
+    # the cut step would have, for example at the final time, so the start is checked too.
+    if integrator.t != cache.current_time || integrator.tprev != cache.prev_time
+        # The step being checked starts at `integrator.tprev`. That is before the end of the
+        # previous fit if another callback's event cut the previous step short, so the
+        # threshold there comes from that fit, and the rest of it is discarded.
+        tprev = integrator.tprev
+        if tprev < cache.prev_time
+            error("The solver step starts at $tprev, before $(cache.prev_time), where `VR_Direct` last integrated the total rate from. This is not supported.")
+        end
+        cache.prev_threshold -= fitted_rate_integral(cache.rate_fit, tprev)
+        cache.prev_time = tprev
         cache.current_time = integrator.t
+        fit_step!(cache, integrator)
     end
 
     dt = t - cache.prev_time
@@ -625,22 +807,7 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
         return cache.prev_threshold
     end
 
-    p = integrator.p
-    rate_increment = zero(t)
-    gps = _GAUSS_POINTS
-    weights = _GAUSS_WEIGHTS
-    tmid = (t + cache.prev_time) / 2
-    halfdt = dt / 2
-    u_τ = first(SciMLBase.get_tmp_cache(integrator))
-    for (i, τᵢ) in enumerate(gps)
-        τ = halfdt * τᵢ + tmid
-        integrator(u_τ, τ)
-        total_variable_rate_τ = total_variable_rate(cache, u_τ, p, τ)
-        rate_increment += weights[i] * total_variable_rate_τ
-    end
-    rate_increment *= halfdt
-
-    cache.current_threshold = cache.prev_threshold - rate_increment
+    cache.current_threshold = cache.prev_threshold - fitted_rate_integral(cache.rate_fit, t)
     return cache.current_threshold
 end
 
@@ -681,5 +848,7 @@ function (cache::VR_DirectEventCache)(integrator)
     cache.current_threshold = randexp(rng)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
+    # the integral up to the jump is used up, and the next step starts at the jump
+    empty_panels!(cache.rate_fit)
     return nothing
 end

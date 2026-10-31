@@ -647,6 +647,34 @@ let
     end
 end
 
+# An RNG whose exponential draws are all 0.7, so the jump times are deterministic
+struct FixedThresholdRNG <: Random.AbstractRNG end
+Random.randexp(::FixedThresholdRNG) = 0.7
+Random.randexp(::FixedThresholdRNG, ::Type{Float64}) = 0.7
+Random.rand(::FixedThresholdRNG, ::Random.SamplerTrivial{Random.CloseOpen01{Float64}}) = 0.5
+
+# Test 10: Exact jump times when another callback's event cuts a step short and the next
+# step ends where the cut step would have, here at the final time. The rate is 1 until a
+# ContinuousCallback sets it to 2 at t = 0.5, and every threshold is 0.7, so the jumps are at
+# 0.6 and 0.95. VR_Direct used to reuse the fit from before the event and jump once, at 0.7.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    double_rate = ContinuousCallback((u, t, integrator) -> t - 0.5,
+        integrator -> (integrator.p[1] = 2.0; nothing))
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW()),
+        kwargs in ((;), (; dt = 1.0, adaptive = false))
+
+        times = Float64[]
+        jump = VariableRateJump((u, p, t) -> p[1],
+            integrator -> (push!(times, integrator.t); nothing))
+        prob = ODEProblem(f, [0.0], (0.0, 1.0), [1.0])
+        jprob = JumpProblem(prob, jump; vr_aggregator, callback = double_rate)
+        solve(jprob, Tsit5(); rng = FixedThresholdRNG(), kwargs...)
+        @test length(times) == 2
+        @test times≈[0.6, 0.95] atol=1e-8
+    end
+end
+
 # Test combining MassActionJump with VariableRateJump for all aggregators
 # This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
 # where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to

@@ -514,6 +514,8 @@ struct TotalRateFit{T}
     panel_ends::Vector{T}
     # integral of the interpolant from the start of the step to the start of each panel
     panel_integrals::Vector{T}
+    # and to the end of each panel, as accumulated by the fit
+    panel_end_integrals::Vector{T}
     # coefficients of the interpolant's antiderivative on each panel, NUM_CHEB_NODES + 1
     # per panel
     panel_coefs::Vector{T}
@@ -534,14 +536,15 @@ function TotalRateFit{T}() where {T}
     transform = [2 * cospi(k * (2j - 1) / T(2n)) / n for k in 0:(n - 1), j in 1:n]
     integral_weights = [k == 0 ? one(T) : isodd(k) ? zero(T) : 2 / T(1 - k^2)
                         for k in 0:(n - 1)]
-    TotalRateFit{T}(T[], T[], T[], T[], Vector{T}(undef, n), Vector{T}(undef, n), nodes,
-        transform, integral_weights)
+    TotalRateFit{T}(T[], T[], T[], T[], T[], Vector{T}(undef, n), Vector{T}(undef, n),
+        nodes, transform, integral_weights)
 end
 
 function empty_panels!(fit::TotalRateFit)
     empty!(fit.panel_starts)
     empty!(fit.panel_ends)
     empty!(fit.panel_integrals)
+    empty!(fit.panel_end_integrals)
     empty!(fit.panel_coefs)
     nothing
 end
@@ -716,12 +719,13 @@ end
 
 # Adds the panel [a, b], whose interpolant is in `fit.rate_coefs`, with the coefficients of
 # the interpolant's antiderivative ∑ⱼ Cⱼ Tⱼ(x), Cⱼ = (cⱼ₋₁ - cⱼ₊₁) / 2j, which is zero at
-# x = -1. `integral` is the integral from the start of the step to `a`.
-function push_panel!(fit::TotalRateFit, a, b, integral)
+# x = -1. `integral` and `total` are the integrals from the start of the step to `a` and `b`.
+function push_panel!(fit::TotalRateFit, a, b, integral, total)
     (; rate_coefs, panel_coefs) = fit
     push!(fit.panel_starts, a)
     push!(fit.panel_ends, b)
     push!(fit.panel_integrals, integral)
+    push!(fit.panel_end_integrals, total)
     i0 = length(panel_coefs) + 1
     resize!(panel_coefs, length(panel_coefs) + NUM_CHEB_NODES + 1)
     C0 = zero(eltype(panel_coefs))
@@ -745,8 +749,8 @@ end
 # Fits the total rate on [a, b], halving the interval until the estimated error of each
 # panel's integral is within the tolerance the solver would use if the remaining threshold
 # were a state component. `integral` is the integral from the start of the step to `a`.
-# Returns the integral to the end of the last panel fitted, and whether the threshold was
-# reached there. Fitting stops at that panel, since the step ends at the jump. The jump time
+# Returns the integral to the end of the last panel fitted, and whether it passed the
+# threshold there. Fitting stops at that panel, since the step ends at the jump. The jump time
 # is where the remaining threshold minus the integral crosses zero, so that panel must also
 # be accurate relative to the remaining threshold, including the antiderivative's rounding.
 function fit_panels!(cache::VR_DirectEventCache, integrator, a, b, integral, depth,
@@ -754,7 +758,12 @@ function fit_panels!(cache::VR_DirectEventCache, integrator, a, b, integral, dep
     I, err = fit_total_rate!(cache, integrator, a, b)
     remaining = cache.prev_threshold - integral
     tol = abstol + reltol * abs(remaining)
-    crossed = I >= remaining
+    # The panel's end total is stored, and the condition uses it from the panel's end on, so
+    # deciding with it keeps the two consistent under rounding. Stopping only when it is past
+    # the threshold, not equal to it, makes the condition negative after the last panel
+    # rather than zero over the rest of the step.
+    total = integral + I
+    crossed = total > cache.prev_threshold
     if crossed
         err = max(err, antiderivative_rounding(cache.rate_fit, a, b))
     end
@@ -766,8 +775,8 @@ function fit_panels!(cache::VR_DirectEventCache, integrator, a, b, integral, dep
         crossed && return integral, crossed
         return fit_panels!(cache, integrator, tmid, b, integral, depth + 1, abstol, reltol)
     end
-    push_panel!(cache.rate_fit, a, b, integral)
-    return integral + I, crossed
+    push_panel!(cache.rate_fit, a, b, integral, total)
+    return total, crossed
 end
 
 # the solver's tolerances can be given per state component
@@ -795,15 +804,17 @@ function chebyshev_sum(C, offset, x)
     return C[offset + 1] + x * b1 - b2
 end
 
-# the interpolant's integral from the start of the step to `t`; past the last panel, which
-# ends before the step does if the threshold was reached, it is the integral to that panel's
-# end, so the condition keeps its sign there without extrapolating the interpolant
+# the interpolant's integral from the start of the step to `t`. At or past a panel's end it
+# is the total the fit accumulated there, the same number the fit decided whether the
+# threshold was passed with; past the last panel, which ends before the step does if the
+# threshold was passed, it is that panel's total, without extrapolating the interpolant.
 function fitted_rate_integral(fit::TotalRateFit, t)
-    (; panel_starts, panel_ends, panel_integrals, panel_coefs) = fit
+    (; panel_starts, panel_ends, panel_integrals, panel_end_integrals, panel_coefs) = fit
     isempty(panel_ends) && return zero(t)
     i = min(searchsortedfirst(panel_ends, t), length(panel_ends))
     a, b = panel_starts[i], panel_ends[i]
-    x = min((2t - a - b) / (b - a), one(t))
+    t >= b && return panel_end_integrals[i]
+    x = (2t - a - b) / (b - a)
     return panel_integrals[i] +
            (b - a) / 2 * chebyshev_sum(panel_coefs, (i - 1) * (NUM_CHEB_NODES + 1), x)
 end

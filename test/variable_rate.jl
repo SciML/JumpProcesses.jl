@@ -647,10 +647,13 @@ let
     end
 end
 
-# An RNG whose exponential draws are all 0.7, so the jump times are deterministic
-struct FixedThresholdRNG <: Random.AbstractRNG end
-Random.randexp(::FixedThresholdRNG) = 0.7
-Random.randexp(::FixedThresholdRNG, ::Type{Float64}) = 0.7
+# An RNG whose exponential draws all equal `threshold`, so the jump times are deterministic
+struct FixedThresholdRNG{T} <: Random.AbstractRNG
+    threshold::T
+end
+Random.randexp(r::FixedThresholdRNG) = Float64(r.threshold)
+Random.randexp(r::FixedThresholdRNG, ::Type{Float64}) = Float64(r.threshold)
+Random.randexp(r::FixedThresholdRNG, ::Type{Float32}) = Float32(r.threshold)
 Random.rand(::FixedThresholdRNG, ::Random.SamplerTrivial{Random.CloseOpen01{Float64}}) = 0.5
 
 # Test 10: Exact jump times when another callback's event cuts a step short and the next
@@ -669,7 +672,7 @@ let
             integrator -> (push!(times, integrator.t); nothing))
         prob = ODEProblem(f, [0.0], (0.0, 1.0), [1.0])
         jprob = JumpProblem(prob, jump; vr_aggregator, callback = double_rate)
-        solve(jprob, Tsit5(); rng = FixedThresholdRNG(), kwargs...)
+        solve(jprob, Tsit5(); rng = FixedThresholdRNG(0.7), kwargs...)
         @test length(times) == 2
         @test times≈[0.6, 0.95] atol=1e-8
     end
@@ -698,6 +701,41 @@ let
         sol = solve(jprob, Vern9(); abstol = tol, reltol = tol, rng = StableRNG(3))
         exact = invert(randexp(StableRNG(3), BigFloat))
         @test abs(sol.t[end] / exact - 1) < 1e-25
+    end
+end
+
+# Test 12: Jump times when the integrated rate meets the threshold at a panel's end, up to
+# rounding or exactly. The fit stops at the panel where the integral passes the threshold,
+# and the condition uses that panel's end total from there on, so the two must agree.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    # The rate is eps/2 on [0, 1) and 1 after, and the threshold is nextfloat(1.0), so on
+    # [1, 2] the panel's integral reaches the remaining threshold but the rounded total stays
+    # below it. The fit must not stop there; the jump is at 2. VR_Direct used to never fire.
+    rate = (u, p, t) -> t < 1.0 ? eps(1.0) / 2 : 1.0
+    for vr_aggregator in (VR_Direct(), VR_DirectFW())
+        jump = VariableRateJump(rate, integrator -> terminate!(integrator))
+        jprob = JumpProblem(ODEProblem(f, [0.0], (0.0, 4.0)), jump; vr_aggregator)
+        sol = solve(jprob, Tsit5(); rng = FixedThresholdRNG(nextfloat(1.0)), dt = 4.0,
+            adaptive = false, abstol = 1e-9, reltol = 1e-6)
+        @test sol.retcode == ReturnCode.Terminated
+        @test sol.t[end]≈2.0 atol=1e-12
+    end
+    # A constant rate of 1 and thresholds at and next to 0.5: an integral exactly equal to
+    # the threshold must not stop the fit, or the condition is zero from there to the step's
+    # end and the jump moves to the step's end. VR_Direct used to jump at 1 for 0.5.
+    for vr_aggregator in (VR_Direct(), VR_DirectFW()), T in (Float32, Float64)
+
+        tol = T === Float32 ? (; abstol = 1.0f-8, reltol = 1.0f-6) :
+              (; abstol = 1e-15, reltol = 1e-15)
+        for E in (prevfloat(T(0.5)), T(0.5), nextfloat(T(0.5)))
+            jump = VariableRateJump((u, p, t) -> one(T), integrator -> terminate!(integrator))
+            jprob = JumpProblem(ODEProblem(f, T[0], (zero(T), one(T))), jump; vr_aggregator)
+            sol = solve(jprob, Tsit5(); rng = FixedThresholdRNG(E), dt = one(T),
+                adaptive = false, tol...)
+            @test sol.retcode == ReturnCode.Terminated
+            @test sol.t[end]≈E atol=2eps(T) rtol=0
+        end
     end
 end
 

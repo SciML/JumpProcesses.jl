@@ -404,6 +404,8 @@ end
 
 ################################### VR_Direct and VR_DirectFW ####################################
 
+# Algorithm: docs/src/algorithms/vr_direct.md
+
 """
 $(TYPEDEF)
 
@@ -455,6 +457,8 @@ sol = solve(jprob, Tsit5())
     driven by noise needs steps that are short compared with its variation, for example
     by setting `dtmax`. `VR_FRM` integrates each rate as a component of the state instead,
     so the solver's error control covers it.
+  - See [VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for how the total rate is
+    integrated, and its accuracy, cost and limitations.
 """
 struct VR_Direct <: VariableRateAggregator end
 """
@@ -464,7 +468,8 @@ Function-wrapper variant of [`VR_Direct`](@ref) for simulations with many
 [`VariableRateJump`](@ref)s.
 
 `VR_DirectFW` uses the same direct-method callback strategy as `VR_Direct`, but stores the
-rate and affect functions in `FunctionWrappers`-based containers.
+rate and affect functions in `FunctionWrappers`-based containers. See
+[VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for the algorithm.
 
 ## Returns
 

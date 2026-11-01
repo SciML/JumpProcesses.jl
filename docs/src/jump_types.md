@@ -222,7 +222,10 @@ Note that
     chosen with the `vr_aggregator` keyword argument of `JumpProblem`: one of
     [`VR_FRM`](@ref) (the default), [`VR_Direct`](@ref) and
     [`VR_DirectFW`](@ref). These use callbacks of the continuous solver to
-    determine when the jumps occur.
+    determine when the jumps occur. See
+    [How jumps are simulated](@ref algorithms_overview) for how they work, and
+    [VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for how `VR_Direct`
+    integrates the rates.
   - When using `Coevolve` with a `JumpProblem` coupled to a continuous problem
     such as an `ODEProblem`, the aggregator will handle the jumps in same way
     that it does with `SSAStepper`. However, *ensure that given `t` the bounds
@@ -313,7 +316,9 @@ offer different trade-offs. However, all aggregators describe the realization of
 each and every individual jump chronologically. Since they do not skip any
 jumps, they are considered exact methods. Note that none of the aggregators
 discussed in this section can be used with `RegularJumps` which are used for
-time-step based (inexact) τ-leaping methods.
+time-step based (inexact) τ-leaping methods. See
+[How jumps are simulated](@ref algorithms_overview) for how the aggregators are
+coupled to time stepping.
 
 The current aggregators are (note that an italicized name indicates the
 aggregator requires various types of dependency graphs, see the next section):

@@ -116,18 +116,37 @@ function (p::AbstractSSAJumpAggregator{
     nothing
 end
 
-# Executes the jump at the current time, then any next jumps whose times round to it, as the
-# aggregator's condition decides: their stops would be at the current time, which an ODE or
-# SDE integrator never reaches, so no jump would fire again. `SSAStepper` executes such jumps
-# through its own loop, which then has none left to execute.
+# Executes the jump at the current time, then any next jumps whose times round to it: their
+# stops would be at the current time, which an ODE or SDE integrator never reaches, so no jump
+# would fire again. `SSAStepper` executes such jumps through its own loop, which then has none
+# left to execute. The time is read after each affect, which may change it.
 function execute_tied_jumps!(p::AbstractSSAJumpAggregator, integrator, affects!)
-    t = integrator.t
     while true
-        execute_jumps!(p, integrator, integrator.u, integrator.p, t, affects!)
-        generate_jumps!(p, integrator, integrator.u, integrator.p, t)
-        p(integrator.u, t, integrator) || break
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+        next_jump_tied!(p, integrator) || break
+        save_between_tied_jumps!(p, integrator)
     end
-    register_next_jump_time!(integrator, p, t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+# Whether the next jump is also at the current time, and is executed now. Not after an affect
+# terminated the solve, nor at the end time, where a tied jump's time is really past the end
+# and some aggregators don't select a next jump.
+function next_jump_tied!(p::AbstractSSAJumpAggregator, integrator)
+    t = integrator.t
+    p.next_jump_time == t && t < p.end_time && !solve_terminated(integrator)
+end
+
+# `terminate!` sets this retcode, while ODE integrators report `Success` during the solve
+solve_terminated(integrator) = integrator.sol.retcode === ReturnCode.Terminated
+
+# Saves between tied jumps as the integrator saves around separate events, which it does
+# before the first jump and after the last as `save_positions` asks
+function save_between_tied_jumps!(p::AbstractSSAJumpAggregator, integrator)
+    p.save_positions[2] && savevalues!(integrator, true)
+    p.save_positions[1] && savevalues!(integrator, true)
     nothing
 end
 

@@ -655,6 +655,9 @@ end
     nothing
 end
 
+# SSAStepper saves once after all the jumps at a time
+save_between_tied_jumps!(p::AbstractSSAJumpAggregator, integrator::SSAIntegrator) = nothing
+
 function DiffEqBase.step!(integrator::SSAIntegrator)
     store_uprev!(integrator)
     integrator.tprev = integrator.t
@@ -683,13 +686,18 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
     # FP error means the new time may equal the old if the next jump time is
     # sufficiently small, hence we add this check to execute jumps until
-    # this is no longer true.
+    # this is no longer true, or a jump terminates the solve.
     integrator.u_modified = true
-    while integrator.t == integrator.tstop
+    jump_modified_u = true
+    first_affect = true
+    while integrator.t == integrator.tstop && integrator.keep_stepping
+        integrator.u_modified = true
         doaffect && integrator.cb.affect!(integrator)
+        # a rejected candidate clears `u_modified`, which must not hide a jump executed
+        # earlier at this time
+        jump_modified_u = (!first_affect && jump_modified_u) || integrator.u_modified
+        first_affect = false
     end
-
-    jump_modified_u = integrator.u_modified
 
     if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
         discrete_modified,

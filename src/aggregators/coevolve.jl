@@ -80,6 +80,18 @@ function (p::CoevolveJumpAggregation)(u, t, integrator)
     return false
 end
 
+# Tests tied candidates after a jump in the ODE/SDE affect, as the condition does. A rejected
+# candidate leaves the derivative discontinuity of the jumps already executed in place.
+function next_jump_tied!(p::CoevolveJumpAggregation, integrator)
+    t = integrator.t
+    solve_terminated(integrator) && return false
+    while p.next_jump_time == t && t < p.end_time
+        accept_next_jump!(p, integrator, integrator.u, integrator.p, t;
+            clear_discontinuity = false) && return true
+    end
+    return false
+end
+
 # executing jump at the next jump time
 function (p::CoevolveJumpAggregation)(integrator::I) where {I <:
                                                             AbstractSSAIntegrator}
@@ -188,7 +200,10 @@ function generate_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
 end
 
 ######################## SSA specific helper routines ########################
-function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
+# A rejected candidate changes no state, so it clears the derivative discontinuity, unless
+# `clear_discontinuity` is false because jumps were already executed at this time
+function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t;
+        clear_discontinuity = true)
     (; next_jump, ma_jumps) = p
 
     num_majumps = get_num_majumps(ma_jumps)
@@ -238,7 +253,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.prev_jump = next_jump
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
     register_next_jump_time!(integrator, p, integrator.t)
-    derivative_discontinuity!(integrator, false)
+    clear_discontinuity && derivative_discontinuity!(integrator, false)
 
     return false
 end

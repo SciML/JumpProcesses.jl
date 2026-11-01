@@ -56,7 +56,13 @@
     larger rate. That jump's solver stop was at the current time, which was never reached,
     and after it no jump of the aggregator fired. Such jumps now execute right away, as
     with `SSAStepper`. With a rate-1 jump switching on a rate-1e20 jump on `(1.0, 11.0)`,
-    the first fired once on average instead of 10 times.
+    the first fired once on average instead of 10 times. In ODE and SDE problems, the state
+    is saved between such jumps as `save_positions` asks, as for separate events at the
+    same time; `SSAStepper` still saves once after all of them. Tied jumps don't execute
+    after an affect calls `terminate!`, now also with `SSAStepper`, or at the end time,
+    where their times are really past it.
+  - With `Coevolve` and `SSAStepper`, the state is now saved after a jump that is followed
+    by a rejected candidate at the same time. The rejection used to skip that save.
   - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1

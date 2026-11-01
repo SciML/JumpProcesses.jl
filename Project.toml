@@ -49,6 +49,7 @@ KernelAbstractions = "0.9.36"
 LinearAlgebra = "1"
 LinearSolve = "5.2"
 OrdinaryDiffEq = "7.0.0, 7"
+OrdinaryDiffEqBDF = "2.4.5, 2"
 OrdinaryDiffEqCore = "4.3.0, 4"
 OrdinaryDiffEqFunctionMap = "2.0.0, 2"
 Pkg = "1"
@@ -79,6 +80,7 @@ KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+OrdinaryDiffEqBDF = "6ad6398a-0878-4a85-9266-38940aa047c8"
 OrdinaryDiffEqFunctionMap = "d3585ca7-f5d3-4ba6-8057-292ed1abd90f"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
@@ -92,4 +94,4 @@ StochasticDiffEqLeaping = "aefaaa88-39f2-4e89-b162-d61b7e8cc81b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Adapt", "FastBroadcast", "ForwardDiff", "KernelAbstractions", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "SciMLTesting", "StableRNGs", "Statistics", "StochasticDiffEq", "StochasticDiffEqCore", "StochasticDiffEqImplicit", "StochasticDiffEqLeaping", "Test"]
+test = ["Adapt", "FastBroadcast", "ForwardDiff", "KernelAbstractions", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqBDF", "OrdinaryDiffEqFunctionMap", "Pkg", "SafeTestsets", "SciMLTesting", "StableRNGs", "Statistics", "StochasticDiffEq", "StochasticDiffEqCore", "StochasticDiffEqImplicit", "StochasticDiffEqLeaping", "Test"]

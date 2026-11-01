@@ -1,4 +1,5 @@
 using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
+using OrdinaryDiffEqBDF
 using FastBroadcast
 using ForwardDiff
 using RecursiveArrayTools
@@ -261,5 +262,44 @@ end
         @test jumps[] > 0
         @test isapprox(sol.u[end].x[1][1], exp(-1); rtol = 1e-9)
         @test sol.u[end].x[2][1] ≈ 1 + jumps[]
+    end
+end
+
+@testset "DAE with VariableRateJump" begin
+    function dae!(out, du, u, p, t)
+        out .= du .+ u
+        nothing
+    end
+    dae(du, u, p, t) = du .+ u
+    rate(u, p, t) = u[1] + 1.0
+    affect!(integrator) = (integrator.u[1] += 1; nothing)
+    jump = VariableRateJump(rate, affect!)
+
+    for (f, iip) in ((dae!, true), (dae, false))
+        prob = DAEProblem{iip, SciMLBase.FullSpecialize}(
+            f, [0.0], [0.0], (0.0, 0.1); differential_vars = [true]
+        )
+        jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
+        jprob = jump_prob.prob
+        @test length(jprob.du0) == length(jprob.u0) == 2
+        @test jprob.differential_vars == [true, true]
+        @test SciMLBase.specialization(jprob.f) === SciMLBase.FullSpecialize
+
+        u = ExtendedJumpArray([5.0], [3.0])
+        du = ExtendedJumpArray([7.0], [11.0])
+        if iip
+            out0 = zero(jprob.u0)
+            jprob.f(out0, jprob.du0, jprob.u0, jprob.p, 0.0)
+            out = zero(jprob.u0)
+            jprob.f(out, du, u, jprob.p, 0.0)
+
+            sol = solve(jump_prob, DFBDF(); rng = StableRNG(626))
+            @test sol.retcode == ReturnCode.Success
+        else
+            out0 = jprob.f(jprob.du0, jprob.u0, jprob.p, 0.0)
+            out = jprob.f(du, u, jprob.p, 0.0)
+        end
+        @test all(iszero, out0)
+        @test out == [12.0, 5.0]
     end
 end

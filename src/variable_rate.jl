@@ -813,7 +813,10 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
     # DiffEqBase evaluates the condition only while checking a step, [tprev, t], so the fit
     # is current when both ends match. A step after another callback's event can end where
     # the cut step would have, for example at the final time, so the start is checked too.
-    if integrator.t != cache.current_time || integrator.tprev != cache.prev_time
+    # While the integrator is still at the fit's start, as right after one of VR_Direct's own
+    # jumps, there is nothing to fit.
+    if integrator.t != cache.prev_time &&
+       (integrator.t != cache.current_time || integrator.tprev != cache.prev_time)
         # The step being checked starts at `integrator.tprev`. That is before the end of the
         # previous fit if another callback's event cut the previous step short, so the
         # threshold there comes from that fit, and the rest of it is discarded.

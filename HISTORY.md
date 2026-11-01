@@ -50,6 +50,13 @@
     short. They integrated the rest of the cut step with the state from before the event,
     which biased the jump statistics when the rates depend on what the event changed: with
     a rate that doubles at each event, a model expecting 14.5 jumps gave 10.4.
+  - General `VariableRateJump`s now work in out-of-place ODE and SDE problems. With
+    `VR_FRM`, out-of-place ODE problems fired no jumps, since the rates were written over
+    the integrated intensities in the state, and out-of-place SDE problems failed to build.
+    `VR_Direct` and `VR_DirectFW` threw a `MethodError`; they now also work with immutable
+    states such as `SVector`s. `VR_FRM` still doesn't, since its extended state can't hold
+    one. `similar(A, T, size(A))` for an `ExtendedJumpArray` `A` now returns an
+    `ExtendedJumpArray`, as `similar(A, T, axes(A))` already did.
   - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1

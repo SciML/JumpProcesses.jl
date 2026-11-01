@@ -50,6 +50,13 @@
     short. They integrated the rest of the cut step with the state from before the event,
     which biased the jump statistics when the rates depend on what the event changed: with
     a rate that doubles at each event, a model expecting 14.5 jumps gave 10.4.
+  - The aggregators for `ConstantRateJump`s, `MassActionJump`s and bounded
+    `VariableRateJump`s no longer stop firing jumps in ODE and SDE problems when the next
+    jump's time rounds to the current time, as when a jump switches on another with a much
+    larger rate. That jump's solver stop was at the current time, which was never reached,
+    and after it no jump of the aggregator fired. Such jumps now execute right away, as
+    with `SSAStepper`. With a rate-1 jump switching on a rate-1e20 jump on `(1.0, 11.0)`,
+    the first fired once on average instead of 10 times.
   - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1

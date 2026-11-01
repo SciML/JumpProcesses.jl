@@ -102,21 +102,32 @@ end
 function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: SciMLBase.DEIntegrator}
     affects! = p.affects!
     if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
-        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        execute_tied_jumps!(p, integrator, affects!)
     else
         error("Error, invalid affects! type. Expected a vector of function wrappers and got $(typeof(affects!))")
     end
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
 
 function (p::AbstractSSAJumpAggregator{
         T, S, F1, F2})(integrator::SciMLBase.DEIntegrator) where
         {T, S, F1, F2 <: Union{Tuple, Nothing}}
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
+    execute_tied_jumps!(p, integrator, p.affects!)
+    nothing
+end
+
+# Executes the jump at the current time, then any next jumps whose times round to it, as the
+# aggregator's condition decides: their stops would be at the current time, which an ODE or
+# SDE integrator never reaches, so no jump would fire again. `SSAStepper` executes such jumps
+# through its own loop, which then has none left to execute.
+function execute_tied_jumps!(p::AbstractSSAJumpAggregator, integrator, affects!)
+    t = integrator.t
+    while true
+        execute_jumps!(p, integrator, integrator.u, integrator.p, t, affects!)
+        generate_jumps!(p, integrator, integrator.u, integrator.p, t)
+        p(integrator.u, t, integrator) || break
+    end
+    register_next_jump_time!(integrator, p, t)
     nothing
 end
 

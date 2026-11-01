@@ -38,13 +38,14 @@
     Gauss-Legendre quadrature, which the solver's error control doesn't see. They now fit
     the total rate on each step, up to the next jump, with piecewise Chebyshev
     interpolants, refined until the integral is within the solver's `abstol` and `reltol`,
-    and root finding uses the fit instead of evaluating the rates again. When the steps
-    were already short enough, solves are faster: 1.1 to 2.9 times with `VR_Direct` and
-    1.3 to 3.7 times with `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they
-    weren't, solves take longer, since the rates' variation within each step is now
-    resolved. In SDE problems, a rate that depends on a component driven by noise still
-    needs steps that are short compared with its variation, for example set with `dtmax`;
-    `VR_FRM` doesn't.
+    and root finding uses the fit instead of evaluating the rates again. The fit is computed
+    in the problem's time type, so higher precision types such as `BigFloat` get the
+    accuracy their tolerances ask for. When the steps were already short enough, solves
+    are as fast or faster: up to 2.8 times with `VR_Direct` and 1.1 to 3.9 times with
+    `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they weren't, solves take
+    longer, since the rates' variation within each step is now resolved. In SDE problems, a
+    rate that depends on a component driven by noise still needs steps that are short
+    compared with its variation, for example set with `dtmax`; `VR_FRM` doesn't.
   - `VR_Direct` and `VR_DirectFW` now handle another callback's event cutting a solver step
     short. They integrated the rest of the cut step with the state from before the event,
     which biased the jump statistics when the rates depend on what the event changed: with

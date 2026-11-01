@@ -675,6 +675,32 @@ let
     end
 end
 
+# Test 11: The fit's Chebyshev tables are computed in the problem's time type, so a higher
+# precision type gets the accuracy its tolerances ask for. With BigFloat and tolerances of
+# 1e-30, the first jump time for the rate 1 + sin(t)/2 matches the analytically integrated
+# rate far beyond Float64 precision; with Float64 tables it was off by about 5e-17.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    jump = VariableRateJump((u, p, t) -> 1 + sin(t) / 2, integrator -> terminate!(integrator))
+    prob = ODEProblem(f, BigFloat[0], (big"0.0", big"10.0"))
+    # the time at which t + (1 - cos(t))/2 reaches E, by bisection
+    function invert(E)
+        a, b = big"0.0", big"10.0"
+        while b - a > 2eps(b)
+            m = (a + b) / 2
+            m + (1 - cos(m)) / 2 < E ? (a = m) : (b = m)
+        end
+        return (a + b) / 2
+    end
+    tol = big"1e-30"
+    for vr_aggregator in (VR_Direct(), VR_DirectFW())
+        jprob = JumpProblem(prob, jump; vr_aggregator)
+        sol = solve(jprob, Vern9(); abstol = tol, reltol = tol, rng = StableRNG(3))
+        exact = invert(randexp(StableRNG(3), BigFloat))
+        @test abs(sol.t[end] / exact - 1) < 1e-25
+    end
+end
+
 # Test combining MassActionJump with VariableRateJump for all aggregators
 # This tests the fix for https://github.com/SciML/JumpProcesses.jl/issues/545
 # where RSSA/RSSACR aggregators would fail with ExtendedJumpArray due to

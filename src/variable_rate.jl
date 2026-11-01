@@ -505,17 +505,10 @@ struct VR_DirectFW <: VariableRateAggregator end
 const NUM_CHEB_NODES = 8
 const MAX_CHEB_DEPTH = 12
 const MAX_CHEB_CROSSING_DEPTH = 40
-# Chebyshev points of the first kind on [-1, 1]
-const CHEB_NODES = [cos(π * (j - 1 / 2) / NUM_CHEB_NODES) for j in 1:NUM_CHEB_NODES]
-# maps the rates at CHEB_NODES to the coefficients cₖ of their interpolant
-# c₀ / 2 + ∑ₖ cₖ Tₖ(x), k = 1:(NUM_CHEB_NODES - 1)
-const CHEB_TRANSFORM = [2 * cos(π * k * (j - 1 / 2) / NUM_CHEB_NODES) / NUM_CHEB_NODES
-                        for k in 0:(NUM_CHEB_NODES - 1), j in 1:NUM_CHEB_NODES]
-# the interpolant's integral over [-1, 1] is ∑ₖ CHEB_INTEGRAL_WEIGHTS[k + 1] cₖ
-const CHEB_INTEGRAL_WEIGHTS = [k == 0 ? 1.0 : isodd(k) ? 0.0 : 2 / (1 - k^2)
-                               for k in 0:(NUM_CHEB_NODES - 1)]
 
-# The total rate's interpolant over the current step, and buffers for fitting it
+# The total rate's interpolant over the current step, buffers for fitting it, and the
+# Chebyshev tables for fitting it, computed in the problem's time type so that the fit isn't
+# limited to Float64 accuracy for higher precision types
 struct TotalRateFit{T}
     panel_starts::Vector{T}
     panel_ends::Vector{T}
@@ -526,11 +519,23 @@ struct TotalRateFit{T}
     panel_coefs::Vector{T}
     rate_samples::Vector{T}
     rate_coefs::Vector{T}
+    # Chebyshev points of the first kind on [-1, 1]
+    nodes::Vector{T}
+    # maps the rates at `nodes` to the coefficients cₖ of their interpolant
+    # c₀ / 2 + ∑ₖ cₖ Tₖ(x), k = 1:(NUM_CHEB_NODES - 1)
+    transform::Matrix{T}
+    # the interpolant's integral over [-1, 1] is ∑ₖ integral_weights[k + 1] cₖ
+    integral_weights::Vector{T}
 end
 
 function TotalRateFit{T}() where {T}
-    TotalRateFit{T}(T[], T[], T[], T[], Vector{T}(undef, NUM_CHEB_NODES),
-        Vector{T}(undef, NUM_CHEB_NODES))
+    n = NUM_CHEB_NODES
+    nodes = [cospi((2j - 1) / T(2n)) for j in 1:n]
+    transform = [2 * cospi(k * (2j - 1) / T(2n)) / n for k in 0:(n - 1), j in 1:n]
+    integral_weights = [k == 0 ? one(T) : isodd(k) ? zero(T) : 2 / T(1 - k^2)
+                        for k in 0:(n - 1)]
+    TotalRateFit{T}(T[], T[], T[], T[], Vector{T}(undef, n), Vector{T}(undef, n), nodes,
+        transform, integral_weights)
 end
 
 function empty_panels!(fit::TotalRateFit)
@@ -686,13 +691,13 @@ end
 # Returns the interpolant's integral over [a, b], and an estimate of its error from the last
 # two coefficients.
 function fit_total_rate!(cache::VR_DirectEventCache, integrator, a, b)
-    (; rate_samples, rate_coefs) = cache.rate_fit
+    (; rate_samples, rate_coefs, nodes, transform, integral_weights) = cache.rate_fit
     p = integrator.p
     u_τ = first(SciMLBase.get_tmp_cache(integrator))
     tmid = (a + b) / 2
     halfdt = (b - a) / 2
     for j in 1:NUM_CHEB_NODES
-        τ = halfdt * CHEB_NODES[j] + tmid
+        τ = halfdt * nodes[j] + tmid
         integrator(u_τ, τ)
         rate_samples[j] = total_variable_rate(cache, u_τ, p, τ)
     end
@@ -700,10 +705,10 @@ function fit_total_rate!(cache::VR_DirectEventCache, integrator, a, b)
     for k in 1:NUM_CHEB_NODES
         c = zero(eltype(rate_coefs))
         for j in 1:NUM_CHEB_NODES
-            c += CHEB_TRANSFORM[k, j] * rate_samples[j]
+            c += transform[k, j] * rate_samples[j]
         end
         rate_coefs[k] = c
-        integral += CHEB_INTEGRAL_WEIGHTS[k] * c
+        integral += integral_weights[k] * c
     end
     err = (b - a) * (abs(rate_coefs[end]) + abs(rate_coefs[end - 1]))
     return halfdt * integral, err

@@ -168,7 +168,7 @@ for N in (1, 16)
 end
 SUITE["vrj"]["m1_16"]["Coevolve"] = benchmark_solve(
     jump_problem(m1_problem(16), Coevolve(), m1_jumps(16; bounded = true)...;
-        dep_graph = [[i] for i in 1:16]),
+        dep_graph = [[i] for i in 1:16], save_positions = (false, false)),
     Tsit5(); save_everystep = false)
 
 SUITE["construct"]["vr_frm"] = @benchmarkable JumpProblem($(m1_problem(16)),
@@ -193,8 +193,9 @@ end
 telegraph_g!(du, u, p, t) = (du[1] = 0; du[2] = 0; du[3] = 1; nothing)
 telegraph_ode = ODEProblem(telegraph_f!, [1.0, 0.0, 0.0], (0.0, 500.0))
 telegraph_sde = SDEProblem(telegraph_f!, telegraph_g!, [1.0, 0.0, 0.0], (0.0, 100.0))
-# A VariableRateJump whose rate reads the protein: export of one protein at rate p / 20
-export_jump = VariableRateJump((u, p, t) -> 0.05 * u[3],
+# A VariableRateJump whose rate reads the protein: export of one protein at rate p / 20, while
+# there is at least one (the SDE's noise can take p below zero)
+export_jump = VariableRateJump((u, p, t) -> u[3] >= 1 ? 0.05 * u[3] : 0.0,
     integrator -> (integrator.u[3] -= 1; nothing); save_positions = (false, false))
 
 SUITE["ode"] = BenchmarkGroup()

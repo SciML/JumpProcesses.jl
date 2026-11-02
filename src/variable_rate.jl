@@ -70,6 +70,8 @@ sol = solve(jprob, Tsit5())
     its use for handling `VariableRateJump`s.
   - While robust, it may be less performant than `VR_Direct` due to its integration of each
     individual jump's intensity, and its detection of each jump's firing time.
+  - It doesn't support immutable state types, such as `SVector`s, since it extends the state
+    with each jump's integrated intensity. Use `VR_Direct` or `VR_DirectFW` with them.
 """
 struct VR_FRM{V} <: VariableRateAggregator end
 
@@ -136,7 +138,9 @@ function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps)
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
+                # the rates go in a new array, not in `u.jump_u`, the state's integrated
+                # intensities
+                du = ExtendedJumpArray(_f(u.u, p, t), similar(u.jump_u))
                 update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
@@ -163,20 +167,33 @@ function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps)
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
+                du = ExtendedJumpArray(_f(u.u, p, t), similar(u.jump_u))
                 update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
-    if prob.noise_rate_prototype === nothing
-        jump_g = function (du, u, p, t)
-            prob.g(du.u, u.u, p, t)
+    if isinplace(prob)
+        if prob.noise_rate_prototype === nothing
+            jump_g = function (du, u, p, t)
+                prob.g(du.u, u.u, p, t)
+            end
+        else
+            jump_g = function (du, u, p, t)
+                prob.g(du, u.u, p, t)
+            end
         end
     else
-        jump_g = function (du, u, p, t)
-            prob.g(du, u.u, p, t)
+        if prob.noise_rate_prototype === nothing
+            # diagonal noise, none for the integrated intensities
+            jump_g = function (u, p, t)
+                ExtendedJumpArray(prob.g(u.u, p, t), zero(u.jump_u))
+            end
+        else
+            jump_g = function (u, p, t)
+                prob.g(u.u, p, t)
+            end
         end
     end
 
@@ -200,7 +217,7 @@ function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps)
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, h, p, t)
-                du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
+                du = ExtendedJumpArray(_f(u.u, h, p, t), similar(u.jump_u))
                 update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
@@ -404,6 +421,8 @@ end
 
 ################################### VR_Direct and VR_DirectFW ####################################
 
+# Algorithm: docs/src/algorithms/vr_direct.md
+
 """
 $(TYPEDEF)
 
@@ -455,6 +474,8 @@ sol = solve(jprob, Tsit5())
     driven by noise needs steps that are short compared with its variation, for example
     by setting `dtmax`. `VR_FRM` integrates each rate as a component of the state instead,
     so the solver's error control covers it.
+  - See [VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for how the total rate is
+    integrated, and its accuracy, cost and limitations.
 """
 struct VR_Direct <: VariableRateAggregator end
 """
@@ -464,7 +485,8 @@ Function-wrapper variant of [`VR_Direct`](@ref) for simulations with many
 [`VariableRateJump`](@ref)s.
 
 `VR_DirectFW` uses the same direct-method callback strategy as `VR_Direct`, but stores the
-rate and affect functions in `FunctionWrappers`-based containers.
+rate and affect functions in `FunctionWrappers`-based containers. See
+[VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for the algorithm.
 
 ## Returns
 
@@ -690,18 +712,27 @@ function total_variable_rate(
     return sum_rate
 end
 
+# The state at τ from the solver's interpolant, written into the integrator's first temporary
+# cache. Out-of-place integrators have none, so the interpolant allocates the state.
+function interpolated_state(integrator, tmp_cache, τ)
+    u_τ = first(tmp_cache)
+    integrator(u_τ, τ)
+    return u_τ
+end
+interpolated_state(integrator, ::Nothing, τ) = integrator(τ)
+
 # Interpolates the total rate on [a, b], leaving the coefficients in `rate_fit.rate_coefs`.
 # Returns the interpolant's integral over [a, b], and an estimate of its error from the last
 # two coefficients.
 function fit_total_rate!(cache::VR_DirectEventCache, integrator, a, b)
     (; rate_samples, rate_coefs, nodes, transform, integral_weights) = cache.rate_fit
     p = integrator.p
-    u_τ = first(SciMLBase.get_tmp_cache(integrator))
+    tmp_cache = SciMLBase.get_tmp_cache(integrator)
     tmid = (a + b) / 2
     halfdt = (b - a) / 2
     for j in 1:NUM_CHEB_NODES
         τ = halfdt * nodes[j] + tmid
-        integrator(u_τ, τ)
+        u_τ = interpolated_state(integrator, tmp_cache, τ)
         rate_samples[j] = total_variable_rate(cache, u_τ, p, τ)
     end
     integral = zero(eltype(rate_coefs))

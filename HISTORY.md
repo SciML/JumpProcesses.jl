@@ -67,6 +67,9 @@
     stops ODE and SDE solves. The next jump's stop was registered after the affect, which
     restarted the solve. `SSAStepper` no longer advances to the end time after such a call
     and runs the callbacks there.
+  - With `save_end = true`, the default, `SSAStepper` now saves the state where
+    `terminate!` stopped the solve, as OrdinaryDiffEq does. Without saves at jumps, a
+    terminated solve returned only its initial state, or no state with `save_start = false`.
   - With `Coevolve` and `SSAStepper`, the state is now saved after a jump that is followed
     by a rejected candidate at the same time. The rejection used to skip that save.
   - General `VariableRateJump`s now work in out-of-place ODE and SDE problems. With

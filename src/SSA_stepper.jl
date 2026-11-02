@@ -421,11 +421,12 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
             DiffEqBase.apply_discrete_callback!(integrator,
                 integrator.opts.callback.discrete_callbacks...)
         end
+    end
 
-        if integrator.save_end &&
-           (isempty(integrator.sol.t) || integrator.sol.t[end] != end_time)
-            save_current_state!(integrator, end_time)
-        end
+    # save the final state, at the end time or where `terminate!` stopped the solve
+    if integrator.save_end &&
+       (isempty(integrator.sol.t) || integrator.sol.t[end] != integrator.t)
+        save_current_state!(integrator, integrator.t)
     end
 
     DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)

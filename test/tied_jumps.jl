@@ -205,3 +205,29 @@ end
     @test endpoint_calls[] == 0
     @test only(sol.u[end]) == 1
 end
+
+# SSAStepper saved no final state after `terminate!`, so with no saves at jumps a terminated
+# solve returned only its initial state
+@testset "SSAStepper saves the state where terminate! stopped the solve" begin
+    for terminate_with! in (terminate!, i -> terminate!(i, ReturnCode.Success))
+        affect!(integrator) = (integrator.u[1] = 7; terminate_with!(integrator); nothing)
+        jump = ConstantRateJump((u, p, t) -> 1.0, affect!)
+        dprob = DiscreteProblem([0], (0.0, 2.0))
+        jprob = JumpProblem(dprob, Direct(), jump; save_positions = (false, false))
+        sol = solve(jprob, SSAStepper(); rng = TiedJumpsRNG())
+        @test sol.t == [0.0, 1.0]
+        @test sol.u == [[0], [7]]
+        sol = solve(jprob, SSAStepper(); save_start = false, rng = TiedJumpsRNG())
+        @test sol.t == [1.0]
+        @test sol.u == [[7]]
+        sol = solve(jprob, SSAStepper(); saveat = 0.25, rng = TiedJumpsRNG())
+        @test sol.t == [0.0, 0.25, 0.5, 0.75, 1.0]
+        @test sol.u[end] == [7]
+        sol = solve(jprob, SSAStepper(); save_end = false, rng = TiedJumpsRNG())
+        @test sol.t == [0.0]
+        # a save at the jump isn't repeated
+        sol = solve(JumpProblem(dprob, Direct(), jump), SSAStepper(); rng = TiedJumpsRNG())
+        @test sol.t == [0.0, 1.0]
+        @test sol.u == [[0], [7]]
+    end
+end

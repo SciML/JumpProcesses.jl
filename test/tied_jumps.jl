@@ -74,19 +74,36 @@ end
     @test only.(sol.u[sol.t .== 1.0]) == [0.0, 1.0, 1.0, 2.0]
 end
 
+# `terminate!` may set any retcode
 @testset "No tied jump after terminate!" begin
-    affectA!(integrator) = (integrator.u[1] = 1; terminate!(integrator); nothing)
-    sol, times_b = solve_two_jumps(affectA!)
-    @test sol.retcode == ReturnCode.Terminated
-    @test isempty(times_b)
-    @test only(sol.u[end]) == 1
+    for terminate_with! in (terminate!, i -> terminate!(i, ReturnCode.Success))
+        affectA!(integrator) = (integrator.u[1] = 1; terminate_with!(integrator); nothing)
+        sol, times_b = solve_two_jumps(affectA!)
+        @test isempty(times_b)
+        @test only(sol.u[end]) == 1
 
-    # SSAStepper too
-    jprob, times_b = two_jump_problem(affectA!, DiscreteProblem([0.0], (0.0, 2.0)))
-    sol = solve(jprob, SSAStepper(); rng = TiedJumpsRNG())
-    @test sol.retcode == ReturnCode.Terminated
-    @test isempty(times_b)
-    @test only(sol.u[end]) == 1
+        # SSAStepper too
+        jprob, times_b = two_jump_problem(affectA!, DiscreteProblem([0.0], (0.0, 2.0)))
+        sol = solve(jprob, SSAStepper(); rng = TiedJumpsRNG())
+        @test isempty(times_b)
+        @test only(sol.u[end]) == 1
+    end
+end
+
+# The next jump's stop used to be registered after the affect, which restarted an ODE solve
+# that the affect terminated with a retcode other than `Terminated`
+@testset "A jump's terminate! stops an ODE solve, whatever the retcode" begin
+    times = Float64[]
+    function affect!(integrator)
+        push!(times, integrator.t)
+        terminate!(integrator, ReturnCode.Success)
+        nothing
+    end
+    jprob = JumpProblem(ODEProblem(zero_drift!, [0.0], (0.0, 10.0)), Direct(),
+        ConstantRateJump((u, p, t) -> 1.0, affect!))
+    sol = solve(jprob, Tsit5(); rng = TiedJumpsRNG())
+    @test times == [1.0]
+    @test sol.t[end] == 1.0
 end
 
 @testset "Next jump scheduled from the time after an affect that changes it" begin
@@ -141,4 +158,31 @@ end
     sol = solve(jprob, SSAStepper(); rng = TiedJumpsRNG())
     @test sol.t == [0.0, 1.0, 2.0]
     @test only.(sol.u) == [0.0, 1.0, 1.0]
+end
+
+# A switches on the ODE's slope at 1, and B, tied with it, only does bookkeeping and says so
+# with `derivative_discontinuity!(integrator, false)`. B used to clear A's derivative
+# discontinuity, so Tsit5 kept the old slope.
+@testset "Derivative discontinuity of any tied jump restarts the solver" begin
+    function drift!(du, u, p, t)
+        du[1] = 0
+        du[2] = u[1] >= 1 ? 1 : 0
+        nothing
+    end
+    a = ConstantRateJump((u, p, t) -> u[1] == 0 ? 1.0 : 0.0,
+        integrator -> (integrator.u[1] = 1; nothing))
+    function affectB!(integrator)
+        integrator.u[1] = 2
+        # the slope is 1 both before and after B
+        SciMLBase.derivative_discontinuity!(integrator, false)
+        nothing
+    end
+    b = ConstantRateJump((u, p, t) -> u[1] == 1 ? 1e20 : 0.0, affectB!)
+    for aggregator in (Direct(), Coevolve())
+        jprob = JumpProblem(ODEProblem(drift!, zeros(2), (0.0, 2.0)), aggregator, a, b;
+            dep_graph = [[1, 2], [2]], save_positions = (false, false))
+        sol = solve(jprob, Tsit5(); dt = 1.0, adaptive = false, save_everystep = false,
+            rng = TiedJumpsRNG())
+        @test sol.u[end][2] ≈ 1.0
+    end
 end

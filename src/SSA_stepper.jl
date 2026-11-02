@@ -658,6 +658,9 @@ end
 # SSAStepper saves once after all the jumps at a time
 save_between_tied_jumps!(p::AbstractSSAJumpAggregator, integrator::SSAIntegrator) = nothing
 
+# `terminate!` stops SSAStepper, whatever the retcode
+solve_stopped(integrator::SSAIntegrator) = !integrator.keep_stepping
+
 function DiffEqBase.step!(integrator::SSAIntegrator)
     store_uprev!(integrator)
     integrator.tprev = integrator.t

@@ -120,27 +120,40 @@ end
 # stops would be at the current time, which an ODE or SDE integrator never reaches, so no jump
 # would fire again. `SSAStepper` executes such jumps through its own loop, which then has none
 # left to execute. The time is read after each affect, which may change it.
+#
+# Each affect starts with a derivative discontinuity, as a separate event's would, and the
+# integrator restarts if any of them leaves it set. After an affect stops the solve, nothing
+# more is executed or scheduled: a new stop would restart an ODE or SDE solve.
 function execute_tied_jumps!(p::AbstractSSAJumpAggregator, integrator, affects!)
+    discontinuity = false
     while true
+        derivative_discontinuity!(integrator, true)
         execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        discontinuity |= integrator.derivative_discontinuity
+        if solve_stopped(integrator)
+            derivative_discontinuity!(integrator, discontinuity)
+            return nothing
+        end
         generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
         next_jump_tied!(p, integrator) || break
         save_between_tied_jumps!(p, integrator)
     end
+    derivative_discontinuity!(integrator, discontinuity)
     register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
 
-# Whether the next jump is also at the current time, and is executed now. Not after an affect
-# terminated the solve, nor at the end time, where a tied jump's time is really past the end
-# and some aggregators don't select a next jump.
+# Whether the next jump is also at the current time, and is executed now. Not at the end
+# time, where a tied jump's time is really past the end and some aggregators don't select a
+# next jump.
 function next_jump_tied!(p::AbstractSSAJumpAggregator, integrator)
     t = integrator.t
-    p.next_jump_time == t && t < p.end_time && !solve_terminated(integrator)
+    p.next_jump_time == t && t < p.end_time
 end
 
-# `terminate!` sets this retcode, while ODE integrators report `Success` during the solve
-solve_terminated(integrator) = integrator.sol.retcode === ReturnCode.Terminated
+# Whether an affect stopped the solve. `terminate!` can set any retcode; this fallback only
+# recognizes the default, and integrators that can say more have their own methods.
+solve_stopped(integrator) = integrator.sol.retcode === ReturnCode.Terminated
 
 # Saves between tied jumps as the integrator saves around separate events, which it does
 # before the first jump and after the last as `save_positions` asks

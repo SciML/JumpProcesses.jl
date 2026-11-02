@@ -2,7 +2,7 @@
 
 julia_version = "1.13.3"
 manifest_format = "2.1"
-project_hash = "847fc08cd772695a3ca85fd437228a39d6695fa4"
+project_hash = "e96a1f68480d217efa9edbc04e8b85426db043ca"
 
 [[deps.ADTypes]]
 deps = ["PrecompileTools"]
@@ -1173,7 +1173,7 @@ version = "1.12.0"
 
 [[deps.JumpProcesses]]
 deps = ["ADTypes", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "FunctionWrappers", "Graphs", "LinearAlgebra", "PoissonRandom", "PrecompileTools", "Random", "RecursiveArrayTools", "SciMLBase", "SimpleNonlinearSolve", "StaticArrays", "SymbolicIndexingInterface"]
-path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"
+path = "/home/runner/_work/JumpProcesses.jl/JumpProcesses.jl"
 uuid = "ccbc3e58-028d-4f4c-8cd5-9ae44345cda5"
 version = "10.0.1"
 

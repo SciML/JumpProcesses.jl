@@ -32,4 +32,5 @@ jobs:
         with:
           name: benchmark-results-${{ matrix.version }}
           path: results/*.json
+          if-no-files-found: error
           retention-days: 1

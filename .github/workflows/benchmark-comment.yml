@@ -11,6 +11,7 @@ on:
 
 permissions:
   actions: read
+  contents: read
   pull-requests: write
 
 jobs:
@@ -62,7 +63,9 @@ jobs:
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         # The results come from the pull request's code, so the renderer treats them as
-        # untrusted data: only validated numbers and restricted benchmark names reach the comment
+        # untrusted data: only validated numbers and restricted benchmark names reach the
+        # comment. It fails unless every Julia version has results for both revisions, which
+        # keeps the previous comment.
         run: python3 .github/scripts/benchmark_comment.py results "$HEAD_SHA" > comment.md
       - name: Create or update the comment
         if: steps.pr.outputs.number != ''

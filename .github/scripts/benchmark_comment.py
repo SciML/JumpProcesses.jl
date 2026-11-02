@@ -9,7 +9,9 @@ propagated error, and allocations and memory.
 usage: python3 benchmark_comment.py <results dir> <head sha> > comment.md
 
 The results dir holds one directory per Julia version, benchmark-results-<version>, each with
-results_JumpProcesses@master.json and results_JumpProcesses@<head sha>.json.
+results_JumpProcesses@master.json and results_JumpProcesses@<head sha>.json. Unless every
+version has valid results for both revisions, it writes nothing and exits with an error, so
+that the workflow keeps the previous comment.
 """
 
 import json
@@ -39,7 +41,14 @@ def unit(value, units):
     """The unit whose scaled value is closest to 1, as AirspeedVelocity picks it."""
     if value <= 0:
         return units[0]
-    return min(units, key=lambda u: abs(math.log10(value * u[1])))
+    return min(units, key=lambda u: abs(math.log10(value) + math.log10(u[1])))
+
+
+def fixed(x, spec):
+    """x formatted by spec; raises ValueError if x isn't finite."""
+    if not math.isfinite(x):
+        raise ValueError
+    return format(x, spec)
 
 
 def number(x, integer=False):
@@ -62,11 +71,15 @@ def summary(trial):
         raise ValueError
     times = [number(t) for t in times]
     stats = {"median": statistics.median(times), "memory": None, "allocs": None}
+    if not math.isfinite(stats["median"]):
+        raise ValueError
     if "memory" in trial and "allocs" in trial:
         stats["memory"] = number(trial["memory"], integer=True)
         stats["allocs"] = number(trial["allocs"], integer=True)
     if len(times) > 1:
         q1, _, q3 = statistics.quantiles(times, n=4, method="inclusive")
+        if not math.isfinite(q3 - q1):
+            raise ValueError
         stats["iqr"] = max(0.0, q3 - q1)
     return stats
 
@@ -104,10 +117,10 @@ def load(path, skipped):
 
 def format_time(stats):
     name, scale = unit(stats["median"], TIME_UNITS)
-    median = stats["median"] * scale
+    median = fixed(stats["median"] * scale, ".3g")
     if "iqr" in stats:
-        return f"{median:.3g} ± {stats['iqr'] * scale:.2g} {name}"
-    return f"{median:.3g} {name}"
+        return f"{median} ± {fixed(stats['iqr'] * scale, '.2g')} {name}"
+    return f"{median} {name}"
 
 
 def format_memory(stats):
@@ -115,10 +128,12 @@ def format_memory(stats):
         return ""
     allocs_name, allocs_scale = unit(stats["allocs"], ALLOCATION_UNITS)
     memory_name, memory_scale = unit(stats["memory"], MEMORY_UNITS)
-    allocs = f"{stats['allocs'] * allocs_scale:.3g}" + (
-        " " + allocs_name if allocs_name else ""
+    allocs = fixed(stats["allocs"] * allocs_scale, ".3g")
+    if allocs_name:
+        allocs += " " + allocs_name
+    return (
+        f"{allocs} allocs: {fixed(stats['memory'] * memory_scale, '.3g')} {memory_name}"
     )
-    return f"{allocs} allocs: {stats['memory'] * memory_scale:.3g} {memory_name}"
 
 
 def ratio(base, head, key):
@@ -132,12 +147,13 @@ def ratio(base, head, key):
         return ""
     r = a / b
     if key == "median" and "iqr" in base and "iqr" in head and a > 0:
-        err = abs(r) * math.sqrt((base["iqr"] / a) ** 2 + (head["iqr"] / b) ** 2)
-        return f"{r:.3g} ± {err:.2g}"
-    return f"{r:.3g}"
+        err = abs(r) * math.hypot(base["iqr"] / a, head["iqr"] / b)
+        return f"{fixed(r, '.3g')} ± {fixed(err, '.2g')}"
+    return fixed(r, ".3g")
 
 
-def table(base, head, short_sha, key, format_cell):
+def table(base, head, short_sha, key, format_cell, skipped):
+    """The table's rows, leaving out (and counting) those whose values don't format."""
     names = sorted(set(base) | set(head), key=lambda n: (n == "time_to_load", n))
     lines = [
         f"| | {BASE} | {short_sha} | {BASE} / {short_sha} |",
@@ -145,12 +161,17 @@ def table(base, head, short_sha, key, format_cell):
     ]
     for name in names:
         b, h = base.get(name), head.get(name)
-        cells = [
-            format_cell(b) if b else "",
-            format_cell(h) if h else "",
-            ratio(b, h, key) if b and h else "",
-        ]
-        lines.append(f"| {name} | {' | '.join(cells)} |")
+        try:
+            cells = [
+                format_cell(b) if b else "",
+                format_cell(h) if h else "",
+                ratio(b, h, key) if b and h else "",
+            ]
+        except (ArithmeticError, ValueError):
+            skipped[0] += 1
+            continue
+        # as code, so that GitHub doesn't turn a name like www.example.com into a link
+        lines.append(f"| `{name}` | {' | '.join(cells)} |")
     return "\n".join(lines)
 
 
@@ -165,6 +186,8 @@ def render(results_dir, head_sha):
         if (m := VERSION_DIR.fullmatch(d))
         and os.path.isdir(os.path.join(results_dir, d))
     )
+    if not versions:
+        raise SystemExit("no benchmark-results-<version> directories")
     for version in versions:
         directory = os.path.join(results_dir, "benchmark-results-" + version)
         skipped = [0]
@@ -172,15 +195,15 @@ def render(results_dir, head_sha):
         head = load(
             os.path.join(directory, f"results_{PACKAGE}@{head_sha}.json"), skipped
         )
-        parts.append(f"## Benchmark Results (Julia v{version})")
+        julia = f"Julia v{version}" if version[0].isdigit() else f"Julia {version}"
         if base is None or head is None:
-            parts.append("No valid results for both revisions.")
-            continue
+            raise SystemExit(f"no valid results for both revisions with {julia}")
+        parts.append(f"## Benchmark Results ({julia})")
         for title, key, format_cell in (
             ("Time", "median", format_time),
             ("Memory", "memory", format_memory),
         ):
-            rows = table(base, head, short_sha, key, format_cell)
+            rows = table(base, head, short_sha, key, format_cell, skipped)
             parts.append(
                 f"<details><summary>{title} benchmarks</summary>\n\n{rows}\n\n</details>"
             )

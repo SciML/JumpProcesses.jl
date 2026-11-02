@@ -65,7 +65,8 @@
   - A jump of these aggregators whose affect calls `terminate!` with a retcode other than
     `ReturnCode.Terminated`, such as `terminate!(integrator, ReturnCode.Success)`, now
     stops ODE and SDE solves. The next jump's stop was registered after the affect, which
-    restarted the solve.
+    restarted the solve. `SSAStepper` no longer advances to the end time after such a call
+    and runs the callbacks there.
   - With `Coevolve` and `SSAStepper`, the state is now saved after a jump that is followed
     by a rejected candidate at the same time. The rejection used to skip that save.
   - General `VariableRateJump`s now work in out-of-place ODE and SDE problems. With

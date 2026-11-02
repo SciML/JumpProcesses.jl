@@ -393,8 +393,9 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
         step!(integrator)
     end
 
-    # if the user terminated the solve we shouldn't advance in time any more
-    if integrator.sol.retcode !== ReturnCode.Terminated
+    # if the user terminated the solve we shouldn't advance in time any more, whatever retcode
+    # `terminate!` set
+    if integrator.keep_stepping
         # The advance to the end time is a final step without a jump, so it starts a new
         # step for evaluating the integrator (and `tprev` always marks a step's start).
         if integrator.t < end_time

@@ -186,3 +186,22 @@ end
         @test sol.u[end][2] ≈ 1.0
     end
 end
+
+# With a retcode other than `Terminated`, SSAStepper used to advance to the end time after the
+# affect and run the callbacks there
+@testset "SSAStepper stops at terminate!, whatever the retcode" begin
+    endpoint_calls = Ref(0)
+    endpoint = DiscreteCallback((u, t, integrator) -> t == 2.0,
+        integrator -> (endpoint_calls[] += 1; integrator.u[1] += 100; nothing))
+    function affect!(integrator)
+        integrator.u[1] = 1
+        terminate!(integrator, ReturnCode.Success)
+        nothing
+    end
+    jprob = JumpProblem(DiscreteProblem([0.0], (0.0, 2.0)), Direct(),
+        ConstantRateJump((u, p, t) -> 1.0, affect!))
+    sol = solve(jprob, SSAStepper(); callback = endpoint, rng = TiedJumpsRNG())
+    @test sol.t[end] == 1.0
+    @test endpoint_calls[] == 0
+    @test only(sol.u[end]) == 1
+end

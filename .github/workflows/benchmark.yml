@@ -6,7 +6,6 @@ on:
     paths-ignore: ['docs/**']
 
 permissions:
-  pull-requests: write
   contents: read
 
 jobs:
@@ -28,13 +27,9 @@ jobs:
           extra-pkgs: "StableRNGs,OrdinaryDiffEqTsit5,StochasticDiffEqHighOrder"
           job-summary: true
       # This workflow can't comment on pull requests from forks, which get a read-only token.
-      # Benchmark Comment posts the tables the action wrote to body.md, with the PR number.
-      - name: Save the PR number
-        run: echo "${{ github.event.pull_request.number }}" > pr_number
+      # Benchmark Comment renders the comment from the results files the action wrote.
       - uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-${{ matrix.version }}
-          path: |
-            body.md
-            pr_number
+          path: results/*.json
           retention-days: 1

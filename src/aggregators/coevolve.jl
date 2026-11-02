@@ -80,13 +80,27 @@ function (p::CoevolveJumpAggregation)(u, t, integrator)
     return false
 end
 
-# Tests tied candidates after a jump in the ODE/SDE affect, as the condition does
-function next_jump_tied!(p::CoevolveJumpAggregation, integrator)
+# Tests tied candidates after a jump in the ODE/SDE affect, as the condition does. Ties are
+# rare, so the test is kept out of the common path.
+@inline function next_jump_tied!(p::CoevolveJumpAggregation, integrator)
     t = integrator.t
+    (p.next_jump_time == t && t < p.end_time) || return false
+    return accept_tied_candidate!(p, integrator, t)
+end
+
+# A rejected candidate clears the derivative discontinuity, which the jump just executed may
+# need, so it is restored
+@noinline function accept_tied_candidate!(p::CoevolveJumpAggregation, integrator, t)
+    discontinuity = integrator.derivative_discontinuity
+    tied = false
     while p.next_jump_time == t && t < p.end_time
-        accept_next_jump!(p, integrator, integrator.u, integrator.p, t) && return true
+        if accept_next_jump!(p, integrator, integrator.u, integrator.p, t)
+            tied = true
+            break
+        end
     end
-    return false
+    derivative_discontinuity!(integrator, discontinuity)
+    return tied
 end
 
 # executing jump at the next jump time

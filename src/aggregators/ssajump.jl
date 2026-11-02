@@ -118,29 +118,46 @@ end
 
 # Executes the jump at the current time, then any next jumps whose times round to it: their
 # stops would be at the current time, which an ODE or SDE integrator never reaches, so no jump
-# would fire again. `SSAStepper` executes such jumps through its own loop, which then has none
-# left to execute. The time is read after each affect, which may change it.
+# would fire again. `SSAStepper` executes such jumps through its own loop, and has its own
+# method. The time is read after each affect, which may change it.
 #
-# Each affect starts with a derivative discontinuity, as a separate event's would, and the
-# integrator restarts if any of them leaves it set. After an affect stops the solve, nothing
-# more is executed or scheduled: a new stop would restart an ODE or SDE solve.
+# The integrator restarts if any affect leaves the derivative discontinuity set; the flag is
+# read after each affect, as a rejected `Coevolve` candidate clears it. After an affect stops
+# the solve, nothing more is executed or scheduled: a new stop would restart an ODE or SDE
+# solve. Ties are rare, so the loop over them is kept out of this function, which otherwise
+# does what the affect did without it.
 function execute_tied_jumps!(p::AbstractSSAJumpAggregator, integrator, affects!)
-    discontinuity = false
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    solve_stopped(integrator) && return nothing
+    discontinuity = integrator.derivative_discontinuity
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    if next_jump_tied!(p, integrator)
+        discontinuity, stopped = execute_more_tied_jumps!(p, integrator, affects!,
+            discontinuity)
+        stopped && return nothing
+    end
+    derivative_discontinuity!(integrator, discontinuity)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+# Executes the tied jumps after the first. Each affect starts with a derivative
+# discontinuity, as a separate event's would. Returns whether any affect left it set, and
+# whether one stopped the solve.
+@noinline function execute_more_tied_jumps!(p::AbstractSSAJumpAggregator, integrator,
+        affects!, discontinuity)
     while true
+        save_between_tied_jumps!(p, integrator)
         derivative_discontinuity!(integrator, true)
         execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
         discontinuity |= integrator.derivative_discontinuity
         if solve_stopped(integrator)
             derivative_discontinuity!(integrator, discontinuity)
-            return nothing
+            return discontinuity, true
         end
         generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-        next_jump_tied!(p, integrator) || break
-        save_between_tied_jumps!(p, integrator)
+        next_jump_tied!(p, integrator) || return discontinuity, false
     end
-    derivative_discontinuity!(integrator, discontinuity)
-    register_next_jump_time!(integrator, p, integrator.t)
-    nothing
 end
 
 # Whether the next jump is also at the current time, and is executed now. Not at the end

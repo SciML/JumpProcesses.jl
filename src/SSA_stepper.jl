@@ -655,11 +655,15 @@ end
     nothing
 end
 
-# SSAStepper saves once after all the jumps at a time
-save_between_tied_jumps!(p::AbstractSSAJumpAggregator, integrator::SSAIntegrator) = nothing
-
-# `terminate!` stops SSAStepper, whatever the retcode
-solve_stopped(integrator::SSAIntegrator) = !integrator.keep_stepping
+# SSAStepper executes the jumps at a time through the loop in its `step!`, which also stops
+# after `terminate!` and saves once after all of them, so its affect executes one jump
+@inline function execute_tied_jumps!(
+        p::AbstractSSAJumpAggregator, integrator::SSAIntegrator, affects!)
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
 
 function DiffEqBase.step!(integrator::SSAIntegrator)
     store_uprev!(integrator)

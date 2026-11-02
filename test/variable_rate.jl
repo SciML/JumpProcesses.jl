@@ -1,6 +1,6 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, SciMLBase, StochasticDiffEq, Test
 using Random, LinearSolve, Statistics
-using StableRNGs, ADTypes
+using StableRNGs, ADTypes, StaticArrays
 rng = StableRNG(12345)
 
 a = ExtendedJumpArray(rand(rng, 3), rand(rng, 2))
@@ -1050,5 +1050,48 @@ end
         cbs = jp.jump_callback.continuous_callbacks
         @test length(cbs) == 1
         @test cbs[1].interp_points == 0
+    end
+end
+
+# Out-of-place ODE and SDE problems. VR_FRM wrote the rates over the integrated intensities
+# in the state, so no jump fired, and failed to build out-of-place SDE problems; VR_Direct
+# asked out-of-place integrators for a cache they don't have. The rate is u[2] = t, so the
+# mean number of jumps by t = 4 is 8.
+@testset "Out-of-place problems" begin
+    rate(u, p, t) = u[2]
+    affect!(integrator) = (integrator.u[1] += 1; nothing)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+    f(u, p, t) = [zero(eltype(u)), one(eltype(u))]
+    g(u, p, t) = zero(u)
+    u0 = [0.0, 0.0]
+    tspan = (0.0, 4.0)
+    for (prob, alg) in ((ODEProblem(f, u0, tspan), Tsit5()),
+            (SDEProblem(f, g, u0, tspan), SRIW1())),
+        vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+
+        @test !isinplace(prob)
+        jprob = JumpProblem(prob, jump; vr_aggregator)
+        rng = StableRNG(12345)
+        counts = [solve(jprob, alg; rng, save_everystep = false).u[end][1] for _ in 1:200]
+        @test isapprox(mean(counts), 8; rtol = 0.1)
+    end
+
+    # SVector states, which the affect replaces. VR_FRM's extended state can't hold one.
+    function affect_sv!(integrator)
+        integrator.u = setindex(integrator.u, integrator.u[1] + 1, 1)
+        nothing
+    end
+    jump_sv = VariableRateJump(rate, affect_sv!; save_positions = (false, false))
+    f_sv(u, p, t) = SVector(zero(eltype(u)), one(eltype(u)))
+    u0_sv = SVector(0.0, 0.0)
+    for (prob, alg) in ((ODEProblem(f_sv, u0_sv, tspan), Tsit5()),
+            (SDEProblem(f_sv, g, u0_sv, tspan), SRIW1())),
+        vr_aggregator in (VR_Direct(), VR_DirectFW())
+
+        jprob = JumpProblem(prob, jump_sv; vr_aggregator)
+        rng = StableRNG(12345)
+        sols = [solve(jprob, alg; rng, save_everystep = false) for _ in 1:200]
+        @test all(sol -> sol.u[end] isa SVector, sols)
+        @test isapprox(mean(sol -> sol.u[end][1], sols), 8; rtol = 0.1)
     end
 end

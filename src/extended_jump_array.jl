@@ -165,6 +165,14 @@ function Base.similar(A::ExtendedJumpArray, ::Type{S},
     return similar(A.u, S, axes)
 end
 
+# The same for a size, as out-of-place SDE solvers ask for when generating noise
+function Base.similar(A::ExtendedJumpArray, ::Type{S}, dims::Tuple{Int}) where {S}
+    if dims == size(A)
+        return ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
+    end
+    return similar(A.u, S, dims)
+end
+
 # plotting
 SciMLBase.plottable_indices(u::ExtendedJumpArray) = SciMLBase.plottable_indices(u.u)
 

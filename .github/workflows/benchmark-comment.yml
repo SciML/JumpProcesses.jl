@@ -53,17 +53,19 @@ jobs:
             done
           } | head -c 60000 > comment.md
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
-      - uses: peter-evans/find-comment@v4
+      - name: Create or update the comment
         if: steps.comment.outputs.pr != ''
-        id: find
-        with:
-          issue-number: ${{ steps.comment.outputs.pr }}
-          comment-author: github-actions[bot]
-          body-includes: "<!-- benchmark-results -->"
-      - uses: peter-evans/create-or-update-comment@v5
-        if: steps.comment.outputs.pr != ''
-        with:
-          comment-id: ${{ steps.find.outputs.comment-id }}
-          issue-number: ${{ steps.comment.outputs.pr }}
-          body-path: comment.md
-          edit-mode: replace
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ steps.comment.outputs.pr }}
+        run: |
+          # this workflow's earlier comment on the PR, found by its first line
+          id=$(gh api --paginate "repos/$REPO/issues/$PR/comments" --jq \
+            '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- benchmark-results -->"))) | .id' |
+            head -n 1)
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F body=@comment.md > /dev/null
+          else
+            gh api --method POST "repos/$REPO/issues/$PR/comments" -F body=@comment.md > /dev/null
+          fi

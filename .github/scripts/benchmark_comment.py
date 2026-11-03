@@ -8,10 +8,11 @@ propagated error, and allocations and memory.
 
 usage: python3 benchmark_comment.py <results dir> <head sha> > comment.md
 
-The results dir holds one directory per Julia version, benchmark-results-<version>, each with
-results_JumpProcesses@master.json and results_JumpProcesses@<head sha>.json. Unless every
-version has valid results for both revisions, it writes nothing and exits with an error, so
-that the workflow keeps the previous comment.
+The results dir holds a directory benchmark-results-<version> for each of the benchmark job's
+Julia versions, 1 and lts, each with results_JumpProcesses@master.json and
+results_JumpProcesses@<head sha>.json; other directories are ignored. Unless each version has
+valid results for both revisions and at least one timing to show, it writes nothing and exits
+with an error, so that the workflow keeps the previous comment.
 """
 
 import json
@@ -29,7 +30,8 @@ MAX_SAMPLES = 100_000
 MAX_BENCHMARKS = 500
 MAX_COMMENT_CHARS = 60_000
 NAME = re.compile(r"[A-Za-z0-9_./-]{1,100}")
-VERSION_DIR = re.compile(r"benchmark-results-([A-Za-z0-9.]{1,10})")
+# the Julia versions of the matrix in .github/workflows/benchmark.yml, and their headings
+VERSIONS = (("1", "Julia v1"), ("lts", "Julia lts"))
 SHA = re.compile(r"[0-9a-f]{40}")
 
 TIME_UNITS = (("ns", 1.0), ("μs", 1e-3), ("ms", 1e-6), ("s", 1e-9), ("h", 1e-9 / 3600))
@@ -153,12 +155,13 @@ def ratio(base, head, key):
 
 
 def table(base, head, short_sha, key, format_cell, skipped):
-    """The table's rows, leaving out (and counting) those whose values don't format."""
+    """The table and its row count, leaving out (and counting) rows that don't format."""
     names = sorted(set(base) | set(head), key=lambda n: (n == "time_to_load", n))
-    lines = [
+    header = [
         f"| | {BASE} | {short_sha} | {BASE} / {short_sha} |",
         "|:---|:---:|:---:|:---:|",
     ]
+    lines = []
     for name in names:
         b, h = base.get(name), head.get(name)
         try:
@@ -172,7 +175,7 @@ def table(base, head, short_sha, key, format_cell, skipped):
             continue
         # as code, so that GitHub doesn't turn a name like www.example.com into a link
         lines.append(f"| `{name}` | {' | '.join(cells)} |")
-    return "\n".join(lines)
+    return "\n".join(header + lines), len(lines)
 
 
 def render(results_dir, head_sha):
@@ -180,30 +183,23 @@ def render(results_dir, head_sha):
         raise SystemExit("not a commit SHA: " + head_sha)
     short_sha = head_sha[:7]
     parts = [MARKER]
-    versions = sorted(
-        m.group(1)
-        for d in os.listdir(results_dir)
-        if (m := VERSION_DIR.fullmatch(d))
-        and os.path.isdir(os.path.join(results_dir, d))
-    )
-    if not versions:
-        raise SystemExit("no benchmark-results-<version> directories")
-    for version in versions:
+    for version, julia in VERSIONS:
         directory = os.path.join(results_dir, "benchmark-results-" + version)
         skipped = [0]
         base = load(os.path.join(directory, f"results_{PACKAGE}@{BASE}.json"), skipped)
         head = load(
             os.path.join(directory, f"results_{PACKAGE}@{head_sha}.json"), skipped
         )
-        julia = f"Julia v{version}" if version[0].isdigit() else f"Julia {version}"
-        if base is None or head is None:
+        if not base or not head:
             raise SystemExit(f"no valid results for both revisions with {julia}")
         parts.append(f"## Benchmark Results ({julia})")
         for title, key, format_cell in (
             ("Time", "median", format_time),
             ("Memory", "memory", format_memory),
         ):
-            rows = table(base, head, short_sha, key, format_cell, skipped)
+            rows, count = table(base, head, short_sha, key, format_cell, skipped)
+            if key == "median" and not count:
+                raise SystemExit(f"no timings to show with {julia}")
             parts.append(
                 f"<details><summary>{title} benchmarks</summary>\n\n{rows}\n\n</details>"
             )

@@ -16,7 +16,7 @@ StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 StochasticDiffEqHighOrder = "0520c28c-50fd-4d16-9c96-902fc80b3bab"
 
 [sources]
-JumpProcesses = {path = "/home/runner/_work/JumpProcesses.jl/JumpProcesses.jl"}
+JumpProcesses = {path = "/home/runner/work/JumpProcesses.jl/JumpProcesses.jl"}
 
 [compat]
 Catalyst = "17"

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 10.1
+
   - `VR_Direct` and `VR_DirectFW` now give correct jump statistics when the time span
     doesn't start at zero. Their first step integrated the total rate from time zero
     instead of from the start time, which lost jumps: with a constant rate of 0.5 on

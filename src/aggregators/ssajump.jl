@@ -102,21 +102,79 @@ end
 function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: SciMLBase.DEIntegrator}
     affects! = p.affects!
     if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
-        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        execute_tied_jumps!(p, integrator, affects!)
     else
         error("Error, invalid affects! type. Expected a vector of function wrappers and got $(typeof(affects!))")
     end
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
 
 function (p::AbstractSSAJumpAggregator{
         T, S, F1, F2})(integrator::SciMLBase.DEIntegrator) where
         {T, S, F1, F2 <: Union{Tuple, Nothing}}
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
+    execute_tied_jumps!(p, integrator, p.affects!)
+    nothing
+end
+
+# Executes the jump at the current time, then any next jumps whose times round to it: their
+# stops would be at the current time, which an ODE or SDE integrator never reaches, so no jump
+# would fire again. `SSAStepper` executes such jumps through its own loop, and has its own
+# method. The time is read after each affect, which may change it.
+#
+# After an affect stops the solve, nothing more is executed or scheduled: a new stop would
+# restart an ODE or SDE solve. Ties are rare, so the loop over them is kept out of this
+# function, which otherwise does what the affect did without it.
+function execute_tied_jumps!(p::AbstractSSAJumpAggregator, integrator, affects!)
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    solve_stopped(integrator) && return nothing
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    if next_jump_tied!(p, integrator)
+        execute_more_tied_jumps!(p, integrator, affects!) && return nothing
+    end
     register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+# Executes the tied jumps after the first. Each affect starts with a derivative
+# discontinuity, as a separate event's would, and the integrator restarts if any affect,
+# including the first, leaves it set. Returns whether an affect stopped the solve.
+@noinline function execute_more_tied_jumps!(p::AbstractSSAJumpAggregator, integrator,
+        affects!)
+    discontinuity = integrator.derivative_discontinuity
+    while true
+        save_between_tied_jumps!(p, integrator)
+        derivative_discontinuity!(integrator, true)
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        discontinuity |= integrator.derivative_discontinuity
+        if solve_stopped(integrator)
+            derivative_discontinuity!(integrator, discontinuity)
+            return true
+        end
+        generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+        if !next_jump_tied!(p, integrator)
+            derivative_discontinuity!(integrator, discontinuity)
+            return false
+        end
+    end
+end
+
+# Whether the next jump is also at the current time, and is executed now. Not at the end
+# time, where a tied jump's time is really past the end and some aggregators don't select a
+# next jump.
+function next_jump_tied!(p::AbstractSSAJumpAggregator, integrator)
+    t = integrator.t
+    p.next_jump_time == t && t < p.end_time
+end
+
+# Whether an affect stopped the solve. `terminate!` can set any retcode; this fallback only
+# recognizes the default, and integrators that can say more have their own methods.
+solve_stopped(integrator) = integrator.sol.retcode === ReturnCode.Terminated
+
+# Saves between tied jumps as the integrator saves around separate events, which it does
+# before the first jump and after the last as `save_positions` asks
+function save_between_tied_jumps!(p::AbstractSSAJumpAggregator, integrator)
+    p.save_positions[2] && savevalues!(integrator, true)
+    p.save_positions[1] && savevalues!(integrator, true)
     nothing
 end
 

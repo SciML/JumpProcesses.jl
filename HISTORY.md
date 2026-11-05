@@ -50,6 +50,28 @@
     short. They integrated the rest of the cut step with the state from before the event,
     which biased the jump statistics when the rates depend on what the event changed: with
     a rate that doubles at each event, a model expecting 14.5 jumps gave 10.4.
+  - The aggregators for `ConstantRateJump`s, `MassActionJump`s and bounded
+    `VariableRateJump`s no longer stop firing jumps in ODE and SDE problems when the next
+    jump's time rounds to the current time, as when a jump switches on another with a much
+    larger rate. That jump's solver stop was at the current time, which was never reached,
+    and after it no jump of the aggregator fired. Such jumps now execute right away, as
+    with `SSAStepper`. With a rate-1 jump switching on a rate-1e20 jump on `(1.0, 11.0)`,
+    the first fired once on average instead of 10 times. In ODE and SDE problems, the state
+    is saved between such jumps as `save_positions` asks, as for separate events at the
+    same time; `SSAStepper` still saves once after all of them. The solver restarts after
+    them if any of their affects leaves the derivative discontinuity set, as each would
+    as a separate event. Tied jumps don't execute after an affect calls `terminate!`, now
+    also with `SSAStepper`, or at the end time, where their times are really past it.
+  - A jump of these aggregators whose affect calls `terminate!` with a retcode other than
+    `ReturnCode.Terminated`, such as `terminate!(integrator, ReturnCode.Success)`, now
+    stops ODE and SDE solves. The next jump's stop was registered after the affect, which
+    restarted the solve. `SSAStepper` no longer advances to the end time after such a call
+    and runs the callbacks there.
+  - With `save_end = true`, the default, `SSAStepper` now saves the state where
+    `terminate!` stopped the solve, as OrdinaryDiffEq does. Without saves at jumps, a
+    terminated solve returned only its initial state, or no state with `save_start = false`.
+  - With `Coevolve` and `SSAStepper`, the state is now saved after a jump that is followed
+    by a rejected candidate at the same time. The rejection used to skip that save.
   - General `VariableRateJump`s now work in out-of-place ODE and SDE problems. With
     `VR_FRM`, out-of-place ODE problems fired no jumps, since the rates were written over
     the integrated intensities in the state, and out-of-place SDE problems failed to build.

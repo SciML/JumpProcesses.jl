@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - `RSSA` and `RSSACR` no longer hang when every rate is zero but some of their bounds on
+    the rates are not, as with `2A → ∅` and one `A` left: their rejection loop never
+    accepted a candidate, whatever the end time. After a long run of rejections they now
+    stop if the last candidate came after the end time or every rate is zero. `CCNRM` no
+    longer executes jumps whose rate is zero when the end time is infinite, or throws an
+    `InexactError` when every rate is zero at the start.
+
 ## 10.1
 
   - `VR_Direct` and `VR_DirectFW` now give correct jump statistics when the time span

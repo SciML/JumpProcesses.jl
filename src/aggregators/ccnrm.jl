@@ -101,6 +101,11 @@ function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
         p.next_jump, p.next_jump_time = getfirst(p.ptt)
     end
 
+    # jumps with rate zero have the time floatmax in the table, which an infinite end time
+    # would reach: no jump comes
+    if p.next_jump_time == floatmax(typeof(p.next_jump_time))
+        p.next_jump_time = typemax(p.next_jump_time)
+    end
     nothing
 end
 
@@ -160,6 +165,10 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t, rng)
         pttdata[idx] = t + randexp(rng) / cur_rates[idx]
         idx += 1
     end
+
+    # jumps with rate zero get the time floatmax, as in updates: when every rate is zero the
+    # bin width is Inf, and the time Inf would give the bin index NaN
+    replace!(pttdata, typemax(eltype(pttdata)) => floatmax(eltype(pttdata)))
 
     # Build the priority time table with the times and bin width.
     timestep = 1 / sum(cur_rates)

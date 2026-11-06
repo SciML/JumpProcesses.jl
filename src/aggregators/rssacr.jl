@@ -150,8 +150,16 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
         return nothing
     end
     rerl += randexp(rng)
+    nrejected = 0
     while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
         params, t, p.maj_rates)
+        # after a long run of rejections, check if a jump can still come before the end time
+        nrejected += 1
+        if nrejected == max(16, length(cur_rate_high))
+            nrejected = 0
+            no_jump_before_end!(p, u, params, t, rerl / sum_rate) && return nothing
+        end
+
         # sample candidate reaction
         jidx = sample(rt, cur_rate_high, rng)
         rerl += randexp(rng)

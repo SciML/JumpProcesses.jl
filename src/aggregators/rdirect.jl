@@ -82,7 +82,8 @@ function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t, aff
     u = update_state!(p, integrator, u, affects!)
 
     # update rates
-    update_dependent_rates!(p, u, params, t)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end
 
@@ -113,8 +114,7 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
 end
 
 ######################## SSA specific helper routines #########################
-function update_dependent_rates!(p::RDirectJumpAggregation, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+function update_dependent_rates!(p::RDirectJumpAggregation, dep_rxs, u, params, t)
     (; ma_jumps, rates, cur_rates, sum_rate) = p
     num_majumps = get_num_majumps(ma_jumps)
     max_rate_increased = false

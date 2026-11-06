@@ -265,16 +265,16 @@ Recalculate the rate for the jump with index `rx`.
 end
 
 """
-    update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
+    update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, params, t)
 
-Recalculate jump rates for jumps that depend on the just executed jump.
+Recalculate the rates of the jumps in `dep_rxs`, and the sum of all rates.
 
 Notes:
 
-  - Intended for methods that have a dependency graph, i.e. define `p.dep_gr`.
+  - Intended for methods that have a dependency graph, i.e. define `p.dep_gr`. After a jump
+    executes, `dep_rxs` is `p.dep_gr[p.next_jump]`, the jumps that depend on it.
 """
-function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+function update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, params, t)
     cur_rates = p.cur_rates
     sum_rate = p.sum_rate
     num_majumps = get_num_majumps(p.ma_jumps)

@@ -200,7 +200,8 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t,
     update_state!(p, integrator, u, affects!)
     # update current jump rates and times
     rng = get_rng(integrator)
-    update_dependent_rates!(p, integrator.u, integrator.p, t, rng)
+    @inbounds deps = p.dep_gr[p.next_jump]
+    update_dependent_rates!(p, deps, integrator.u, integrator.p, t, rng)
     nothing
 end
 
@@ -266,8 +267,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     return false
 end
 
-function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t, rng)
-    @inbounds deps = p.dep_gr[p.next_jump]
+function update_dependent_rates!(p::CoevolveJumpAggregation, deps, u, params, t, rng)
     (; cur_rates, pq) = p
     for (ix, i) in enumerate(deps)
         ti, urate_i = next_time(p, u, params, t, i, rng)

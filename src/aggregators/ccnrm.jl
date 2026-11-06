@@ -101,6 +101,11 @@ function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)
         p.next_jump, p.next_jump_time = getfirst(p.ptt)
     end
 
+    # jumps with rate zero have the time floatmax in the table, which an infinite end time
+    # would reach: no jump comes
+    if p.next_jump_time == floatmax(typeof(p.next_jump_time))
+        p.next_jump_time = typemax(p.next_jump_time)
+    end
     nothing
 end
 

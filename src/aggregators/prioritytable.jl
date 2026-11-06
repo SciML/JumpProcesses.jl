@@ -160,6 +160,12 @@ end
     length(pt.pidtogroup)
 end
 
+# number of terms in the table's sums, the priorities and the group sums, for bounds on their
+# rounding errors
+@inline function numterms(pt::PriorityTable)
+    numpriorities(pt) + numgroups(pt)
+end
+
 @inline function groupsum(pt::PriorityTable)
     pt.gsum
 end

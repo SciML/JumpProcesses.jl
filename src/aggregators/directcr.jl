@@ -101,7 +101,7 @@ function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t::Numbe
     for (pid, priority) in enumerate(p.cur_rates)
         insert!(p.rt, pid, priority)
     end
-    p.sum_rate_err = sum_error_bound(p.sum_rate, numpriorities(p.rt) + numgroups(p.rt))
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numterms(p.rt))
 
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -122,8 +122,7 @@ end
 # the compiler chose before the checks of the rate sum made it longer
 @inline function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
     # recompute the sums of the rates if rounding may have made them inaccurate
-    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err,
-        numpriorities(p.rt) + numgroups(p.rt))
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, numterms(p.rt))
         resum_rates!(p)
     end
     nomorejumps!(p, p.sum_rate) && return nothing
@@ -157,7 +156,7 @@ end
 @noinline function resum_rates!(p::DirectCRJumpAggregation)
     resum!(p.rt, p.cur_rates)
     p.sum_rate = groupsum(p.rt)
-    p.sum_rate_err = sum_error_bound(p.sum_rate, numpriorities(p.rt) + numgroups(p.rt))
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numterms(p.rt))
     nothing
 end
 

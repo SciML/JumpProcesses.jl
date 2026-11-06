@@ -49,8 +49,9 @@ end
     netstoich = [[[i => -1, i + 1 => 1] for i in 1:5]; [[i => 1, i + 1 => -1] for i in 1:5];
                  [[1 => 1]]; [[6 => -1]]]
     chain = MassActionJump([k; reverse(k); 50.0; 1.0], substoich, netstoich)
-    for (prob, jumps) in ((DiscreteProblem([999, 50, 0], (0.0, 1e3), (0.1, 100.0)), sir),
+    cases = ((DiscreteProblem([999, 50, 0], (0.0, 1e3), (0.1, 100.0)), sir),
         (DiscreteProblem(fill(100, 6), (0.0, 5.0)), chain))
+    for (prob, jumps) in cases
         for agg in RUNNING_SUM_AGGREGATORS
             jprob = JumpProblem(prob, agg, jumps; save_positions = (false, false))
             a = jprob.discrete_jump_aggregation

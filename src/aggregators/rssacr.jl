@@ -118,7 +118,7 @@ function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t::Number)
     for (pid, priority) in enumerate(p.cur_rate_high)
         insert!(p.rt, pid, priority)
     end
-    p.sum_rate_err = sum_error_bound(p.sum_rate, numpriorities(p.rt) + numgroups(p.rt))
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numterms(p.rt))
 
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -138,8 +138,7 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     # recompute the sums of the rate bounds if rounding may have made them inaccurate
-    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err,
-        numpriorities(p.rt) + numgroups(p.rt))
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, numterms(p.rt))
         resum_rates!(p)
     end
 
@@ -188,7 +187,7 @@ end
 @noinline function resum_rates!(p::RSSACRJumpAggregation)
     resum!(p.rt, p.cur_rate_high)
     p.sum_rate = groupsum(p.rt)
-    p.sum_rate_err = sum_error_bound(p.sum_rate, numpriorities(p.rt) + numgroups(p.rt))
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numterms(p.rt))
     nothing
 end
 

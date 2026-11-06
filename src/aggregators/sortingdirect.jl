@@ -133,7 +133,9 @@ end
 # Recompute the sum of the rates after the search found no jump, which happens only if the sum
 # exceeds the sum of the rates, and search again. The recomputed sum is positive, since
 # `sum_rate_inaccurate` ruled out that the exact sum is zero, and the next jump time, drawn
-# with the previous sum, is off by at most its relative tolerance.
+# with the previous sum, is off by at most its relative tolerance. A search can still miss
+# by rounding, since `sum` adds the rates in another order than the search subtracts them,
+# but only with probability around `eps` per try, so it repeats until it finds a jump.
 @noinline function resum_and_search!(p::SortingDirectJumpAggregation, rng)
     resum_rates!(p, p.cur_rates)
     (; cur_rates, jump_search_order) = p

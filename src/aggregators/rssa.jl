@@ -150,7 +150,9 @@ end
 
 # Recompute the sum of the rate bounds after a search found no jump, which happens only if the
 # sum exceeds the sum of the bounds, and search again. The recomputed sum is positive, since
-# `sum_rate_inaccurate` ruled out that the exact sum is zero.
+# `sum_rate_inaccurate` ruled out that the exact sum is zero. A search can still miss by
+# rounding, since `sum` adds the bounds in another order than the search subtracts them, but
+# only with probability around `eps` per try, so it repeats until it finds a jump.
 @noinline function resum_and_search!(p::RSSAJumpAggregation, rng)
     resum_rates!(p, p.cur_rate_high)
     sum_rate = p.sum_rate

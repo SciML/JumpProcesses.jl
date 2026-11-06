@@ -142,7 +142,9 @@ end
 # Recompute the sums of the rates after sampling found no jump, which happens only if the sums
 # exceed the sum of the rates, and sample again. The recomputed sum is positive, since
 # `sum_rate_inaccurate` ruled out that the exact sum is zero, and the next jump time, drawn
-# with the previous sum, is off by at most its relative tolerance.
+# with the previous sum, is off by at most its relative tolerance. A sample can still miss
+# by rounding, since `sum` adds the group sums in another order than `sample` subtracts
+# them, but only with probability around `eps` per try, so it repeats until it finds a jump.
 @noinline function resum_and_sample!(p::DirectCRJumpAggregation, rng)
     resum_rates!(p)
     jidx = 0

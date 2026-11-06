@@ -400,3 +400,21 @@ Perform rejection sampling test (used in RSSA methods).
     end
     return true
 end
+
+"""
+    all_rates_zero(p, u, params, t) :: Bool
+
+Check if every jump's rate is zero at `(u, params, t)`. The rejection-based aggregators
+check this after a long run of rejected candidates: their bounds on the rates can be
+positive when every rate is zero, and then no candidate is ever accepted.
+"""
+@noinline function all_rates_zero(p::AbstractSSAJumpAggregator, u, params, t)
+    (; ma_jumps, rates, maj_rates) = p
+    num_majumps = get_num_majumps(ma_jumps)
+    for rx in 1:(num_majumps + length(rates))
+        rate = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx,
+            maj_rates)
+        rate > zero(rate) && return false
+    end
+    return true
+end

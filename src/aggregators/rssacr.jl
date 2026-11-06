@@ -29,6 +29,9 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, CB, U, VJMAP, JVMAP, BD,
     maxrate::F   # initial maxrate only, table can increase beyond it!
     rt::P #rate table
     ratetogroup::W
+    # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
+    # together measurably slowed each jump
+    sum_rate_err::F
 end
 
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
@@ -87,7 +90,7 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
         typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
         sum_rate, maj, maj_rates, rs, affs!, brackets, sps, vtoj_map,
         jtov_map, bd, ulow, uhigh, minrate, maxrate,
-        rt, ratetogroup)
+        rt, ratetogroup, zero(sum_rate))
 end
 
 ############################# Required Functions ##############################
@@ -115,6 +118,7 @@ function initialize!(p::RSSACRJumpAggregation, integrator, u, params, t::Number)
     for (pid, priority) in enumerate(p.cur_rate_high)
         insert!(p.rt, pid, priority)
     end
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numpriorities(p.rt) + numgroups(p.rt))
 
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -133,6 +137,12 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
+    # recompute the sums of the rate bounds if rounding may have made them inaccurate
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err,
+        numpriorities(p.rt) + numgroups(p.rt))
+        resum_rates!(p)
+    end
+
     sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
     if nomorejumps!(p, sum_rate)
@@ -145,21 +155,40 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     rerl = zero(sum_rate)
 
     jidx = sample(rt, cur_rate_high, rng)
-    if iszero(jidx)
-        p.next_jump_time = Inf
-        return nothing
-    end
+    # sampling finds no jump only if the sums exceed the sum of the rate bounds
+    iszero(jidx) && ((sum_rate, jidx) = resum_and_sample!(p, rng))
     rerl += randexp(rng)
     while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
         params, t, p.maj_rates)
         # sample candidate reaction
         jidx = sample(rt, cur_rate_high, rng)
+        iszero(jidx) && ((sum_rate, jidx) = resum_and_sample!(p, rng))
         rerl += randexp(rng)
     end
     p.next_jump = jidx
 
     # update time to next jump
     p.next_jump_time = t + rerl / sum_rate
+    nothing
+end
+
+# Recompute the sums of the rate bounds after sampling found no jump, which happens only if the
+# sums exceed the sum of the bounds, and sample again. The recomputed sum is positive, since
+# `sum_rate_inaccurate` ruled out that the exact sum is zero.
+@noinline function resum_and_sample!(p::RSSACRJumpAggregation, rng)
+    resum_rates!(p)
+    jidx = 0
+    while iszero(jidx)
+        jidx = sample(p.rt, p.cur_rate_high, rng)
+    end
+    return p.sum_rate, jidx
+end
+
+# recompute the priority table's sums from the rate bounds
+@noinline function resum_rates!(p::RSSACRJumpAggregation)
+    resum!(p.rt, p.cur_rate_high)
+    p.sum_rate = groupsum(p.rt)
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numpriorities(p.rt) + numgroups(p.rt))
     nothing
 end
 
@@ -172,6 +201,8 @@ update bracketing for the species in `changed_vars`, e.g. those the executed jum
     # update bracketing intervals
     (; ulow, uhigh) = p
     crhigh = p.cur_rate_high
+    # number of rate bounds updated, for the bound on the sum's rounding error
+    nupdates = 0
 
     @inbounds for uidx in changed_vars
         uval = u[uidx]
@@ -188,11 +219,15 @@ update bracketing for the species in `changed_vars`, e.g. those the executed jum
 
                 # update the priority table
                 update!(p.rt, jidx, oldrate, crhigh[jidx])
+                nupdates += 1
             end
         end
     end
 
-    p.sum_rate = groupsum(p.rt)
+    # each update takes up to four additions or subtractions in the table's sums
+    sum_rate = groupsum(p.rt)
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 4 * nupdates)
+    p.sum_rate = sum_rate
     nothing
 end
 
@@ -200,6 +235,8 @@ end
         u::SVector, params, t)
     # update bracketing intervals
     crhigh = p.cur_rate_high
+    # number of rate bounds updated, for the bound on the sum's rounding error
+    nupdates = 0
 
     @inbounds for uidx in changed_vars
         uval = u[uidx]
@@ -218,10 +255,14 @@ end
 
                 # update the priority table
                 update!(p.rt, jidx, oldrate, crhigh[jidx])
+                nupdates += 1
             end
         end
     end
 
-    p.sum_rate = groupsum(p.rt)
+    # each update takes up to four additions or subtractions in the table's sums
+    sum_rate = groupsum(p.rt)
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 4 * nupdates)
+    p.sum_rate = sum_rate
     nothing
 end

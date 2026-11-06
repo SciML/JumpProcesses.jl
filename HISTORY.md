@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+  - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
+    sums of the rates when rounding errors may have made them inaccurate, using a bound on
+    those errors that they update as the rates change. When every rate became zero, the
+    sums could be left slightly positive or negative instead of zero, so `RDirect` could
+    hang, `SortingDirect` could execute jumps whose rate is zero before a long enough end
+    time, `DirectCR` could sample an invalid jump index, which crashed or hung Julia, and
+    ODE and SDE solves with `SortingDirect` or `DirectCR` could throw because the next jump
+    time was far in the past. Rounding left from large rates could also bias later jump
+    times, for example after fast reactions consume a species. Seeded results change only in
+    solves where a sum is recomputed.
+
 ## 10.1
 
   - `VR_Direct` and `VR_DirectFW` now give correct jump statistics when the time span

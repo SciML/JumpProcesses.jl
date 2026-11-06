@@ -19,6 +19,9 @@ mutable struct RDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
     max_rate::T
     counter::Int
     counter_threshold::Int
+    # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
+    # together measurably slowed each jump
+    sum_rate_err::T
 end
 
 function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
@@ -47,7 +50,7 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
         crs, sr, maj, maj_rates, rs,
         affs!, sps,
         dg, max_rate, 0,
-        Int(counter_threshold))
+        Int(counter_threshold), zero(sr))
 end
 
 ############################# Required Functions #############################
@@ -69,6 +72,7 @@ function initialize!(p::RDirectJumpAggregation, integrator, u, params, t::Number
     p.end_time = integrator.sol.prob.tspan[2]
     fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     fill_rates_and_sum!(p, u, params, t)
+    p.sum_rate_err = sum_error_bound(p.sum_rate, length(p.cur_rates))
     p.max_rate = maximum(p.cur_rates)
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -91,6 +95,11 @@ end
 calculate the next jump / jump time
 """
 function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
+    # recompute the sum of the rates if rounding may have made it inaccurate
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, length(p.cur_rates))
+        resum_rates!(p, p.cur_rates)
+    end
+
     # if no more events possible there is nothing to do
     sum_rate = p.sum_rate
     if nomorejumps!(p, sum_rate)
@@ -133,6 +142,7 @@ function update_dependent_rates!(p::RDirectJumpAggregation, dep_rxs, u, params, 
         p.max_rate = maximum(p.cur_rates)
     end
 
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * length(dep_rxs))
     p.sum_rate = sum_rate
     nothing
 end

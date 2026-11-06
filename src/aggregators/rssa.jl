@@ -24,6 +24,9 @@ mutable struct RSSAJumpAggregation{T, S, F1, F2, CB, VJMAP, JVMAP, BD, U} <:
     bracket_data::BD
     ulow::U
     uhigh::U
+    # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
+    # together measurably slowed each jump
+    sum_rate_err::T
 end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -69,7 +72,7 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
         crh_bnds, sr, maj, maj_rates, rs, affs!, brackets, sps,
         vtoj_map, jtov_map, bd, ulow,
-        uhigh)
+        uhigh, zero(sr))
 end
 
 ############################# Required Functions ##############################
@@ -92,6 +95,7 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t::Number)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     set_bracketing!(p, u, params, t)
+    p.sum_rate_err = sum_error_bound(p.sum_rate, length(p.cur_rate_high))
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -107,6 +111,11 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+    # recompute the sum of the rate bounds if rounding may have made it inaccurate
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, length(p.cur_rate_high))
+        resum_rates!(p, p.cur_rate_high)
+    end
+
     sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
     if nomorejumps!(p, sum_rate)
@@ -120,16 +129,15 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 
     r = rand(rng) * sum_rate
     jidx = linear_search(cur_rate_high, r)
-    if iszero(jidx)
-        p.next_jump_time = Inf
-        return nothing
-    end
+    # the search finds no jump only if the sum exceeds the sum of the rate bounds
+    iszero(jidx) && ((sum_rate, jidx) = resum_and_search!(p, rng))
     rerl += randexp(rng)
     @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high,
         cur_rate_low, rng, u, jidx, params, t, p.maj_rates)
         # sample candidate reaction
         r = rand(rng) * sum_rate
         jidx = linear_search(cur_rate_high, r)
+        iszero(jidx) && ((sum_rate, jidx) = resum_and_search!(p, rng))
         rerl += randexp(rng)
     end
     p.next_jump = jidx
@@ -140,6 +148,19 @@ end
 
 ######################## SSA specific helper routines #########################
 
+# Recompute the sum of the rate bounds after a search found no jump, which happens only if the
+# sum exceeds the sum of the bounds, and search again. The recomputed sum is positive, since
+# `sum_rate_inaccurate` ruled out that the exact sum is zero.
+@noinline function resum_and_search!(p::RSSAJumpAggregation, rng)
+    resum_rates!(p, p.cur_rate_high)
+    sum_rate = p.sum_rate
+    jidx = 0
+    while iszero(jidx)
+        jidx = linear_search(p.cur_rate_high, rand(rng) * sum_rate)
+    end
+    return sum_rate, jidx
+end
+
 """
 Update rates after the species in `changed_vars` changed
 """
@@ -149,6 +170,8 @@ Update rates after the species in `changed_vars` changed
     (; ulow, uhigh) = p
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
+    # number of rate bounds updated, for the bound on the sum's rounding error
+    nupdates = 0
 
     @inbounds for uidx in changed_vars
         uval = u[uidx]
@@ -164,9 +187,11 @@ Update rates after the species in `changed_vars` changed
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
                     jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
+                nupdates += 1
             end
         end
     end
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * nupdates)
     p.sum_rate = sum_rate
 end
 
@@ -174,6 +199,8 @@ end
     # update bracketing intervals
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
+    # number of rate bounds updated, for the bound on the sum's rounding error
+    nupdates = 0
 
     @inbounds for uidx in changed_vars
         uval = u[uidx]
@@ -191,8 +218,10 @@ end
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
                     jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
+                nupdates += 1
             end
         end
     end
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * nupdates)
     p.sum_rate = sum_rate
 end

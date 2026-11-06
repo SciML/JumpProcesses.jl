@@ -252,6 +252,22 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     nothing
 end
 
+"""
+Recompute the group sums and their total from the priorities.
+"""
+function resum!(pt::PriorityTable, priorities)
+    (; groups, gsums) = pt
+    @inbounds for (gid, group) in enumerate(groups)
+        grpsum = zero(eltype(gsums))
+        for pididx in 1:(group.numpids)
+            grpsum += priorities[group.pids[pididx]]
+        end
+        gsums[gid] = grpsum
+    end
+    pt.gsum = sum(gsums)
+    nothing
+end
+
 function reset!(pt::PriorityTable{F, S, T, U}) where {F, S, T, U}
     (; groups, gsums, pidtogroup) = pt
     pt.gsum = zero(F)
@@ -313,7 +329,7 @@ function sample(pt::PriorityTable, priorities, rng)
     (; groups, gsum, gsums) = pt
 
     # return id zero if total priority is zero
-    (gsum < eps(typeof(gsum))) && return zero(eltype(groups[1].pids))
+    (gsum <= zero(gsum)) && return zero(eltype(groups[1].pids))
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!

@@ -18,6 +18,9 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
     dep_gr::DEPGR
     jump_search_order::Vector{Int}
     jump_search_idx::Int
+    # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
+    # together measurably slowed each jump
+    sum_rate_err::T
 end
 
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -47,7 +50,7 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
         crs, sr, maj, maj_rates, rs,
         affs!, sps,
         dg, jtoidx,
-        zero(Int))
+        zero(Int), zero(sr))
 end
 
 ############################# Required Functions ##############################
@@ -69,6 +72,7 @@ function initialize!(p::SortingDirectJumpAggregation, integrator, u, params, t::
     p.end_time = integrator.sol.prob.tspan[2]
     fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     fill_rates_and_sum!(p, u, params, t)
+    p.sum_rate_err = sum_error_bound(p.sum_rate, length(p.cur_rates))
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -95,6 +99,12 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, t)
+    # recompute the sum of the rates if rounding may have made it inaccurate
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, length(p.cur_rates))
+        resum_rates!(p, p.cur_rates)
+    end
+    nomorejumps!(p, p.sum_rate) && return nothing
+
     rng = get_rng(integrator)
     p.next_jump_time = t + randexp(rng) / p.sum_rate
 
@@ -111,8 +121,30 @@ function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params,
                 break
             end
         end
+
+        # the search finds no jump only if the sum exceeds the sum of the rates
+        rn >= zero(rn) && resum_and_search!(p, rng)
         @inbounds p.next_jump = jso[p.jump_search_idx]
     end
 
     nothing
+end
+
+# Recompute the sum of the rates after the search found no jump, which happens only if the sum
+# exceeds the sum of the rates, and search again. The recomputed sum is positive, since
+# `sum_rate_inaccurate` ruled out that the exact sum is zero, and the next jump time, drawn
+# with the previous sum, is off by at most its relative tolerance.
+@noinline function resum_and_search!(p::SortingDirectJumpAggregation, rng)
+    resum_rates!(p, p.cur_rates)
+    (; cur_rates, jump_search_order) = p
+    while true
+        rn = p.sum_rate * rand(rng)
+        @inbounds for idx in eachindex(jump_search_order)
+            rn -= cur_rates[jump_search_order[idx]]
+            if rn < zero(rn)
+                p.jump_search_idx = idx
+                return nothing
+            end
+        end
+    end
 end

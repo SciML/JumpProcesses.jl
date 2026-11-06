@@ -166,6 +166,10 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t, rng)
         idx += 1
     end
 
+    # jumps with rate zero get the time floatmax, as in updates: when every rate is zero the
+    # bin width is Inf, and the time Inf would give the bin index NaN
+    replace!(pttdata, typemax(eltype(pttdata)) => floatmax(eltype(pttdata)))
+
     # Build the priority time table with the times and bin width.
     timestep = 1 / sum(cur_rates)
     p.ptt.times = pttdata

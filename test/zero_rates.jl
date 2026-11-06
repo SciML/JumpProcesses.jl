@@ -3,15 +3,18 @@ using JumpProcesses, OrdinaryDiffEq, Random, StableRNGs, Test
 # 2A -> 0 from A = 11 leaves one A, and every rate is zero. RSSA and RSSACR draw candidates
 # from bounds on the rates, and the bound of 2A -> 0 stays positive while A is inside its
 # bracket, so they rejected every candidate, whatever the end time. CCNRM gives a zero rate
-# the time floatmax, which it reached with an infinite end time.
+# the time floatmax, which it reached with an infinite end time. From A = 1 or A = 0 every
+# rate is zero from the start, where CCNRM threw an InexactError.
 @testset "SSAs stop when every rate is zero" begin
     maj = MassActionJump([1.0], [[1 => 2]], [[1 => -2]])
-    for tend in (100.0, Inf)
-        for agg in JumpProcesses.JUMP_AGGREGATORS
-            jprob = JumpProblem(DiscreteProblem([11], (0.0, tend)), agg, maj)
-            sol = solve(jprob, SSAStepper(); rng = StableRNG(1))
-            @test sol.u[end] == [1]
-            @test sol.t[end] == tend
+    for A0 in (11, 1, 0)
+        for tend in (100.0, Inf)
+            for agg in JumpProcesses.JUMP_AGGREGATORS
+                jprob = JumpProblem(DiscreteProblem([A0], (0.0, tend)), agg, maj)
+                sol = solve(jprob, SSAStepper(); rng = StableRNG(1))
+                @test sol.u[end] == [A0 % 2]
+                @test sol.t[end] == tend
+            end
         end
     end
 end

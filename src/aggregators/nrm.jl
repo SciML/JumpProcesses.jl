@@ -77,7 +77,8 @@ function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t, affects
 
     # update current jump rates and times
     rng = get_rng(integrator)
-    update_dependent_rates!(p, u, params, t, rng)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    update_dependent_rates!(p, dep_rxs, p.next_jump, u, params, t, rng)
     nothing
 end
 
@@ -90,9 +91,10 @@ end
 
 ######################## SSA specific helper routines ########################
 
-# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
-function update_dependent_rates!(p::NRMJumpAggregation, u, params, t, rng)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+# recalculate the rates and times of the jumps in dep_rxs, e.g. the jumps that depend on
+# executed_jump, the jump just executed (0 if none), which gets a new time
+function update_dependent_rates!(p::NRMJumpAggregation, dep_rxs, executed_jump, u, params,
+        t, rng)
     (; cur_rates, rates, ma_jumps) = p
     num_majumps = get_num_majumps(ma_jumps)
 
@@ -104,7 +106,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t, rng)
             params, t, rx, p.maj_rates)
 
         # calculate new jump times for dependent jumps
-        if rx != p.next_jump && oldrate > zero(oldrate)
+        if rx != executed_jump && oldrate > zero(oldrate)
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(p.pq, rx, t + oldrate / cur_rates[rx] * (p.pq[rx] - t))
             else

@@ -88,7 +88,8 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
     end
 
     # update current jump rates
-    update_dependent_rates!(p, u, params, t)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end
 

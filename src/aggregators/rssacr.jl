@@ -126,7 +126,8 @@ function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t, affe
     u = update_state!(p, integrator, u, affects!)
 
     # update rates
-    update_dependent_rates!(p, u, params, t)
+    @inbounds changed_vars = p.jumptovars_map[p.next_jump]
+    update_dependent_rates!(p, changed_vars, u, params, t)
     nothing
 end
 
@@ -164,15 +165,15 @@ end
 
 ######################## SSA specific helper routines #########################
 """
-update bracketing for species that depend on the just executed jump
+update bracketing for the species in `changed_vars`, e.g. those the executed jump changed
 """
-@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::AbstractVector,
-        params, t)
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, changed_vars,
+        u::AbstractVector, params, t)
     # update bracketing intervals
     (; ulow, uhigh) = p
     crhigh = p.cur_rate_high
 
-    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+    @inbounds for uidx in changed_vars
         uval = u[uidx]
         # if new u value is outside the bracketing interval
         if uval == zero(uval) || uval < ulow[uidx] || uval > uhigh[uidx]
@@ -195,11 +196,12 @@ update bracketing for species that depend on the just executed jump
     nothing
 end
 
-@inline function update_dependent_rates!(p::RSSACRJumpAggregation, u::SVector, params, t)
+@inline function update_dependent_rates!(p::RSSACRJumpAggregation, changed_vars,
+        u::SVector, params, t)
     # update bracketing intervals
     crhigh = p.cur_rate_high
 
-    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+    @inbounds for uidx in changed_vars
         uval = u[uidx]
         # if new u value is outside the bracketing interval
         if uval == zero(uval) || uval < p.ulow[uidx] || uval > p.uhigh[uidx]

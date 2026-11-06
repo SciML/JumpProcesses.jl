@@ -109,7 +109,8 @@ function execute_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t, af
     u = update_state!(p, integrator, u, affects!)
 
     # update current jump rates
-    update_dependent_rates!(p, u, params, t)
+    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end
 
@@ -126,11 +127,10 @@ end
 
 ######################## SSA specific helper routines #########################
 
-# recalculate jump rates for jumps that depend on the just executed jump
+# recalculate the rates of the jumps in dep_rxs, e.g. those depending on the executed jump
 # requires dependency graph
-function update_dependent_rates!(p::DirectCRJumpAggregation, u, params, t)
+function update_dependent_rates!(p::DirectCRJumpAggregation, dep_rxs, u, params, t)
     (; cur_rates, rates, ma_jumps, rt) = p
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
     num_majumps = get_num_majumps(ma_jumps)
 
     @inbounds for rx in dep_rxs

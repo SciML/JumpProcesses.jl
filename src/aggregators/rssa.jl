@@ -172,8 +172,7 @@ Update rates after the species in `changed_vars` changed
     (; ulow, uhigh) = p
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
-    # number of rate bounds updated, for the bound on the sum's rounding error
-    nupdates = 0
+    sum_rate_err = p.sum_rate_err
 
     @inbounds for uidx in changed_vars
         uval = u[uidx]
@@ -184,16 +183,21 @@ Update rates after the species in `changed_vars` changed
             ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
-            for jidx in p.vartojumps_map[uidx]
+            sum_before = sum_rate
+            deps = p.vartojumps_map[uidx]
+            for jidx in deps
                 sum_rate -= crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
                     jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
-                nupdates += 1
             end
+            # bound the rounding error per species: a jump reading several changed species
+            # is updated once per species, so its intermediate bounds can far exceed the
+            # sums before and after the whole update
+            sum_rate_err += update_error_bound(sum_before, sum_rate, 2 * length(deps))
         end
     end
-    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * nupdates)
+    p.sum_rate_err = sum_rate_err
     p.sum_rate = sum_rate
 end
 
@@ -201,8 +205,7 @@ end
     # update bracketing intervals
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
-    # number of rate bounds updated, for the bound on the sum's rounding error
-    nupdates = 0
+    sum_rate_err = p.sum_rate_err
 
     @inbounds for uidx in changed_vars
         uval = u[uidx]
@@ -215,15 +218,20 @@ end
             p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
-            for jidx in p.vartojumps_map[uidx]
+            sum_before = sum_rate
+            deps = p.vartojumps_map[uidx]
+            for jidx in deps
                 sum_rate -= crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
                     jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
-                nupdates += 1
             end
+            # bound the rounding error per species: a jump reading several changed species
+            # is updated once per species, so its intermediate bounds can far exceed the
+            # sums before and after the whole update
+            sum_rate_err += update_error_bound(sum_before, sum_rate, 2 * length(deps))
         end
     end
-    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * nupdates)
+    p.sum_rate_err = sum_rate_err
     p.sum_rate = sum_rate
 end

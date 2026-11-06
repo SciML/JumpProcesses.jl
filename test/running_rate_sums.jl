@@ -49,8 +49,15 @@ end
     netstoich = [[[i => -1, i + 1 => 1] for i in 1:5]; [[i => 1, i + 1 => -1] for i in 1:5];
                  [[1 => 1]]; [[6 => -1]]]
     chain = MassActionJump([k; reverse(k); 50.0; 1.0], substoich, netstoich)
+    # B -> A, A + B -> 0 and 0 -> C: as B -> A updates A's bracket before B's, RSSA and
+    # RSSACR pass the bound of A + B through about 1e16, whose rounding their error bound
+    # used to miss
+    transient_sub = [[2 => 1], [1 => 1, 2 => 1], Pair{Int, Int}[]]
+    transient_net = [[1 => 1, 2 => -1], [1 => -1, 2 => -1], [3 => 1]]
+    transient = MassActionJump([1.0, 1e16, 100.1], transient_sub, transient_net)
     cases = ((DiscreteProblem([999, 50, 0], (0.0, 1e3), (0.1, 100.0)), sir),
-        (DiscreteProblem(fill(100, 6), (0.0, 5.0)), chain))
+        (DiscreteProblem(fill(100, 6), (0.0, 5.0)), chain),
+        (DiscreteProblem([0, 1, 0], (0.0, 5.0)), transient))
     for (prob, jumps) in cases
         for agg in RUNNING_SUM_AGGREGATORS
             jprob = JumpProblem(prob, agg, jumps; save_positions = (false, false))
@@ -92,6 +99,31 @@ end
         end
         z = (means .- 10 .* p) ./ sqrt.(10 .* p .* (1 .- p) ./ N)
         @test all(abs.(z) .< 4.5)
+    end
+end
+
+# Rates below eps(Float64) are in the priority table's group of zero rates, which has no
+# rejection bound, so its positive rates were sampled uniformly once totals below eps could
+# be sampled
+@testset "Tiny rates are sampled by weight" begin
+    minpriority = 2.0^exponent(1e-12)
+    ptog = priority -> JP.priortogid(priority, exponent(minpriority))
+    priorities = [1e-20, 9e-20]
+    pt = JP.PriorityTable(ptog, priorities, minpriority, 2.0^exponent(1e12))
+    rng = StableRNG(1)
+    picks = [JP.sample(pt, priorities, rng) for _ in 1:20000]
+    @test abs(count(==(1), picks) / length(picks) - 0.1) < 0.01
+
+    # through the aggregators: 0 -> A at rate 1e-20 and 0 -> B at 9e-20, about 1000 jumps
+    # per solve
+    maj = MassActionJump([1e-20, 9e-20], [Pair{Int, Int}[], Pair{Int, Int}[]],
+        [[1 => 1], [2 => 1]])
+    dprob = DiscreteProblem([0, 0], (0.0, 1e22))
+    for agg in (DirectCR(), RSSACR())
+        jprob = JumpProblem(dprob, agg, maj; save_positions = (false, false))
+        sols = [solve(jprob, SSAStepper(); rng = StableRNG(seed)) for seed in 1:5]
+        counts = sum(sol.u[end] for sol in sols)
+        @test abs(counts[1] / sum(counts) - 0.1) < 0.02
     end
 end
 

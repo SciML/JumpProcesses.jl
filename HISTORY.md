@@ -12,6 +12,9 @@
     time was far in the past. Rounding left from large rates could also bias later jump
     times, for example after fast reactions consume a species. Seeded results change only in
     solves where a sum is recomputed.
+  - `DirectCR` and `RSSACR` now fire rates below `eps(Float64)` in proportion to their
+    sizes. They stopped when the total rate was below `eps`, and chose among such rates
+    uniformly.
 
 ## 10.1
 

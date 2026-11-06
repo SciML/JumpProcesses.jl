@@ -357,8 +357,37 @@ function sample(pt::PriorityTable, priorities, rng)
     end
     iszero(gid) && return gid
 
-    # sample element within the group
-    @inbounds sample(groups[gid], priorities, rng)
+    # sample element within the group; the first group, of zero and tiny priorities, has no
+    # rejection bound, so it is sampled by weight
+    @inbounds group = groups[gid]
+    iszero(group.maxpriority) && return weighted_sample(group, priorities, rng)
+    sample(group, priorities, rng)
+end
+
+"""
+Sample a priority id from the group with probability proportional to its priority, by linear
+search, for the group of zero and tiny priorities. Returns zero if every priority in the
+group is zero.
+"""
+@noinline function weighted_sample(pg::PriorityGroup, priorities, rng)
+    (; numpids, pids) = pg
+    total = zero(eltype(priorities))
+    @inbounds for pididx in 1:numpids
+        total += priorities[pids[pididx]]
+    end
+    iszero(total) && return zero(eltype(pids))
+
+    r = rand(rng) * total
+    @inbounds for pididx in 1:numpids
+        r -= priorities[pids[pididx]]
+        (r < zero(r)) && return pids[pididx]
+    end
+
+    # rounding left r nonnegative: take the last id with a positive priority
+    @inbounds for pididx in numpids:-1:1
+        (priorities[pids[pididx]] > zero(total)) && return pids[pididx]
+    end
+    zero(eltype(pids))
 end
 
 ##########################

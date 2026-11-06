@@ -125,29 +125,14 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         return nothing
     end
     rerl += randexp(rng)
-    # candidates come at rate sum_rate, accepted with probability rate / bound; the bounds
-    # can be positive when every rate is zero
-    rerl_end = (p.end_time - t) * sum_rate
-    max_rejections = max(16, length(cur_rate_high))
     nrejected = 0
     @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high,
         cur_rate_low, rng, u, jidx, params, t, p.maj_rates)
-        # stop once a rejected candidate comes after the end time: the next jump does too
-        if rerl >= rerl_end
-            tnext = t + rerl / sum_rate
-            if tnext >= p.end_time
-                p.next_jump_time = tnext
-                return nothing
-            end
-        end
-        # after a long run of rejections, check if every rate is zero: then no jump comes
+        # after a long run of rejections, check if a jump can still come before the end time
         nrejected += 1
-        if nrejected == max_rejections
+        if nrejected == max(16, length(cur_rate_high))
             nrejected = 0
-            if all_rates_zero(p, u, params, t)
-                p.next_jump_time = Inf
-                return nothing
-            end
+            no_jump_before_end!(p, u, params, t, rerl / sum_rate) && return nothing
         end
 
         # sample candidate reaction

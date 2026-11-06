@@ -404,11 +404,9 @@ end
 """
     all_rates_zero(p, u, params, t) :: Bool
 
-Check if every jump's rate is zero at `(u, params, t)`. The rejection-based aggregators
-check this after a long run of rejected candidates: their bounds on the rates can be
-positive when every rate is zero, and then no candidate is ever accepted.
+Check if every jump's rate is zero at `(u, params, t)`.
 """
-@noinline function all_rates_zero(p::AbstractSSAJumpAggregator, u, params, t)
+function all_rates_zero(p::AbstractSSAJumpAggregator, u, params, t)
     (; ma_jumps, rates, maj_rates) = p
     num_majumps = get_num_majumps(ma_jumps)
     for rx in 1:(num_majumps + length(rates))
@@ -417,4 +415,26 @@ positive when every rate is zero, and then no candidate is ever accepted.
         rate > zero(rate) && return false
     end
     return true
+end
+
+"""
+    no_jump_before_end!(p, u, params, t, Δt) :: Bool
+
+Check, after a long run of rejected candidates in a rejection-based aggregator, the last at
+time `t + Δt`, if no jump can come before the end time; if so, set the next jump time and
+return `true`. Once a rejected candidate comes at or after the end time, the next jump comes
+later still. If every rate is zero no jump comes, but the bounds on the rates can be
+positive, and then no candidate is ever accepted.
+"""
+@noinline function no_jump_before_end!(p::AbstractSSAJumpAggregator, u, params, t, Δt)
+    tnext = t + Δt
+    if tnext >= p.end_time
+        p.next_jump_time = tnext
+        return true
+    end
+    if all_rates_zero(p, u, params, t)
+        p.next_jump_time = typemax(tnext)
+        return true
+    end
+    return false
 end

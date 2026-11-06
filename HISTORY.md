@@ -4,9 +4,9 @@
 
   - `RSSA` and `RSSACR` no longer hang when every rate is zero but some of their bounds on
     the rates are not, as with `2A → ∅` and one `A` left: their rejection loop never
-    accepted a candidate, whatever the end time. They now check the rates after a long run
-    of rejections, and stop once a candidate comes after the end time. `CCNRM` no longer
-    executes jumps whose rate is zero when the end time is infinite.
+    accepted a candidate, whatever the end time. After a long run of rejections they now
+    stop if the last candidate came after the end time or every rate is zero. `CCNRM` no
+    longer executes jumps whose rate is zero when the end time is infinite.
 
 ## 10.1
 

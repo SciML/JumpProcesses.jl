@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+## 10.1.1
   - `RSSA` and `RSSACR` no longer hang when every rate is zero but some of their bounds on
     the rates are not, as with `2A → ∅` and one `A` left: their rejection loop never
     accepted a candidate, whatever the end time. After a long run of rejections they now

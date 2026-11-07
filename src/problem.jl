@@ -56,6 +56,9 @@ $(FIELDS)
     this only controls saving for non-`VariableRateJump`s. `VariableRateJump` saving is controlled
     at the individual jump level via the value of this kwarg passed to the individual `VariableRateJump`s
     constructor when it is created.
+  - `dependencies`, a [`JumpDependencies`](@ref) with the dependency maps some aggregators
+    need, such as `dep_graph` for `NRM`. The maps can also be given as the keywords
+    `dep_graph`, `vartojumps_map` and `jumptovars_map`, which JumpProcesses may modify.
   - `spatial_system`, for spatial problems the underlying spatial structure.
   - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
   - `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s with
@@ -315,10 +318,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::Abstr
 end
 function JumpProblem(prob, jumps::JumpSet; vartojumps_map = nothing,
         jumptovars_map = nothing, dep_graph = nothing,
+        dependencies::Union{Nothing, JumpDependencies} = nothing,
         spatial_system = nothing, hopping_constants = nothing, kwargs...)
-    ps = (; vartojumps_map, jumptovars_map, dep_graph, spatial_system, hopping_constants)
-    aggtype = select_aggregator(jumps; ps...)
-    return JumpProblem(prob, aggtype(), jumps; ps..., kwargs...)
+    deps = merge_dependencies(dependencies, vartojumps_map, jumptovars_map, dep_graph)
+    aggtype = select_aggregator(jumps; dependency_kwargs(deps)..., spatial_system,
+        hopping_constants)
+    return JumpProblem(prob, aggtype(), jumps; vartojumps_map, jumptovars_map, dep_graph,
+        dependencies, spatial_system, hopping_constants, kwargs...)
 end
 
 # this makes it easier to test the aggregator selection
@@ -333,7 +339,9 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
         save_positions = prob isa SciMLBase.AbstractDiscreteProblem ?
                          (false, true) : (true, true),
         spatial_system = nothing, hopping_constants = nothing,
-        callback = nothing, tstops = nothing, use_vrj_bounds = true, kwargs...)
+        callback = nothing, tstops = nothing, use_vrj_bounds = true,
+        dependencies::Union{Nothing, JumpDependencies} = nothing, vartojumps_map = nothing,
+        jumptovars_map = nothing, dep_graph = nothing, kwargs...)
     if haskey(kwargs, :rng)
         throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
     end
@@ -346,6 +354,10 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     haskey(kwargs, :alias_jump) && throw(ArgumentError(ALIAS_JUMP_REMOVED_MSG))
     # Check before spatial flattening, which rebuilds the problem without its keywords.
     check_no_wrapped_callbacks(prob)
+
+    # the aggregators receive the dependency maps as keywords
+    deps = merge_dependencies(dependencies, vartojumps_map, jumptovars_map, dep_graph)
+    kwargs = merge(dependency_kwargs(deps), kwargs)
 
     # keep the original MAJ (including {Nothing} parameterized MAJs);
     # fill_scaled_rates! in each aggregator's initialize! handles rate setup
@@ -378,6 +390,12 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     end
 
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
+
+    # check the maps of a `JumpDependencies` built by the user; maps given as keywords stay
+    # unchecked, as before `JumpDependencies` existed
+    if dependencies !== nothing && spatial_system === nothing
+        check_dependencies(dependencies, num_variables(u), ndiscjumps)
+    end
 
     # handle majs, crjs, and bounded vrjs
     if (ndiscjumps == 0) && !is_spatial(aggregator)

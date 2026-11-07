@@ -153,6 +153,9 @@ struct PureLeaping <: AbstractAggregatorAlgorithm end
 export PureLeaping
 
 # core problem and timestepping
+include("jump_dependencies.jl")
+export JumpDependencies
+
 include("problem.jl")
 export JumpProblem, SplitCoupledJumpProblem
 

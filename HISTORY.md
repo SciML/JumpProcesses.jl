@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+  - New `JumpDependencies` holds the dependency maps `dep_graph`, `vartojumps_map` and
+    `jumptovars_map`, passed with `JumpProblem(...; dependencies)`. It copies the maps
+    unless built with `alias = true`, and the `JumpProblem` checks their lengths and indices
+    against the problem. The `JumpProblem` keywords `dep_graph`, `vartojumps_map` and
+    `jumptovars_map` work as before, unchecked; a map given both ways is an error.
   - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
     sums of the rates when rounding errors may have made them inaccurate, using a bound on
     those errors that they update as the rates change. When every rate became zero, the

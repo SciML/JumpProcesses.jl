@@ -47,18 +47,18 @@ end
     @test SciMLBase.successful_retcode(solve(jprob, Tsit5(); rng))
 end
 
-@testset "VR_FRM keeps the problem's specialization" begin
+@testset "VR_FRM's rebuilt function is FullSpecialize unless NoSpecialize" begin
     for (spec, kept) in ((SciMLBase.FullSpecialize, SciMLBase.FullSpecialize),
         (SciMLBase.NoSpecialize, SciMLBase.NoSpecialize),
-        (SciMLBase.AutoSpecialize, SciMLBase.AutoSpecialize),
-        (SciMLBase.AutoDespecialize, SciMLBase.AutoSpecialize),
-        (SciMLBase.FunctionWrapperSpecialize, SciMLBase.AutoSpecialize))
+        (SciMLBase.AutoSpecialize, SciMLBase.FullSpecialize),
+        (SciMLBase.AutoDespecialize, SciMLBase.FullSpecialize),
+        (SciMLBase.FunctionWrapperSpecialize, SciMLBase.FullSpecialize))
         jprob = JumpProblem(odeprob(spec), Direct(), vrj; vr_aggregator = VR_FRM())
         @test SciMLBase.specialization(jprob.prob.f) === kept
         @test SciMLBase.successful_retcode(solve(jprob, Tsit5(); rng))
     end
 
-    # `AutoDespecialize` becomes `AutoSpecialize`, so the jump callbacks get `prob.p`
+    # `AutoDespecialize` becomes `FullSpecialize`, so the jump callbacks get `prob.p`
     jprob = JumpProblem(odeprob(SciMLBase.AutoDespecialize), RSSA(), crj, vrj;
         vr_aggregator = VR_FRM(), dep_graph = [[1]], vartojumps_map = [Int[], [1]],
         jumptovars_map = [[1, 2]])

@@ -17,6 +17,30 @@ guidance on choosing different SSAs (called aggregators in JumpProcesses). For
 systems with bounded `VariableRateJump`s using `Coevolve` with `SSAStepper`
 instead of an ODE/SDE time stepper can give a significant performance boost.
 
+### [Jumps coupled to an ODE or SDE on Julia 1.12 and later](@id faq_fullspecialize)
+
+On Julia 1.12 and later, when the function of an `ODEProblem`, `SDEProblem`,
+`DDEProblem` or `DAEProblem` uses the default specialization
+(`SciMLBase.AutoSpecialize`), or `AutoDespecialize` or `NoSpecialize`, the solvers
+erase the types of its callbacks. Every callback, including the ones a `JumpProblem`
+adds for its jumps, is then called through a dynamic dispatch that allocates on every
+time step, which can make jump simulations considerably slower. To avoid this, build
+the problem you wrap in a `JumpProblem` with `SciMLBase.FullSpecialize`:
+
+```julia
+using SciMLBase
+oprob = ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)
+sprob = SDEProblem{true, SciMLBase.FullSpecialize}(f, g, u0, tspan, p)
+jprob = JumpProblem(oprob, Direct(), jumps...)
+```
+
+`FullSpecialize` compiles the solver for your specific function, which can take
+longer the first time; jump simulations are usually solved many times, so the faster
+solves usually outweigh it. `JumpProblem`s built from ModelingToolkit or Catalyst
+systems already use `FullSpecialize`, and `VR_FRM` uses it for the function it builds
+(unless the problem is `NoSpecialize`). `DiscreteProblem`s solved with `SSAStepper` are
+not affected.
+
 ## When running many consecutive simulations, for example within an `EnsembleProblem` or loop, how can I update `JumpProblem`s?
 
 In [Remaking `JumpProblem`s](@ref) we show how to modify parameters, the initial

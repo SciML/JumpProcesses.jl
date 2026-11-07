@@ -301,6 +301,15 @@ further callbacks can be passed to `solve` or `init`.
     `solve`/`init` instead, and use `remake(prob; callback = nothing)` to remove them
     from an existing problem.
 
+!!! tip "Use `FullSpecialize` for jumps coupled to an ODE or SDE"
+
+    On Julia 1.12 and later, build an ODE/SDE/DDE/DAE problem that you wrap in a
+    `JumpProblem` with `SciMLBase.FullSpecialize`, e.g.
+    `ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)`. With the default
+    specialization the solvers erase the types of the jump callbacks and allocate on every
+    time step, which can make jump simulations considerably slower. See
+    [this FAQ entry](@ref faq_fullspecialize).
+
 Note that a `JumpProblem`/`JumpSet` can only have 1 `RegularJump` (since a
 `RegularJump` itself describes multiple processes together). Similarly, it can
 only have one `MassActionJump` (since it also describes multiple processes

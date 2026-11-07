@@ -100,17 +100,18 @@ function extend_u0(prob, Njumps)
     return u0
 end
 
-# The function that `extend_problem` rebuilds keeps the specialization of `prob.f` if it is
-# `FullSpecialize` or `NoSpecialize`. Other policies become the default, `AutoSpecialize`, as
-# before: under `AutoDespecialize` and `AutoRespecialize` the integrator would pass the jump
-# callbacks a parameter container instead of `prob.p`, and `FunctionWrapperSpecialize` can only
-# be set by a problem constructor.
+# The function that `extend_problem` rebuilds is `FullSpecialize` unless `prob.f` is
+# `NoSpecialize`, which is kept. On Julia >= 1.12, DiffEqBase erases the callback types of
+# problems whose function is `AutoSpecialize`, `AutoDespecialize` or `NoSpecialize` and calls
+# every callback through `invokelatest`, which allocates on every step; VR_FRM's callbacks
+# then make solves much slower. The rebuilt function is a new closure for every problem, so
+# `AutoSpecialize` would save no compilation. Under `AutoDespecialize` and `AutoRespecialize`
+# the integrator would also pass the jump callbacks a parameter container instead of `prob.p`,
+# and `FunctionWrapperSpecialize` can only be set by a problem constructor.
 function extended_specialization(f)
     spec = SciMLBase.specialization(f)
-    if spec === SciMLBase.FullSpecialize || spec === SciMLBase.NoSpecialize
-        return spec
-    end
-    return SciMLBase.AutoSpecialize
+    spec === SciMLBase.NoSpecialize && return spec
+    return SciMLBase.FullSpecialize
 end
 
 # extends prob.du0 with the jump intensities at the initial time, the derivatives of the

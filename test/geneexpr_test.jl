@@ -199,7 +199,9 @@ let
     crjprob = JumpProblem(prob, crjs; save_positions = (false, false))
     crjmean = runSSAs(crjprob; rng)
     f(du, u, p, t) = (du .= 0; nothing)
-    oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
+    # FullSpecialize: on Julia >= 1.12 the default erases callback types, which allocates on
+    # every step and makes these 24000 solves much slower
+    oprob = ODEProblem{true, SciMLBase.FullSpecialize}(f, u0f, (0.0, tf / 5), rates)
 
     for vr_agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         vrjprob = JumpProblem(

@@ -239,9 +239,8 @@ selected simulation algorithm, our processes and
 the dependency graph.
 
 ```@example tpp-tutorial
-deps = JumpDependencies(; dep_graph)
-jprob = JumpProblem(dprob, Coevolve(), poisson_process, seasonal_process;
-    dependencies = deps)
+dependencies = JumpDependencies(; dep_graph)
+jprob = JumpProblem(dprob, Coevolve(), poisson_process, seasonal_process; dependencies)
 sol = solve(jprob, SSAStepper())
 plot(sol, labels = ["N_1(t)" "N_2(t)"], xlabel = "t", legend = :topleft)
 ```

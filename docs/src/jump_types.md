@@ -376,8 +376,8 @@ dependency graph to `JumpProblem`, in a [`JumpDependencies`](@ref) given with th
 a jump-jump dependency graph, `dep_graph`, i.e.,
 
 ```julia
-deps = JumpDependencies(; dep_graph = your_dependency_graph)
-JumpProblem(prob, DirectCR(), jump1, jump2; dependencies = deps)
+dependencies = JumpDependencies(; dep_graph = your_dependency_graph)
+JumpProblem(prob, DirectCR(), jump1, jump2; dependencies)
 ```
 
 Passing the maps as `JumpProblem` keywords, as in

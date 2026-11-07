@@ -388,8 +388,8 @@ function Base.rand(rng::AbstractRNG,
     out = Array{History, 1}(undef, n)
     p = params(pp)
     dprob = DiscreteProblem([0], tspan, p)
-    deps = JumpDependencies(; dep_graph = pp.g)
-    jprob = JumpProblem(dprob, Coevolve(), jumps...; dependencies = deps, save_positions)
+    dependencies = JumpDependencies(; dep_graph = pp.g)
+    jprob = JumpProblem(dprob, Coevolve(), jumps...; dependencies, save_positions)
     for i in 1:n
         params!(pp, p)
         solve(jprob, SSAStepper(); rng)

@@ -1,6 +1,10 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - New `isolated_copy(jprob)` returns a copy of a `JumpProblem` with its own jump state, for
+    concurrent solves and integrators that are alive at the same time. Unlike `deepcopy`, it
+    shares the wrapped problem, which makes it much cheaper for problems built with
+    ModelingToolkit or Catalyst.
   - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
     sums of the rates when rounding errors may have made them inaccurate, using a bound on
     those errors that they update as the rates change. When every rate became zero, the

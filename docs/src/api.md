@@ -14,6 +14,7 @@ SSAStepper
 SplitCoupledJumpProblem
 reset_aggregated_jumps!
 remake(::JumpProblem)
+isolated_copy
 ```
 
 ## Jump Types

@@ -154,7 +154,7 @@ export PureLeaping
 
 # core problem and timestepping
 include("problem.jl")
-export JumpProblem, SplitCoupledJumpProblem
+export JumpProblem, SplitCoupledJumpProblem, isolated_copy
 
 include("solve.jl")
 export init, solve, solve!

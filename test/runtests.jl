@@ -52,6 +52,7 @@ end
         @time @safetestset "Stochastic dispatch tests" begin include("stochastic_dispatch.jl") end
         @time @safetestset "Jump-diffusion replay and jump state" begin include("jump_diffusion_state.jl") end
         @time @safetestset "Jump-state ownership and alias controls" begin include("jump_state_ownership.jl") end
+        @time @safetestset "isolated_copy" begin include("isolated_copy.jl") end
         @time @safetestset "Ensemble Uniqueness test" begin include("ensemble_uniqueness.jl") end
         @time @safetestset "Ensemble Problem Tests" begin include("ensemble_problems.jl") end
         @time @safetestset "A + B <--> C" begin include("reversible_binding.jl") end
@@ -75,6 +76,7 @@ end
     if GROUP == "All" || GROUP == "ThreadSafety"
         @time @safetestset "Thread Safety test (threaded)" begin include("thread_safety.jl") end
         @time @safetestset "Jump-state ownership (threaded)" begin include("jump_state_ownership.jl") end
+        @time @safetestset "isolated_copy (threaded)" begin include("isolated_copy.jl") end
     end
 
     if GROUP == "CUDA"

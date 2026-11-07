@@ -219,7 +219,16 @@ let
             (; vr_aggregator = VR_FRM())),
         ("VR_Direct", full, () -> (vrj(),), (; vr_aggregator = VR_Direct())),
         ("Direct with a mass action jump", full, () -> (maj,), (;)))
+    # Under forced bounds checking (`--check-bounds=yes`, which `Pkg.test` uses on Julia 1.10
+    # and julia-runtest by default) before Julia 1.13, OrdinaryDiffEq's residual broadcast over
+    # VR_FRM's ExtendedJumpArray state allocates a `Ref` on every step. It doesn't with the
+    # default bounds checking, or on Julia >= 1.13.
+    forced_bounds_checks = Base.JLOptions().check_bounds == 1 && VERSION < v"1.13"
     @testset "$name" for (name, spec, jumps, kw) in cases
+        if forced_bounds_checks && get(kw, :vr_aggregator, nothing) isa VR_FRM
+            @test_skip false
+            continue
+        end
         nallocs = map((10.0, 100.0)) do T
             oprob = ODEProblem{true, spec}(f!, [0.0], (0.0, T), [5.0])
             jprob = JumpProblem(

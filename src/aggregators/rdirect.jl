@@ -95,9 +95,12 @@ end
 calculate the next jump / jump time
 """
 function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
-    # recompute the sum of the rates if rounding may have made it inaccurate
+    # recompute the sum of the rates if rounding may have made it inaccurate, and the largest
+    # rate with it: when the rates have collapsed, a stale maximum far above every rate would
+    # make the rejection loop below practically endless
     if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, length(p.cur_rates))
         resum_rates!(p, p.cur_rates)
+        p.max_rate = maximum(p.cur_rates)
     end
 
     # if no more events possible there is nothing to do

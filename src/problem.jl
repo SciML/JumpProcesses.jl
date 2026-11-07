@@ -36,6 +36,15 @@ wanted to have the jumps coupled with a system of ODEs, or have transition rates
 explicit time dependence, we would use an `ODEProblem` instead that defines the ODE portion
 of the dynamics.
 
+!!! tip
+
+    On Julia 1.12 and later, build an ODE/SDE/DDE/DAE problem that you wrap in a
+    `JumpProblem` with `SciMLBase.FullSpecialize`, e.g.
+    `ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)`. With the default
+    specialization the solvers erase the types of the jump callbacks and allocate on every
+    time step, which can make jump simulations considerably slower. See the
+    [FAQ](https://docs.sciml.ai/JumpProcesses/stable/faq/#faq_fullspecialize).
+
 Given `prob` we define the jumps via
 
   - `JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpSet ; kwargs...)`

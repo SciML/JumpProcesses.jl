@@ -75,6 +75,13 @@ array form. Variable rate jump equations will require this form. Note that for
 this tutorial, we solve a one-dimensional problem, but the same syntax applies
 for solving a system of differential equations with multiple jumps.
 
+!!! tip
+
+    On Julia 1.12 and later, jump simulations coupled to an ODE or SDE run faster when
+    the problem is built with `SciMLBase.FullSpecialize`, e.g.
+    `ODEProblem{true, SciMLBase.FullSpecialize}(f, [0.2], (0.0, 10.0))`; see
+    [this FAQ entry](@ref faq_fullspecialize).
+
 Now we define our `rate` equation for our jump. Since it's just the constant
 value 2, we do:
 

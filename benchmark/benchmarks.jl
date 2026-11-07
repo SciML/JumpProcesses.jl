@@ -2,6 +2,12 @@ using JumpProcesses, BenchmarkTools
 using StableRNGs
 using OrdinaryDiffEqTsit5, StochasticDiffEqHighOrder
 
+# Every ODE/SDE problem is FullSpecialize: on Julia >= 1.12 the default specialization makes
+# DiffEqBase erase the jump callbacks' types for ODEs, which allocates on every step,
+# and the suite would time that instead of JumpProcesses. (StochasticDiffEq adds the jump
+# callbacks after the erasure, so the SDE problems are FullSpecialize only for consistency.)
+const FullSpecialize = JumpProcesses.SciMLBase.FullSpecialize
+
 const SUITE = BenchmarkGroup()
 
 # SIR model: S + I -> 2I at rate p[1], I -> R at rate p[2]
@@ -140,7 +146,7 @@ SUITE["pure_jump"]["bounded_vrj"]["Coevolve"] = benchmark_solve(bounded_jprob)
 # rate λ c (1 + sin(t + i)) and increments counter i; λ = 32 / N gives about 200 jumps.
 function m1_problem(N)
     f!(du, u, p, t) = (du .= 0; du[end] = -0.1 * u[end]; nothing)
-    ODEProblem(f!, [zeros(N); 1.0], (0.0, 10.0), 32.0 / N)
+    ODEProblem{true, FullSpecialize}(f!, [zeros(N); 1.0], (0.0, 10.0), 32.0 / N)
 end
 function m1_jumps(N; bounded = false)
     map(1:N) do i
@@ -191,8 +197,10 @@ function telegraph_f!(du, u, p, t)
     nothing
 end
 telegraph_g!(du, u, p, t) = (du[1] = 0; du[2] = 0; du[3] = 1; nothing)
-telegraph_ode = ODEProblem(telegraph_f!, [1.0, 0.0, 0.0], (0.0, 500.0))
-telegraph_sde = SDEProblem(telegraph_f!, telegraph_g!, [1.0, 0.0, 0.0], (0.0, 100.0))
+telegraph_ode = ODEProblem{true, FullSpecialize}(
+    telegraph_f!, [1.0, 0.0, 0.0], (0.0, 500.0))
+telegraph_sde = SDEProblem{true, FullSpecialize}(
+    telegraph_f!, telegraph_g!, [1.0, 0.0, 0.0], (0.0, 100.0))
 # A VariableRateJump whose rate reads the protein: export of one protein at rate p / 20, while
 # there is at least one (the SDE's noise can take p below zero)
 export_jump = VariableRateJump((u, p, t) -> u[3] >= 1 ? 0.05 * u[3] : 0.0,
@@ -213,7 +221,8 @@ for vr_aggregator in (VR_FRM(), VR_Direct())
         Tsit5(); save_everystep = false)
 end
 # The SIR model as an ODE problem with no other dynamics
-sir_ode = ODEProblem((du, u, p, t) -> (du .= 0; nothing), [999.0, 1.0, 0.0], tspan, p)
+sir_ode = ODEProblem{true, FullSpecialize}((du, u, p, t) -> (du .= 0; nothing),
+    [999.0, 1.0, 0.0], tspan, p)
 SUITE["ode"]["sir_zero_drift"] = BenchmarkGroup()
 for agg in (Direct(), NRM())
     SUITE["ode"]["sir_zero_drift"][aggname(agg)] = benchmark_solve(
@@ -266,15 +275,17 @@ division = ContinuousCallback((u, t, integrator) -> u[3] - 100,
     integrator -> (integrator.u[3] /= 2; nothing); save_positions = (false, false))
 SUITE["events"]["ode_division"] = BenchmarkGroup()
 SUITE["events"]["ode_division"]["Direct"] = benchmark_solve(
-    jump_problem(ODEProblem(telegraph_growth_f!, [1.0, 0.0, 0.0], (0.0, 500.0)), Direct(),
-        telegraph_maj; save_positions = (false, false)),
+    jump_problem(
+        ODEProblem{true, FullSpecialize}(
+            telegraph_growth_f!, [1.0, 0.0, 0.0], (0.0, 500.0)),
+        Direct(), telegraph_maj; save_positions = (false, false)),
     Tsit5(); callback = division, save_everystep = false)
 
 # Test 9 of test/variable_rate.jl, scaled up: u[1] decays and a ContinuousCallback resets it
 # from 1/2 to 1, so its events cut solver steps short; a VariableRateJump with rate 100 u[1]
 # counts in u[2]
 vrj_reset_f!(du, u, p, t) = (du[1] = -u[1]; du[2] = 0; nothing)
-vrj_reset_prob = ODEProblem(vrj_reset_f!, [1.0, 0.0], (0.0, 10.0))
+vrj_reset_prob = ODEProblem{true, FullSpecialize}(vrj_reset_f!, [1.0, 0.0], (0.0, 10.0))
 vrj_reset = ContinuousCallback((u, t, integrator) -> u[1] - 0.5,
     integrator -> (integrator.u[1] = 1.0; nothing); save_positions = (false, false))
 vrj_reset_jump = VariableRateJump((u, p, t) -> 100 * u[1],

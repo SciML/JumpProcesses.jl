@@ -1,7 +1,6 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
-
   - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
     sums of the rates when rounding errors may have made them inaccurate, using a bound on
     those errors that they update as the rates change. When every rate became zero, the
@@ -15,6 +14,13 @@
   - `DirectCR` and `RSSACR` now fire rates below `eps(Float64)` in proportion to their
     sizes. They stopped when the total rate was below `eps`, and chose among such rates
     uniformly.
+  - `VR_FRM` builds the function it solves (the problem's function extended with the
+    integrated rates) with `SciMLBase.FullSpecialize`, unless the problem's function is
+    `NoSpecialize`; it used `AutoSpecialize` unless the problem was `FullSpecialize`. On
+    Julia 1.12 and later, the default specialization makes the solvers erase the types of
+    callbacks and allocate on every step, which made `VR_FRM` solves much slower. The docs
+    now recommend building ODE problems wrapped in a `JumpProblem` with
+    `FullSpecialize` (see the FAQ).
 
 ## 10.1.1
   - `RSSA` and `RSSACR` no longer hang when every rate is zero but some of their bounds on

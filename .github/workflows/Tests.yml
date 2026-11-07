@@ -19,4 +19,8 @@ concurrency:
 jobs:
   tests:
     uses: "SciML/.github/.github/workflows/grouped-tests.yml@v1"
+    with:
+      # Nothing uses the coverage reports, and instrumenting JumpProcesses' code slows it
+      # 2-5x in the tests. Bounds checking stays on (the default) to catch @inbounds errors.
+      coverage: false
     secrets: "inherit"

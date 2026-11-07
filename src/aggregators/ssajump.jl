@@ -267,7 +267,8 @@ end
 """
     update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, params, t)
 
-Recalculate the rates of the jumps in `dep_rxs`, and the sum of all rates.
+Recalculate the rates of the jumps in `dep_rxs`, the sum of all rates, and the bound on the
+sum's rounding error, `p.sum_rate_err`.
 
 Notes:
 
@@ -285,6 +286,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, param
         sum_rate += cur_rates[rx]
     end
 
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * length(dep_rxs))
     p.sum_rate = sum_rate
     nothing
 end
@@ -339,14 +341,68 @@ end
     nomorejumps!(p, sum_rate) :: Bool
 
 Check if the total rate is zero, and if it is, make the next jump time Inf.
+
+Notes:
+
+  - A running sum of rates must first be recomputed if `sum_rate_inaccurate` says so, since
+    rounding can leave it slightly positive or negative when every rate is zero.
 """
 @inline function nomorejumps!(p, sum_rate)::Bool
-    if sum_rate < eps(typeof(sum_rate))
+    if sum_rate <= zero(sum_rate)
         p.next_jump = zero(p.next_jump)
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return true
     end
     return false
+end
+
+"""
+    update_error_bound(sum_before, sum_after, nops)
+
+Bound on the rounding error that `nops` additions and subtractions add to a running sum of
+nonnegative rates when they update some of the rates, taking the sum from `sum_before` to
+`sum_after`. As the rates are nonnegative, every intermediate sum is at most
+`sum_before + sum_after`, and each operation errs by at most `eps / 2` times its result. Using
+`eps` covers the rounding errors already in `sum_before` and `sum_after`, which
+`sum_rate_inaccurate` keeps small relative to them.
+"""
+@inline function update_error_bound(sum_before, sum_after, nops)
+    return nops * eps(typeof(sum_after)) * (abs(sum_before) + abs(sum_after))
+end
+
+"""
+    sum_error_bound(sum_rate, n)
+
+Bound on the rounding error of a sum of `n` nonnegative terms, `sum_rate`, computed in any
+order.
+"""
+@inline sum_error_bound(sum_rate, n) = n * eps(typeof(sum_rate)) * abs(sum_rate)
+
+"""
+    sum_rate_inaccurate(sum_rate, sum_rate_err, n) :: Bool
+
+Check if a running sum of `n` nonnegative rates, `sum_rate`, must be recomputed from the rates:
+if the bound on its rounding error, `sum_rate_err`, doesn't rule out that the exact sum is
+zero, or allows a relative error above `max(sqrt(eps), 4n eps)`. The tolerance stays above the
+relative error of a recomputed sum, `n eps`.
+"""
+@inline function sum_rate_inaccurate(sum_rate, sum_rate_err, n)
+    T = typeof(sum_rate)
+    reltol = max(sqrt(eps(T)), 4 * n * eps(T))
+    return sum_rate_err > reltol * sum_rate
+end
+
+"""
+    resum_rates!(p, rates)
+
+Recompute `p.sum_rate`, the sum of `rates`, and the bound on its rounding error,
+`p.sum_rate_err`.
+"""
+@noinline function resum_rates!(p::AbstractSSAJumpAggregator, rates)
+    sum_rate = sum(rates)
+    p.sum_rate = sum_rate
+    p.sum_rate_err = sum_error_bound(sum_rate, length(rates))
+    nothing
 end
 
 """
@@ -358,9 +414,8 @@ Perform linear search for `r` over iterator. Output index j s.t. sum(array[1:j-1
 Notes:
 
   - The iterator must have all positive numbers
-  - Returns index zero if the search is unsuccessful. Assumes this corresponds to
-    the case of an infinite next reaction time and so the jump index does not
-    matter.
+  - Returns index zero if the search is unsuccessful, i.e. if `r` is at least the sum of the
+    iterator's elements.
 """
 @inline function linear_search(iterator, r)
     jidx = 0

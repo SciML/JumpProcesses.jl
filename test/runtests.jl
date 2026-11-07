@@ -42,6 +42,7 @@ end
         @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
         @time @safetestset "Extinction test" begin include("extinction_test.jl") end
         @time @safetestset "Every rate zero" begin include("zero_rates.jl") end
+        @time @safetestset "Running rate sums" begin include("running_rate_sums.jl") end
     end
     if GROUP == "All" || GROUP == "InterfaceII"
         @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end

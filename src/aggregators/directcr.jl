@@ -29,6 +29,9 @@ mutable struct DirectCRJumpAggregation{T, S, F1, F2, DEPGR, U <: PriorityTable,
     maxrate::T   # initial maxrate only, table can increase beyond it!
     rt::U
     ratetogroup::W
+    # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
+    # together measurably slowed each jump
+    sum_rate_err::T
 end
 
 function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
@@ -68,7 +71,7 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
         maj_rates, rs, affs!, sps, dg,
         minrate, maxrate, rt,
-        ratetogroup)
+        ratetogroup, zero(sr))
 end
 
 ############################# Required Functions ##############################
@@ -98,6 +101,7 @@ function initialize!(p::DirectCRJumpAggregation, integrator, u, params, t::Numbe
     for (pid, priority) in enumerate(p.cur_rates)
         insert!(p.rt, pid, priority)
     end
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numterms(p.rt))
 
     generate_jumps!(p, integrator, u, params, t)
     nothing
@@ -114,14 +118,47 @@ function execute_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t, af
     nothing
 end
 
-# calculate the next jump / jump time
-function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
+# calculate the next jump / jump time; @inline keeps it inlined into the per-jump affect, as
+# the compiler chose before the checks of the rate sum made it longer
+@inline function generate_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t)
+    # recompute the sums of the rates if rounding may have made them inaccurate
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, numterms(p.rt))
+        resum_rates!(p)
+    end
+    nomorejumps!(p, p.sum_rate) && return nothing
+
     rng = get_rng(integrator)
     p.next_jump_time = t + randexp(rng) / p.sum_rate
 
     if p.next_jump_time < p.end_time
         p.next_jump = sample(p.rt, p.cur_rates, rng)
+
+        # sampling finds no jump only if the sums exceed the sum of the rates
+        iszero(p.next_jump) && (p.next_jump = resum_and_sample!(p, rng))
     end
+    nothing
+end
+
+# Recompute the sums of the rates after sampling found no jump, which happens only if the sums
+# exceed the sum of the rates, and sample again. The recomputed sum is positive, since
+# `sum_rate_inaccurate` ruled out that the exact sum is zero, and the next jump time, drawn
+# with the previous sum, is off by at most its relative tolerance. A sample can still miss
+# by rounding, since `sum` adds the group sums in another order than `sample` subtracts
+# them, but only with probability around `eps` per try, so it repeats until it finds a jump.
+@noinline function resum_and_sample!(p::DirectCRJumpAggregation, rng)
+    resum_rates!(p)
+    jidx = 0
+    while iszero(jidx)
+        jidx = sample(p.rt, p.cur_rates, rng)
+    end
+    return jidx
+end
+
+# recompute the priority table's sums from the rates
+@noinline function resum_rates!(p::DirectCRJumpAggregation)
+    resum!(p.rt, p.cur_rates)
+    p.sum_rate = groupsum(p.rt)
+    p.sum_rate_err = sum_error_bound(p.sum_rate, numterms(p.rt))
     nothing
 end
 
@@ -144,6 +181,9 @@ function update_dependent_rates!(p::DirectCRJumpAggregation, dep_rxs, u, params,
         update!(rt, rx, oldrate, cur_rates[rx])
     end
 
-    p.sum_rate = groupsum(rt)
+    # each rate change takes up to four additions or subtractions in the table's sums
+    sum_rate = groupsum(rt)
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 4 * length(dep_rxs))
+    p.sum_rate = sum_rate
     nothing
 end

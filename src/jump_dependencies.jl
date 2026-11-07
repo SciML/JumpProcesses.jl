@@ -23,9 +23,9 @@ are not numbered. For the spatial aggregators the maps describe one site: the va
 the species, and the jumps the reactions of the spatial `MassActionJump`.
 
 A `JumpProblem` checks the lengths and indices of the maps against the problem (except for
-spatial problems), and puts each map its aggregator uses into one form: every entry sorted
-and without duplicates, and each entry of `dep_graph` listing its own jump. A map already in
-that form is used as is, without a copy. When every jump is a `MassActionJump`, a map the
+spatial problems), and puts each map its aggregator uses into one form: every entry sorted,
+without duplicates and with `Int` indices, and each entry of `dep_graph` listing its own
+jump. A map already in that form is used as is, without a copy. When every jump is a `MassActionJump`, a map the
 aggregator needs but wasn't given is generated from them.
 
 ## Keyword arguments
@@ -135,42 +135,43 @@ num_variables(u0::ExtendedJumpArray) = length(u0.u)
 uses_dep_graph(aggregator) = needs_depgraph(aggregator) || is_spatial(aggregator)
 uses_species_maps(aggregator) = needs_vartojumps_map(aggregator) || is_spatial(aggregator)
 
-# Returns the maps the aggregator uses, each in normal form: every entry sorted and without
-# duplicates, and each `dep_graph` entry listing its own jump. A map already in that form is
-# used as is. Otherwise it is fixed in place if `modifiable` allows it for that map and its
-# entries are `Vector`s, and rebuilt if not. A missing map is generated from the mass action
-# jumps `maj` when every jump is one (always for the spatial aggregators), and is an error
-# otherwise. The problem has `num_vars` variables and `num_jumps` jumps handled by the
-# aggregator. Maps the aggregator doesn't use are returned as given.
+# Returns the maps the aggregator uses, each in normal form: every entry sorted and
+# without duplicates, with `Int` indices, and each `dep_graph` entry listing its own jump.
+# A map already in that form is used as is. Otherwise it is fixed in place if `modifiable`
+# allows it for that map and its entries are `Vector{Int}`s, and rebuilt if not. A missing
+# map is generated from the mass action jumps `maj` when every jump is one (always for the
+# spatial aggregators), and is an error otherwise. The problem has `num_vars` variables
+# and `num_jumps` jumps handled by the aggregator. Maps the aggregator doesn't use are
+# left out (`nothing`), so that every map of the result is in normal form.
 function normalize_dependencies(aggregator, deps::JumpDependencies, modifiable, maj,
         num_vars, num_jumps)
-    (; vartojumps_map, jumptovars_map, dep_graph) = deps
+    vartojumps_map = jumptovars_map = dep_graph = nothing
     num_majumps = get_num_majumps(maj)
     can_generate = is_spatial(aggregator) || (num_majumps > 0 && num_jumps == num_majumps)
     if uses_dep_graph(aggregator)
-        if dep_graph === nothing
+        if deps.dep_graph === nothing
             can_generate || error(missing_dep_graph_message(aggregator))
             dep_graph = normalize_map(generated_dep_graph(num_vars, maj), true, true)
         else
-            dep_graph = normalize_map(dep_graph, true, modifiable.dep_graph)
+            dep_graph = normalize_map(deps.dep_graph, true, modifiable.dep_graph)
         end
     end
     if uses_species_maps(aggregator)
-        if vartojumps_map === nothing
+        if deps.vartojumps_map === nothing
             can_generate || error(missing_species_map_message(aggregator, "variables",
                 "jumps"))
             vartojumps_map = normalize_map(generated_vartojumps_map(num_vars, maj), false,
                 true)
         else
-            vartojumps_map = normalize_map(vartojumps_map, false,
+            vartojumps_map = normalize_map(deps.vartojumps_map, false,
                 modifiable.vartojumps_map)
         end
-        if jumptovars_map === nothing
+        if deps.jumptovars_map === nothing
             can_generate || error(missing_species_map_message(aggregator, "jumps",
                 "variables"))
             jumptovars_map = normalize_map(generated_jumptovars_map(maj), false, true)
         else
-            jumptovars_map = normalize_map(jumptovars_map, false,
+            jumptovars_map = normalize_map(deps.jumptovars_map, false,
                 modifiable.jumptovars_map)
         end
     end
@@ -215,19 +216,23 @@ end
 # the map in normal form; entry `i` of a map with `addself` must list `i`
 function normalize_map(map, addself, modifiable)
     isnormal_map(map, addself) && return map
-    if modifiable && all(entry -> entry isa Vector, map)
+    if modifiable && all(entry -> entry isa Vector{Int}, map)
         for i in 1:length(map)
             normalize_entry!(dependents(map, i), addself ? i : 0)
         end
         return map
     end
-    [normalize_entry!(collect(Int, dependents(map, i)), addself ? i : 0)
+    # `Vector{Int}` rows: resizable for any input row (`collect` keeps static vectors static)
+    [normalize_entry!(Vector{Int}(dependents(map, i)), addself ? i : 0)
      for i in 1:length(map)]
 end
 
+# Whether every entry has `Int` indices (the heap-based aggregators use them as handles), is
+# sorted and without duplicates, and lists its own index if `addself`.
 function isnormal_map(map, addself)
     for i in 1:length(map)
-        isnormal_entry(dependents(map, i), addself ? i : 0) || return false
+        entry = dependents(map, i)
+        (eltype(entry) === Int && isnormal_entry(entry, addself ? i : 0)) || return false
     end
     true
 end

@@ -1,4 +1,4 @@
-using JumpProcesses, StableRNGs, Test
+using JumpProcesses, StableRNGs, StaticArrays, Test
 
 # ∅ → A, A → ∅ and B → ∅ as mass action jumps 1-3, and A → B (rate 0.5 A) as constant rate
 # jump 4, so the maps can't be generated from the mass action jumps
@@ -53,7 +53,7 @@ end
     jprob = JumpProblem(prob, NRM(), maj, crj; dependencies = deps)
     # by default the problem puts the maps into normal form in place
     @test deps.dep_graph == dep_graph()
-    @test jprob.discrete_jump_aggregation.dep_gr === deps.dep_graph
+    @test jprob.discrete_jump_aggregation.dependencies.dep_graph === deps.dep_graph
     # the user's maps were copied when the JumpDependencies was built
     @test g == raw_dep_graph()
 
@@ -61,8 +61,11 @@ end
     deps = normal_deps()
     jprob = JumpProblem(prob, RSSA(), maj, crj; dependencies = deps,
         alias_dependencies = false)
-    @test jprob.discrete_jump_aggregation.vartojumps_map === deps.vartojumps_map
-    @test jprob.discrete_jump_aggregation.jumptovars_map === deps.jumptovars_map
+    agg_deps = jprob.discrete_jump_aggregation.dependencies
+    @test agg_deps.vartojumps_map === deps.vartojumps_map
+    @test agg_deps.jumptovars_map === deps.jumptovars_map
+    # maps the aggregator doesn't use are left out
+    @test agg_deps.dep_graph === nothing
 end
 
 @testset "With alias_dependencies = false a JumpDependencies is reused unchanged" begin
@@ -151,6 +154,29 @@ end
             dep_graph = [[1, 2, 3, 4], [2, 3, 4], [3],
             [2, 3, 4]]))
     @test same_solution(jprob1, jprob2)
+end
+
+@testset "Indices that aren't Int, and static rows" begin
+    # Int32 indices: NRM, CCNRM and Coevolve use the indices as heap handles, which must be
+    # Ints, so these maps are rebuilt with Int indices even though they are otherwise normal
+    i32(map) = [Int32.(entry) for entry in map]
+    # static rows: out of normal form (duplicates, missing self entries, an empty row) and
+    # not resizable, so these maps are rebuilt too
+    svdeps() = JumpDependencies(;
+        vartojumps_map = [SVector(4, 2, 2), SVector(3)],
+        jumptovars_map = [SVector(1), SVector(1, 1), SVector(2), SVector(2, 1)],
+        dep_graph = [SVector(4, 2), SVector(2, 4), SVector{0, Int}(), SVector(4, 3, 2)])
+    for agg in JumpProcesses.JUMP_AGGREGATORS
+        deps = JumpDependencies(; vartojumps_map = i32(vartojumps_map()),
+            jumptovars_map = i32(jumptovars_map()), dep_graph = i32(dep_graph()))
+        jprob1 = JumpProblem(prob, agg, maj, crj; dependencies = deps)
+        jprob2 = JumpProblem(prob, agg, maj, crj; dependencies = normal_deps())
+        @test same_solution(jprob1, jprob2)
+        # new problems, since SortingDirect keeps its learned search order between solves
+        jprob1 = JumpProblem(prob, agg, maj, crj; dependencies = svdeps())
+        jprob2 = JumpProblem(prob, agg, maj, crj; dependencies = normal_deps())
+        @test same_solution(jprob1, jprob2)
+    end
 end
 
 @testset "JumpDependencies with Coevolve and bounded VariableRateJumps" begin

@@ -5,8 +5,8 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR,
-    VJMAP, JVMAP, SS, U <: PriorityTable,
+mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPS, SS,
+    U <: PriorityTable,
     W <: Function} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
@@ -19,9 +19,7 @@ mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR,
     rates::F1 # legacy, not used
     affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR #dep graph is same for each site
-    vartojumps_map::VJMAP #vartojumps_map is same for each site
-    jumptovars_map::JVMAP #jumptovars_map is same for each site
+    dependencies::DEPS #the maps are the same for each site
     spatial_system::SS
     numspecies::Int #number of species
     rt::U
@@ -32,8 +30,7 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
         hop_rates::HOP, site_rates::Vector{T},
         sps::Tuple{Bool, Bool}, spatial_system::SS;
         num_specs, minrate = convert(T, MINJUMPRATE),
-        vartojumps_map, jumptovars_map, dep_graph,
-        kwargs...) where {J, T, RX, HOP, SS}
+        dependencies, kwargs...) where {J, T, RX, HOP, SS}
 
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
@@ -46,12 +43,10 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
     DirectCRDirectJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP,
-        typeof(dep_graph), typeof(vartojumps_map),
-        typeof(jumptovars_map), SS, typeof(rt),
+        typeof(dependencies), SS, typeof(rt),
         typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
         site_rates, nothing, nothing, sps,
-        dep_graph, vartojumps_map,
-        jumptovars_map, spatial_system, num_specs,
+        dependencies, spatial_system, num_specs,
         rt, ratetogroup)
 end
 

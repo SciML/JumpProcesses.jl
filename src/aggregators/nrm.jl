@@ -1,7 +1,7 @@
 # Implementation the original Next Reaction Method
 # Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
 
-mutable struct NRMJumpAggregation{T, S, F1, F2, DEPGR, PQ} <:
+mutable struct NRMJumpAggregation{T, S, F1, F2, DEPS, PQ} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -14,23 +14,23 @@ mutable struct NRMJumpAggregation{T, S, F1, F2, DEPGR, PQ} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     pq::PQ
 end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        dep_graph,
+        dependencies,
         kwargs...) where {T, S, F1, F2}
     pq = MutableBinaryMinHeap{T}()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    NRMJumpAggregation{T, S, F1, affecttype, typeof(dep_graph), typeof(pq)}(
+    NRMJumpAggregation{T, S, F1, affecttype, typeof(dependencies), typeof(pq)}(
         nj, nj, njt, et,
         crs, sr, maj, maj_rates,
         rs, affs!, sps,
-        dep_graph, pq)
+        dependencies, pq)
 end
 
 ############################# Required Functions ##############################
@@ -62,7 +62,7 @@ function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t, affects
 
     # update current jump rates and times
     rng = get_rng(integrator)
-    @inbounds dep_rxs = dependents(p.dep_gr, p.next_jump)
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
     update_dependent_rates!(p, dep_rxs, p.next_jump, u, params, t, rng)
     nothing
 end

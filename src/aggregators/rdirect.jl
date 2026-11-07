@@ -2,7 +2,7 @@
 Direct with rejection sampling
 """
 
-mutable struct RDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
+mutable struct RDirectJumpAggregation{T, S, F1, F2, DEPS} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -15,7 +15,7 @@ mutable struct RDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     max_rate::T
     counter::Int
     counter_threshold::Int
@@ -27,14 +27,15 @@ end
 function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        counter_threshold = length(crs), dep_graph,
+        counter_threshold = length(crs), dependencies,
         kwargs...) where {T, S, F1, F2}
     max_rate = maximum(crs)
     affecttype = F2 <: Tuple ? F2 : Any
-    return RDirectJumpAggregation{T, S, F1, affecttype, typeof(dep_graph)}(nj, nj, njt, et,
+    return RDirectJumpAggregation{T, S, F1, affecttype, typeof(dependencies)}(
+        nj, nj, njt, et,
         crs, sr, maj, maj_rates, rs,
         affs!, sps,
-        dep_graph, max_rate, 0,
+        dependencies, max_rate, 0,
         Int(counter_threshold), zero(sr))
 end
 
@@ -70,7 +71,7 @@ function execute_jumps!(p::RDirectJumpAggregation, integrator, u, params, t, aff
     u = update_state!(p, integrator, u, affects!)
 
     # update rates
-    @inbounds dep_rxs = dependents(p.dep_gr, p.next_jump)
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
     update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end

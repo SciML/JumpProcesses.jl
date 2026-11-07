@@ -11,11 +11,12 @@
   - The `JumpProblem` keywords `dep_graph`, `vartojumps_map` and `jumptovars_map` are
     deprecated, and will be removed in JumpProcesses 11: pass the maps in a
     `JumpDependencies` instead. A map given both ways is an error.
-  - `JumpProblem` now puts each map its aggregator uses into one form: every entry sorted
-    and without duplicates, and each entry of `dep_graph` listing its own jump. A map
-    already in that form is used without a copy. Seeded results can change for maps given in
-    another form, and for `RSSA` and `RSSACR` with maps generated from `MassActionJump`s,
-    whose `jumptovars_map` entries followed the order of each reaction's net stoichiometry.
+  - `JumpProblem` now puts each map its aggregator uses into one form: every entry sorted,
+    without duplicates and with `Int` indices, and each entry of `dep_graph` listing its own
+    jump. A map already in that form is used without a copy. Seeded results can change for
+    maps given in another form, and for `RSSA` and `RSSACR` with maps generated from
+    `MassActionJump`s, whose `jumptovars_map` entries followed the order of each reaction's
+    net stoichiometry.
   - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
     sums of the rates when rounding errors may have made them inaccurate, using a bound on
     those errors that they update as the rates change. When every rate became zero, the

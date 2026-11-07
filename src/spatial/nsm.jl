@@ -3,8 +3,7 @@
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR, VJMAP, JVMAP,
-    PQ, SS} <:
+mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPS, PQ, SS} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
@@ -15,9 +14,7 @@ mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR, VJMAP, JVMAP,
     rates::F1 # legacy, not used
     affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR #dep graph is same for each site
-    vartojumps_map::VJMAP #vartojumps_map is same for each site
-    jumptovars_map::JVMAP #jumptovars_map is same for each site
+    dependencies::DEPS #the maps are the same for each site
     pq::PQ
     spatial_system::SS
     numspecies::Int #number of species
@@ -27,18 +24,16 @@ function NSMJumpAggregation(
         nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP,
         sps::Tuple{Bool, Bool},
         spatial_system::SS; num_specs,
-        vartojumps_map, jumptovars_map, dep_graph, kwargs...) where {J, T, RX, HOP, SS}
+        dependencies, kwargs...) where {J, T, RX, HOP, SS}
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dep_graph),
-        typeof(vartojumps_map), typeof(jumptovars_map), typeof(pq), SS}(nj, nj, njt, et,
+    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dependencies),
+        typeof(pq), SS}(nj, nj, njt, et,
         rx_rates,
         hop_rates,
         nothing,
         nothing,
-        sps, dep_graph,
-        vartojumps_map,
-        jumptovars_map,
+        sps, dependencies,
         pq,
         spatial_system,
         num_specs)

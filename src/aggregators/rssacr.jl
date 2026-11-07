@@ -4,7 +4,7 @@ Composition-Rejection with Rejection sampling method (RSSA-CR)
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct RSSACRJumpAggregation{F, S, F1, F2, CB, U, VJMAP, JVMAP, BD,
+mutable struct RSSACRJumpAggregation{F, S, F1, F2, CB, U, DEPS, BD,
     P <: PriorityTable, W <: Function} <:
                AbstractSSAJumpAggregator{F, S, F1, F2}
     next_jump::Int
@@ -20,8 +20,7 @@ mutable struct RSSACRJumpAggregation{F, S, F1, F2, CB, U, VJMAP, JVMAP, BD,
     affects!::F2
     brackets::CB
     save_positions::Tuple{Bool, Bool}
-    vartojumps_map::VJMAP
-    jumptovars_map::JVMAP
+    dependencies::DEPS
     bracket_data::BD
     ulow::U
     uhigh::U
@@ -37,7 +36,7 @@ end
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{F}(undef, get_num_majumps(maj)),
-        u::U, brackets, vartojumps_map, jumptovars_map,
+        u::U, brackets, dependencies,
         bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
         maxrate = convert(F, Inf),
         kwargs...) where {F, S, F1, F2, U}
@@ -65,10 +64,10 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
 
     affecttype = F2 <: Tuple ? F2 : Any
     RSSACRJumpAggregation{typeof(njt), S, F1, affecttype, typeof(brackets), U,
-        typeof(vartojumps_map), typeof(jumptovars_map), typeof(bd), typeof(rt),
+        typeof(dependencies), typeof(bd), typeof(rt),
         typeof(ratetogroup)}(nj, nj, njt, et, crl_bnds, crh_bnds,
-        sum_rate, maj, maj_rates, rs, affs!, brackets, sps, vartojumps_map,
-        jumptovars_map, bd, ulow, uhigh, minrate, maxrate,
+        sum_rate, maj, maj_rates, rs, affs!, brackets, sps, dependencies, bd, ulow,
+        uhigh, minrate, maxrate,
         rt, ratetogroup, zero(sum_rate))
 end
 
@@ -109,7 +108,7 @@ function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t, affe
     u = update_state!(p, integrator, u, affects!)
 
     # update rates
-    @inbounds changed_vars = dependents(p.jumptovars_map, p.next_jump)
+    @inbounds changed_vars = dependents(p.dependencies.jumptovars_map, p.next_jump)
     update_dependent_rates!(p, changed_vars, u, params, t)
     nothing
 end
@@ -200,7 +199,7 @@ update bracketing for the species in `changed_vars`, e.g. those the executed jum
             ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
-            deps = dependents(p.vartojumps_map, uidx)
+            deps = dependents(p.dependencies.vartojumps_map, uidx)
             for jidx in deps
                 oldrate = crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
@@ -241,7 +240,7 @@ end
             p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
-            deps = dependents(p.vartojumps_map, uidx)
+            deps = dependents(p.dependencies.vartojumps_map, uidx)
             for jidx in deps
                 oldrate = crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(

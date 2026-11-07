@@ -10,7 +10,7 @@ by S. Mauch and M. Stalzer, ACM Trans. Comp. Biol. and Bioinf., 8, No. 1, 27-35 
 
 const MINJUMPRATE = 2.0^exponent(1e-12)
 
-mutable struct DirectCRJumpAggregation{T, S, F1, F2, DEPGR, U <: PriorityTable,
+mutable struct DirectCRJumpAggregation{T, S, F1, F2, DEPS, U <: PriorityTable,
     W <: Function} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
@@ -24,7 +24,7 @@ mutable struct DirectCRJumpAggregation{T, S, F1, F2, DEPGR, U <: PriorityTable,
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     minrate::T
     maxrate::T   # initial maxrate only, table can increase beyond it!
     rt::U
@@ -37,7 +37,7 @@ end
 function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        dep_graph,
+        dependencies,
         minrate = convert(T, MINJUMPRATE),
         maxrate = convert(T, Inf),
         kwargs...) where {T, S, F1, F2}
@@ -53,9 +53,9 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    DirectCRJumpAggregation{T, S, F1, affecttype, typeof(dep_graph),
+    DirectCRJumpAggregation{T, S, F1, affecttype, typeof(dependencies),
         typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
-        maj_rates, rs, affs!, sps, dep_graph,
+        maj_rates, rs, affs!, sps, dependencies,
         minrate, maxrate, rt,
         ratetogroup, zero(sr))
 end
@@ -98,7 +98,7 @@ function execute_jumps!(p::DirectCRJumpAggregation, integrator, u, params, t, af
     u = update_state!(p, integrator, u, affects!)
 
     # update current jump rates
-    @inbounds dep_rxs = dependents(p.dep_gr, p.next_jump)
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
     update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end

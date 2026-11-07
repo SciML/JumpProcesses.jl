@@ -3,7 +3,7 @@
 # algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 # (2015). doi: 10.1063/1.4928635.
 
-mutable struct CCNRMJumpAggregation{T, S, F1, F2, DEPGR, PT} <:
+mutable struct CCNRMJumpAggregation{T, S, F1, F2, DEPS, PT} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -16,14 +16,14 @@ mutable struct CCNRMJumpAggregation{T, S, F1, F2, DEPGR, PT} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     ptt::PT
 end
 
 function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        dep_graph,
+        dependencies,
         kwargs...) where {T, S, F1, F2}
     binwidthconst = haskey(kwargs, :binwidthconst) ? kwargs[:binwidthconst] : 16
     numbinsconst = haskey(kwargs, :numbinsconst) ? kwargs[:numbinsconst] : 20
@@ -31,11 +31,11 @@ function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         binwidthconst = binwidthconst, numbinsconst = numbinsconst) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    CCNRMJumpAggregation{T, S, F1, affecttype, typeof(dep_graph), typeof(ptt)}(
+    CCNRMJumpAggregation{T, S, F1, affecttype, typeof(dependencies), typeof(ptt)}(
         nj, nj, njt, et,
         crs, sr, maj, maj_rates,
         rs, affs!, sps,
-        dep_graph, ptt)
+        dependencies, ptt)
 end
 
 ############################# Required Functions ##############################
@@ -67,7 +67,7 @@ function execute_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t, affec
 
     # update current jump rates and times
     rng = get_rng(integrator)
-    @inbounds dep_rxs = dependents(p.dep_gr, p.next_jump)
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
     update_dependent_rates!(p, dep_rxs, p.next_jump, u, params, t, rng)
     nothing
 end

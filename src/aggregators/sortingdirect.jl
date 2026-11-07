@@ -2,7 +2,7 @@
 # "The sorting direct method for stochastic simulation of biochemical systems with varying reaction execution behavior"
 # Comp. Bio. and Chem., 30, pg. 39-49 (2006).
 
-mutable struct SortingDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
+mutable struct SortingDirectJumpAggregation{T, S, F1, F2, DEPS} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -15,7 +15,7 @@ mutable struct SortingDirectJumpAggregation{T, S, F1, F2, DEPGR} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     jump_search_order::Vector{Int}
     jump_search_idx::Int
     # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
@@ -26,16 +26,17 @@ end
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        dep_graph,
+        dependencies,
         kwargs...) where {T, S, F1, F2}
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
-    SortingDirectJumpAggregation{T, S, F1, affecttype, typeof(dep_graph)}(nj, nj, njt, et,
+    SortingDirectJumpAggregation{T, S, F1, affecttype, typeof(dependencies)}(
+        nj, nj, njt, et,
         crs, sr, maj, maj_rates, rs,
         affs!, sps,
-        dep_graph, jtoidx,
+        dependencies, jtoidx,
         zero(Int), zero(sr))
 end
 
@@ -77,7 +78,7 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
     end
 
     # update current jump rates
-    @inbounds dep_rxs = dependents(p.dep_gr, p.next_jump)
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
     update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end

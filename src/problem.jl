@@ -398,9 +398,9 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     # When an aggregator is built: check the maps of a `JumpDependencies` built by the user
     # (maps given as keywords stay unchecked, as before `JumpDependencies` existed), put the
-    # maps the aggregator uses into normal form, generating missing ones, and pass them to it
-    # as keywords. Maps given as keywords may be modified, as before, and those in
-    # `dependencies` when the problem owns it.
+    # maps the aggregator uses into normal form, generating missing ones, and give the
+    # aggregator a `JumpDependencies` holding them. Maps given as keywords may be modified,
+    # as before, and those in `dependencies` when the problem owns it.
     if (ndiscjumps > 0) || is_spatial(aggregator)
         if dependencies !== nothing && spatial_system === nothing
             check_dependencies(dependencies, num_variables(u), ndiscjumps)
@@ -415,7 +415,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
             deps = normalize_dependencies(aggregator, deps, modifiable, maj,
                 num_variables(u), ndiscjumps)
         end
-        kwargs = merge((; kwargs...), dependency_kwargs(deps))
+        kwargs = merge((; kwargs...), (; dependencies = deps))
     end
 
     # handle majs, crjs, and bounded vrjs

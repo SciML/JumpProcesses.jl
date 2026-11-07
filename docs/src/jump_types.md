@@ -380,9 +380,9 @@ deps = JumpDependencies(; dep_graph = your_dependency_graph)
 JumpProblem(prob, DirectCR(), jump1, jump2; dependencies = deps)
 ```
 
-The maps can also be passed as `JumpProblem` keywords, as in
-`JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)`.
-JumpProcesses may then modify them, as with `JumpDependencies(; alias = true)`.
+Passing the maps as `JumpProblem` keywords, as in
+`JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)`, is
+deprecated.
 
 For systems with only `MassActionJump`s, or those generated from a
 [Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this
@@ -400,7 +400,7 @@ relative order between bounded `VariableRateJump`s is preserved. In this way, on
 can precalculate the jump order to manually construct dependency graphs.
 
 `RSSA` and `RSSACR` require two different types of dependency graphs, passed as
-the following fields of a `JumpDependencies` (or as `JumpProblem` keywords):
+the following fields of a `JumpDependencies`:
 
   - `vartojumps_map` - A map, such as a `Vector{Vector{Int}}`, from each variable
     index, `i`, to a set of jump indices. The jump indices correspond to jumps with

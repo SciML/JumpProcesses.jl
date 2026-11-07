@@ -32,31 +32,13 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
         hop_rates::HOP, site_rates::Vector{T},
         sps::Tuple{Bool, Bool}, spatial_system::SS;
         num_specs, minrate = convert(T, MINJUMPRATE),
-        vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing,
+        vartojumps_map, jumptovars_map, dep_graph,
         kwargs...) where {J, T, RX, HOP, SS}
 
-    # a dependency graph is needed
-    if dep_graph === nothing
-        dg = make_dependency_graph(num_specs, rx_rates.ma_jumps)
-    else
-        dg = dep_graph
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
-    end
-
-    # a species-to-reactions graph is needed
-    if vartojumps_map === nothing
-        vtoj_map = var_to_jumps_map(num_specs, rx_rates.ma_jumps)
-    else
-        vtoj_map = vartojumps_map
-    end
-
-    if jumptovars_map === nothing
-        jtov_map = jump_to_vars_map(rx_rates.ma_jumps)
-    else
-        jtov_map = jumptovars_map
-    end
+    # `JumpProblem` passes the maps in normal form, each jump listing itself in `dep_graph`
+    dg = dep_graph
+    vtoj_map = vartojumps_map
+    jtov_map = jumptovars_map
 
     # mapping from jump rate to group id
     minexponent = exponent(minrate)

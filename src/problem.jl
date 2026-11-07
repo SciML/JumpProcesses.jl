@@ -57,8 +57,11 @@ $(FIELDS)
     at the individual jump level via the value of this kwarg passed to the individual `VariableRateJump`s
     constructor when it is created.
   - `dependencies`, a [`JumpDependencies`](@ref) with the dependency maps some aggregators
-    need, such as `dep_graph` for `NRM`. The maps can also be given as the keywords
-    `dep_graph`, `vartojumps_map` and `jumptovars_map`, which JumpProcesses may modify.
+    need, such as `dep_graph` for `NRM`.
+  - `alias_dependencies = true`: the `JumpProblem` takes ownership of `dependencies` and may
+    modify its maps; with `false` it leaves them unchanged. See [`JumpDependencies`](@ref).
+  - `dep_graph`, `vartojumps_map` and `jumptovars_map` are deprecated: pass the maps in
+    `dependencies` instead.
   - `spatial_system`, for spatial problems the underlying spatial structure.
   - `hopping_constants`, for spatial problems the spatial transition rate coefficients.
   - `use_vrj_bounds = true`, set to false to disable handling bounded `VariableRateJump`s with
@@ -340,7 +343,8 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
                          (false, true) : (true, true),
         spatial_system = nothing, hopping_constants = nothing,
         callback = nothing, tstops = nothing, use_vrj_bounds = true,
-        dependencies::Union{Nothing, JumpDependencies} = nothing, vartojumps_map = nothing,
+        dependencies::Union{Nothing, JumpDependencies} = nothing,
+        alias_dependencies::Bool = true, vartojumps_map = nothing,
         jumptovars_map = nothing, dep_graph = nothing, kwargs...)
     if haskey(kwargs, :rng)
         throw(ArgumentError("`rng` is no longer a keyword argument for `JumpProblem`. Pass `rng` to `solve` or `init` instead, e.g. `solve(jprob, SSAStepper(); rng = my_rng)`."))
@@ -355,9 +359,10 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     # Check before spatial flattening, which rebuilds the problem without its keywords.
     check_no_wrapped_callbacks(prob)
 
-    # the aggregators receive the dependency maps as keywords
+    if vartojumps_map !== nothing || jumptovars_map !== nothing || dep_graph !== nothing
+        Base.depwarn(DEPENDENCY_KEYWORDS_DEPWARN, :JumpProblem)
+    end
     deps = merge_dependencies(dependencies, vartojumps_map, jumptovars_map, dep_graph)
-    kwargs = merge(dependency_kwargs(deps), kwargs)
 
     # keep the original MAJ (including {Nothing} parameterized MAJs);
     # fill_scaled_rates! in each aggregator's initialize! handles rate setup
@@ -391,10 +396,26 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
 
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
 
-    # check the maps of a `JumpDependencies` built by the user; maps given as keywords stay
-    # unchecked, as before `JumpDependencies` existed
-    if dependencies !== nothing && spatial_system === nothing
-        check_dependencies(dependencies, num_variables(u), ndiscjumps)
+    # When an aggregator is built: check the maps of a `JumpDependencies` built by the user
+    # (maps given as keywords stay unchecked, as before `JumpDependencies` existed), put the
+    # maps the aggregator uses into normal form, generating missing ones, and pass them to it
+    # as keywords. Maps given as keywords may be modified, as before, and those in
+    # `dependencies` when the problem owns it.
+    if (ndiscjumps > 0) || is_spatial(aggregator)
+        if dependencies !== nothing && spatial_system === nothing
+            check_dependencies(dependencies, num_variables(u), ndiscjumps)
+        end
+        modifiable = (; vartojumps_map = alias_dependencies || vartojumps_map !== nothing,
+            jumptovars_map = alias_dependencies || jumptovars_map !== nothing,
+            dep_graph = alias_dependencies || dep_graph !== nothing)
+        if is_spatial(aggregator)
+            deps = normalize_dependencies(aggregator, deps, modifiable, maj, size(u, 1),
+                get_num_majumps(maj))
+        else
+            deps = normalize_dependencies(aggregator, deps, modifiable, maj,
+                num_variables(u), ndiscjumps)
+        end
+        kwargs = merge((; kwargs...), dependency_kwargs(deps))
     end
 
     # handle majs, crjs, and bounded vrjs

@@ -56,7 +56,8 @@ function ssa_smoke_problem(aggregator, representation)
     dep_graph = [[1, 2], [1, 2]]
     vartojumps_map = [[1], [2]]
     jumptovars_map = [[1, 2], [1, 2]]
-    JumpProblem(prob, aggregator, jumps...; dep_graph, vartojumps_map, jumptovars_map)
+    JumpProblem(prob, aggregator, jumps...;
+        dependencies = JumpDependencies(; dep_graph, vartojumps_map, jumptovars_map))
 end
 
 @testset "Nonspatial SSA aggregator smoke" begin

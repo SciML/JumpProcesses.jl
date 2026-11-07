@@ -32,29 +32,11 @@ end
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        u::U, brackets, vartojumps_map = nothing,
-        jumptovars_map = nothing,
+        u::U, brackets, vartojumps_map, jumptovars_map,
         bracket_data = nothing, kwargs...) where {T, S, F1, F2, U}
-    # a dependency graph is needed and must be provided if there are constant rate jumps
-    if vartojumps_map === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from variables to dependent jumps must be supplied.")
-        else
-            vtoj_map = var_to_jumps_map(length(u), maj)
-        end
-    else
-        vtoj_map = vartojumps_map
-    end
-
-    if jumptovars_map === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
-        else
-            jtov_map = jump_to_vars_map(maj)
-        end
-    else
-        jtov_map = jumptovars_map
-    end
+    # `JumpProblem` passes both maps in normal form
+    vtoj_map = vartojumps_map
+    jtov_map = jumptovars_map
 
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
@@ -104,7 +86,7 @@ end
 function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
     u = update_state!(p, integrator, u, affects!)
-    @inbounds changed_vars = p.jumptovars_map[p.next_jump]
+    @inbounds changed_vars = dependents(p.jumptovars_map, p.next_jump)
     update_rates!(p, changed_vars, u, params, t)
     nothing
 end
@@ -192,7 +174,7 @@ Update rates after the species in `changed_vars` changed
 
             # for each dependent jump, update jump rate brackets
             sum_before = sum_rate
-            deps = p.vartojumps_map[uidx]
+            deps = dependents(p.vartojumps_map, uidx)
             for jidx in deps
                 sum_rate -= crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
@@ -227,7 +209,7 @@ end
 
             # for each dependent jump, update jump rate brackets
             sum_before = sum_rate
-            deps = p.vartojumps_map[uidx]
+            deps = dependents(p.vartojumps_map, uidx)
             for jidx in deps
                 sum_rate -= crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(

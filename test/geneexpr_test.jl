@@ -97,8 +97,8 @@ if doplot
     plothand = plot(reuse = false)
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
         local sol = solve(jump_prob, SSAStepper(); rng)
         plot!(plothand, sol.t, sol[3, :], seriestype = :steppost)
     end
@@ -109,8 +109,8 @@ end
 if dotestmean
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
         means = runSSAs(jump_prob; rng)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
@@ -121,8 +121,8 @@ if dotestmean
     # test default solver dispatch (use_stepper=false) with one algorithm
     let alg = Direct()
         jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
         means = runSSAs(jump_prob; use_stepper = false, rng)
         @test abs(means - expected_avg) < reltol * expected_avg
     end
@@ -131,8 +131,8 @@ if dotestmean
     # past rejection bound issues with floating point)
     for alg in (Direct(), RSSA())
         jump_probf = JumpProblem(probf, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
         means = runSSAs(jump_probf; rng)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method (Float64 u0): ", typeof(alg),
@@ -143,7 +143,8 @@ end
 
 # no-aggregator tests
 jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
-    vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs)
+    dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+        jumptovars_map = jump_to_dep_specs))
 @test abs(runSSAs(jump_prob; rng) - expected_avg) < reltol * expected_avg
 
 jump_prob = JumpProblem(prob, majumps, save_positions = (false, false))

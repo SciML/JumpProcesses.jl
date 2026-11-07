@@ -617,7 +617,8 @@ construct our `JumpProblem` as before, specifying the `Coevolve` aggregator:
 
 ```@example tut2
 prob = DiscreteProblem(u₀, tspan, p1)
-jump_prob = JumpProblem(prob, Coevolve(), jump3, jump4; dep_graph)
+jump_prob = JumpProblem(prob, Coevolve(), jump3, jump4;
+    dependencies = JumpDependencies(; dep_graph))
 ```
 
 We now have a problem that can be solved with `SSAStepper` to handle
@@ -942,7 +943,8 @@ as continuous as it depends on a continuous variable.
 ```@example tut2
 jump6 = VariableRateJump(rate5, affect5!; urate = urate2, rateinterval = rateinterval2)
 dep_graph2 = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
-jump_prob = JumpProblem(prob, Coevolve(), jump, jump2, jump6; dep_graph = dep_graph2)
+jump_prob = JumpProblem(prob, Coevolve(), jump, jump2, jump6;
+    dependencies = JumpDependencies(; dep_graph = dep_graph2))
 sol = solve(jump_prob, Tsit5())
 plot(sol; label = ["S(t)" "I(t)" "R(t)" "u₄(t)"])
 ```

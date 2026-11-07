@@ -37,30 +37,13 @@ end
 function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate::F, maj::S,
         rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{F}(undef, get_num_majumps(maj)),
-        u::U, brackets, vartojumps_map = nothing, jumptovars_map = nothing,
+        u::U, brackets, vartojumps_map, jumptovars_map,
         bracket_data = nothing, minrate = convert(F, MINJUMPRATE),
         maxrate = convert(F, Inf),
         kwargs...) where {F, S, F1, F2, U}
-    # a dependency graph is needed and must be provided if there are constant rate jumps
-    if vartojumps_map === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSACR algorithm a map from variables to dependent jumps must be supplied.")
-        else
-            vtoj_map = var_to_jumps_map(length(u), maj)
-        end
-    else
-        vtoj_map = vartojumps_map
-    end
-
-    if jumptovars_map === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSACR algorithm a map from jumps to dependent variables must be supplied.")
-        else
-            jtov_map = jump_to_vars_map(maj)
-        end
-    else
-        jtov_map = jumptovars_map
-    end
+    # `JumpProblem` passes both maps in normal form
+    vtoj_map = vartojumps_map
+    jtov_map = jumptovars_map
 
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
@@ -130,7 +113,7 @@ function execute_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t, affe
     u = update_state!(p, integrator, u, affects!)
 
     # update rates
-    @inbounds changed_vars = p.jumptovars_map[p.next_jump]
+    @inbounds changed_vars = dependents(p.jumptovars_map, p.next_jump)
     update_dependent_rates!(p, changed_vars, u, params, t)
     nothing
 end
@@ -221,7 +204,7 @@ update bracketing for the species in `changed_vars`, e.g. those the executed jum
             ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
-            deps = p.vartojumps_map[uidx]
+            deps = dependents(p.vartojumps_map, uidx)
             for jidx in deps
                 oldrate = crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
@@ -262,7 +245,7 @@ end
             p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
-            deps = p.vartojumps_map[uidx]
+            deps = dependents(p.vartojumps_map, uidx)
             for jidx in deps
                 oldrate = crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(

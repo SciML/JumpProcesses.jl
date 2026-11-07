@@ -26,22 +26,11 @@ end
 function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        num_specs, dep_graph = nothing,
+        dep_graph,
         kwargs...) where {T, S, F1, F2}
 
-    # a dependency graph is needed and must be provided if there are constant rate jumps
-    if dep_graph === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use ConstantRateJumps with the SortingDirect algorithm a dependency graph must be supplied.")
-        else
-            dg = make_dependency_graph(num_specs, maj)
-        end
-    else
-        dg = dep_graph
-
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
-    end
+    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
+    dg = dep_graph
 
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
@@ -63,8 +52,7 @@ function aggregate(aggregator::SortingDirect, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(SortingDirectJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions; num_specs = length(u),
-        kwargs...)
+        rates, affects!, save_positions; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -92,7 +80,7 @@ function execute_jumps!(p::SortingDirectJumpAggregation, integrator, u, params, 
     end
 
     # update current jump rates
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    @inbounds dep_rxs = dependents(p.dep_gr, p.next_jump)
     update_dependent_rates!(p, dep_rxs, u, params, t)
     nothing
 end

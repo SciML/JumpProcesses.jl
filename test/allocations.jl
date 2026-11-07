@@ -96,7 +96,9 @@ let
     dep_graph = [copy(idxs1), copy(idxs2), copy(idxs1), copy(idxs2), copy(idxs), copy(idxs)]
     vartojumps_map = [copy(idxs1), copy(idxs2)]
     jumptovars_map = [[1], [2], [1], [2], [1, 2], [1, 2]]
-    graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
+    graphkwargs = (;
+        dependencies = JumpDependencies(; dep_graph, vartojumps_map, jumptovars_map),
+        alias_dependencies = false)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
         jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs)

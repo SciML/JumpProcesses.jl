@@ -32,21 +32,11 @@ end
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        u::U, dep_graph = nothing, lrates, urates,
+        u::U, dep_graph, lrates, urates,
         rateintervals, haslratevec,
         cur_lrates::Vector{T}) where {T, S, F1, F2, U}
-    if dep_graph === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(urates)
-            error("To use Coevolve a dependency graph between jumps must be supplied.")
-        else
-            dg = make_dependency_graph(length(u), maj)
-        end
-    else
-        # using a Set to ensure that edges are not duplicate
-        dgsets = [Set{Int}(append!(Int[], jumps, [var]))
-                  for (var, jumps) in enumerate(dep_graph)]
-        dg = [sort!(collect(i)) for i in dgsets]
-    end
+    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
+    dg = dep_graph
 
     num_jumps = get_num_majumps(maj) + length(urates)
 
@@ -134,8 +124,7 @@ end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions; dep_graph = nothing,
-        variable_jumps = nothing, kwargs...)
+        ma_jumps, save_positions; dep_graph, variable_jumps = nothing, kwargs...)
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
         Tuple{typeof(u), typeof(p), typeof(t)}}
 
@@ -200,7 +189,7 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t,
     update_state!(p, integrator, u, affects!)
     # update current jump rates and times
     rng = get_rng(integrator)
-    @inbounds deps = p.dep_gr[p.next_jump]
+    @inbounds deps = dependents(p.dep_gr, p.next_jump)
     update_dependent_rates!(p, deps, integrator.u, integrator.p, t, rng)
     nothing
 end

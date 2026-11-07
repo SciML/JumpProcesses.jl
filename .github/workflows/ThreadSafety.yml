@@ -45,21 +45,10 @@ jobs:
 
       - name: "Run thread safety tests (4 threads)"
         run: |
-          julia --threads=4 --code-coverage=user --check-bounds=yes --compiled-modules=yes \
+          julia --threads=4 --check-bounds=yes --compiled-modules=yes \
                 --project=@. --color=yes -e '
             using Pkg
             Pkg.test()
           '
         env:
           GROUP: ThreadSafety
-
-      - name: "Process Coverage"
-        uses: julia-actions/julia-processcoverage@v1
-
-      - name: "Report Coverage"
-        uses: codecov/codecov-action@v7
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        with:
-          files: lcov.info
-          token: "${{ secrets.CODECOV_TOKEN }}"
-          fail_ci_if_error: false

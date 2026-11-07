@@ -11,4 +11,6 @@ jobs:
   build:
     name: "Documentation"
     uses: "SciML/.github/.github/workflows/documentation.yml@v1"
+    with:
+      coverage: false
     secrets: "inherit"

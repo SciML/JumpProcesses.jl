@@ -77,7 +77,7 @@ for solving a system of differential equations with multiple jumps.
 
 !!! tip
 
-    On Julia 1.12 and later, jump simulations coupled to an ODE or SDE run faster when
+    On Julia 1.12 and later, jump simulations coupled to an ODE run faster when
     the problem is built with `SciMLBase.FullSpecialize`, e.g.
     `ODEProblem{true, SciMLBase.FullSpecialize}(f, [0.2], (0.0, 10.0))`; see
     [this FAQ entry](@ref faq_fullspecialize).

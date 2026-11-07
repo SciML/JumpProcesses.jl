@@ -19,7 +19,7 @@
     `NoSpecialize`; it used `AutoSpecialize` unless the problem was `FullSpecialize`. On
     Julia 1.12 and later, the default specialization makes the solvers erase the types of
     callbacks and allocate on every step, which made `VR_FRM` solves much slower. The docs
-    now recommend building ODE/SDE problems wrapped in a `JumpProblem` with
+    now recommend building ODE problems wrapped in a `JumpProblem` with
     `FullSpecialize` (see the FAQ).
 
 ## 10.1.1

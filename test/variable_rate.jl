@@ -399,8 +399,8 @@ end
 
 # Correctness test based on
 # VR_Direct and VR_FRM
-# Function to run ensemble and compute statistics. The problems passed in are FullSpecialize
-# (runtime-heavy Monte Carlo; see the accuracy test above).
+# Function to run ensemble and compute statistics. The ODE problems passed in are
+# FullSpecialize (runtime-heavy Monte Carlo; see the accuracy test above).
 function run_ensemble(prob, alg, jumps...; vr_aggregator = VR_FRM(), Nsims = 8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator)
@@ -439,7 +439,7 @@ let
     jump = VariableRateJump(rate, affect!; save_positions = (false, false))
     jump2 = deepcopy(jump)
 
-    prob = SDEProblem{true, SciMLBase.FullSpecialize}(f, g, [10.0], (0.0, 10.0))
+    prob = SDEProblem(f, g, [10.0], (0.0, 10.0))
 
     mean_vrfr = run_ensemble(prob, SRIW1(), jump, jump2)
     mean_vrcb = run_ensemble(prob, SRIW1(), jump, jump2; vr_aggregator = VR_Direct())
@@ -609,8 +609,7 @@ let
     g = (du, u, p, t) -> (du[1] = 1; du[2] = 0; nothing)
     jump = VariableRateJump((u, p, t) -> 2 * u[1]^2,
         integrator -> (integrator.u[2] += 1; nothing); save_positions = (false, false))
-    # FullSpecialize: runtime-heavy Monte Carlo (see the accuracy test above)
-    prob = SDEProblem{true, SciMLBase.FullSpecialize}(f, g, [0.0, 0.0], (0.0, 2.0))
+    prob = SDEProblem(f, g, [0.0, 0.0], (0.0, 2.0))
     ts = [0.5, 1.0, 2.0]
     Nsims = 4000
     # the counts at `ts`, the last three saves whether or not the start is saved

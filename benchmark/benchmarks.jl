@@ -3,8 +3,9 @@ using StableRNGs
 using OrdinaryDiffEqTsit5, StochasticDiffEqHighOrder
 
 # Every ODE/SDE problem is FullSpecialize: on Julia >= 1.12 the default specialization makes
-# DiffEqBase erase callback types, which allocates on every step, and the suite would time that
-# instead of JumpProcesses
+# DiffEqBase erase the jump callbacks' types for ODEs, which allocates on every step,
+# and the suite would time that instead of JumpProcesses. (StochasticDiffEq adds the jump
+# callbacks after the erasure, so the SDE problems are FullSpecialize only for consistency.)
 const FullSpecialize = JumpProcesses.SciMLBase.FullSpecialize
 
 const SUITE = BenchmarkGroup()

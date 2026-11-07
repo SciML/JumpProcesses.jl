@@ -27,8 +27,8 @@ end
 # Steps two integrators in turn before finishing both, so that both are alive at once
 function interleaved_paths(prob1, prob2, alg; seeds = (1, 2), nsteps = 10)
     integrators = (init(prob1, alg; seed = seeds[1]), init(prob2, alg; seed = seeds[2]))
-    for _ in 1:nsteps, integrator in integrators
-        step!(integrator)
+    for _ in 1:nsteps
+        foreach(step!, integrators)
     end
     foreach(solve!, integrators)
     map(integrator -> path(integrator.sol), integrators)
@@ -129,7 +129,7 @@ end
     copies = [rate_seen_by_copy() for _ in 1:20]
     for _ in 1:5
         GC.gc(true)
-        junk = [fill(-1.0, 4) for _ in 1:10^4]
+        junk = [fill(-1.0, 4) for _ in 1:10_000]
     end
     rate_at_start(jprob) = only(jprob.discrete_jump_aggregation.rates)(jprob.prob.u0,
         jprob.prob.p, 0.0)

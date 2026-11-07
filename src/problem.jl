@@ -290,18 +290,28 @@ end
 Return a copy of `jprob` with its own jump state, so that it can be solved concurrently with
 `jprob`, or used for an integrator that is alive at the same time as one of `jprob`.
 
-The copy is like `deepcopy(jprob)`, except that it shares the wrapped problem `jprob.prob`,
-including its function, initial condition and parameters. The jump aggregator and its
-callbacks, the jumps, and the callbacks passed to the `JumpProblem` constructor are copied,
-so the copy starts from the same state as `jprob`, including `SortingDirect`'s learned
-search order. For problems built with ModelingToolkit or Catalyst, sharing the wrapped
-problem makes `isolated_copy` much cheaper than `deepcopy`.
+## Arguments
+
+  - `jprob`: the `JumpProblem` to copy.
+
+## Returns
+
+A `JumpProblem` of the same type as `jprob`, sharing the wrapped problem `jprob.prob`.
+
+## Details
+
+The copy is like `deepcopy(jprob)`, except that it shares the wrapped problem, including its
+function, initial condition and parameters. The jump aggregator and its callbacks, the
+jumps, and the callbacks passed to the `JumpProblem` constructor are copied, so the copy
+starts from the same state as `jprob`, including `SortingDirect`'s learned search order.
+For problems built with ModelingToolkit or Catalyst, sharing the wrapped problem makes
+`isolated_copy` much cheaper than `deepcopy`.
 
 Since the parameters are shared and solvers alias them by default, a callback that modifies
 `integrator.p` also modifies the parameters of `jprob`. To give the copy its own
-parameters, use `remake(isolated_copy(jprob); p = copy(jprob.prob.p))`. Likewise, solves
-with `alias_u0 = true` modify the shared initial condition. Rate and affect functions
-should not store mutable state, since copies may share them.
+parameters, use `remake(isolated_copy(jprob); p = new_p)`. Likewise, solves that alias
+`u0` modify the shared initial condition. Rate and affect functions should not store
+mutable state, since copies may share them.
 
 ## Example
 
@@ -314,40 +324,54 @@ sols = fetch.(tasks)
 ```
 """
 function isolated_copy(jprob::JumpProblem)
-    # One dict for every field, so that the copied callbacks use the copied aggregation
-    stackdict = IdDict{Any, Any}()
-    state = (jprob.discrete_jump_aggregation, jprob.jump_callback, jprob.constant_jumps,
-        jprob.variable_jumps, jprob.regular_jump, jprob.massaction_jump, jprob.kwargs)
-    share_function_wrappers!(stackdict, state)
-    agg, cbs, crjs, vrjs, rj, maj, kwargs = Base.deepcopy_internal(state, stackdict)
+    state = JumpState((jprob.discrete_jump_aggregation, jprob.jump_callback,
+        jprob.constant_jumps, jprob.variable_jumps, jprob.regular_jump,
+        jprob.massaction_jump, jprob.kwargs))
+    agg, cbs, crjs, vrjs, rj, maj, kwargs = deepcopy(state).fields
     remaker_of(jprob)(jprob.prob, jprob.aggregator, agg, cbs, crjs, vrjs, rj, maj, kwargs)
+end
+
+# The fields of a `JumpProblem` other than the wrapped problem and the aggregator, copied
+# together so that the copied callbacks use the copied aggregation
+struct JumpState{F <: Tuple}
+    fields::F
 end
 
 # A deep copy of a `FunctionWrapper` keeps calling the original object through a raw
 # pointer, so the wrappers in the jump state are shared instead. Solves don't mutate them.
-function share_function_wrappers!(stackdict::IdDict, x, seen = IdSet{Any}())
-    if x isa FunctionWrappers.FunctionWrapper
-        stackdict[x] = x
-    elseif x isa Array
-        isbitstype(eltype(x)) && return nothing
-        x in seen && return nothing
-        push!(seen, x)
-        for i in eachindex(x)
-            isassigned(x, i) && share_function_wrappers!(stackdict, x[i], seen)
-        end
-    elseif x isa Union{Tuple, NamedTuple} || is_jump_state_type(x)
-        if ismutable(x)
-            x in seen && return nothing
-            push!(seen, x)
-        end
-        for i in 1:nfields(x)
-            isdefined(x, i) && share_function_wrappers!(stackdict, getfield(x, i), seen)
-        end
+function Base.deepcopy_internal(state::JumpState, stackdict::IdDict)
+    share_function_wrappers!(stackdict, state.fields, IdSet{Any}())
+    JumpState(Base.deepcopy_internal(state.fields, stackdict))
+end
+
+function share_function_wrappers!(stackdict, wrapper::FunctionWrappers.FunctionWrapper,
+        seen)
+    stackdict[wrapper] = wrapper
+    nothing
+end
+
+function share_function_wrappers!(stackdict, x::Array, seen)
+    (isbitstype(eltype(x)) || x in seen) && return nothing
+    push!(seen, x)
+    for i in eachindex(x)
+        isassigned(x, i) && share_function_wrappers!(stackdict, x[i], seen)
     end
     nothing
 end
 
-# Wrappers are created by JumpProcesses and stored in its own types and SciMLBase callbacks
+# Wrappers are only stored in JumpProcesses' own types and in SciMLBase callbacks
+function share_function_wrappers!(stackdict, x, seen)
+    (x isa Union{Tuple, NamedTuple} || is_jump_state_type(x)) || return nothing
+    if ismutable(x)
+        x in seen && return nothing
+        push!(seen, x)
+    end
+    for i in 1:nfields(x)
+        isdefined(x, i) && share_function_wrappers!(stackdict, getfield(x, i), seen)
+    end
+    nothing
+end
+
 is_jump_state_type(x) = parentmodule(typeof(x)) in (JumpProcesses, SciMLBase)
 
 DiffEqBase.isinplace(::JumpProblem{iip}) where {iip} = iip

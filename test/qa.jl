@@ -28,8 +28,8 @@ run_qa(
         # Names not (yet) declared public in their owner package's released API.
         all_qualified_accesses_are_public = (;
             ignore = (
-            # Base / Base.Broadcast / Base.FastMath internals; `deepcopy_internal` is the
-            # extension point documented by `deepcopy`
+            # Base / Base.Broadcast / Base.FastMath internals; `deepcopy_internal` is
+            # extended to customise `deepcopy`, as its docstring describes
             Symbol("@pure"), :BroadcastStyle, :Broadcasted, :Cartesian, :deepcopy_internal,
             :DefaultArrayStyle, :FastMath, :Unknown, :result_style, :sqrt_fast,
             # SciMLBase non-public

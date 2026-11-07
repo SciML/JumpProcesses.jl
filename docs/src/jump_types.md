@@ -371,13 +371,18 @@ method.
 ## Jump Aggregators Requiring Dependency Graphs
 
 Italicized constant rate jump aggregators above require the user to pass a
-dependency graph to `JumpProblem`. `Coevolve`, `DirectCR`, `NRM`, and
-`SortingDirect` require a jump-jump dependency graph, passed through the named
-parameter `dep_graph`. i.e.,
+dependency graph to `JumpProblem`, in a [`JumpDependencies`](@ref) given with the
+`dependencies` keyword. `Coevolve`, `DirectCR`, `NRM`, and `SortingDirect` require
+a jump-jump dependency graph, `dep_graph`, i.e.,
 
 ```julia
-JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)
+deps = JumpDependencies(; dep_graph = your_dependency_graph)
+JumpProblem(prob, DirectCR(), jump1, jump2; dependencies = deps)
 ```
+
+The maps can also be passed as `JumpProblem` keywords, as in
+`JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)`.
+JumpProcesses may then modify them, as with `JumpDependencies(; alias = true)`.
 
 For systems with only `MassActionJump`s, or those generated from a
 [Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this
@@ -385,24 +390,24 @@ graph will be auto-generated. Otherwise, you must construct the dependency graph
 whenever the set of jumps include `ConstantRateJump`s and/or bounded
 `VariableRateJump`s.
 
-Dependency graphs are represented as a `Vector{Vector{Int}}`, with the `i`th
-vector containing the indices of the jumps for which rates must be recalculated
-when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
+A dependency graph is a collection of collections of integer indices, such as a
+`Vector{Vector{Int}}`, with the `i`th entry containing the indices of the jumps for
+which rates must be recalculated when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
 `ConstantRateJump`s and bounded `VariableRateJump`s. General `VariableRateJump`s
 are not handled by aggregators, and so not included in the jump ordering for
 dependency graphs. Note that the relative order between `ConstantRateJump`s and
 relative order between bounded `VariableRateJump`s is preserved. In this way, one
 can precalculate the jump order to manually construct dependency graphs.
 
-`RSSA` and `RSSACR` require two different types of dependency graphs, passed
-through the following `JumpProblem` kwargs:
+`RSSA` and `RSSACR` require two different types of dependency graphs, passed as
+the following fields of a `JumpDependencies` (or as `JumpProblem` keywords):
 
-  - `vartojumps_map` - A `Vector{Vector{Int}}` mapping each variable index, `i`,
-    to a set of jump indices. The jump indices correspond to jumps with rate
-    functions that depend on the value of `u[i]`.
-  - `jumptovars_map` - A `Vector{Vector{Int}}`  mapping each jump index to a set
-    of variable indices. The corresponding variables are those that have their
-    value, `u[i]`, altered when the jump occurs.
+  - `vartojumps_map` - A map, such as a `Vector{Vector{Int}}`, from each variable
+    index, `i`, to a set of jump indices. The jump indices correspond to jumps with
+    rate functions that depend on the value of `u[i]`.
+  - `jumptovars_map` - A map, such as a `Vector{Vector{Int}}`, from each jump index
+    to a set of variable indices. The corresponding variables are those that have
+    their value, `u[i]`, altered when the jump occurs.
 
 For systems generated from a [Catalyst](https://docs.sciml.ai/Catalyst/stable/)
 `reaction_network` these will be auto-generated. Otherwise, you must explicitly

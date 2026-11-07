@@ -41,6 +41,7 @@ end
         @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
         @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
         @time @safetestset "Extinction test" begin include("extinction_test.jl") end
+        @time @safetestset "Every rate zero" begin include("zero_rates.jl") end
         @time @safetestset "Running rate sums" begin include("running_rate_sums.jl") end
     end
     if GROUP == "All" || GROUP == "InterfaceII"

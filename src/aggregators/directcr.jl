@@ -42,9 +42,6 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maxrate = convert(T, Inf),
         kwargs...) where {T, S, F1, F2}
 
-    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
-    dg = dep_graph
-
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
 
@@ -56,9 +53,9 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    DirectCRJumpAggregation{T, S, F1, affecttype, typeof(dg),
+    DirectCRJumpAggregation{T, S, F1, affecttype, typeof(dep_graph),
         typeof(rt), typeof(ratetogroup)}(nj, nj, njt, et, crs, sr, maj,
-        maj_rates, rs, affs!, sps, dg,
+        maj_rates, rs, affs!, sps, dep_graph,
         minrate, maxrate, rt,
         ratetogroup, zero(sr))
 end

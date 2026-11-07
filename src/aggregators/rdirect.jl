@@ -29,15 +29,12 @@ function RDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, m
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         counter_threshold = length(crs), dep_graph,
         kwargs...) where {T, S, F1, F2}
-    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
-    dg = dep_graph
-
     max_rate = maximum(crs)
     affecttype = F2 <: Tuple ? F2 : Any
-    return RDirectJumpAggregation{T, S, F1, affecttype, typeof(dg)}(nj, nj, njt, et,
+    return RDirectJumpAggregation{T, S, F1, affecttype, typeof(dep_graph)}(nj, nj, njt, et,
         crs, sr, maj, maj_rates, rs,
         affs!, sps,
-        dg, max_rate, 0,
+        dep_graph, max_rate, 0,
         Int(counter_threshold), zero(sr))
 end
 

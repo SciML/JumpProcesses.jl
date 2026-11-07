@@ -25,21 +25,17 @@ function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         dep_graph,
         kwargs...) where {T, S, F1, F2}
-
-    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
-    dg = dep_graph
-
     binwidthconst = haskey(kwargs, :binwidthconst) ? kwargs[:binwidthconst] : 16
     numbinsconst = haskey(kwargs, :numbinsconst) ? kwargs[:numbinsconst] : 20
     ptt = PriorityTimeTable(zeros(T, length(crs)), zero(T), one(T),
         binwidthconst = binwidthconst, numbinsconst = numbinsconst) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    CCNRMJumpAggregation{T, S, F1, affecttype, typeof(dg), typeof(ptt)}(
+    CCNRMJumpAggregation{T, S, F1, affecttype, typeof(dep_graph), typeof(ptt)}(
         nj, nj, njt, et,
         crs, sr, maj, maj_rates,
         rs, affs!, sps,
-        dg, ptt)
+        dep_graph, ptt)
 end
 
 ############################# Required Functions ##############################

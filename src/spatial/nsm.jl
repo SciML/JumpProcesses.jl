@@ -28,23 +28,17 @@ function NSMJumpAggregation(
         sps::Tuple{Bool, Bool},
         spatial_system::SS; num_specs,
         vartojumps_map, jumptovars_map, dep_graph, kwargs...) where {J, T, RX, HOP, SS}
-
-    # `JumpProblem` passes the maps in normal form, each jump listing itself in `dep_graph`
-    dg = dep_graph
-    vtoj_map = vartojumps_map
-    jtov_map = jumptovars_map
-
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dg),
-        typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS}(nj, nj, njt, et,
+    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dep_graph),
+        typeof(vartojumps_map), typeof(jumptovars_map), typeof(pq), SS}(nj, nj, njt, et,
         rx_rates,
         hop_rates,
         nothing,
         nothing,
-        sps, dg,
-        vtoj_map,
-        jtov_map,
+        sps, dep_graph,
+        vartojumps_map,
+        jumptovars_map,
         pq,
         spatial_system,
         num_specs)

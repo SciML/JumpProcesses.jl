@@ -35,11 +35,6 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
         vartojumps_map, jumptovars_map, dep_graph,
         kwargs...) where {J, T, RX, HOP, SS}
 
-    # `JumpProblem` passes the maps in normal form, each jump listing itself in `dep_graph`
-    dg = dep_graph
-    vtoj_map = vartojumps_map
-    jtov_map = jumptovars_map
-
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
 
@@ -51,12 +46,12 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
     DirectCRDirectJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP,
-        typeof(dg), typeof(vtoj_map),
-        typeof(jtov_map), SS, typeof(rt),
+        typeof(dep_graph), typeof(vartojumps_map),
+        typeof(jumptovars_map), SS, typeof(rt),
         typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
         site_rates, nothing, nothing, sps,
-        dg, vtoj_map,
-        jtov_map, spatial_system, num_specs,
+        dep_graph, vartojumps_map,
+        jumptovars_map, spatial_system, num_specs,
         rt, ratetogroup)
 end
 

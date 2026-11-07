@@ -23,17 +23,14 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         dep_graph,
         kwargs...) where {T, S, F1, F2}
-
-    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
-    dg = dep_graph
-
     pq = MutableBinaryMinHeap{T}()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    NRMJumpAggregation{T, S, F1, affecttype, typeof(dg), typeof(pq)}(nj, nj, njt, et,
+    NRMJumpAggregation{T, S, F1, affecttype, typeof(dep_graph), typeof(pq)}(
+        nj, nj, njt, et,
         crs, sr, maj, maj_rates,
         rs, affs!, sps,
-        dg, pq)
+        dep_graph, pq)
 end
 
 ############################# Required Functions ##############################

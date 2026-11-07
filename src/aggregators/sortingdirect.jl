@@ -29,16 +29,13 @@ function SortingDirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr
         dep_graph,
         kwargs...) where {T, S, F1, F2}
 
-    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
-    dg = dep_graph
-
     # map jump idx to idx in cur_rates
     jtoidx = collect(1:length(crs))
     affecttype = F2 <: Tuple ? F2 : Any
-    SortingDirectJumpAggregation{T, S, F1, affecttype, typeof(dg)}(nj, nj, njt, et,
+    SortingDirectJumpAggregation{T, S, F1, affecttype, typeof(dep_graph)}(nj, nj, njt, et,
         crs, sr, maj, maj_rates, rs,
         affs!, sps,
-        dg, jtoidx,
+        dep_graph, jtoidx,
         zero(Int), zero(sr))
 end
 

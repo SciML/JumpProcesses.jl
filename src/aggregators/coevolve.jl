@@ -35,20 +35,17 @@ function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Not
         u::U, dep_graph, lrates, urates,
         rateintervals, haslratevec,
         cur_lrates::Vector{T}) where {T, S, F1, F2, U}
-    # `JumpProblem` passes the dependency graph in normal form, each jump listing itself
-    dg = dep_graph
-
     num_jumps = get_num_majumps(maj) + length(urates)
 
-    if length(dg) != num_jumps
+    if length(dep_graph) != num_jumps
         error("Number of nodes in the dependency graph must be the same as the number of jumps.")
     end
 
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
-    CoevolveJumpAggregation{T, S, F1, affecttype, typeof(dg),
+    CoevolveJumpAggregation{T, S, F1, affecttype, typeof(dep_graph),
         typeof(pq)}(nj, nj, njt, et, crs, sr, maj, maj_rates,
-        rs, affs!, sps, dg, pq,
+        rs, affs!, sps, dep_graph, pq,
         lrates, urates, rateintervals,
         haslratevec, cur_lrates)
 end

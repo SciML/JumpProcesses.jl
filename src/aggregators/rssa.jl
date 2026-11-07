@@ -34,10 +34,6 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
         u::U, brackets, vartojumps_map, jumptovars_map,
         bracket_data = nothing, kwargs...) where {T, S, F1, F2, U}
-    # `JumpProblem` passes both maps in normal form
-    vtoj_map = vartojumps_map
-    jtov_map = jumptovars_map
-
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
     crh_bnds = similar(crs)
@@ -50,10 +46,10 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     uhigh = similar(u)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    RSSAJumpAggregation{T, S, F1, affecttype, typeof(brackets), typeof(vtoj_map),
-        typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
+    RSSAJumpAggregation{T, S, F1, affecttype, typeof(brackets), typeof(vartojumps_map),
+        typeof(jumptovars_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
         crh_bnds, sr, maj, maj_rates, rs, affs!, brackets, sps,
-        vtoj_map, jtov_map, bd, ulow,
+        vartojumps_map, jumptovars_map, bd, ulow,
         uhigh, zero(sr))
 end
 

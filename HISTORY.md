@@ -1,6 +1,9 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - `VR_Direct` and `VR_DirectFW` no longer also simulate the bounded `VariableRateJump`s
+    that `Coevolve` handles. In problems with both bounded and general `VariableRateJump`s,
+    those bounded jumps fired twice as often.
   - New `JumpDependencies` holds the dependency maps `dep_graph`, `vartojumps_map` and
     `jumptovars_map`, passed with `JumpProblem(...; dependencies)`. Each entry of a map is
     an `AbstractVector` of indices. It copies the maps unless built with `alias = true`, and

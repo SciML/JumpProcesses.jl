@@ -3,8 +3,7 @@
 ############################ NSM ###################################
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR, VJMAP, JVMAP,
-    PQ, SS} <:
+mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPS, PQ, SS} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
@@ -15,9 +14,7 @@ mutable struct NSMJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPGR, VJMAP, JVMAP,
     rates::F1 # legacy, not used
     affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR #dep graph is same for each site
-    vartojumps_map::VJMAP #vartojumps_map is same for each site
-    jumptovars_map::JVMAP #jumptovars_map is same for each site
+    dependencies::DEPS #the maps are the same for each site
     pq::PQ
     spatial_system::SS
     numspecies::Int #number of species
@@ -27,42 +24,16 @@ function NSMJumpAggregation(
         nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX, hop_rates::HOP,
         sps::Tuple{Bool, Bool},
         spatial_system::SS; num_specs,
-        vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing, kwargs...) where {J, T, RX, HOP, SS}
-
-    # a dependency graph is needed
-    if dep_graph === nothing
-        dg = make_dependency_graph(num_specs, rx_rates.ma_jumps)
-    else
-        dg = dep_graph
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
-    end
-
-    # a species-to-reactions graph is needed
-    if vartojumps_map === nothing
-        vtoj_map = var_to_jumps_map(num_specs, rx_rates.ma_jumps)
-    else
-        vtoj_map = vartojumps_map
-    end
-
-    if jumptovars_map === nothing
-        jtov_map = jump_to_vars_map(rx_rates.ma_jumps)
-    else
-        jtov_map = jumptovars_map
-    end
-
+        dependencies, kwargs...) where {J, T, RX, HOP, SS}
     pq = MutableBinaryMinHeap{T}()
 
-    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dg),
-        typeof(vtoj_map), typeof(jtov_map), typeof(pq), SS}(nj, nj, njt, et,
+    NSMJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP, typeof(dependencies),
+        typeof(pq), SS}(nj, nj, njt, et,
         rx_rates,
         hop_rates,
         nothing,
         nothing,
-        sps, dg,
-        vtoj_map,
-        jtov_map,
+        sps, dependencies,
         pq,
         spatial_system,
         num_specs)

@@ -52,16 +52,19 @@ end
 
 function update_rates_after_reaction!(p, integrator, site, reaction_id)
     u = integrator.u
-    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], integrator, site)
-    update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
+    (; dep_graph, jumptovars_map) = p.dependencies
+    update_rx_rates!(p.rx_rates, dependents(dep_graph, reaction_id), integrator, site)
+    update_hop_rates!(
+        p.hop_rates, dependents(jumptovars_map, reaction_id), u, site, p.spatial_system)
 end
 
 function update_rates_after_hop!(p, integrator, source_site, target_site, species)
     u = integrator.u
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, source_site)
+    dep_rxs = dependents(p.dependencies.vartojumps_map, species)
+    update_rx_rates!(p.rx_rates, dep_rxs, integrator, source_site)
     update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
 
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, target_site)
+    update_rx_rates!(p.rx_rates, dep_rxs, integrator, target_site)
     update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
 end
 

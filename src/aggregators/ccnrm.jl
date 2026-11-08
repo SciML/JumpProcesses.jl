@@ -3,7 +3,7 @@
 # algorithm with optimal binning,  Journal of Chemical Physics 143, 074108
 # (2015). doi: 10.1063/1.4928635.
 
-mutable struct CCNRMJumpAggregation{T, S, F1, F2, DEPGR, PT} <:
+mutable struct CCNRMJumpAggregation{T, S, F1, F2, DEPS, PT} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -16,41 +16,26 @@ mutable struct CCNRMJumpAggregation{T, S, F1, F2, DEPGR, PT} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     ptt::PT
 end
 
 function CCNRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        num_specs, dep_graph = nothing,
+        dependencies,
         kwargs...) where {T, S, F1, F2}
-
-    # a dependency graph is needed and must be provided if there are constant rate jumps
-    if dep_graph === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use ConstantRateJumps with the constant-complexity Next Reaction Method (CCNRM) algorithm a dependency graph must be supplied.")
-        else
-            dg = make_dependency_graph(num_specs, maj)
-        end
-    else
-        dg = dep_graph
-
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
-    end
-
     binwidthconst = haskey(kwargs, :binwidthconst) ? kwargs[:binwidthconst] : 16
     numbinsconst = haskey(kwargs, :numbinsconst) ? kwargs[:numbinsconst] : 20
     ptt = PriorityTimeTable(zeros(T, length(crs)), zero(T), one(T),
         binwidthconst = binwidthconst, numbinsconst = numbinsconst) # We will re-initialize this in initialize!()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    CCNRMJumpAggregation{T, S, F1, affecttype, typeof(dg), typeof(ptt)}(
+    CCNRMJumpAggregation{T, S, F1, affecttype, typeof(dependencies), typeof(ptt)}(
         nj, nj, njt, et,
         crs, sr, maj, maj_rates,
         rs, affs!, sps,
-        dg, ptt)
+        dependencies, ptt)
 end
 
 ############################# Required Functions ##############################
@@ -62,8 +47,7 @@ function aggregate(aggregator::CCNRM, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(CCNRMJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions; num_specs = length(u),
-        kwargs...)
+        rates, affects!, save_positions; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -83,7 +67,7 @@ function execute_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t, affec
 
     # update current jump rates and times
     rng = get_rng(integrator)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
     update_dependent_rates!(p, dep_rxs, p.next_jump, u, params, t, rng)
     nothing
 end

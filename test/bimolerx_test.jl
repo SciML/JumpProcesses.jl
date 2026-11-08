@@ -75,8 +75,8 @@ prob = DiscreteProblem(u0, (0.0, tf), rates)
 if doplot
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
         local sol = solve(jump_prob, SSAStepper(); rng)
         local plothand = plot(sol, seriestype = :steppost, reuse = false)
         display(plothand)
@@ -87,8 +87,8 @@ end
 if dotestmean
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
         means = runSSAs(jump_prob; rng)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
@@ -110,8 +110,8 @@ if dotestmean
     end
     jset = JumpSet((), (), nothing, majump_vec)
     jump_prob = JumpProblem(prob, Direct(), jset, save_positions = (false, false),
-        vartojumps_map = spec_to_dep_jumps,
-        jumptovars_map = jump_to_dep_specs)
+        dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+            jumptovars_map = jump_to_dep_specs))
     meanval = runSSAs(jump_prob; rng)
     relerr = abs(meanval - expected_avg) / expected_avg
     if doprintmeans

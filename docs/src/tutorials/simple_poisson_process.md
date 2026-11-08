@@ -288,7 +288,8 @@ supports bounded `VariableRateJump`s, in this case we choose the `Coevolve`
 aggregator.
 
 ```@example tut1
-jprob = JumpProblem(dprob, Coevolve(), vrj1, deathcrj; dep_graph)
+dependencies = JumpDependencies(; dep_graph)
+jprob = JumpProblem(dprob, Coevolve(), vrj1, deathcrj; dependencies)
 sol = solve(jprob, SSAStepper())
 plot(sol, labels = ["N(t)" "D(t)"], xlabel = "t", legend = :topleft)
 ```

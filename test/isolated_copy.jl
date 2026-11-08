@@ -18,10 +18,10 @@ function ab_jprob(aggregator; massaction = true, kwargs...)
         return JumpProblem(prob, aggregator, maj; kwargs...)
     end
 
-    ab!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
-    ba!(integrator) = (integrator.u[1] += 1; integrator.u[2] -= 1; nothing)
-    jumps = (ConstantRateJump((u, p, t) -> p[1] * u[1], ab!),
-        ConstantRateJump((u, p, t) -> p[2] * u[2], ba!))
+    a_to_b!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    b_to_a!(integrator) = (integrator.u[1] += 1; integrator.u[2] -= 1; nothing)
+    jumps = (ConstantRateJump((u, p, t) -> p[1] * u[1], a_to_b!),
+        ConstantRateJump((u, p, t) -> p[2] * u[2], b_to_a!))
     dependencies = JumpDependencies(; dep_graph = [[1, 2], [1, 2]],
         vartojumps_map = [[1], [2]], jumptovars_map = [[1, 2], [1, 2]])
     JumpProblem(prob, aggregator, jumps...; dependencies, kwargs...)
@@ -308,11 +308,11 @@ end
     f!(du, u, p, t) = (du .= 0; nothing)
     g!(du, u, p, t) = (du .= 0.1; nothing)
     sprob = SDEProblem(f!, g!, [10.0, 5.0], (0.0, 2.0), [0.7, 0.4])
-    ab!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
-    ba!(integrator) = (integrator.u[1] += 1; integrator.u[2] -= 1; nothing)
+    a_to_b!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
+    b_to_a!(integrator) = (integrator.u[1] += 1; integrator.u[2] -= 1; nothing)
     jprob = JumpProblem(sprob, Direct(),
-        ConstantRateJump((u, p, t) -> p[1] * max(u[1], 0), ab!),
-        ConstantRateJump((u, p, t) -> p[2] * max(u[2], 0), ba!))
+        ConstantRateJump((u, p, t) -> p[1] * max(u[1], 0), a_to_b!),
+        ConstantRateJump((u, p, t) -> p[2] * max(u[2], 0), b_to_a!))
 
     jcopy = JumpProcesses.resetted_jump_problem(jprob, nothing)
     @test jcopy.prob === jprob.prob

@@ -202,12 +202,12 @@ end
 # The VR callbacks find the SSA aggregator among the integrator's discrete callbacks each
 # time a VariableRateJump occurs; over a Tuple the search must resolve at compile time,
 # however many callbacks there are: its typed code is the aggregator's field access, only
-# `getfield` calls
+# `getfield` calls (and the markers that coverage runs add)
 function static_search(cbs)
     code = only(code_typed(JumpProcesses.find_ssa_aggregator, (typeof(cbs),)))[1].code
     all(code) do st
         st === nothing || st isa Core.ReturnNode ||
-            Meta.isexpr(st, (:boundscheck, :inbounds)) ||
+            Meta.isexpr(st, (:boundscheck, :inbounds, :code_coverage_effect)) ||
             (Meta.isexpr(st, :call) && st.args[1] isa GlobalRef &&
              st.args[1].name === :getfield)
     end

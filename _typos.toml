@@ -1,3 +1,8 @@
+[default]
+# Two-letter names, such as the affects `ab!` and `ba!` of an A <--> B test problem, are not
+# misspellings
+extend-ignore-identifiers-re = ["^[A-Za-z]{2}$"]
+
 [default.extend-words]
 # Surname of an author cited in the SortingDirect references (McCollum et al.)
 Collum = "Collum"

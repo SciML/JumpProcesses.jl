@@ -1,6 +1,16 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - The rates of `MassActionJump`s, `ConstantRateJump`s and bounded `VariableRateJump`s
+    handled by an aggregator may now depend on components that general `VariableRateJump`s
+    change: give `vrjtovars_map` or `vrj_dep_graph` in the `JumpDependencies`, and after
+    each `VariableRateJump` occurs the aggregator updates the rates that depend on the
+    change, with every aggregator and with `VR_FRM`, `VR_Direct` and `VR_DirectFW`. Without
+    these maps nothing changes. `RSSA` and `RSSACR` need `vrjtovars_map`; the aggregators
+    with dependency graphs need `vrj_dep_graph`, or `vrjtovars_map` and `vartojumps_map`
+    (generated when every jump is a `MassActionJump`).
+  - The error for a dependency map that an aggregator needs but wasn't given now names the
+    `JumpDependencies` field that gives it, with the same wording for every aggregator.
   - New `JumpDependencies` holds the dependency maps `dep_graph`, `vartojumps_map` and
     `jumptovars_map`, passed with `JumpProblem(...; dependencies)`. Each entry of a map is
     an `AbstractVector` of indices. It copies the maps unless built with `alias = true`, and

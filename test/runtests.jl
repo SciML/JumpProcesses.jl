@@ -18,6 +18,7 @@ end
         @time @safetestset "Precompile workload" begin include("precompile_workload.jl") end
         @time @safetestset "Constant Rate Tests" begin include("constant_rate.jl") end
         @time @safetestset "Variable Rate Tests" begin include("variable_rate.jl") end
+        @time @safetestset "SSA jumps updated after VariableRateJumps" begin include("vrj_ssa_updates.jl") end
         @time @safetestset "ExtendedJumpArray Tests" begin include("extended_jump_array.jl") end
         @time @safetestset "FunctionWrapper Tests" begin include("functionwrappers.jl") end
         @time @safetestset "Specialization Tests" begin include("specialization.jl") end

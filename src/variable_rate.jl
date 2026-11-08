@@ -307,13 +307,18 @@ end
 vrj_dependents(::Nothing, k) = nothing
 Base.@propagate_inbounds vrj_dependents(lists, k) = dependents(lists, k)
 
-# The SSA aggregator among the integrator's discrete callbacks, searched from the front (the
-# jump callbacks come first in JumpProcesses' ODE solve). Over a `Tuple` the recursion unrolls
-# and the type checks resolve at compile time; an erased `Vector` is scanned at run time.
-find_ssa_aggregator(::Tuple{}) = nothing
-@inline function find_ssa_aggregator(cbs::Tuple)
-    c = first(cbs).condition
-    c isa AbstractSSAJumpAggregator ? c : find_ssa_aggregator(Base.tail(cbs))
+# The SSA aggregator among the integrator's discrete callbacks. Over a `Tuple` its position
+# follows from the callbacks' types, so the generated body is just that field access, however
+# many callbacks there are and wherever it is (a recursion through `Base.tail` stops being
+# resolved at compile time beyond 32 callbacks). An erased `Vector` is scanned at run time.
+@generated function find_ssa_aggregator(cbs::Tuple)
+    for i in 1:fieldcount(cbs)
+        T = fieldtype(cbs, i)
+        if hasfield(T, :condition) && fieldtype(T, :condition) <: AbstractSSAJumpAggregator
+            return :(@inbounds cbs[$i].condition)
+        end
+    end
+    :nothing
 end
 function find_ssa_aggregator(cbs::AbstractVector)
     for cb in cbs

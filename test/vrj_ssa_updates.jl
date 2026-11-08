@@ -201,7 +201,18 @@ end
 
 # The VR callbacks find the SSA aggregator among the integrator's discrete callbacks each
 # time a VariableRateJump occurs; over a Tuple the search must resolve at compile time,
-# however many callbacks there are
+# however many callbacks there are: its typed code is the aggregator's field access, only
+# `getfield` calls
+function static_search(cbs)
+    code = only(code_typed(JumpProcesses.find_ssa_aggregator, (typeof(cbs),)))[1].code
+    all(code) do st
+        st === nothing || st isa Core.ReturnNode ||
+            Meta.isexpr(st, (:boundscheck, :inbounds)) ||
+            (Meta.isexpr(st, :call) && st.args[1] isa GlobalRef &&
+             st.args[1].name === :getfield)
+    end
+end
+
 @testset "Finding the SSA aggregator among many callbacks" begin
     jprob = birth_death(NRM(), VR_FRM())
     never = [DiscreteCallback((u, t, integ) -> false, integ -> nothing) for _ in 1:40]
@@ -211,12 +222,15 @@ end
     @test length(dcbs) == 41
     @test (@inferred JumpProcesses.find_ssa_aggregator(dcbs)) ===
           jprob.discrete_jump_aggregation
+    @test static_search(dcbs)
     # with the user's callbacks first, as StochasticDiffEq orders them
     dcbs2 = (cbs.discrete_callbacks..., dcbs[1])
     @test (@inferred JumpProcesses.find_ssa_aggregator(dcbs2)) ===
           jprob.discrete_jump_aggregation
+    @test static_search(dcbs2)
     JumpProcesses.find_ssa_aggregator(dcbs2)
     @test (@allocated JumpProcesses.find_ssa_aggregator(dcbs2)) == 0
+    @test JumpProcesses.find_ssa_aggregator(cbs.discrete_callbacks) === nothing
     # the whole problem solves with them
     A = [solve(jprob, Tsit5(); rng = StableRNG(i), callback = cbs,
              save_everystep = false).u[end][1] for i in 1:400]

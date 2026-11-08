@@ -53,8 +53,8 @@ the dependencies, at a cost in proportion to the number of jumps each time a
 A `JumpProblem` checks the lengths and indices of the maps against the problem (except for
 spatial problems), and puts each map its aggregator uses into one form: every entry sorted,
 without duplicates and with `Int` indices, and each entry of `dep_graph` listing its own
-jump. A map already in that form is used as is, without a copy. When every jump is a
-`MassActionJump`, a map the aggregator needs but wasn't given is generated from them.
+jump. A map already in that form is used as is, without a copy. When every jump is a `MassActionJump`, a map the
+aggregator needs but wasn't given is generated from them.
 
 ## Keyword arguments
 

@@ -1,4 +1,4 @@
-using Test, JumpProcesses, SciMLBase
+using Test, JumpProcesses, SciMLBase, OrdinaryDiffEq
 using StableRNGs
 
 # tests for https://github.com/SciML/JumpProcesses.jl/issues/305
@@ -96,7 +96,9 @@ let
     dep_graph = [copy(idxs1), copy(idxs2), copy(idxs1), copy(idxs2), copy(idxs), copy(idxs)]
     vartojumps_map = [copy(idxs1), copy(idxs2)]
     jumptovars_map = [[1], [2], [1], [2], [1, 2], [1, 2]]
-    graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
+    graphkwargs = (;
+        dependencies = JumpDependencies(; dep_graph, vartojumps_map, jumptovars_map),
+        alias_dependencies = false)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
         jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs)
@@ -197,6 +199,49 @@ let
     @test fieldtype(typeof(agg), :counter_threshold) === Int
     @test agg.counter_threshold isa Int
     @test agg.counter_threshold == 2
+end
+
+# Jumps coupled to an ODE must not allocate per step when the problem is FullSpecialize. With
+# the default specialization, DiffEqBase erases callback types on Julia >= 1.12 and every step
+# allocates; VR_FRM avoids that for any problem, since the function it builds is FullSpecialize.
+function alloc_resolve(integ)
+    @allocations begin
+        reinit!(integ)
+        solve!(integ)
+    end
+end
+let
+    f!(du, u, p, t) = (du .= 0; nothing)
+    vrj() = VariableRateJump((u, p, t) -> p[1], integ -> (integ.u[1] += 1; nothing);
+        save_positions = (false, false))
+    maj = MassActionJump([5.0], [[0 => 1]], [[1 => 1]])
+    full = SciMLBase.FullSpecialize
+    cases = (("VR_FRM", full, () -> (vrj(),), (; vr_aggregator = VR_FRM())),
+        ("VR_FRM, default specialization", SciMLBase.AutoSpecialize, () -> (vrj(),),
+            (; vr_aggregator = VR_FRM())),
+        ("VR_Direct", full, () -> (vrj(),), (; vr_aggregator = VR_Direct())),
+        ("Direct with a mass action jump", full, () -> (maj,), (;)))
+    # Under forced bounds checking (`--check-bounds=yes`, which `Pkg.test` uses on Julia 1.10
+    # and julia-runtest by default) before Julia 1.13, OrdinaryDiffEq's residual broadcast over
+    # VR_FRM's ExtendedJumpArray state allocates a `Ref` on every step. It doesn't with the
+    # default bounds checking, or on Julia >= 1.13.
+    forced_bounds_checks = Base.JLOptions().check_bounds == 1 && VERSION < v"1.13"
+    @testset "$name" for (name, spec, jumps, kw) in cases
+        if forced_bounds_checks && get(kw, :vr_aggregator, nothing) isa VR_FRM
+            @test_skip false
+            continue
+        end
+        nallocs = map((10.0, 100.0)) do T
+            oprob = ODEProblem{true, spec}(f!, [0.0], (0.0, T), [5.0])
+            jprob = JumpProblem(
+                oprob, Direct(), jumps()...; save_positions = (false, false),
+                kw...)
+            integ = init(jprob, Tsit5(); save_everystep = false, rng = StableRNG(1))
+            alloc_resolve(integ)
+            alloc_resolve(integ)
+        end
+        @test nallocs[1] == nallocs[2]
+    end
 end
 
 nothing

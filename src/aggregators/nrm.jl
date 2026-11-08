@@ -1,7 +1,7 @@
 # Implementation the original Next Reaction Method
 # Gibson and Bruck, J. Phys. Chem. A, 104 (9), (2000)
 
-mutable struct NRMJumpAggregation{T, S, F1, F2, DEPGR, PQ} <:
+mutable struct NRMJumpAggregation{T, S, F1, F2, DEPS, PQ} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -14,37 +14,23 @@ mutable struct NRMJumpAggregation{T, S, F1, F2, DEPGR, PQ} <:
     rates::F1
     affects!::F2
     save_positions::Tuple{Bool, Bool}
-    dep_gr::DEPGR
+    dependencies::DEPS
     pq::PQ
 end
 
 function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        num_specs, dep_graph = nothing,
+        dependencies,
         kwargs...) where {T, S, F1, F2}
-
-    # a dependency graph is needed and must be provided if there are constant rate jumps
-    if dep_graph === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a dependency graph must be supplied.")
-        else
-            dg = make_dependency_graph(num_specs, maj)
-        end
-    else
-        dg = dep_graph
-
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
-    end
-
     pq = MutableBinaryMinHeap{T}()
 
     affecttype = F2 <: Tuple ? F2 : Any
-    NRMJumpAggregation{T, S, F1, affecttype, typeof(dg), typeof(pq)}(nj, nj, njt, et,
+    NRMJumpAggregation{T, S, F1, affecttype, typeof(dependencies), typeof(pq)}(
+        nj, nj, njt, et,
         crs, sr, maj, maj_rates,
         rs, affs!, sps,
-        dg, pq)
+        dependencies, pq)
 end
 
 ############################# Required Functions ##############################
@@ -56,8 +42,7 @@ function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,
     rates, affects! = get_jump_info_fwrappers(u, p, t, constant_jumps)
 
     build_jump_aggregation(NRMJumpAggregation, u, p, t, end_time, ma_jumps,
-        rates, affects!, save_positions; num_specs = length(u),
-        kwargs...)
+        rates, affects!, save_positions; kwargs...)
 end
 
 # set up a new simulation and calculate the first jump / jump time
@@ -77,7 +62,8 @@ function execute_jumps!(p::NRMJumpAggregation, integrator, u, params, t, affects
 
     # update current jump rates and times
     rng = get_rng(integrator)
-    update_dependent_rates!(p, u, params, t, rng)
+    @inbounds dep_rxs = dependents(p.dependencies.dep_graph, p.next_jump)
+    update_dependent_rates!(p, dep_rxs, p.next_jump, u, params, t, rng)
     nothing
 end
 
@@ -90,9 +76,10 @@ end
 
 ######################## SSA specific helper routines ########################
 
-# recalculate jump rates for jumps that depend on the just executed jump (p.next_jump)
-function update_dependent_rates!(p::NRMJumpAggregation, u, params, t, rng)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+# recalculate the rates and times of the jumps in dep_rxs, e.g. the jumps that depend on
+# executed_jump, the jump just executed (0 if none), which gets a new time
+function update_dependent_rates!(p::NRMJumpAggregation, dep_rxs, executed_jump, u, params,
+        t, rng)
     (; cur_rates, rates, ma_jumps) = p
     num_majumps = get_num_majumps(ma_jumps)
 
@@ -104,7 +91,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, u, params, t, rng)
             params, t, rx, p.maj_rates)
 
         # calculate new jump times for dependent jumps
-        if rx != p.next_jump && oldrate > zero(oldrate)
+        if rx != executed_jump && oldrate > zero(oldrate)
             if cur_rates[rx] > zero(eltype(cur_rates))
                 update!(p.pq, rx, t + oldrate / cur_rates[rx] * (p.pq[rx] - t))
             else

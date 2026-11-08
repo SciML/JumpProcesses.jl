@@ -1,6 +1,51 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - New `JumpDependencies` holds the dependency maps `dep_graph`, `vartojumps_map` and
+    `jumptovars_map`, passed with `JumpProblem(...; dependencies)`. Each entry of a map is
+    an `AbstractVector` of indices. It copies the maps unless built with `alias = true`, and
+    the `JumpProblem` checks their lengths and indices against the problem. The
+    `JumpProblem` takes ownership of it and may modify its maps; pass
+    `alias_dependencies = false` to leave it unchanged.
+  - The `JumpProblem` keywords `dep_graph`, `vartojumps_map` and `jumptovars_map` are
+    deprecated, and will be removed in JumpProcesses 11: pass the maps in a
+    `JumpDependencies` instead. A map given both ways is an error.
+  - `JumpProblem` now puts each map its aggregator uses into one form: every entry sorted,
+    without duplicates and with `Int` indices, and each entry of `dep_graph` listing its own
+    jump. A map already in that form is used without a copy. Seeded results can change for
+    maps given in another form, and for `RSSA` and `RSSACR` with maps generated from
+    `MassActionJump`s, whose `jumptovars_map` entries followed the order of each reaction's
+    net stoichiometry.
+  - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
+    sums of the rates when rounding errors may have made them inaccurate, using a bound on
+    those errors that they update as the rates change. When every rate became zero, the
+    sums could be left slightly positive or negative instead of zero, so `RDirect` could
+    hang, `SortingDirect` could execute jumps whose rate is zero before a long enough end
+    time, `DirectCR` could sample an invalid jump index, which crashed or hung Julia, and
+    ODE and SDE solves with `SortingDirect` or `DirectCR` could throw because the next jump
+    time was far in the past. Rounding left from large rates could also bias later jump
+    times, for example after fast reactions consume a species. Seeded results change only in
+    solves where a sum is recomputed.
+  - `DirectCR` and `RSSACR` now fire rates below `eps(Float64)` in proportion to their
+    sizes. They stopped when the total rate was below `eps`, and chose among such rates
+    uniformly.
+  - `VR_FRM` builds the function it solves (the problem's function extended with the
+    integrated rates) with `SciMLBase.FullSpecialize`, unless the problem's function is
+    `NoSpecialize`; it used `AutoSpecialize` unless the problem was `FullSpecialize`. On
+    Julia 1.12 and later, the default specialization makes the solvers erase the types of
+    callbacks and allocate on every step, which made `VR_FRM` solves much slower. The docs
+    now recommend building ODE problems wrapped in a `JumpProblem` with
+    `FullSpecialize` (see the FAQ).
+
+## 10.1.1
+  - `RSSA` and `RSSACR` no longer hang when every rate is zero but some of their bounds on
+    the rates are not, as with `2A → ∅` and one `A` left: their rejection loop never
+    accepted a candidate, whatever the end time. After a long run of rejections they now
+    stop if the last candidate came after the end time or every rate is zero. `CCNRM` no
+    longer executes jumps whose rate is zero when the end time is infinite, or throws an
+    `InexactError` when every rate is zero at the start.
+
+## 10.1
 
   - `VR_Direct` and `VR_DirectFW` now give correct jump statistics when the time span
     doesn't start at zero. Their first step integrated the total rate from time zero
@@ -32,6 +77,54 @@
     current time, which was never reached, and after it no `Coevolve` jump fired. With
     two rate-1 jumps and `rateinterval = 0.1` on `(0.0, 10.0)`, each fired 1.9 times on
     average instead of 10.
+  - `VR_Direct` and `VR_DirectFW` no longer give biased jump statistics when a rate varies
+    within a solver step, for example when the ODE part is constant and doesn't limit the
+    step size (#692). They integrated the total rate over each step with 4-point
+    Gauss-Legendre quadrature, which the solver's error control doesn't see. They now fit
+    the total rate on each step, up to the next jump, with piecewise Chebyshev
+    interpolants, refined until the integral is within the solver's `abstol` and `reltol`,
+    and root finding uses the fit instead of evaluating the rates again. The fit is computed
+    in the problem's time type, so higher precision types such as `BigFloat` get the
+    accuracy their tolerances ask for. When the steps were already short enough, solves
+    are as fast or faster: up to 2.8 times with `VR_Direct` and 1.1 to 3.9 times with
+    `VR_DirectFW`, on a benchmark with 1 to 64 jumps. When they weren't, solves take
+    longer, since the rates' variation within each step is now resolved. In SDE problems, a
+    rate that depends on a component driven by noise still needs steps that are short
+    compared with its variation, for example set with `dtmax`; `VR_FRM` doesn't.
+  - `VR_Direct` and `VR_DirectFW` now handle another callback's event cutting a solver step
+    short. They integrated the rest of the cut step with the state from before the event,
+    which biased the jump statistics when the rates depend on what the event changed: with
+    a rate that doubles at each event, a model expecting 14.5 jumps gave 10.4.
+  - The aggregators for `ConstantRateJump`s, `MassActionJump`s and bounded
+    `VariableRateJump`s no longer stop firing jumps in ODE and SDE problems when the next
+    jump's time rounds to the current time, as when a jump switches on another with a much
+    larger rate. That jump's solver stop was at the current time, which was never reached,
+    and after it no jump of the aggregator fired. Such jumps now execute right away, as
+    with `SSAStepper`. With a rate-1 jump switching on a rate-1e20 jump on `(1.0, 11.0)`,
+    the first fired once on average instead of 10 times. In ODE and SDE problems, the state
+    is saved between such jumps as `save_positions` asks, as for separate events at the
+    same time; `SSAStepper` still saves once after all of them. The solver restarts after
+    them if any of their affects leaves the derivative discontinuity set, as each would
+    as a separate event. Tied jumps don't execute after an affect calls `terminate!`, now
+    also with `SSAStepper`, or at the end time, where their times are really past it.
+  - A jump of these aggregators whose affect calls `terminate!` with a retcode other than
+    `ReturnCode.Terminated`, such as `terminate!(integrator, ReturnCode.Success)`, now
+    stops ODE and SDE solves. The next jump's stop was registered after the affect, which
+    restarted the solve. `SSAStepper` no longer advances to the end time after such a call
+    and runs the callbacks there.
+  - With `save_end = true`, the default, `SSAStepper` now saves the state where
+    `terminate!` stopped the solve, as OrdinaryDiffEq does. Without saves at jumps, a
+    terminated solve returned only its initial state, or no state with `save_start = false`.
+  - With `Coevolve` and `SSAStepper`, the state is now saved after a jump that is followed
+    by a rejected candidate at the same time. The rejection used to skip that save.
+  - General `VariableRateJump`s now work in out-of-place ODE and SDE problems. With
+    `VR_FRM`, out-of-place ODE problems fired no jumps, since the rates were written over
+    the integrated intensities in the state, and out-of-place SDE problems failed to build.
+    `VR_Direct` and `VR_DirectFW` threw a `MethodError`; they now also work with immutable
+    states such as `SVector`s. `VR_FRM` still doesn't, since its extended state can't hold
+    one. `similar(A, T, size(A))` for an `ExtendedJumpArray` `A` now returns an
+    `ExtendedJumpArray`, as `similar(A, T, axes(A))` already did.
+  - DiffEqCallbacks is no longer a dependency.
 
 ## 10.0.1
 

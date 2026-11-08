@@ -393,8 +393,9 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
         step!(integrator)
     end
 
-    # if the user terminated the solve we shouldn't advance in time any more
-    if integrator.sol.retcode !== ReturnCode.Terminated
+    # if the user terminated the solve we shouldn't advance in time any more, whatever retcode
+    # `terminate!` set
+    if integrator.keep_stepping
         # The advance to the end time is a final step without a jump, so it starts a new
         # step for evaluating the integrator (and `tprev` always marks a step's start).
         if integrator.t < end_time
@@ -420,11 +421,12 @@ function DiffEqBase.solve!(integrator::SSAIntegrator)
             DiffEqBase.apply_discrete_callback!(integrator,
                 integrator.opts.callback.discrete_callbacks...)
         end
+    end
 
-        if integrator.save_end &&
-           (isempty(integrator.sol.t) || integrator.sol.t[end] != end_time)
-            save_current_state!(integrator, end_time)
-        end
+    # save the final state, at the end time or where `terminate!` stopped the solve
+    if integrator.save_end &&
+       (isempty(integrator.sol.t) || integrator.sol.t[end] != integrator.t)
+        save_current_state!(integrator, integrator.t)
     end
 
     DiffEqBase.finalize!(integrator.opts.callback, integrator.u, integrator.t, integrator)
@@ -655,6 +657,16 @@ end
     nothing
 end
 
+# SSAStepper executes the jumps at a time through the loop in its `step!`, which also stops
+# after `terminate!` and saves once after all of them, so its affect executes one jump
+@inline function execute_tied_jumps!(
+        p::AbstractSSAJumpAggregator, integrator::SSAIntegrator, affects!)
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
 function DiffEqBase.step!(integrator::SSAIntegrator)
     store_uprev!(integrator)
     integrator.tprev = integrator.t
@@ -683,13 +695,18 @@ function DiffEqBase.step!(integrator::SSAIntegrator)
 
     # FP error means the new time may equal the old if the next jump time is
     # sufficiently small, hence we add this check to execute jumps until
-    # this is no longer true.
+    # this is no longer true, or a jump terminates the solve.
     integrator.u_modified = true
-    while integrator.t == integrator.tstop
+    jump_modified_u = true
+    first_affect = true
+    while integrator.t == integrator.tstop && integrator.keep_stepping
+        integrator.u_modified = true
         doaffect && integrator.cb.affect!(integrator)
+        # a rejected candidate clears `u_modified`, which must not hide a jump executed
+        # earlier at this time
+        jump_modified_u = (!first_affect && jump_modified_u) || integrator.u_modified
+        first_affect = false
     end
-
-    jump_modified_u = integrator.u_modified
 
     if !(integrator.opts.callback.discrete_callbacks isa Tuple{})
         discrete_modified,

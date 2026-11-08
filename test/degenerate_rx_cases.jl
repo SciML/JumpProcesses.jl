@@ -97,8 +97,10 @@ dep_graph = [
 ]
 spec_to_dep_jumps = [[2]]
 jump_to_dep_specs = [[1], [1]]
-namedpars = (dep_graph = dep_graph, vartojumps_map = spec_to_dep_jumps,
-    jumptovars_map = jump_to_dep_specs)
+namedpars = (;
+    dependencies = JumpDependencies(; dep_graph, vartojumps_map = spec_to_dep_jumps,
+        jumptovars_map = jump_to_dep_specs),
+    alias_dependencies = false)
 
 for method in methods
     local jump_prob = JumpProblem(prob, method, jump, jump2; namedpars...)

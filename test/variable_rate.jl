@@ -1,6 +1,6 @@
 using DiffEqBase, JumpProcesses, OrdinaryDiffEq, SciMLBase, StochasticDiffEq, Test
 using Random, LinearSolve, Statistics
-using StableRNGs, ADTypes
+using StableRNGs, ADTypes, StaticArrays
 rng = StableRNG(12345)
 
 a = ExtendedJumpArray(rand(rng, 3), rand(rng, 2))
@@ -238,7 +238,8 @@ let
         rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
-    jprob = JumpProblem(dprob, Coevolve(), test_jump; dep_graph = [[1]])
+    jprob = JumpProblem(dprob, Coevolve(), test_jump;
+        dependencies = JumpDependencies(; dep_graph = [[1]]))
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())
@@ -261,7 +262,8 @@ let
     Nsims = 1000
     for (prob, alg) in ((ODEProblem(f!, u0, tspan), Tsit5()),
         (SDEProblem(f!, g!, u0, tspan), SRIW1()))
-        jprob = JumpProblem(prob, Coevolve(), jump1, jump2; dep_graph = [[1], [2]])
+        jprob = JumpProblem(prob, Coevolve(), jump1, jump2;
+            dependencies = JumpDependencies(; dep_graph = [[1], [2]]))
         counts = [solve(jprob, alg; rng, save_everystep = false).u[end] for _ in 1:Nsims]
         # each jump fires Poisson(10) times
         @test mean(c -> c[1], counts)≈10 atol=0.5
@@ -282,7 +284,8 @@ let
     Nsims = 1000
     for (prob, alg) in ((ODEProblem(f!, [0.0], tspan), Tsit5()),
         (SDEProblem(f!, g!, [0.0], tspan), SRIW1()))
-        jprob = JumpProblem(prob, Coevolve(), jump; dep_graph = [[1]])
+        jprob = JumpProblem(prob, Coevolve(), jump;
+            dependencies = JumpDependencies(; dep_graph = [[1]]))
         counts = [solve(jprob, alg; rng, save_everystep = false).u[end][1] for _ in 1:Nsims]
         # the jump fires Poisson(1) times
         @test mean(counts)≈1 atol=0.15
@@ -381,7 +384,9 @@ let
     end
     d_jump = VariableRateJump(d_rate, death!; save_positions = (false, false))
 
-    ode_prob = ODEProblem(ode_fxn, u0, tspan, p)
+    # FullSpecialize for the runtime-heavy Monte Carlo tests: on Julia >= 1.12 the default
+    # erases callback types, which allocates on every step (other tests keep the default)
+    ode_prob = ODEProblem{true, SciMLBase.FullSpecialize}(ode_fxn, u0, tspan, p)
     tsave = range(tspan[1], tspan[2]; step = 0.1)
     for vr_aggregator in (VR_Direct(), VR_DirectFW(), VR_FRM(),
         VR_FRM(; vector_callback = true))
@@ -395,9 +400,10 @@ let
     end
 end
 
-# Correctness test based on 
+# Correctness test based on
 # VR_Direct and VR_FRM
-# Function to run ensemble and compute statistics
+# Function to run ensemble and compute statistics. The ODE problems passed in are
+# FullSpecialize (runtime-heavy Monte Carlo; see the accuracy test above).
 function run_ensemble(prob, alg, jumps...; vr_aggregator = VR_FRM(), Nsims = 8000)
     rng = StableRNG(12345)
     jump_prob = JumpProblem(prob, Direct(), jumps...; vr_aggregator)
@@ -417,7 +423,7 @@ let
     jump2 = deepcopy(jump)
 
     f = (du, u, p, t) -> (du[1] = u[1])
-    prob = ODEProblem(f, [0.2], (0.0, 10.0))
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(f, [0.2], (0.0, 10.0))
 
     mean_vrfr = run_ensemble(prob, Tsit5(), jump, jump2)
     mean_vrcb = run_ensemble(prob, Tsit5(), jump, jump2; vr_aggregator = VR_Direct())
@@ -454,7 +460,7 @@ let
     affect! = (integrator) -> (integrator.u[1] += 1; nothing)
     jump = VariableRateJump(rate, affect!; save_positions = (false, false))
 
-    prob = ODEProblem(f, [0.2], (0.0, 10.0))
+    prob = ODEProblem{true, SciMLBase.FullSpecialize}(f, [0.2], (0.0, 10.0))
 
     mean_vrfr = run_ensemble(prob, Tsit5(), jump)
     mean_vrcb = run_ensemble(prob, Tsit5(), jump; vr_aggregator = VR_Direct())
@@ -534,6 +540,208 @@ let
     for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         mean_jumps = run_ensemble(prob, Tsit5(), jump; vr_aggregator)
         @test isapprox(mean_jumps, analytical_mean, rtol = 0.05)
+    end
+end
+
+# Test 6: Rates that vary within the solver's steps. The ODE part is constant, so it doesn't
+# limit the step size, and VR_Direct's integral of the total rate must resolve the rates'
+# variation itself. This tests the fix for
+# https://github.com/SciML/JumpProcesses.jl/issues/692
+let
+    λ = 0.1
+    f = (du, u, p, t) -> (du[1] = 0.0; nothing)
+    affect! = (integrator) -> (integrator.u[1] += 1; nothing)
+    prob = ODEProblem(f, [0.0], (0.0, 10.0))
+
+    # a rate that oscillates throughout, and one that starts oscillating at t = 5
+    rates = ((u, p, t) -> λ * (1 + sin(10 * t)),
+        (u, p, t) -> t < 5 ? λ : λ * (1 + sin(10 * (t - 5))))
+    analytical_means = (λ * (10 + (1 - cos(100)) / 10), λ * (10 + (1 - cos(50)) / 10))
+    for (rate, analytical_mean) in zip(rates, analytical_means)
+        jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+        for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+            mean_jumps = run_ensemble(prob, Tsit5(), jump; vr_aggregator)
+            @test isapprox(mean_jumps, analytical_mean, rtol = 0.05)
+        end
+    end
+end
+
+# Test 7: First jump times against the analytically integrated rate. A solve stops at its
+# first jump, which happens when the integrated rate reaches the first exponential threshold
+# the aggregator draws, so the exact time follows from the same seed. In both cases a
+# solver step integrates to many times the threshold: a Float32 rate over one fixed step,
+# where the step's interpolant must stay accurate near the step's start, and a quickly
+# oscillating rate over long adaptive steps.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    jump(rate) = VariableRateJump(rate, integrator -> terminate!(integrator))
+    # the time at which the increasing function Λ reaches E, by bisection
+    function invert(Λ, E, a, b)
+        while b - a > eps(b)
+            m = (a + b) / 2
+            Λ(m) < E ? (a = m) : (b = m)
+        end
+        return (a + b) / 2
+    end
+    Λ(t) = 500 * (t + 0.95 * (1 - cos(1000 * t)) / 1000)
+    for vr_aggregator in (VR_Direct(), VR_DirectFW()), seed in 1:20
+        # 1f8 t^4 integrates to 2f7 t^5
+        prob = ODEProblem(f, [0.0f0], (0.0f0, 1.0f0))
+        jprob = JumpProblem(prob, jump((u, p, t) -> 1.0f8 * t^4); vr_aggregator)
+        sol = solve(jprob, Tsit5(); dt = 1.0f0, adaptive = false, abstol = 1.0f-8,
+            reltol = 1.0f-5, rng = StableRNG(seed))
+        exact = (Float64(randexp(StableRNG(seed), Float32)) / 2e7)^(1 / 5)
+        @test sol.t[end]≈exact rtol=1e-5
+
+        prob = ODEProblem(f, [0.0], (0.0, 1.0))
+        jprob = JumpProblem(prob, jump((u, p, t) -> 500 * (1 + 0.95 * sin(1000 * t)));
+            vr_aggregator)
+        sol = solve(jprob, Tsit5(); abstol = 1e-8, reltol = 1e-6, rng = StableRNG(seed))
+        exact = invert(Λ, randexp(StableRNG(seed)), 0.0, 1.0)
+        @test sol.t[end]≈exact rtol=1e-6
+    end
+end
+
+# Test 8: A rate driven by noise. With dX = dB, X(0) = 0 and rate 2X², the mean number of
+# jumps by time t is t². VR_FRM integrates the rate as a component of the SDE's state, so it
+# is accurate with SRIW1's default steps. VR_Direct and VR_DirectFW integrate the rate along
+# the solver's interpolant between steps, which doesn't resolve the noise within a step, so
+# they need steps that are short compared with the rate's variation, set here by `dtmax`.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    g = (du, u, p, t) -> (du[1] = 1; du[2] = 0; nothing)
+    jump = VariableRateJump((u, p, t) -> 2 * u[1]^2,
+        integrator -> (integrator.u[2] += 1; nothing); save_positions = (false, false))
+    prob = SDEProblem(f, g, [0.0, 0.0], (0.0, 2.0))
+    ts = [0.5, 1.0, 2.0]
+    Nsims = 4000
+    # the counts at `ts`, the last three saves whether or not the start is saved
+    counts_at(sol) = [u[2] for u in sol.u[(end - 2):end]]
+    cases = ((VR_FRM(), (;)), (VR_Direct(), (; dtmax = 0.05)),
+        (VR_Direct(), (; dtmax = 0.01)), (VR_DirectFW(), (; dtmax = 0.01)))
+    for (vr_aggregator, kwargs) in cases
+        jprob = JumpProblem(prob, jump; vr_aggregator)
+        rng = StableRNG(12345)
+        counts = reduce(hcat,
+            [counts_at(solve(jprob, SRIW1(); rng, saveat = ts, kwargs...)) for _ in 1:Nsims])
+        for (i, t) in enumerate(ts)
+            z = (mean(counts[i, :]) - t^2) / sqrt(var(counts[i, :]) / Nsims)
+            @test abs(z) < 4
+        end
+    end
+end
+
+# Test 9: Another callback's event cuts solver steps short. u[1] decays and is reset from 0.5
+# to 1 by a ContinuousCallback, and the rate is 2u[1], so each cycle of length log(2) adds one
+# expected jump. VR_Direct used to integrate the rest of a cut step with the state from
+# before the event, giving about 10.4 jumps instead of 14.5.
+let
+    f = (du, u, p, t) -> (du[1] = -u[1]; du[2] = 0; nothing)
+    reset = ContinuousCallback((u, t, integrator) -> u[1] - 0.5,
+        integrator -> (integrator.u[1] = 1.0; nothing))
+    jump = VariableRateJump((u, p, t) -> 2 * u[1],
+        integrator -> (integrator.u[2] += 1; nothing); save_positions = (false, false))
+    prob = ODEProblem(f, [1.0, 0.0], (0.0, 10.0))
+    analytical_mean = 14 + 2 * (1 - exp(-(10 - 14 * log(2))))
+    Nsims = 2000
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+        jprob = JumpProblem(prob, jump; vr_aggregator, callback = reset)
+        rng = StableRNG(12345)
+        mean_jumps = mean(solve(jprob, Tsit5(); rng, save_everystep = false).u[end][2]
+        for _ in 1:Nsims)
+        @test isapprox(mean_jumps, analytical_mean, rtol = 0.05)
+    end
+end
+
+# An RNG whose exponential draws all equal `threshold`, so the jump times are deterministic
+struct FixedThresholdRNG{T} <: Random.AbstractRNG
+    threshold::T
+end
+Random.randexp(r::FixedThresholdRNG) = Float64(r.threshold)
+Random.randexp(r::FixedThresholdRNG, ::Type{Float64}) = Float64(r.threshold)
+Random.randexp(r::FixedThresholdRNG, ::Type{Float32}) = Float32(r.threshold)
+Random.rand(::FixedThresholdRNG, ::Random.SamplerTrivial{Random.CloseOpen01{Float64}}) = 0.5
+
+# Test 10: Exact jump times when another callback's event cuts a step short and the next
+# step ends where the cut step would have, here at the final time. The rate is 1 until a
+# ContinuousCallback sets it to 2 at t = 0.5, and every threshold is 0.7, so the jumps are at
+# 0.6 and 0.95. VR_Direct used to reuse the fit from before the event and jump once, at 0.7.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    double_rate = ContinuousCallback((u, t, integrator) -> t - 0.5,
+        integrator -> (integrator.p[1] = 2.0; nothing))
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW()),
+        kwargs in ((;), (; dt = 1.0, adaptive = false))
+
+        times = Float64[]
+        jump = VariableRateJump((u, p, t) -> p[1],
+            integrator -> (push!(times, integrator.t); nothing))
+        prob = ODEProblem(f, [0.0], (0.0, 1.0), [1.0])
+        jprob = JumpProblem(prob, jump; vr_aggregator, callback = double_rate)
+        solve(jprob, Tsit5(); rng = FixedThresholdRNG(0.7), kwargs...)
+        @test length(times) == 2
+        @test times≈[0.6, 0.95] atol=1e-8
+    end
+end
+
+# Test 11: The fit's Chebyshev tables are computed in the problem's time type, so a higher
+# precision type gets the accuracy its tolerances ask for. With BigFloat and tolerances of
+# 1e-30, the first jump time for the rate 1 + sin(t)/2 matches the analytically integrated
+# rate far beyond Float64 precision; with Float64 tables it was off by about 5e-17.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    jump = VariableRateJump((u, p, t) -> 1 + sin(t) / 2, integrator -> terminate!(integrator))
+    prob = ODEProblem(f, BigFloat[0], (big"0.0", big"10.0"))
+    # the time at which t + (1 - cos(t))/2 reaches E, by bisection
+    function invert(E)
+        a, b = big"0.0", big"10.0"
+        while b - a > 2eps(b)
+            m = (a + b) / 2
+            m + (1 - cos(m)) / 2 < E ? (a = m) : (b = m)
+        end
+        return (a + b) / 2
+    end
+    tol = big"1e-30"
+    for vr_aggregator in (VR_Direct(), VR_DirectFW())
+        jprob = JumpProblem(prob, jump; vr_aggregator)
+        sol = solve(jprob, Vern9(); abstol = tol, reltol = tol, rng = StableRNG(3))
+        exact = invert(randexp(StableRNG(3), BigFloat))
+        @test abs(sol.t[end] / exact - 1) < 1e-25
+    end
+end
+
+# Test 12: Jump times when the integrated rate meets the threshold at a panel's end, up to
+# rounding or exactly. The fit stops at the panel where the integral passes the threshold,
+# and the condition uses that panel's end total from there on, so the two must agree.
+let
+    f = (du, u, p, t) -> (du .= 0; nothing)
+    # The rate is eps/2 on [0, 1) and 1 after, and the threshold is nextfloat(1.0), so on
+    # [1, 2] the panel's integral reaches the remaining threshold but the rounded total stays
+    # below it. The fit must not stop there; the jump is at 2. VR_Direct used to never fire.
+    rate = (u, p, t) -> t < 1.0 ? eps(1.0) / 2 : 1.0
+    for vr_aggregator in (VR_Direct(), VR_DirectFW())
+        jump = VariableRateJump(rate, integrator -> terminate!(integrator))
+        jprob = JumpProblem(ODEProblem(f, [0.0], (0.0, 4.0)), jump; vr_aggregator)
+        sol = solve(jprob, Tsit5(); rng = FixedThresholdRNG(nextfloat(1.0)), dt = 4.0,
+            adaptive = false, abstol = 1e-9, reltol = 1e-6)
+        @test sol.retcode == ReturnCode.Terminated
+        @test sol.t[end]≈2.0 atol=1e-12
+    end
+    # A constant rate of 1 and thresholds at and next to 0.5: an integral exactly equal to
+    # the threshold must not stop the fit, or the condition is zero from there to the step's
+    # end and the jump moves to the step's end. VR_Direct used to jump at 1 for 0.5.
+    for vr_aggregator in (VR_Direct(), VR_DirectFW()), T in (Float32, Float64)
+
+        tol = T === Float32 ? (; abstol = 1.0f-8, reltol = 1.0f-6) :
+              (; abstol = 1e-15, reltol = 1e-15)
+        for E in (prevfloat(T(0.5)), T(0.5), nextfloat(T(0.5)))
+            jump = VariableRateJump((u, p, t) -> one(T), integrator -> terminate!(integrator))
+            jprob = JumpProblem(ODEProblem(f, T[0], (zero(T), one(T))), jump; vr_aggregator)
+            sol = solve(jprob, Tsit5(); rng = FixedThresholdRNG(E), dt = one(T),
+                adaptive = false, tol...)
+            @test sol.retcode == ReturnCode.Terminated
+            @test sol.t[end]≈E atol=2eps(T) rtol=0
+        end
     end
 end
 
@@ -833,5 +1041,63 @@ end
         z = [(mean(c) - exact_mean(i)) / sqrt(var(c) / Nsims)
              for (i, c) in enumerate(eachcol(counts))]
         @test all(<(4), abs.(z))
+    end
+end
+
+@testset "VR_Direct ContinuousCallback uses interp_points=0" begin
+    rate = (u, p, t) -> 0.01 * (1 + sin(t))
+    affect! = (integrator) -> (integrator.u[1] += 0.1; nothing)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+    @test jump.interp_points == 10
+    f = (du, u, p, t) -> (du[1] = -u[1]; nothing)
+    prob = ODEProblem(f, [1.0], (0.0, 1.0))
+    for agg in (VR_Direct(), VR_DirectFW())
+        jp = JumpProblem(prob, Direct(), jump; vr_aggregator = agg)
+        cbs = jp.jump_callback.continuous_callbacks
+        @test length(cbs) == 1
+        @test cbs[1].interp_points == 0
+    end
+end
+
+# Out-of-place ODE and SDE problems. VR_FRM wrote the rates over the integrated intensities
+# in the state, so no jump fired, and failed to build out-of-place SDE problems; VR_Direct
+# asked out-of-place integrators for a cache they don't have. The rate is u[2] = t, so the
+# mean number of jumps by t = 4 is 8.
+@testset "Out-of-place problems" begin
+    rate(u, p, t) = u[2]
+    affect!(integrator) = (integrator.u[1] += 1; nothing)
+    jump = VariableRateJump(rate, affect!; save_positions = (false, false))
+    f(u, p, t) = [zero(eltype(u)), one(eltype(u))]
+    g(u, p, t) = zero(u)
+    u0 = [0.0, 0.0]
+    tspan = (0.0, 4.0)
+    for (prob, alg) in ((ODEProblem(f, u0, tspan), Tsit5()),
+            (SDEProblem(f, g, u0, tspan), SRIW1())),
+        vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+
+        @test !isinplace(prob)
+        jprob = JumpProblem(prob, jump; vr_aggregator)
+        rng = StableRNG(12345)
+        counts = [solve(jprob, alg; rng, save_everystep = false).u[end][1] for _ in 1:200]
+        @test isapprox(mean(counts), 8; rtol = 0.1)
+    end
+
+    # SVector states, which the affect replaces. VR_FRM's extended state can't hold one.
+    function affect_sv!(integrator)
+        integrator.u = setindex(integrator.u, integrator.u[1] + 1, 1)
+        nothing
+    end
+    jump_sv = VariableRateJump(rate, affect_sv!; save_positions = (false, false))
+    f_sv(u, p, t) = SVector(zero(eltype(u)), one(eltype(u)))
+    u0_sv = SVector(0.0, 0.0)
+    for (prob, alg) in ((ODEProblem(f_sv, u0_sv, tspan), Tsit5()),
+            (SDEProblem(f_sv, g, u0_sv, tspan), SRIW1())),
+        vr_aggregator in (VR_Direct(), VR_DirectFW())
+
+        jprob = JumpProblem(prob, jump_sv; vr_aggregator)
+        rng = StableRNG(12345)
+        sols = [solve(jprob, alg; rng, save_everystep = false) for _ in 1:200]
+        @test all(sol -> sol.u[end] isa SVector, sols)
+        @test isapprox(mean(sol -> sol.u[end][1], sols), 8; rtol = 0.1)
     end
 end

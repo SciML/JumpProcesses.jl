@@ -91,7 +91,9 @@ majumps = MassActionJump(rate, react_stoch, net_stoch)
 f = function (du, u, p, t)
     du[1] = -1.0 * u[1]
 end
-odeprob = ODEProblem(f, [10.0], (0.0, 10.0))
+# FullSpecialize: on Julia >= 1.12 the default erases callback types, which allocates on
+# every step and makes these 8000 solves much slower
+odeprob = ODEProblem{true, SciMLBase.FullSpecialize}(f, [10.0], (0.0, 10.0))
 jump_prob = JumpProblem(odeprob, Direct(), majumps, save_positions = (false, false))
 Nsims = 8000
 Amean = 0.0

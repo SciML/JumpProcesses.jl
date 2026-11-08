@@ -14,7 +14,8 @@ let
         # None of these points should be saved.
         jump = VariableRateJump((u, p, t) -> 0, (integrator) -> integrator.u[1] += 1;
             urate = (u, p, t) -> 1.0, rateinterval = (u, p, t) -> 5.0)
-        jumpproblem = JumpProblem(dprob, alg, jump; dep_graph = [[1]],
+        jumpproblem = JumpProblem(dprob, alg, jump;
+            dependencies = JumpDependencies(; dep_graph = [[1]]),
             save_positions = (false, true))
         sol = solve(jumpproblem, SSAStepper(); rng)
         @test sol.t == [0.0, 30.0]
@@ -25,7 +26,8 @@ let
 
         for vr_agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
             jumpproblem = JumpProblem(
-                oprob, alg, jump; vr_aggregator = vr_agg, dep_graph = [[1]],
+                oprob, alg, jump; vr_aggregator = vr_agg,
+                dependencies = JumpDependencies(; dep_graph = [[1]]),
                 save_positions = (false, true))
             sol = solve(jumpproblem, Tsit5(); rng, save_everystep = false)
             @test sol.t == [0.0, 30.0]

@@ -3,7 +3,8 @@ module JumpProcessesOrdinaryDiffEqCoreExt
 using JumpProcesses
 import SciMLBase
 import OrdinaryDiffEqCore: OrdinaryDiffEqAlgorithm, DAEAlgorithm,
-                           StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm
+                           StochasticDiffEqAlgorithm, StochasticDiffEqRODEAlgorithm,
+                           ODEIntegrator
 
 # `init_call` has already merged the problem's stored keywords before `__init`; see the
 # generic `__init` in src/solve.jl. `merge_callbacks` is discarded, not forwarded.
@@ -21,5 +22,9 @@ function SciMLBase.__init(
     # more specific.
     _jump_init(_jump_prob, alg; kwargs...)
 end
+
+# `terminate!` clears the integrator's stops, whatever the retcode, while an integrator that is
+# still solving has at least the final time left (ODE and SDE integrators alike)
+JumpProcesses.solve_stopped(integrator::ODEIntegrator) = !SciMLBase.has_tstop(integrator)
 
 end

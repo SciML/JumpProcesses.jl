@@ -108,6 +108,23 @@ Base.similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u), similar(A.j
 function Base.similar(A::ExtendedJumpArray, ::Type{S}) where {S}
     ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
 end
+Base.copy(A::ExtendedJumpArray) = ExtendedJumpArray(copy(A.u), copy(A.jump_u))
+function Base.copyto!(dest::ExtendedJumpArray, src::ExtendedJumpArray)
+    if size(dest.u) == size(src.u) && size(dest.jump_u) == size(src.jump_u)
+        copyto!(dest.u, src.u)
+        copyto!(dest.jump_u, src.jump_u)
+    else
+        @inbounds for i in eachindex(src)
+            dest[i] = src[i]
+        end
+    end
+    return dest
+end
+function Base.fill!(A::ExtendedJumpArray, x)
+    fill!(A.u, x)
+    fill!(A.jump_u, x)
+    return A
+end
 Base.zero(A::ExtendedJumpArray) = fill!(similar(A), 0)
 
 # Required for non-diagonal noise; also handles full-state matrices from LinearSolve
@@ -146,6 +163,14 @@ function Base.similar(A::ExtendedJumpArray, ::Type{S},
         return ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
     end
     return similar(A.u, S, axes)
+end
+
+# The same for a size, as out-of-place SDE solvers ask for when generating noise
+function Base.similar(A::ExtendedJumpArray, ::Type{S}, dims::Tuple{Int}) where {S}
+    if dims == size(A)
+        return ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
+    end
+    return similar(A.u, S, dims)
 end
 
 # plotting

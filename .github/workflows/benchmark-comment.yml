@@ -1,0 +1,88 @@
+name: Benchmark Comment
+
+# Posts the tables of "Benchmark this PR" as a comment on its pull request. That workflow runs
+# the pull request's code with a read-only token for pull requests from forks, so it can't
+# comment there. This one runs from the default branch with a token that can, never runs the
+# pull request's code, and only reads the uploaded files as data.
+on:
+  workflow_run:
+    workflows: ["Benchmark this PR"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find the pull request
+        id: pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+          HEAD_REPO_ID: ${{ github.event.workflow_run.head_repository.id }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # GitHub leaves the run's pull_requests empty for forks, so find the open pull
+          # request into the default branch whose head repository, branch and commit are the
+          # run's. Post nothing unless exactly one matches; a newer push gets its own run.
+          gh api --paginate "repos/$REPO/pulls?state=open&base=$BASE&per_page=100" > pulls.json
+          numbers=$(jq -s -c --argjson repo "$HEAD_REPO_ID" --arg branch "$HEAD_BRANCH" \
+            --arg sha "$HEAD_SHA" \
+            '[add[] | select(.head.repo.id == $repo and .head.ref == $branch and
+              .head.sha == $sha) | .number]' pulls.json)
+          if [ "$(jq length <<< "$numbers")" -eq 1 ]; then
+            echo "number=$(jq '.[0]' <<< "$numbers")" >> "$GITHUB_OUTPUT"
+          else
+            echo "No unique open pull request for $HEAD_SHA ($numbers); not commenting"
+            echo "number=" >> "$GITHUB_OUTPUT"
+          fi
+      # the renderer, from the default branch; the pull request's code is never checked out
+      - uses: actions/checkout@v7
+        if: steps.pr.outputs.number != ''
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/download-artifact@v8
+        if: steps.pr.outputs.number != ''
+        with:
+          pattern: benchmark-results-*
+          path: results
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Render the comment
+        if: steps.pr.outputs.number != ''
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        # The results come from the pull request's code, so the renderer treats them as
+        # untrusted data: only validated numbers and restricted benchmark names reach the
+        # comment. It fails unless both Julia versions have results for both revisions and
+        # timings to show, which keeps the previous comment.
+        run: python3 .github/scripts/benchmark_comment.py results "$HEAD_SHA" > comment.md
+      - name: Create or update the comment
+        if: steps.pr.outputs.number != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          # Find this workflow's earlier comment by its first line. A failed lookup stops the
+          # step, so that a comment is only created after a lookup that found none.
+          gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" > comments.json
+          id=$(jq -s -r '[add[] | select(.user.login == "github-actions[bot]" and
+            (.body | startswith("<!-- benchmark-results -->"))) | .id] | first // empty' \
+            comments.json)
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F body=@comment.md > /dev/null
+          else
+            gh api --method POST "repos/$REPO/issues/$PR/comments" -F body=@comment.md > /dev/null
+          fi

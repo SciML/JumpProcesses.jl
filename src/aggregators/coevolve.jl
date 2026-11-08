@@ -1,7 +1,7 @@
 """
 Queue method. This method handles variable intensity rates.
 """
-mutable struct CoevolveJumpAggregation{T, S, F1, F2, GR, PQ} <:
+mutable struct CoevolveJumpAggregation{T, S, F1, F2, DEPS, PQ} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int                    # the next jump to execute
     prev_jump::Int                    # the previous jump that was executed
@@ -14,7 +14,7 @@ mutable struct CoevolveJumpAggregation{T, S, F1, F2, GR, PQ} <:
     rates::F1                         # vector of rate functions
     affects!::F2                      # vector of affect functions for VariableRateJumps
     save_positions::Tuple{Bool, Bool} # tuple for whether to save the jumps before and/or after event
-    dep_gr::GR                        # map from jumps to jumps depending on it
+    dependencies::DEPS                # dep_graph: map from jumps to jumps depending on it
     pq::PQ                            # priority queue of next time
     lrates::F1                        # vector of rate lower bound functions
     urates::F1                        # vector of rate upper bound functions
@@ -32,33 +32,20 @@ end
 function CoevolveJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::Nothing,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        u::U, dep_graph = nothing, lrates, urates,
+        u::U, dependencies, lrates, urates,
         rateintervals, haslratevec,
         cur_lrates::Vector{T}) where {T, S, F1, F2, U}
-    if dep_graph === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(urates)
-            error("To use Coevolve a dependency graph between jumps must be supplied.")
-        else
-            dg = make_dependency_graph(length(u), maj)
-        end
-    else
-        # using a Set to ensure that edges are not duplicate
-        dgsets = [Set{Int}(append!(Int[], jumps, [var]))
-                  for (var, jumps) in enumerate(dep_graph)]
-        dg = [sort!(collect(i)) for i in dgsets]
-    end
-
     num_jumps = get_num_majumps(maj) + length(urates)
 
-    if length(dg) != num_jumps
+    if length(dependencies.dep_graph) != num_jumps
         error("Number of nodes in the dependency graph must be the same as the number of jumps.")
     end
 
     pq = MutableBinaryMinHeap{T}()
     affecttype = F2 <: Tuple ? F2 : Any
-    CoevolveJumpAggregation{T, S, F1, affecttype, typeof(dg),
+    CoevolveJumpAggregation{T, S, F1, affecttype, typeof(dependencies),
         typeof(pq)}(nj, nj, njt, et, crs, sr, maj, maj_rates,
-        rs, affs!, sps, dg, pq,
+        rs, affs!, sps, dependencies, pq,
         lrates, urates, rateintervals,
         haslratevec, cur_lrates)
 end
@@ -78,6 +65,29 @@ function (p::CoevolveJumpAggregation)(u, t, integrator)
             return true
     end
     return false
+end
+
+# Tests tied candidates after a jump in the ODE/SDE affect, as the condition does. Ties are
+# rare, so the test is kept out of the common path.
+@inline function next_jump_tied!(p::CoevolveJumpAggregation, integrator)
+    t = integrator.t
+    (p.next_jump_time == t && t < p.end_time) || return false
+    return accept_tied_candidate!(p, integrator, t)
+end
+
+# A rejected candidate clears the derivative discontinuity, which the jump just executed may
+# need, so it is restored
+@noinline function accept_tied_candidate!(p::CoevolveJumpAggregation, integrator, t)
+    discontinuity = integrator.derivative_discontinuity
+    tied = false
+    while p.next_jump_time == t && t < p.end_time
+        if accept_next_jump!(p, integrator, integrator.u, integrator.p, t)
+            tied = true
+            break
+        end
+    end
+    derivative_discontinuity!(integrator, discontinuity)
+    return tied
 end
 
 # executing jump at the next jump time
@@ -111,8 +121,7 @@ end
 
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
-        ma_jumps, save_positions; dep_graph = nothing,
-        variable_jumps = nothing, kwargs...)
+        ma_jumps, save_positions; dependencies, variable_jumps = nothing, kwargs...)
     RateWrapper = FunctionWrappers.FunctionWrapper{typeof(t),
         Tuple{typeof(u), typeof(p), typeof(t)}}
 
@@ -156,7 +165,7 @@ function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
     next_jump_time = typemax(t)
     CoevolveJumpAggregation(next_jump, next_jump_time, end_time, cur_rates, sum_rate,
         ma_jumps, rates, affects!, save_positions;
-        maj_rates, u, dep_graph, lrates, urates, rateintervals, haslratevec,
+        maj_rates, u, dependencies, lrates, urates, rateintervals, haslratevec,
         cur_lrates)
 end
 
@@ -177,7 +186,8 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t,
     update_state!(p, integrator, u, affects!)
     # update current jump rates and times
     rng = get_rng(integrator)
-    update_dependent_rates!(p, integrator.u, integrator.p, t, rng)
+    @inbounds deps = dependents(p.dependencies.dep_graph, p.next_jump)
+    update_dependent_rates!(p, deps, integrator.u, integrator.p, t, rng)
     nothing
 end
 
@@ -243,8 +253,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     return false
 end
 
-function update_dependent_rates!(p::CoevolveJumpAggregation, u, params, t, rng)
-    @inbounds deps = p.dep_gr[p.next_jump]
+function update_dependent_rates!(p::CoevolveJumpAggregation, deps, u, params, t, rng)
     (; cur_rates, pq) = p
     for (ix, i) in enumerate(deps)
         ti, urate_i = next_time(p, u, params, t, i, rng)

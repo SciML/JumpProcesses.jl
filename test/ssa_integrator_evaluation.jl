@@ -326,8 +326,10 @@ end
 end
 
 @testset "Scalar states in models without mass-action jumps" begin
-    graphs = (; dep_graph = [[1, 2], [1, 2]], vartojumps_map = [[2]],
-        jumptovars_map = [[1], [1]])
+    graphs = (;
+        dependencies = JumpDependencies(; dep_graph = [[1, 2], [1, 2]],
+            vartojumps_map = [[2]], jumptovars_map = [[1], [1]]),
+        alias_dependencies = false)
     aggregators = filter(agg -> !(agg isa Union{RSSA, RSSACR}),
         JumpProcesses.JUMP_AGGREGATORS)
     bounded_birth = VariableRateJump((u, p, t) -> 1.0 + 0.1 * sin(t),
@@ -342,7 +344,7 @@ end
             @test eltype(sol.u) == typeof(u0)
         end
         jprob = JumpProblem(DiscreteProblem(u0, (0.0, 20.0)), Coevolve(), bounded_birth;
-            dep_graph = [[1]])
+            dependencies = JumpDependencies(; dep_graph = [[1]]))
         sol = solve(jprob, SSAStepper(); seed = 1)
         @test eltype(sol.u) == typeof(u0)
         @test sol.u[end] > u0

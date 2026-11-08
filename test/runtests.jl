@@ -41,6 +41,9 @@ end
         @time @safetestset "Bracketing Tests" begin include("bracketing.jl") end
         @time @safetestset "Composition-Rejection Table Tests" begin include("table_test.jl") end
         @time @safetestset "Extinction test" begin include("extinction_test.jl") end
+        @time @safetestset "Every rate zero" begin include("zero_rates.jl") end
+        @time @safetestset "Running rate sums" begin include("running_rate_sums.jl") end
+        @time @safetestset "Jump dependencies" begin include("jump_dependencies.jl") end
     end
     if GROUP == "All" || GROUP == "InterfaceII"
         @time @safetestset "Saveat Regression test" begin include("saveat_regression.jl") end
@@ -57,6 +60,7 @@ end
         @time @safetestset "ExtendedJumpArray remake tests" begin include("extended_jump_array_remake.jl") end
         @time @safetestset "Symbol based problem indexing" begin include("jprob_symbol_indexing.jl") end
         @time @safetestset "Long time accuracy test" begin include("longtimes_test.jl") end
+        @time @safetestset "Jumps tied with the current time" begin include("tied_jumps.jl") end
         @time @safetestset "Hawkes process" begin include("hawkes_test.jl") end
         @time @safetestset "Reaction rates" begin include("spatial/reaction_rates.jl") end
         @time @safetestset "Hop rates" begin include("spatial/hop_rates.jl") end

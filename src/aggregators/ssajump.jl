@@ -16,7 +16,7 @@ An aggregator interface for SSA-like algorithms.
 
 ### Optional fields:
 
-  - `dep_gr`             # dependency graph, dep_gr[i] = indices of reactions that should be updated when rx i occurs.
+  - `dependencies`       # `JumpDependencies` holding the maps used, e.g. `dep_graph`
 """
 abstract type AbstractSSAJumpAggregator{T, S, F1, F2} <: AbstractJumpAggregator end
 
@@ -102,21 +102,79 @@ end
 function (p::AbstractSSAJumpAggregator)(integrator::I) where {I <: SciMLBase.DEIntegrator}
     affects! = p.affects!
     if affects! isa Vector{FunctionWrappers.FunctionWrapper{Nothing, Tuple{I}}}
-        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        execute_tied_jumps!(p, integrator, affects!)
     else
         error("Error, invalid affects! type. Expected a vector of function wrappers and got $(typeof(affects!))")
     end
-    generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
-    register_next_jump_time!(integrator, p, integrator.t)
     nothing
 end
 
 function (p::AbstractSSAJumpAggregator{
         T, S, F1, F2})(integrator::SciMLBase.DEIntegrator) where
         {T, S, F1, F2 <: Union{Tuple, Nothing}}
-    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, p.affects!)
+    execute_tied_jumps!(p, integrator, p.affects!)
+    nothing
+end
+
+# Executes the jump at the current time, then any next jumps whose times round to it: their
+# stops would be at the current time, which an ODE or SDE integrator never reaches, so no jump
+# would fire again. `SSAStepper` executes such jumps through its own loop, and has its own
+# method. The time is read after each affect, which may change it.
+#
+# After an affect stops the solve, nothing more is executed or scheduled: a new stop would
+# restart an ODE or SDE solve. Ties are rare, so the loop over them is kept out of this
+# function, which otherwise does what the affect did without it.
+function execute_tied_jumps!(p::AbstractSSAJumpAggregator, integrator, affects!)
+    execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+    solve_stopped(integrator) && return nothing
     generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+    if next_jump_tied!(p, integrator)
+        execute_more_tied_jumps!(p, integrator, affects!) && return nothing
+    end
     register_next_jump_time!(integrator, p, integrator.t)
+    nothing
+end
+
+# Executes the tied jumps after the first. Each affect starts with a derivative
+# discontinuity, as a separate event's would, and the integrator restarts if any affect,
+# including the first, leaves it set. Returns whether an affect stopped the solve.
+@noinline function execute_more_tied_jumps!(p::AbstractSSAJumpAggregator, integrator,
+        affects!)
+    discontinuity = integrator.derivative_discontinuity
+    while true
+        save_between_tied_jumps!(p, integrator)
+        derivative_discontinuity!(integrator, true)
+        execute_jumps!(p, integrator, integrator.u, integrator.p, integrator.t, affects!)
+        discontinuity |= integrator.derivative_discontinuity
+        if solve_stopped(integrator)
+            derivative_discontinuity!(integrator, discontinuity)
+            return true
+        end
+        generate_jumps!(p, integrator, integrator.u, integrator.p, integrator.t)
+        if !next_jump_tied!(p, integrator)
+            derivative_discontinuity!(integrator, discontinuity)
+            return false
+        end
+    end
+end
+
+# Whether the next jump is also at the current time, and is executed now. Not at the end
+# time, where a tied jump's time is really past the end and some aggregators don't select a
+# next jump.
+function next_jump_tied!(p::AbstractSSAJumpAggregator, integrator)
+    t = integrator.t
+    p.next_jump_time == t && t < p.end_time
+end
+
+# Whether an affect stopped the solve. `terminate!` can set any retcode; this fallback only
+# recognizes the default, and integrators that can say more have their own methods.
+solve_stopped(integrator) = integrator.sol.retcode === ReturnCode.Terminated
+
+# Saves between tied jumps as the integrator saves around separate events, which it does
+# before the first jump and after the last as `save_positions` asks
+function save_between_tied_jumps!(p::AbstractSSAJumpAggregator, integrator)
+    p.save_positions[2] && savevalues!(integrator, true)
+    p.save_positions[1] && savevalues!(integrator, true)
     nothing
 end
 
@@ -207,16 +265,18 @@ Recalculate the rate for the jump with index `rx`.
 end
 
 """
-    update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
+    update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, params, t)
 
-Recalculate jump rates for jumps that depend on the just executed jump.
+Recalculate the rates of the jumps in `dep_rxs`, the sum of all rates, and the bound on the
+sum's rounding error, `p.sum_rate_err`.
 
 Notes:
 
-  - Intended for methods that have a dependency graph, i.e. define `p.dep_gr`.
+  - Intended for methods that have a dependency graph, i.e. define `p.dependencies` with a
+    `dep_graph`. After a jump executes, `dep_rxs` is that graph's entry for
+    `p.next_jump`, the jumps that depend on it.
 """
-function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
-    @inbounds dep_rxs = p.dep_gr[p.next_jump]
+function update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, params, t)
     cur_rates = p.cur_rates
     sum_rate = p.sum_rate
     num_majumps = get_num_majumps(p.ma_jumps)
@@ -227,6 +287,7 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, u, params, t)
         sum_rate += cur_rates[rx]
     end
 
+    p.sum_rate_err += update_error_bound(p.sum_rate, sum_rate, 2 * length(dep_rxs))
     p.sum_rate = sum_rate
     nothing
 end
@@ -281,14 +342,68 @@ end
     nomorejumps!(p, sum_rate) :: Bool
 
 Check if the total rate is zero, and if it is, make the next jump time Inf.
+
+Notes:
+
+  - A running sum of rates must first be recomputed if `sum_rate_inaccurate` says so, since
+    rounding can leave it slightly positive or negative when every rate is zero.
 """
 @inline function nomorejumps!(p, sum_rate)::Bool
-    if sum_rate < eps(typeof(sum_rate))
+    if sum_rate <= zero(sum_rate)
         p.next_jump = zero(p.next_jump)
         p.next_jump_time = convert(typeof(sum_rate), Inf)
         return true
     end
     return false
+end
+
+"""
+    update_error_bound(sum_before, sum_after, nops)
+
+Bound on the rounding error that `nops` additions and subtractions add to a running sum of
+nonnegative rates when they update some of the rates, taking the sum from `sum_before` to
+`sum_after`. As the rates are nonnegative, every intermediate sum is at most
+`sum_before + sum_after`, and each operation errs by at most `eps / 2` times its result. Using
+`eps` covers the rounding errors already in `sum_before` and `sum_after`, which
+`sum_rate_inaccurate` keeps small relative to them.
+"""
+@inline function update_error_bound(sum_before, sum_after, nops)
+    return nops * eps(typeof(sum_after)) * (abs(sum_before) + abs(sum_after))
+end
+
+"""
+    sum_error_bound(sum_rate, n)
+
+Bound on the rounding error of a sum of `n` nonnegative terms, `sum_rate`, computed in any
+order.
+"""
+@inline sum_error_bound(sum_rate, n) = n * eps(typeof(sum_rate)) * abs(sum_rate)
+
+"""
+    sum_rate_inaccurate(sum_rate, sum_rate_err, n) :: Bool
+
+Check if a running sum of `n` nonnegative rates, `sum_rate`, must be recomputed from the rates:
+if the bound on its rounding error, `sum_rate_err`, doesn't rule out that the exact sum is
+zero, or allows a relative error above `max(sqrt(eps), 4n eps)`. The tolerance stays above the
+relative error of a recomputed sum, `n eps`.
+"""
+@inline function sum_rate_inaccurate(sum_rate, sum_rate_err, n)
+    T = typeof(sum_rate)
+    reltol = max(sqrt(eps(T)), 4 * n * eps(T))
+    return sum_rate_err > reltol * sum_rate
+end
+
+"""
+    resum_rates!(p, rates)
+
+Recompute `p.sum_rate`, the sum of `rates`, and the bound on its rounding error,
+`p.sum_rate_err`.
+"""
+@noinline function resum_rates!(p::AbstractSSAJumpAggregator, rates)
+    sum_rate = sum(rates)
+    p.sum_rate = sum_rate
+    p.sum_rate_err = sum_error_bound(sum_rate, length(rates))
+    nothing
 end
 
 """
@@ -300,9 +415,8 @@ Perform linear search for `r` over iterator. Output index j s.t. sum(array[1:j-1
 Notes:
 
   - The iterator must have all positive numbers
-  - Returns index zero if the search is unsuccessful. Assumes this corresponds to
-    the case of an infinite next reaction time and so the jump index does not
-    matter.
+  - Returns index zero if the search is unsuccessful, i.e. if `r` is at least the sum of the
+    iterator's elements.
 """
 @inline function linear_search(iterator, r)
     jidx = 0
@@ -341,4 +455,41 @@ Perform rejection sampling test (used in RSSA methods).
         end
     end
     return true
+end
+
+"""
+    all_rates_zero(p, u, params, t) :: Bool
+
+Check if every jump's rate is zero at `(u, params, t)`.
+"""
+function all_rates_zero(p::AbstractSSAJumpAggregator, u, params, t)
+    (; ma_jumps, rates, maj_rates) = p
+    num_majumps = get_num_majumps(ma_jumps)
+    for rx in 1:(num_majumps + length(rates))
+        rate = calculate_jump_rate(ma_jumps, num_majumps, rates, u, params, t, rx,
+            maj_rates)
+        rate > zero(rate) && return false
+    end
+    return true
+end
+
+"""
+    no_jump_before_end!(p, u, params, t, Δt) :: Bool
+
+Check, after a long run of rejected candidates in a rejection-based aggregator, the last at
+time `t + Δt`, if no jump can come before the end time; if so, set the next jump time to
+`Inf` and return `true`. Once a rejected candidate comes at or after the end time, the next
+jump comes later still. If every rate is zero no jump comes, but the bounds on the rates can
+be positive, and then no candidate is ever accepted.
+
+The next jump time is not the candidate's time, which can be the end time: an ODE or SDE
+integrator executes the next jump when it reaches its time, the end time included.
+"""
+@noinline function no_jump_before_end!(p::AbstractSSAJumpAggregator, u, params, t, Δt)
+    tnext = t + Δt
+    if tnext >= p.end_time || all_rates_zero(p, u, params, t)
+        p.next_jump_time = typemax(tnext)
+        return true
+    end
+    return false
 end

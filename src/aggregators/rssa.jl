@@ -4,7 +4,7 @@
 # functions of the current population sizes (i.e. u)
 # requires vartojumps_map and fluct_rates as JumpProblem keywords
 
-mutable struct RSSAJumpAggregation{T, S, F1, F2, CB, VJMAP, JVMAP, BD, U} <:
+mutable struct RSSAJumpAggregation{T, S, F1, F2, CB, DEPS, BD, U} <:
                AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::Int
     prev_jump::Int
@@ -19,40 +19,20 @@ mutable struct RSSAJumpAggregation{T, S, F1, F2, CB, VJMAP, JVMAP, BD, U} <:
     affects!::F2
     brackets::CB
     save_positions::Tuple{Bool, Bool}
-    vartojumps_map::VJMAP
-    jumptovars_map::JVMAP
+    dependencies::DEPS
     bracket_data::BD
     ulow::U
     uhigh::U
+    # bound on the rounding error in `sum_rate`; kept apart from it, since storing the two
+    # together measurably slowed each jump
+    sum_rate_err::T
 end
 
 function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maj::S, rs::F1, affs!::F2, sps::Tuple{Bool, Bool};
         maj_rates = Vector{T}(undef, get_num_majumps(maj)),
-        u::U, brackets, vartojumps_map = nothing,
-        jumptovars_map = nothing,
+        u::U, brackets, dependencies,
         bracket_data = nothing, kwargs...) where {T, S, F1, F2, U}
-    # a dependency graph is needed and must be provided if there are constant rate jumps
-    if vartojumps_map === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from variables to dependent jumps must be supplied.")
-        else
-            vtoj_map = var_to_jumps_map(length(u), maj)
-        end
-    else
-        vtoj_map = vartojumps_map
-    end
-
-    if jumptovars_map === nothing
-        if (get_num_majumps(maj) == 0) || !isempty(rs)
-            error("To use the RSSA algorithm a map from jumps to dependent variables must be supplied.")
-        else
-            jtov_map = jump_to_vars_map(maj)
-        end
-    else
-        jtov_map = jumptovars_map
-    end
-
     # vectors to store bracketing intervals for jump rates
     crl_bnds = similar(crs)
     crh_bnds = similar(crs)
@@ -65,11 +45,11 @@ function RSSAJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
     uhigh = similar(u)
 
     affecttype = F2 <: Tuple ? F2 : Any
-    RSSAJumpAggregation{T, S, F1, affecttype, typeof(brackets), typeof(vtoj_map),
-        typeof(jtov_map), typeof(bd), U}(nj, nj, njt, et, crl_bnds,
+    RSSAJumpAggregation{T, S, F1, affecttype, typeof(brackets), typeof(dependencies),
+        typeof(bd), U}(nj, nj, njt, et, crl_bnds,
         crh_bnds, sr, maj, maj_rates, rs, affs!, brackets, sps,
-        vtoj_map, jtov_map, bd, ulow,
-        uhigh)
+        dependencies, bd, ulow,
+        uhigh, zero(sr))
 end
 
 ############################# Required Functions ##############################
@@ -92,6 +72,7 @@ function initialize!(p::RSSAJumpAggregation, integrator, u, params, t::Number)
     p.end_time = integrator.sol.prob.tspan[2]
     fill_scaled_rates!(p.maj_rates, p.ma_jumps, params)
     set_bracketing!(p, u, params, t)
+    p.sum_rate_err = sum_error_bound(p.sum_rate, length(p.cur_rate_high))
     generate_jumps!(p, integrator, u, params, t)
     nothing
 end
@@ -100,12 +81,18 @@ end
 function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t, affects!)
     # execute jump
     u = update_state!(p, integrator, u, affects!)
-    update_rates!(p, u, params, t)
+    @inbounds changed_vars = dependents(p.dependencies.jumptovars_map, p.next_jump)
+    update_rates!(p, changed_vars, u, params, t)
     nothing
 end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
+    # recompute the sum of the rate bounds if rounding may have made it inaccurate
+    if sum_rate_inaccurate(p.sum_rate, p.sum_rate_err, length(p.cur_rate_high))
+        resum_rates!(p, p.cur_rate_high)
+    end
+
     sum_rate = p.sum_rate
     # if no more events possible there is nothing to do
     if nomorejumps!(p, sum_rate)
@@ -119,16 +106,23 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
 
     r = rand(rng) * sum_rate
     jidx = linear_search(cur_rate_high, r)
-    if iszero(jidx)
-        p.next_jump_time = Inf
-        return nothing
-    end
+    # the search finds no jump only if the sum exceeds the sum of the rate bounds
+    iszero(jidx) && ((sum_rate, jidx) = resum_and_search!(p, rng))
     rerl += randexp(rng)
+    nrejected = 0
     @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high,
         cur_rate_low, rng, u, jidx, params, t, p.maj_rates)
+        # after a long run of rejections, check if a jump can still come before the end time
+        nrejected += 1
+        if nrejected == max(16, length(cur_rate_high))
+            nrejected = 0
+            no_jump_before_end!(p, u, params, t, rerl / sum_rate) && return nothing
+        end
+
         # sample candidate reaction
         r = rand(rng) * sum_rate
         jidx = linear_search(cur_rate_high, r)
+        iszero(jidx) && ((sum_rate, jidx) = resum_and_search!(p, rng))
         rerl += randexp(rng)
     end
     p.next_jump = jidx
@@ -139,16 +133,33 @@ end
 
 ######################## SSA specific helper routines #########################
 
+# Recompute the sum of the rate bounds after a search found no jump, which happens only if the
+# sum exceeds the sum of the bounds, and search again. The recomputed sum is positive, since
+# `sum_rate_inaccurate` ruled out that the exact sum is zero. A search can still miss by
+# rounding, since `sum` adds the bounds in another order than the search subtracts them, but
+# only with probability around `eps` per try, so it repeats until it finds a jump.
+@noinline function resum_and_search!(p::RSSAJumpAggregation, rng)
+    resum_rates!(p, p.cur_rate_high)
+    sum_rate = p.sum_rate
+    jidx = 0
+    while iszero(jidx)
+        jidx = linear_search(p.cur_rate_high, rand(rng) * sum_rate)
+    end
+    return sum_rate, jidx
+end
+
 """
-Update rates
+Update rates after the species in `changed_vars` changed
 """
-@inline function update_rates!(p::RSSAJumpAggregation, u::AbstractVector, params, t)
+@inline function update_rates!(p::RSSAJumpAggregation, changed_vars, u::AbstractVector,
+        params, t)
     # update bracketing intervals
     (; ulow, uhigh) = p
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
+    sum_rate_err = p.sum_rate_err
 
-    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+    @inbounds for uidx in changed_vars
         uval = u[uidx]
 
         # if new u value is outside the bracketing interval
@@ -157,23 +168,31 @@ Update rates
             ulow[uidx], uhigh[uidx] = get_spec_brackets(p.bracket_data, uidx, uval)
 
             # for each dependent jump, update jump rate brackets
-            for jidx in p.vartojumps_map[uidx]
+            sum_before = sum_rate
+            deps = dependents(p.dependencies.vartojumps_map, uidx)
+            for jidx in deps
                 sum_rate -= crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
                     jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
             end
+            # bound the rounding error per species: a jump reading several changed species
+            # is updated once per species, so its intermediate bounds can far exceed the
+            # sums before and after the whole update
+            sum_rate_err += update_error_bound(sum_before, sum_rate, 2 * length(deps))
         end
     end
+    p.sum_rate_err = sum_rate_err
     p.sum_rate = sum_rate
 end
 
-@inline function update_rates!(p::RSSAJumpAggregation, u::SVector, params, t)
+@inline function update_rates!(p::RSSAJumpAggregation, changed_vars, u::SVector, params, t)
     # update bracketing intervals
     sum_rate = p.sum_rate
     crhigh = p.cur_rate_high
+    sum_rate_err = p.sum_rate_err
 
-    @inbounds for uidx in p.jumptovars_map[p.next_jump]
+    @inbounds for uidx in changed_vars
         uval = u[uidx]
 
         # if new u value is outside the bracketing interval
@@ -184,13 +203,20 @@ end
             p.uhigh = setindex(p.uhigh, uhigh, uidx)
 
             # for each dependent jump, update jump rate brackets
-            for jidx in p.vartojumps_map[uidx]
+            sum_before = sum_rate
+            deps = dependents(p.dependencies.vartojumps_map, uidx)
+            for jidx in deps
                 sum_rate -= crhigh[jidx]
                 p.cur_rate_low[jidx], crhigh[jidx] = get_jump_brackets(
                     jidx, p, u, params, t)
                 sum_rate += crhigh[jidx]
             end
+            # bound the rounding error per species: a jump reading several changed species
+            # is updated once per species, so its intermediate bounds can far exceed the
+            # sums before and after the whole update
+            sum_rate_err += update_error_bound(sum_before, sum_rate, 2 * length(deps))
         end
     end
+    p.sum_rate_err = sum_rate_err
     p.sum_rate = sum_rate
 end

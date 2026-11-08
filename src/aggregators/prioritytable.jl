@@ -160,6 +160,12 @@ end
     length(pt.pidtogroup)
 end
 
+# number of terms in the table's sums, the priorities and the group sums, for bounds on their
+# rounding errors
+@inline function numterms(pt::PriorityTable)
+    numpriorities(pt) + numgroups(pt)
+end
+
 @inline function groupsum(pt::PriorityTable)
     pt.gsum
 end
@@ -252,6 +258,22 @@ function update!(pt::PriorityTable, pid, oldpriority, newpriority)
     nothing
 end
 
+"""
+Recompute the group sums and their total from the priorities.
+"""
+function resum!(pt::PriorityTable, priorities)
+    (; groups, gsums) = pt
+    @inbounds for (gid, group) in enumerate(groups)
+        grpsum = zero(eltype(gsums))
+        for pididx in 1:(group.numpids)
+            grpsum += priorities[group.pids[pididx]]
+        end
+        gsums[gid] = grpsum
+    end
+    pt.gsum = sum(gsums)
+    nothing
+end
+
 function reset!(pt::PriorityTable{F, S, T, U}) where {F, S, T, U}
     (; groups, gsums, pidtogroup) = pt
     pt.gsum = zero(F)
@@ -313,7 +335,7 @@ function sample(pt::PriorityTable, priorities, rng)
     (; groups, gsum, gsums) = pt
 
     # return id zero if total priority is zero
-    (gsum < eps(typeof(gsum))) && return zero(eltype(groups[1].pids))
+    (gsum <= zero(gsum)) && return zero(eltype(groups[1].pids))
 
     # sample a group, search from end (largest priorities)
     # NOTE, THIS ASSUMES THE FIRST PRIORITY IS ZERO!!!
@@ -335,8 +357,37 @@ function sample(pt::PriorityTable, priorities, rng)
     end
     iszero(gid) && return gid
 
-    # sample element within the group
-    @inbounds sample(groups[gid], priorities, rng)
+    # sample element within the group; the first group, of zero and tiny priorities, has no
+    # rejection bound, so it is sampled by weight
+    @inbounds group = groups[gid]
+    iszero(group.maxpriority) && return weighted_sample(group, priorities, rng)
+    sample(group, priorities, rng)
+end
+
+"""
+Sample a priority id from the group with probability proportional to its priority, by linear
+search, for the group of zero and tiny priorities. Returns zero if every priority in the
+group is zero.
+"""
+@noinline function weighted_sample(pg::PriorityGroup, priorities, rng)
+    (; numpids, pids) = pg
+    total = zero(eltype(priorities))
+    @inbounds for pididx in 1:numpids
+        total += priorities[pids[pididx]]
+    end
+    iszero(total) && return zero(eltype(pids))
+
+    r = rand(rng) * total
+    @inbounds for pididx in 1:numpids
+        r -= priorities[pids[pididx]]
+        (r < zero(r)) && return pids[pididx]
+    end
+
+    # rounding left r nonnegative: take the last id with a positive priority
+    @inbounds for pididx in numpids:-1:1
+        (priorities[pids[pididx]] > zero(total)) && return pids[pididx]
+    end
+    zero(eltype(pids))
 end
 
 ##########################

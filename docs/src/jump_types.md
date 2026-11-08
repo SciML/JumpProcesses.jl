@@ -222,7 +222,10 @@ Note that
     chosen with the `vr_aggregator` keyword argument of `JumpProblem`: one of
     [`VR_FRM`](@ref) (the default), [`VR_Direct`](@ref) and
     [`VR_DirectFW`](@ref). These use callbacks of the continuous solver to
-    determine when the jumps occur.
+    determine when the jumps occur. See
+    [How jumps are simulated](@ref algorithms_overview) for how they work, and
+    [VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for how `VR_Direct`
+    integrates the rates.
   - When using `Coevolve` with a `JumpProblem` coupled to a continuous problem
     such as an `ODEProblem`, the aggregator will handle the jumps in same way
     that it does with `SSAStepper`. However, *ensure that given `t` the bounds
@@ -298,6 +301,15 @@ further callbacks can be passed to `solve` or `init`.
     `solve`/`init` instead, and use `remake(prob; callback = nothing)` to remove them
     from an existing problem.
 
+!!! tip "Use `FullSpecialize` for jumps coupled to an ODE"
+
+    On Julia 1.12 and later, build an ODE/DDE/DAE problem that you wrap in a
+    `JumpProblem` with `SciMLBase.FullSpecialize`, e.g.
+    `ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)`. With the default
+    specialization the solvers erase the types of the jump callbacks and allocate on every
+    time step, which can make jump simulations considerably slower. See
+    [this FAQ entry](@ref faq_fullspecialize).
+
 Note that a `JumpProblem`/`JumpSet` can only have 1 `RegularJump` (since a
 `RegularJump` itself describes multiple processes together). Similarly, it can
 only have one `MassActionJump` (since it also describes multiple processes
@@ -313,7 +325,9 @@ offer different trade-offs. However, all aggregators describe the realization of
 each and every individual jump chronologically. Since they do not skip any
 jumps, they are considered exact methods. Note that none of the aggregators
 discussed in this section can be used with `RegularJumps` which are used for
-time-step based (inexact) τ-leaping methods.
+time-step based (inexact) τ-leaping methods. See
+[How jumps are simulated](@ref algorithms_overview) for how the aggregators are
+coupled to time stepping.
 
 The current aggregators are (note that an italicized name indicates the
 aggregator requires various types of dependency graphs, see the next section):
@@ -366,13 +380,18 @@ method.
 ## Jump Aggregators Requiring Dependency Graphs
 
 Italicized constant rate jump aggregators above require the user to pass a
-dependency graph to `JumpProblem`. `Coevolve`, `DirectCR`, `NRM`, and
-`SortingDirect` require a jump-jump dependency graph, passed through the named
-parameter `dep_graph`. i.e.,
+dependency graph to `JumpProblem`, in a [`JumpDependencies`](@ref) given with the
+`dependencies` keyword. `Coevolve`, `DirectCR`, `NRM`, and `SortingDirect` require
+a jump-jump dependency graph, `dep_graph`, i.e.,
 
 ```julia
-JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)
+dependencies = JumpDependencies(; dep_graph = your_dependency_graph)
+JumpProblem(prob, DirectCR(), jump1, jump2; dependencies)
 ```
+
+Passing the maps as `JumpProblem` keywords, as in
+`JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)`, is
+deprecated.
 
 For systems with only `MassActionJump`s, or those generated from a
 [Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this
@@ -380,24 +399,24 @@ graph will be auto-generated. Otherwise, you must construct the dependency graph
 whenever the set of jumps include `ConstantRateJump`s and/or bounded
 `VariableRateJump`s.
 
-Dependency graphs are represented as a `Vector{Vector{Int}}`, with the `i`th
-vector containing the indices of the jumps for which rates must be recalculated
-when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
+A dependency graph is a collection of collections of integer indices, such as a
+`Vector{Vector{Int}}`, with the `i`th entry containing the indices of the jumps for
+which rates must be recalculated when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
 `ConstantRateJump`s and bounded `VariableRateJump`s. General `VariableRateJump`s
 are not handled by aggregators, and so not included in the jump ordering for
 dependency graphs. Note that the relative order between `ConstantRateJump`s and
 relative order between bounded `VariableRateJump`s is preserved. In this way, one
 can precalculate the jump order to manually construct dependency graphs.
 
-`RSSA` and `RSSACR` require two different types of dependency graphs, passed
-through the following `JumpProblem` kwargs:
+`RSSA` and `RSSACR` require two different types of dependency graphs, passed as
+the following fields of a `JumpDependencies`:
 
-  - `vartojumps_map` - A `Vector{Vector{Int}}` mapping each variable index, `i`,
-    to a set of jump indices. The jump indices correspond to jumps with rate
-    functions that depend on the value of `u[i]`.
-  - `jumptovars_map` - A `Vector{Vector{Int}}`  mapping each jump index to a set
-    of variable indices. The corresponding variables are those that have their
-    value, `u[i]`, altered when the jump occurs.
+  - `vartojumps_map` - A map, such as a `Vector{Vector{Int}}`, from each variable
+    index, `i`, to a set of jump indices. The jump indices correspond to jumps with
+    rate functions that depend on the value of `u[i]`.
+  - `jumptovars_map` - A map, such as a `Vector{Vector{Int}}`, from each jump index
+    to a set of variable indices. The corresponding variables are those that have
+    their value, `u[i]`, altered when the jump occurs.
 
 For systems generated from a [Catalyst](https://docs.sciml.ai/Catalyst/stable/)
 `reaction_network` these will be auto-generated. Otherwise, you must explicitly

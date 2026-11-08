@@ -79,6 +79,9 @@ function generate_jumps!(p::FRMJumpAggregation, integrator, u, params, t)
     nothing
 end
 
+# every rate is recomputed when the next jump is chosen
+update_external_rates!(p::FRMJumpAggregation, deps, u, params, t, integrator) = nothing
+
 ######################## SSA specific helper routines ########################
 
 # mass action jumps

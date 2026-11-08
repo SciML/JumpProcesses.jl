@@ -72,6 +72,11 @@ function execute_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t, affec
     nothing
 end
 
+# an outside change executed no jump (0): every listed jump keeps or rescales its time
+function update_external_rates!(p::CCNRMJumpAggregation, deps, u, params, t, integrator)
+    update_dependent_rates!(p, deps, 0, u, params, t, get_rng(integrator))
+end
+
 # calculate the next jump / jump time
 # just the first reaction in the first non-empty bin in the priority table
 function generate_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t)

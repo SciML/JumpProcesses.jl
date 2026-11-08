@@ -293,6 +293,37 @@ function update_dependent_rates!(p::AbstractSSAJumpAggregator, dep_rxs, u, param
 end
 
 """
+    update_after_external_change!(p::AbstractSSAJumpAggregator, integrator, deps)
+
+Update the aggregator after something outside it changed the state at the current time, as a
+`VariableRateJump` occurring does: recompute the rates that depend on the change, choose the
+next jump again, and register its time if it is later than now. `deps` lists the jumps whose
+rates changed (for `RSSA` and `RSSACR`, the variables that changed), or is `nothing` when it
+isn't known, for the aggregators that recompute every rate when they choose (`Direct`,
+`DirectFW`, `FRM`, `FRMFW`).
+
+Choosing again from the current time is exact, since the jumps are memoryless. A next jump at
+the current time needs no `tstop`: it fires in the same pass, since discrete callbacks run after
+continuous ones, while a `tstop` at the current time makes SDE solvers stop.
+"""
+@noinline function update_after_external_change!(p::AbstractSSAJumpAggregator, integrator,
+        deps)
+    u, params, t = integrator.u, integrator.p, integrator.t
+    update_external_rates!(p, deps, u, params, t, integrator)
+    generate_jumps!(p, integrator, u, params, t)
+    (p.next_jump_time > t) && register_next_jump_time!(integrator, p, t)
+    nothing
+end
+
+# Recomputes the rates of the jumps in `deps` after an outside change (no jump executed): the
+# generic method uses the aggregator's `update_dependent_rates!` (SortingDirect, RDirect,
+# DirectCR), and the other aggregators have their own.
+function update_external_rates!(p::AbstractSSAJumpAggregator, deps, u, params, t,
+        integrator)
+    update_dependent_rates!(p, deps, u, params, t)
+end
+
+"""
     update_state!(p::AbstractSSAJumpAggregator, integrator, u)
 
 Execute `p.next_jump`.

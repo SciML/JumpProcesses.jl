@@ -69,6 +69,9 @@ function generate_jumps!(p::DirectJumpAggregation, integrator, u, params, t)
     nothing
 end
 
+# every rate is recomputed when the next jump is chosen
+update_external_rates!(p::DirectJumpAggregation, deps, u, params, t, integrator) = nothing
+
 ######################## SSA specific helper routines ########################
 
 # tuple-based constant jumps

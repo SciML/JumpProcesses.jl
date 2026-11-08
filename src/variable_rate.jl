@@ -78,17 +78,19 @@ struct VR_FRM{V} <: VariableRateAggregator end
 VR_FRM(; vector_callback::Union{Nothing, Bool} = nothing) = VR_FRM{vector_callback}()
 
 # per-jump callbacks were faster in benchmarks with up to three jumps
-function configure_jump_problem(prob, ::VR_FRM{nothing}, jumps, cvrjs)
+# `updates`: how the callbacks update the SSA jumps after a jump occurs (see `VRJUpdates`)
+function configure_jump_problem(prob, ::VR_FRM{nothing}, jumps, cvrjs, updates = nothing)
     vr_aggregator = VR_FRM{length(cvrjs) > 3}()
-    configure_jump_problem(prob, vr_aggregator, jumps, cvrjs)
+    configure_jump_problem(prob, vr_aggregator, jumps, cvrjs, updates)
 end
 
-function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs)
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs,
+        updates = nothing)
     # a Vector of jumps is converted here, once, so that the extended right-hand side
     # evaluates the rates through the type-stable, unrolled `update_jumps!`
     vrjs = Tuple(cvrjs)
     new_prob = extend_problem(prob, vrjs)
-    variable_jump_callback = vr_frm_callbacks(vr_aggregator, length(prob.u0), vrjs)
+    variable_jump_callback = vr_frm_callbacks(vr_aggregator, length(prob.u0), vrjs, updates)
     return new_prob, variable_jump_callback
 end
 
@@ -283,11 +285,49 @@ function check_vr_frm_state_length(integrator, nu)
     nothing
 end
 
+################################# updating the SSA jumps #################################
+
+# What a VR aggregator's callbacks do after one of its jumps occurs: nothing (no
+# `VariableRateJump` maps given), or update the SSA aggregator with `lists[k]` after its `k`th
+# jump: the SSA jumps whose rates to recompute, or for RSSA and RSSACR the changed variables.
+# `lists === nothing` when they aren't known, for the aggregators that recompute every rate.
+struct VRJUpdates{L}
+    lists::L
+end
+
+@inline vrj_occurred!(::Nothing, integrator, k) = nothing
+@inline function vrj_occurred!(updates::VRJUpdates, integrator, k)
+    deps = vrj_dependents(updates.lists, k)
+    # a jump that changes nothing the SSA jumps read needs no update
+    (deps !== nothing && isempty(deps)) && return nothing
+    p = find_ssa_aggregator(integrator.opts.callback.discrete_callbacks)
+    p === nothing || update_after_external_change!(p, integrator, deps)
+    nothing
+end
+vrj_dependents(::Nothing, k) = nothing
+Base.@propagate_inbounds vrj_dependents(lists, k) = dependents(lists, k)
+
+# The SSA aggregator among the integrator's discrete callbacks, searched from the front (the
+# jump callbacks come first in JumpProcesses' ODE solve). Over a `Tuple` the recursion unrolls
+# and the type checks resolve at compile time; an erased `Vector` is scanned at run time.
+find_ssa_aggregator(::Tuple{}) = nothing
+@inline function find_ssa_aggregator(cbs::Tuple)
+    c = first(cbs).condition
+    c isa AbstractSSAJumpAggregator ? c : find_ssa_aggregator(Base.tail(cbs))
+end
+function find_ssa_aggregator(cbs::AbstractVector)
+    for cb in cbs
+        cb.condition isa AbstractSSAJumpAggregator && return cb.condition
+    end
+    nothing
+end
+
 ############################ VR_FRM{false}: one callback per jump ############################
 
-struct VR_FRMEventCallback{F}
+struct VR_FRMEventCallback{F, U}
     idx::Int
     affect!::F
+    updates::U
 end
 
 # condition: (u, t, integrator); with the callback's `idxs`, `u` is the value of `jump_u[idx]`
@@ -298,6 +338,7 @@ function (c::VR_FRMEventCallback)(integrator)
     c.affect!(integrator)
     rng = get_rng(integrator)
     integrator.u.jump_u[c.idx] = -randexp(rng, typeof(integrator.t))
+    vrj_occurred!(c.updates, integrator, c.idx)
     nothing
 end
 
@@ -310,8 +351,8 @@ function (c::VR_FRMEventCallback)(cb, u, t, integrator)
     nothing
 end
 
-function wrap_jump_in_callback(nu, idx, jump)
-    cb_functor = VR_FRMEventCallback(idx, jump.affect!)
+function wrap_jump_in_callback(nu, idx, jump, updates)
+    cb_functor = VR_FRMEventCallback(idx, jump.affect!, updates)
     ContinuousCallback(cb_functor, cb_functor;
         initialize = cb_functor,
         idxs = nu + idx,
@@ -322,19 +363,19 @@ function wrap_jump_in_callback(nu, idx, jump)
         reltol = jump.reltol)
 end
 
-function build_variable_callback(cb, nu, idx, jump, jumps...)
+function build_variable_callback(cb, nu, idx, updates, jump, jumps...)
     idx += 1
-    new_cb = wrap_jump_in_callback(nu, idx, jump)
-    build_variable_callback(CallbackSet(cb, new_cb), nu, idx, jumps...)
+    new_cb = wrap_jump_in_callback(nu, idx, jump, updates)
+    build_variable_callback(CallbackSet(cb, new_cb), nu, idx, updates, jumps...)
 end
 
-function build_variable_callback(cb, nu, idx, jump)
+function build_variable_callback(cb, nu, idx, updates, jump)
     idx += 1
-    CallbackSet(cb, wrap_jump_in_callback(nu, idx, jump))
+    CallbackSet(cb, wrap_jump_in_callback(nu, idx, jump, updates))
 end
 
-function vr_frm_callbacks(::VR_FRM{false}, nu, vrjs)
-    build_variable_callback(CallbackSet(), nu, 0, vrjs...)
+function vr_frm_callbacks(::VR_FRM{false}, nu, vrjs, updates)
+    build_variable_callback(CallbackSet(), nu, 0, updates, vrjs...)
 end
 
 ###################### VR_FRM{true}: one callback per set of jump options ######################
@@ -349,10 +390,11 @@ end
 struct VR_FRMVectorCondition end
 @inline (::VR_FRMVectorCondition)(out, u, t, integrator) = (out .= u; nothing)
 
-struct VR_FRMVectorCallback{A}
+struct VR_FRMVectorCallback{A, U}
     jump_idxs::Vector{Int}  # indices in `jump_u` of the callback's jumps
     affects::A              # Tuple of their `affect!` functions
     init_all::Bool          # whether `initialize` draws the thresholds of all the jumps
+    updates::U              # how the SSA jumps are updated after a jump (`VRJUpdates`)
 end
 
 # calls `affects[k](integrator)` through one branch per affect, so each call is static; `k` is
@@ -372,6 +414,7 @@ function (c::VR_FRMVectorCallback)(integrator, events)
         iszero(events[k]) && continue
         vr_frm_affect!(c.affects, k, integrator)
         integrator.u.jump_u[i] = -randexp(rng, typeof(integrator.t))
+        vrj_occurred!(c.updates, integrator, i)
     end
     nothing
 end
@@ -391,7 +434,7 @@ function (c::VR_FRMVectorCallback)(cb, u, t, integrator)
     nothing
 end
 
-function vr_frm_callbacks(::VR_FRM{true}, nu, vrjs)
+function vr_frm_callbacks(::VR_FRM{true}, nu, vrjs, updates)
     opts = map(vr_frm_callback_options, vrjs)
     cbs = map(enumerate(unique(opts))) do (n, jump_opts)
         jump_idxs = findall(isequal(jump_opts), opts)
@@ -402,7 +445,7 @@ function vr_frm_callbacks(::VR_FRM{true}, nu, vrjs)
             nu .+ jump_idxs
         end
         affects = Tuple(vrjs[i].affect! for i in jump_idxs)
-        cb_functor = VR_FRMVectorCallback(jump_idxs, affects, n == 1)
+        cb_functor = VR_FRMVectorCallback(jump_idxs, affects, n == 1, updates)
         VectorContinuousCallback(VR_FRMVectorCondition(), cb_functor, length(jump_idxs);
             initialize = cb_functor, idxs, jump_opts...)
     end
@@ -572,7 +615,7 @@ function empty_panels!(fit::TotalRateFit)
     nothing
 end
 
-mutable struct VR_DirectEventCache{T, F1, F2}
+mutable struct VR_DirectEventCache{T, F1, F2, U}
     prev_time::T
     prev_threshold::T
     current_time::T
@@ -582,22 +625,25 @@ mutable struct VR_DirectEventCache{T, F1, F2}
     affect_funcs::F2
     cum_rate_sum::Vector{T}
     rate_fit::TotalRateFit{T}
+    updates::U    # how the SSA jumps are updated after a jump (`VRJUpdates`)
 end
 
 # `vjumps` are the jumps the cache handles: the variable rate jumps not handled by the SSA
 # aggregator (`Coevolve` takes the bounded ones)
-function VR_DirectEventCache(vjumps, ::VR_Direct, prob, ::Type{T}) where {T}
+function VR_DirectEventCache(vjumps, ::VR_Direct, prob, ::Type{T},
+        updates = nothing) where {T}
     # handle vjumps using tuples
     rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
 
     cum_rate_sum = Vector{T}(undef, length(vjumps))
 
-    VR_DirectEventCache{T, typeof(rate_funcs), typeof(affect_funcs)}(zero(T),
-        zero(T), zero(T), zero(T), zero(T), rate_funcs,
-        affect_funcs, cum_rate_sum, TotalRateFit{T}())
+    VR_DirectEventCache{T, typeof(rate_funcs), typeof(affect_funcs), typeof(updates)}(
+        zero(T), zero(T), zero(T), zero(T), zero(T), rate_funcs, affect_funcs, cum_rate_sum,
+        TotalRateFit{T}(), updates)
 end
 
-function VR_DirectEventCache(vjumps, ::VR_DirectFW, prob, ::Type{T}) where {T}
+function VR_DirectEventCache(vjumps, ::VR_DirectFW, prob, ::Type{T},
+        updates = nothing) where {T}
     t, u = prob.tspan[1], prob.u0
 
     # handle vjumps using tuples
@@ -605,9 +651,9 @@ function VR_DirectEventCache(vjumps, ::VR_DirectFW, prob, ::Type{T}) where {T}
 
     cum_rate_sum = Vector{T}(undef, length(vjumps))
 
-    VR_DirectEventCache{T, typeof(rate_funcs), Any}(zero(T),
-        zero(T), zero(T), zero(T), zero(T), rate_funcs,
-        affect_funcs, cum_rate_sum, TotalRateFit{T}())
+    VR_DirectEventCache{T, typeof(rate_funcs), Any, typeof(updates)}(zero(T), zero(T),
+        zero(T), zero(T), zero(T), rate_funcs, affect_funcs, cum_rate_sum, TotalRateFit{T}(),
+        updates)
 end
 
 # Initialization function for VR_DirectEventCache
@@ -666,16 +712,16 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps)
         save_positions, abstol, reltol, interp_points = 0)
 end
 
-function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs)
+function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs, updates = nothing)
     new_prob = prob
-    cache = VR_DirectEventCache(cvrjs, VR_Direct(), prob, eltype(prob.tspan))
+    cache = VR_DirectEventCache(cvrjs, VR_Direct(), prob, eltype(prob.tspan), updates)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     return new_prob, variable_jump_callback
 end
 
-function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs)
+function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs, updates = nothing)
     new_prob = prob
-    cache = VR_DirectEventCache(cvrjs, VR_DirectFW(), prob, eltype(prob.tspan))
+    cache = VR_DirectEventCache(cvrjs, VR_DirectFW(), prob, eltype(prob.tspan), updates)
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     return new_prob, variable_jump_callback
 end
@@ -917,5 +963,6 @@ function (cache::VR_DirectEventCache)(integrator)
     cache.current_time = t
     # the integral up to the jump is used up, and the next step starts at the jump
     empty_panels!(cache.rate_fit)
+    vrj_occurred!(cache.updates, integrator, jump_idx)
     return nothing
 end

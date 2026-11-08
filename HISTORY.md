@@ -1,6 +1,9 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - `VR_Direct` and `VR_DirectFW` no longer also simulate the bounded `VariableRateJump`s
+    that `Coevolve` handles. In problems with both bounded and general `VariableRateJump`s,
+    those bounded jumps fired twice as often.
   - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
     sums of the rates when rounding errors may have made them inaccurate, using a bound on
     those errors that they update as the rates change. When every rate became zero, the

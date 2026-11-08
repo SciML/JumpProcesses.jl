@@ -289,6 +289,30 @@ let
     end
 end
 
+# Coevolve handles the bounded VariableRateJumps; the VR aggregator only the others. VR_Direct
+# and VR_DirectFW used to handle the bounded ones too, so those fired twice as often. Here a
+# bounded jump at rate 1 counts its firings in u[1], and an unbounded jump never fires.
+@testset "VR aggregators leave Coevolve's bounded jumps to it" begin
+    f!(du, u, p, t) = (du .= 0; nothing)
+    bounded = VariableRateJump((u, p, t) -> 1.0, integ -> (integ.u[1] += 1; nothing);
+        urate = (u, p, t) -> 1.0, rateinterval = (u, p, t) -> Inf)
+    unbounded = VariableRateJump((u, p, t) -> 0.0, integ -> (integ.u[2] += 1; nothing))
+    T = 20.0
+    oprob = ODEProblem{true, SciMLBase.FullSpecialize}(f!, [0.0, 0.0], (0.0, T))
+    for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
+        jprob = JumpProblem(oprob, Coevolve(), bounded, unbounded; vr_aggregator,
+            dep_graph = [[1]])
+        if !(vr_aggregator isa VR_FRM)
+            cache = jprob.jump_callback.continuous_callbacks[1].condition
+            @test length(cache.rate_funcs) == 1
+        end
+        rng = StableRNG(12345)
+        counts = [solve(jprob, Tsit5(); rng).u[end][1] for _ in 1:400]
+        # Poisson(20), so the mean of 400 is within 1 with overwhelming probability
+        @test mean(counts)≈T atol=1
+    end
+end
+
 # test u0 resets correctly
 let
     b = 2.0

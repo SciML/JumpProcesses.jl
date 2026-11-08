@@ -584,10 +584,9 @@ mutable struct VR_DirectEventCache{T, F1, F2}
     rate_fit::TotalRateFit{T}
 end
 
-function VR_DirectEventCache(
-        jumps::JumpSet, ::VR_Direct, prob, ::Type{T}) where {T}
-    vjumps = jumps.variable_jumps
-
+# `vjumps` are the jumps the cache handles: the variable rate jumps not handled by the SSA
+# aggregator (`Coevolve` takes the bounded ones)
+function VR_DirectEventCache(vjumps, ::VR_Direct, prob, ::Type{T}) where {T}
     # handle vjumps using tuples
     rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
 
@@ -598,10 +597,7 @@ function VR_DirectEventCache(
         affect_funcs, cum_rate_sum, TotalRateFit{T}())
 end
 
-function VR_DirectEventCache(
-        jumps::JumpSet, ::VR_DirectFW, prob, ::Type{T}) where {T}
-    vjumps = jumps.variable_jumps
-
+function VR_DirectEventCache(vjumps, ::VR_DirectFW, prob, ::Type{T}) where {T}
     t, u = prob.tspan[1], prob.u0
 
     # handle vjumps using tuples
@@ -672,14 +668,14 @@ end
 
 function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs)
     new_prob = prob
-    cache = VR_DirectEventCache(jumps, VR_Direct(), prob, eltype(prob.tspan))
+    cache = VR_DirectEventCache(cvrjs, VR_Direct(), prob, eltype(prob.tspan))
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     return new_prob, variable_jump_callback
 end
 
 function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs)
     new_prob = prob
-    cache = VR_DirectEventCache(jumps, VR_DirectFW(), prob, eltype(prob.tspan))
+    cache = VR_DirectEventCache(cvrjs, VR_DirectFW(), prob, eltype(prob.tspan))
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     return new_prob, variable_jump_callback
 end

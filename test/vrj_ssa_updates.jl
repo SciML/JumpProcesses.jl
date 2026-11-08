@@ -201,16 +201,21 @@ end
 
 # The VR callbacks find the SSA aggregator among the integrator's discrete callbacks each
 # time a VariableRateJump occurs; over a Tuple the search must resolve at compile time,
-# however many callbacks there are: its typed code is the aggregator's field access, only
-# `getfield` calls (and the markers that coverage runs add)
-function static_search(cbs)
-    code = only(code_typed(JumpProcesses.find_ssa_aggregator, (typeof(cbs),)))[1].code
-    all(code) do st
-        st === nothing || st isa Core.ReturnNode ||
-            Meta.isexpr(st, (:boundscheck, :inbounds, :code_coverage_effect)) ||
-            (Meta.isexpr(st, :call) && st.args[1] isa GlobalRef &&
-             st.args[1].name === :getfield)
+# however many callbacks there are. A search through `Base.tail` stopped doing so beyond 32
+# callbacks: still inferred and allocation free, it took about 10 µs among 41 callbacks
+# instead of a few ns. So the best of 5 runs of 10^4 searches must take under 1 ms (100 ns
+# per search), with a wide margin on both sides, coverage runs included. Each result is
+# stored, so that no search can be skipped.
+function search_loop(cbs, n, sink)
+    for _ in 1:n
+        sink[] = JumpProcesses.find_ssa_aggregator(cbs)
     end
+    nothing
+end
+function search_time(cbs; n = 10^4)
+    sink = Ref(JumpProcesses.find_ssa_aggregator(cbs))
+    search_loop(cbs, n, sink)
+    minimum(@elapsed(search_loop(cbs, n, sink)) for _ in 1:5)
 end
 
 @testset "Finding the SSA aggregator among many callbacks" begin
@@ -222,12 +227,12 @@ end
     @test length(dcbs) == 41
     @test (@inferred JumpProcesses.find_ssa_aggregator(dcbs)) ===
           jprob.discrete_jump_aggregation
-    @test static_search(dcbs)
+    @test search_time(dcbs) < 1e-3
     # with the user's callbacks first, as StochasticDiffEq orders them
     dcbs2 = (cbs.discrete_callbacks..., dcbs[1])
     @test (@inferred JumpProcesses.find_ssa_aggregator(dcbs2)) ===
           jprob.discrete_jump_aggregation
-    @test static_search(dcbs2)
+    @test search_time(dcbs2) < 1e-3
     JumpProcesses.find_ssa_aggregator(dcbs2)
     @test (@allocated JumpProcesses.find_ssa_aggregator(dcbs2)) == 0
     @test JumpProcesses.find_ssa_aggregator(cbs.discrete_callbacks) === nothing

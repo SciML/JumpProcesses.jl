@@ -1,6 +1,21 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - New `JumpDependencies` holds the dependency maps `dep_graph`, `vartojumps_map` and
+    `jumptovars_map`, passed with `JumpProblem(...; dependencies)`. Each entry of a map is
+    an `AbstractVector` of indices. It copies the maps unless built with `alias = true`, and
+    the `JumpProblem` checks their lengths and indices against the problem. The
+    `JumpProblem` takes ownership of it and may modify its maps; pass
+    `alias_dependencies = false` to leave it unchanged.
+  - The `JumpProblem` keywords `dep_graph`, `vartojumps_map` and `jumptovars_map` are
+    deprecated, and will be removed in JumpProcesses 11: pass the maps in a
+    `JumpDependencies` instead. A map given both ways is an error.
+  - `JumpProblem` now puts each map its aggregator uses into one form: every entry sorted,
+    without duplicates and with `Int` indices, and each entry of `dep_graph` listing its own
+    jump. A map already in that form is used without a copy. Seeded results can change for
+    maps given in another form, and for `RSSA` and `RSSACR` with maps generated from
+    `MassActionJump`s, whose `jumptovars_map` entries followed the order of each reaction's
+    net stoichiometry.
   - `SortingDirect`, `RDirect`, `DirectCR`, `RSSA` and `RSSACR` now recompute their running
     sums of the rates when rounding errors may have made them inaccurate, using a bound on
     those errors that they update as the rates change. When every rate became zero, the

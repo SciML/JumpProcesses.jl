@@ -20,7 +20,8 @@ function sortingdirect_reuse_problem(representation)
         end
         ConstantRateJump(rate, affect!)
     end
-    JumpProblem(prob, SortingDirect(), jumps...; dep_graph = [[i] for i in 1:3])
+    JumpProblem(prob, SortingDirect(), jumps...;
+        dependencies = JumpDependencies(; dep_graph = [[i] for i in 1:3]))
 end
 
 @testset "SortingDirect preserves learned search order" begin

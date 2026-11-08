@@ -9,6 +9,7 @@ CurrentModule = JumpProcesses
 ```@docs
 ExtendedJumpArray
 JumpProblem
+JumpDependencies
 PureLeaping
 SSAStepper
 SplitCoupledJumpProblem

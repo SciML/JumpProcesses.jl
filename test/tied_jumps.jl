@@ -33,8 +33,9 @@ zero_drift!(du, u, p, t) = (fill!(du, 0); nothing)
             (; adaptive = false, dt = 0.25))),
         aggregator in JumpProcesses.JUMP_AGGREGATORS
 
-        jprob = JumpProblem(prob, aggregator, jumps...; dep_graph, vartojumps_map,
-            jumptovars_map, save_positions = (false, false))
+        jprob = JumpProblem(prob, aggregator, jumps...;
+            dependencies = JumpDependencies(; dep_graph, vartojumps_map, jumptovars_map),
+            save_positions = (false, false))
         rng = StableRNG(12345)
         sols = [solve(jprob, alg; rng, save_everystep = false, kwargs...) for _ in 1:200]
         @test all(sol -> SciMLBase.successful_retcode(sol), sols)
@@ -126,7 +127,7 @@ end
         a = ConstantRateJump((u, p, t) -> u[1] < 2 ? 1.0 : 0.0, i -> record!(i, :A))
         b = ConstantRateJump((u, p, t) -> u[1] == 2 ? 1e20 : 0.0, i -> record!(i, :B))
         jprob = JumpProblem(ODEProblem(zero_drift!, [0.0], (0.0, 2.0)), aggregator, a, b;
-            dep_graph = [[1, 2], [1, 2]])
+            dependencies = JumpDependencies(; dep_graph = [[1, 2], [1, 2]]))
         solve(jprob, Tsit5(); dt = 0.25, adaptive = false, rng = TiedJumpsRNG())
         @test calls == [:A, :A]
     end
@@ -146,7 +147,8 @@ end
 @testset "Coevolve rejection after a tied jump keeps its derivative discontinuity" begin
     drift!(du, u, p, t) = (du[1] = 0; du[2] = u[1]; nothing)
     jprob = JumpProblem(ODEProblem(drift!, zeros(2), (0.0, 2.0)), Coevolve(),
-        jump_and_tied_rejection()...; dep_graph = [[1], [2]])
+        jump_and_tied_rejection()...;
+        dependencies = JumpDependencies(; dep_graph = [[1], [2]]))
     sol = solve(jprob, Tsit5(); dt = 1.0, adaptive = false, rng = TiedJumpsRNG())
     @test sol.u[end][2] ≈ 1.0
 end
@@ -154,7 +156,8 @@ end
 # The rejection used to make SSAStepper skip the save after A
 @testset "SSAStepper saves a jump followed by a rejected tied candidate" begin
     jprob = JumpProblem(DiscreteProblem([0.0], (0.0, 2.0)), Coevolve(),
-        jump_and_tied_rejection()...; dep_graph = [[1], [2]])
+        jump_and_tied_rejection()...;
+        dependencies = JumpDependencies(; dep_graph = [[1], [2]]))
     sol = solve(jprob, SSAStepper(); rng = TiedJumpsRNG())
     @test sol.t == [0.0, 1.0, 2.0]
     @test only.(sol.u) == [0.0, 1.0, 1.0]
@@ -180,7 +183,8 @@ end
     b = ConstantRateJump((u, p, t) -> u[1] == 1 ? 1e20 : 0.0, affectB!)
     for aggregator in (Direct(), Coevolve())
         jprob = JumpProblem(ODEProblem(drift!, zeros(2), (0.0, 2.0)), aggregator, a, b;
-            dep_graph = [[1, 2], [2]], save_positions = (false, false))
+            dependencies = JumpDependencies(; dep_graph = [[1, 2], [2]]),
+            save_positions = (false, false))
         sol = solve(jprob, Tsit5(); dt = 1.0, adaptive = false, save_everystep = false,
             rng = TiedJumpsRNG())
         @test sol.u[end][2] ≈ 1.0

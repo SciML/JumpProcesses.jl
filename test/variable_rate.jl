@@ -238,7 +238,8 @@ let
         rateinterval = (u, p, t) -> 1.0)
 
     dprob = DiscreteProblem([0], (0.0, 1.0), nothing)
-    jprob = JumpProblem(dprob, Coevolve(), test_jump; dep_graph = [[1]])
+    jprob = JumpProblem(dprob, Coevolve(), test_jump;
+        dependencies = JumpDependencies(; dep_graph = [[1]]))
 
     @test_nowarn for i in 1:50
         solve(jprob, SSAStepper())
@@ -261,7 +262,8 @@ let
     Nsims = 1000
     for (prob, alg) in ((ODEProblem(f!, u0, tspan), Tsit5()),
         (SDEProblem(f!, g!, u0, tspan), SRIW1()))
-        jprob = JumpProblem(prob, Coevolve(), jump1, jump2; dep_graph = [[1], [2]])
+        jprob = JumpProblem(prob, Coevolve(), jump1, jump2;
+            dependencies = JumpDependencies(; dep_graph = [[1], [2]]))
         counts = [solve(jprob, alg; rng, save_everystep = false).u[end] for _ in 1:Nsims]
         # each jump fires Poisson(10) times
         @test mean(c -> c[1], counts)≈10 atol=0.5
@@ -282,7 +284,8 @@ let
     Nsims = 1000
     for (prob, alg) in ((ODEProblem(f!, [0.0], tspan), Tsit5()),
         (SDEProblem(f!, g!, [0.0], tspan), SRIW1()))
-        jprob = JumpProblem(prob, Coevolve(), jump; dep_graph = [[1]])
+        jprob = JumpProblem(prob, Coevolve(), jump;
+            dependencies = JumpDependencies(; dep_graph = [[1]]))
         counts = [solve(jprob, alg; rng, save_everystep = false).u[end][1] for _ in 1:Nsims]
         # the jump fires Poisson(1) times
         @test mean(counts)≈1 atol=0.15

@@ -1,5 +1,6 @@
 using JumpProcesses, OrdinaryDiffEq, StochasticDiffEq, SciMLBase, Test
-using JumpProcesses: working_fields
+using JumpProcesses: shared_fields
+using InteractiveUtils: subtypes
 
 # `isolated_copy` gives a problem its own jump state and shares everything else. The tests of
 # integrators alive at the same time, variable-rate jumps, threaded solves, spatial
@@ -8,9 +9,10 @@ using JumpProcesses: working_fields
 
 path(sol) = (sol.t, sol.u)
 
-# A <-> B, as mass-action or constant-rate jumps
-function ab_jprob(aggregator; massaction = true, kwargs...)
-    prob = DiscreteProblem([12, 8], (0.0, 5.0), [0.7, 0.4])
+# A <-> B, as mass-action or constant-rate jumps, with state type `U` and time and parameter
+# type `T`
+function ab_jprob(aggregator; massaction = true, U = Int, T = Float64, kwargs...)
+    prob = DiscreteProblem(U[12, 8], (zero(T), T(5)), T[0.7, 0.4])
     reactant_stoch = [[1 => 1], [2 => 1]]
     net_stoch = [[1 => -1, 2 => 1], [1 => 1, 2 => -1]]
     if massaction
@@ -51,9 +53,9 @@ function stop_after_jumps(n)
 end
 
 # Growth of u[1], with births of u[2] at rate u[1] and resets of u[1] at a constant rate
-function growth_jprob(vr_aggregator)
+function growth_jprob(vr_aggregator; T = Float64)
     f!(du, u, p, t) = (du[1] = p[1] * u[1]; du[2] = 0; nothing)
-    oprob = ODEProblem(f!, [1.0, 0.0], (0.0, 3.0), [0.5])
+    oprob = ODEProblem(f!, T[1.0, 0.0], (zero(T), T(3)), T[0.5])
     birth = VariableRateJump((u, p, t) -> u[1],
         integrator -> (integrator.u[2] += 1; nothing))
     reset = ConstantRateJump((u, p, t) -> 1.0,
@@ -61,39 +63,21 @@ function growth_jprob(vr_aggregator)
     JumpProblem(oprob, Direct(), birth, reset; vr_aggregator)
 end
 
-# The fields that `isolated_copy` shares for each aggregator. With the working fields they
-# must cover every field, so that a new field has to be classified.
-const COMMON_SHARED = (:ma_jumps, :rates, :affects!, :save_positions)
-const SPATIAL_SHARED = (:rates, :affects!, :save_positions, :dependencies, :spatial_system,
-    :numspecies)
-const SHARED_FIELDS = Dict(
-    :DirectJumpAggregation => COMMON_SHARED,
-    :FRMJumpAggregation => COMMON_SHARED,
-    :SortingDirectJumpAggregation => (COMMON_SHARED..., :dependencies),
-    :DirectCRJumpAggregation => (COMMON_SHARED..., :dependencies, :ratetogroup),
-    :RSSAJumpAggregation => (COMMON_SHARED..., :brackets, :dependencies, :bracket_data),
-    :RSSACRJumpAggregation => (COMMON_SHARED..., :brackets, :dependencies, :bracket_data,
-        :ratetogroup),
-    :NRMJumpAggregation => (COMMON_SHARED..., :dependencies),
-    :CCNRMJumpAggregation => (COMMON_SHARED..., :dependencies),
-    :CoevolveJumpAggregation => (COMMON_SHARED..., :dependencies, :lrates, :urates,
-        :rateintervals, :haslratevec),
-    :RDirectJumpAggregation => (COMMON_SHARED..., :dependencies, :counter_threshold),
-    :NSMJumpAggregation => SPATIAL_SHARED,
-    :DirectCRDirectJumpAggregation => (SPATIAL_SHARED..., :ratetogroup))
-
-# Working fields are copies (values of bits types are copied by construction); every other
-# field is the original's
+# The fields in `shared_fields` are the original's; every other field is a copy (numbers,
+# which are never modified in place, are shared, and values of bits types are copied by
+# value)
 function test_copied_and_shared_fields(orig, copied)
     T = typeof(orig)
     @test typeof(copied) === T
     @test copied !== orig
+    @test allunique(shared_fields(T))
+    @test issubset(shared_fields(T), fieldnames(T))
     for name in fieldnames(T)
         x, y = getfield(orig, name), getfield(copied, name)
-        if name in working_fields(T)
-            @test isbits(x) || x !== y
-        else
+        if name in shared_fields(T)
             @test x === y
+        else
+            @test isbits(x) || x isa Number || x !== y
         end
     end
 end
@@ -116,6 +100,19 @@ end
 const SHARED_PROBLEM_FIELDS = (:prob, :aggregator, :constant_jumps, :variable_jumps,
     :regular_jump, :massaction_jump, :kwargs)
 
+@testset "Every aggregator declares the fields it shares" begin
+    fallback = which(shared_fields, Tuple{Type{Nothing}})
+    own(types) = filter(T -> parentmodule(T) === JumpProcesses, types)
+    for T in own([subtypes(JumpProcesses.AbstractSSAJumpAggregator);
+                  subtypes(JumpProcesses.AbstractHopRates)])
+        @test which(shared_fields, Tuple{Type{T}}) !== fallback
+        @test issubset(shared_fields(T), fieldnames(T))
+    end
+
+    # An object of a type that declares nothing is never shared by mistake
+    @test_throws ArgumentError JumpProcesses.copy_working(Ref(1.0))
+end
+
 @testset "Shares the jumps and copies the jump state: $(nameof(typeof(aggregator))), \
            massaction = $massaction" for aggregator in JumpProcesses.JUMP_AGGREGATORS,
     massaction in (true, false)
@@ -129,10 +126,6 @@ const SHARED_PROBLEM_FIELDS = (:prob, :aggregator, :constant_jumps, :variable_ju
     end
 
     agg = jprob.discrete_jump_aggregation
-    T = typeof(agg)
-    shared = SHARED_FIELDS[nameof(T)]
-    @test Set(fieldnames(T)) == Set((working_fields(T)..., shared...))
-    @test isempty(intersect(working_fields(T), shared))
     test_copied_and_shared_fields(agg, jcopy.discrete_jump_aggregation)
     test_copied_tables(agg, jcopy.discrete_jump_aggregation)
 
@@ -292,9 +285,6 @@ end
     jcopy = isolated_copy(jprob)
 
     agg = jprob.discrete_jump_aggregation
-    T = typeof(agg)
-    shared = SHARED_FIELDS[nameof(T)]
-    @test Set(fieldnames(T)) == Set((working_fields(T)..., shared...))
     test_copied_and_shared_fields(agg, jcopy.discrete_jump_aggregation)
     test_copied_and_shared_fields(agg.rx_rates, jcopy.discrete_jump_aggregation.rx_rates)
     test_copied_and_shared_fields(agg.hop_rates, jcopy.discrete_jump_aggregation.hop_rates)
@@ -302,6 +292,41 @@ end
 
     refs = map(seed -> path(solve(deepcopy(jprob), SSAStepper(); seed)), (1, 2))
     @test interleaved_paths(jprob, isolated_copy(jprob), SSAStepper()) == refs
+end
+
+# A fresh aggregator's buffers are allocated with `undef`, so for `BigFloat` and `BigInt` they
+# hold unassigned entries until the first `init`; these problems are copied unsolved.
+# (`DirectCR`, `RSSACR` and `RDirect` can't build problems with `BigFloat` times yet.)
+@testset "Copies of unsolved problems with BigFloat times: $(nameof(typeof(aggregator))), \
+           massaction = $massaction" for aggregator in (Direct(), DirectFW(),
+        SortingDirect(), RSSA(), FRM(), FRMFW(), NRM(), Coevolve(), CCNRM()),
+    massaction in (true, false)
+
+    jprob = ab_jprob(aggregator; massaction, T = BigFloat)
+    jcopy = isolated_copy(jprob)
+    test_copied_and_shared_fields(jprob.discrete_jump_aggregation,
+        jcopy.discrete_jump_aggregation)
+    @test path(solve(jcopy, SSAStepper(); seed = 1)) ==
+          path(solve(deepcopy(jprob), SSAStepper(); seed = 1))
+end
+
+@testset "Copies of unsolved problems with BigInt states and BigFloat ODEs" begin
+    jprob = ab_jprob(RSSA(); U = BigInt)
+    jcopy = isolated_copy(jprob)
+    @test jcopy.discrete_jump_aggregation.ulow !== jprob.discrete_jump_aggregation.ulow
+    @test path(solve(jcopy, SSAStepper(); seed = 1)) ==
+          path(solve(deepcopy(jprob), SSAStepper(); seed = 1))
+
+    for vr_aggregator in (VR_Direct(), VR_DirectFW())
+        jprob = growth_jprob(vr_aggregator; T = BigFloat)
+        jcopy = isolated_copy(jprob)
+        cache = only(jprob.jump_callback.continuous_callbacks).condition
+        cache_copy = only(jcopy.jump_callback.continuous_callbacks).condition
+        test_copied_and_shared_fields(cache, cache_copy)
+        test_copied_and_shared_fields(cache.rate_fit, cache_copy.rate_fit)
+        @test path(solve(jcopy, Tsit5(); seed = 1)) ==
+              path(solve(deepcopy(jprob), Tsit5(); seed = 1))
+    end
 end
 
 @testset "Jump-diffusions, through `resetted_jump_problem`" begin

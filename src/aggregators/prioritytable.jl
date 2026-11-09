@@ -36,6 +36,8 @@ mutable struct PriorityGroup{T, W <: AbstractVector}
     pids::W
 end
 PriorityGroup{U}(maxpriority::T) where {T, U} = PriorityGroup(maxpriority, 0, Vector{U}())
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:PriorityGroup}) = ()
 
 @inline function insert!(pg::PriorityGroup, pid)
     (; numpids, pids) = pg
@@ -115,6 +117,8 @@ mutable struct PriorityTable{F, S, T, U <: Function} <: AbstractPriorityTable
     """
     priortogid::U
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:PriorityTable}) = (:priortogid,)
 
 """
 Setup table from a vector of priorities. The id
@@ -398,6 +402,8 @@ struct TimeGrouper{T <: Number}
     mintime::T
     binwidth::T
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:TimeGrouper}) = ()
 
 @inline function (t::TimeGrouper{T})(time::T) where {T}
     return floor(Int, (time - t.mintime) / t.binwidth) + 1
@@ -414,6 +420,8 @@ mutable struct PriorityTimeTable{T, F <: Int}
     binwidthconst::F
     numbinsconst::F
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:PriorityTimeTable}) = (:binwidthconst, :numbinsconst)
 
 # Construct the time table with the default optimal bin width and number of bins. 
 # DEFAULT NUMBINS: 20 * √length(times)

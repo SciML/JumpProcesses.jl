@@ -21,6 +21,11 @@ function DirectJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T, ma
         rs, affs!, sps)
 end
 
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:DirectJumpAggregation})
+    (:ma_jumps, :rates, :affects!, :save_positions)
+end
+
 ############################# Required Functions #############################
 
 # creating the JumpAggregation structure (tuple-based constant jumps)

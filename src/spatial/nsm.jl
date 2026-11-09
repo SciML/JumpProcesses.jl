@@ -39,6 +39,11 @@ function NSMJumpAggregation(
         num_specs)
 end
 
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:NSMJumpAggregation})
+    (:rates, :affects!, :save_positions, :dependencies, :spatial_system, :numspecies)
+end
+
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::NSM, starting_state, p, t, end_time, constant_jumps,

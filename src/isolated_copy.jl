@@ -1,82 +1,34 @@
 # `isolated_copy`: a copy of a `JumpProblem` with its own jump state and everything else
-# shared. Each type that holds jump state lists the fields that solvers modify, its working
-# fields; the copy rebuilds an object through its default constructor from copies of those
-# fields and the other fields as they are.
+# shared. Each type that holds jump state declares, next to its definition, the fields that
+# hold definitions (`shared_fields`, see aggregators/ssajump.jl); the copy rebuilds an object
+# through its default constructor from those fields as they are and copies of all the others.
 
-# The fields of a type that solvers modify, which `isolated_copy` copies. Every other field is
-# shared with the copy.
-function working_fields end
-
-const DIRECT_WORKING_FIELDS = (:next_jump, :prev_jump, :next_jump_time, :end_time,
-    :cur_rates, :sum_rate, :maj_rates)
-const RSSA_WORKING_FIELDS = (:next_jump, :prev_jump, :next_jump_time, :end_time,
-    :cur_rate_low, :cur_rate_high, :sum_rate, :maj_rates, :ulow, :uhigh, :sum_rate_err)
-const SPATIAL_WORKING_FIELDS = (:next_jump, :prev_jump, :next_jump_time, :end_time,
-    :rx_rates, :hop_rates)
-
-working_fields(::Type{<:DirectJumpAggregation}) = DIRECT_WORKING_FIELDS
-working_fields(::Type{<:FRMJumpAggregation}) = DIRECT_WORKING_FIELDS
-function working_fields(::Type{<:SortingDirectJumpAggregation})
-    (DIRECT_WORKING_FIELDS..., :jump_search_order, :jump_search_idx, :sum_rate_err)
-end
-function working_fields(::Type{<:DirectCRJumpAggregation})
-    (DIRECT_WORKING_FIELDS..., :minrate, :maxrate, :rt, :sum_rate_err)
-end
-working_fields(::Type{<:NRMJumpAggregation}) = (DIRECT_WORKING_FIELDS..., :pq)
-working_fields(::Type{<:CCNRMJumpAggregation}) = (DIRECT_WORKING_FIELDS..., :ptt)
-function working_fields(::Type{<:CoevolveJumpAggregation})
-    (DIRECT_WORKING_FIELDS..., :pq, :cur_lrates)
-end
-function working_fields(::Type{<:RDirectJumpAggregation})
-    (DIRECT_WORKING_FIELDS..., :max_rate, :counter, :sum_rate_err)
-end
-working_fields(::Type{<:RSSAJumpAggregation}) = RSSA_WORKING_FIELDS
-function working_fields(::Type{<:RSSACRJumpAggregation})
-    (RSSA_WORKING_FIELDS..., :minrate, :maxrate, :rt)
-end
-working_fields(::Type{<:NSMJumpAggregation}) = (SPATIAL_WORKING_FIELDS..., :pq)
-function working_fields(::Type{<:DirectCRDirectJumpAggregation})
-    (SPATIAL_WORKING_FIELDS..., :site_rates, :rt)
-end
-working_fields(::Type{<:RxRates}) = (:rates, :sum_rates, :maj_rates)
-working_fields(::Type{<:AbstractHopRates}) = (:rates, :sum_rates)
-function working_fields(::Type{<:VR_DirectEventCache})
-    (:prev_time, :prev_threshold, :current_time, :current_threshold, :total_rate,
-        :cum_rate_sum, :rate_fit)
-end
-function working_fields(::Type{<:TotalRateFit})
-    (:panel_starts, :panel_ends, :panel_integrals, :panel_end_integrals, :panel_coefs,
-        :rate_samples, :rate_coefs)
-end
-working_fields(::Type{<:PriorityGroup}) = (:maxpriority, :numpids, :pids)
-function working_fields(::Type{<:PriorityTable})
-    (:minpriority, :maxpriority, :groups, :gsums, :gsum, :pidtogroup)
-end
-function working_fields(::Type{<:PriorityTimeTable})
-    (:groups, :pidtogroup, :times, :timegrouper, :minbin, :steps, :maxtime)
-end
-
-# A new object of the type of `x`, from copies of its working fields and its other fields as
-# they are. Every type with `working_fields` keeps its default positional constructor.
+# A new object of the type of `x`, sharing its `shared_fields` and copying its other fields.
+# Every type with `shared_fields` keeps its default positional constructor. The generator
+# only reads the field names: `shared_fields` is called by the generated code, where it folds
+# to a constant, so that declarations made in other packages, after this one loads, are seen.
+# (Building the fields with `ntuple` instead allocated more for some types, such as
+# `PriorityTable`.)
 @generated function copy_working_state(x::T) where {T}
-    wf = working_fields(T)
-    args = map(fieldnames(T)) do name
+    fields = map(fieldnames(T)) do name
         field = :(getfield(x, $(QuoteNode(name))))
-        name in wf ? :(copy_working($field)) : field
+        :($(QuoteNode(name)) in shared_fields(T) ? $field : copy_working($field))
     end
-    return :(T($(args...)))
+    return :(T($(fields...)))
 end
 
-# Copies of working fields. There is deliberately no fallback, so that a working field of a
-# new type must be given a method here.
-copy_working(x::Union{Number, Nothing, SpatialJump, TimeGrouper}) = x
+# Copies of the fields that solvers modify. Numbers, `BigFloat`s included, are never modified
+# in place, so they are shared; arrays of numbers are copied as containers, which keeps the
+# unassigned entries of fresh buffers (`Vector{BigFloat}(undef, n)`) unassigned.
+copy_working(x::Number) = x
+copy_working(x::AbstractArray{<:Number}) = copy(x)
 copy_working(x::AbstractArray) = isbitstype(eltype(x)) ? copy(x) : map(copy_working, x)
 # DataStructures' heap holds only numbers
 copy_working(x::MutableBinaryMinHeap) = deepcopy(x)
-function copy_working(x::Union{RxRates, AbstractHopRates, TotalRateFit, PriorityGroup,
-        PriorityTable, PriorityTimeTable})
-    copy_working_state(x)
-end
+# Values of bits types are copied by value. Any other type must declare its `shared_fields`,
+# so that a field nobody classified is copied, or makes `isolated_copy` throw, but is never
+# shared by mistake.
+copy_working(x) = isbits(x) ? x : copy_working_state(x)
 
 fresh_aggregator(::Nothing) = nothing
 fresh_aggregator(agg::AbstractSSAJumpAggregator) = copy_working_state(agg)

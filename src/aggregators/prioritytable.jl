@@ -124,6 +124,10 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
         maxpriority)
     numgroups = priortogid(maxpriority)
     numgroups -= one(typeof(numgroups))
+    # `priortogid` maps priorities at or below `eps` to group 1, so when minpriority
+    # itself is below `eps` (e.g. Float32, where 2^-40 < eps(Float32)) this can give
+    # fewer than the three base groups {0}, (0,minpriority), [minpriority,2*minpriority).
+    numgroups = max(numgroups, 3)
     pidtype = typeof(numgroups)
     ptype = eltype(priorities)
     groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()
@@ -524,6 +528,11 @@ end
 # we remove the reaction and wait until rebuild. 
 function update!(ptt::PriorityTimeTable{T, F}, pid, oldtime, newtime) where {T, F}
     (; times, timegrouper, maxtime, pidtogroup, groups) = ptt
+
+    # widening arithmetic (e.g. `randexp`) can pass times of a wider type than the
+    # table's; convert so the timegrouper sees the stored value's type
+    newtime = convert(T, newtime)
+    oldtime = convert(T, oldtime)
 
     times[pid] = newtime
     if oldtime >= maxtime

@@ -36,7 +36,7 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate
-    minrate = 2.0^minexponent
+    minrate = T(2)^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init

@@ -75,7 +75,7 @@ their own special time integrators.
 The constructor for a [`ConstantRateJump`](@ref) is:
 
 ```julia
-ConstantRateJump(rate, affect!; bounds=nothing)
+ConstantRateJump(rate, affect!; bounds = nothing)
 ```
 
   - `rate(u, p, t)` is a function which calculates the rate given the current
@@ -112,7 +112,17 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = not
     Gillespie, and hence need to be rescaled. *The default, `scale_rates = true`,
     corresponds to rescaling the passed in rate constants.* See below.
   - `param_idxs` is a vector of the indices within the parameter vector, `p`, that
-    correspond to the rate constant for each jump.
+    correspond to the rate constant for each jump, or a scalar index for a
+    single reaction. Alternatively, supply a custom `param_mapper` callable
+    `(dest, maj, params)` that fills the final scaled coefficients in `dest`.
+
+Parameterized definitions have `scaled_rates === nothing`. Working rates are
+owned by the solver or aggregator and refreshed from the current parameters
+at initialization and jump-state resets. After changing parameters in a
+callback, call [`reset_aggregated_jumps!`](@ref). Definitions constructed with
+explicit fixed coefficients retain their stored rates and do not read `p`.
+See [Migrating to JumpProcesses 10](@ref migration_v10) for custom mapper
+scaling and the removed `JumpProblem` constructor keywords.
 
 **Notes for Mass Action Jumps**
 
@@ -124,7 +134,7 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = not
     `k*A*(A-1)*(A-2)/3!`. To *avoid* having the reaction rates rescaled (by `1/2`
     and `1/6` for these two examples), one can pass the `MassActionJump`
     constructor the optional named parameter `scale_rates = false`, i.e., use
-    
+
     ```julia
     MassActionJump(reactant_stoich, net_stoich; scale_rates = false, param_idxs)
     ```
@@ -132,31 +142,32 @@ MassActionJump(reactant_stoich, net_stoich; scale_rates = true, param_idxs = not
   - Zero order reactions can be passed as `reactant_stoich`s in one of two ways.
     Consider the ``\varnothing \overset{k}{\rightarrow} A`` reaction with rate
     `k=1`:
-    
+
     ```julia
     p = [1.0]
     reactant_stoich = [[0 => 1]]
     net_stoich = [[1 => 1]]
     jump = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1])
     ```
-    
+
     Alternatively, one can create an empty vector of pairs to represent the reaction:
-    
+
     ```julia
     p = [1.0]
     reactant_stoich = [Vector{Pair{Int, Int}}()]
     net_stoich = [[1 => 1]]
     jump = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1])
     ```
+
   - For performance reasons, it is recommended to order species indices in
     stoichiometry vectors from smallest to largest. That is
-    
+
     ```julia
     reactant_stoich = [[1 => 2, 3 => 1, 4 => 2], [2 => 2, 3 => 2]]
     ```
-    
+
     is preferred over
-    
+
     ```julia
     reactant_stoich = [[3 => 1, 1 => 2, 4 => 2], [3 => 2, 2 => 2]]
     ```
@@ -186,7 +197,10 @@ must also specify
     interval `t` to `t + rateinterval(u, p, t)` at time `t` given state `u` and
     parameters `p`.
   - `rateinterval(u, p, t)`, a function which computes a time interval `t` to `t + rateinterval(u, p, t)` given state `u` and parameters `p` over which the
-    `urate` bound will hold (and `lrate` bound if provided, see below).
+    `urate` bound will hold (and `lrate` bound if provided, see below). It must be
+    positive, with `t + rateinterval(u, p, t) > t`, at every time `t` before the end
+    time `T` of the time span, though it may reach zero at `T`, as `T - t` does. A
+    zero-length interval before then is invalid and can make the solve loop forever.
 
 For increased performance, one can also specify a lower bound that should be
 valid over the same `rateinterval`
@@ -203,10 +217,15 @@ Note that
     `Coevolve` aggregator.
   - Any `JumpProblem` with `VariableRateJump` that *does not use* the
     `Coevolve` aggregator  must be coupled to a continuous problem type such as
-    an `ODEProblem` to handle time-stepping. Continuous time-stepper will ignore
-    the provided aggregator and treat *all* `VariableRateJump`s as
-    `ContinuousCallback`s, using the `rate(u, p, t)` function to construct the
-    `condition` function that triggers a callback.
+    an `ODEProblem` to handle time-stepping. The `VariableRateJump`s are then
+    handled not by the provided aggregator, but by the variable rate aggregator
+    chosen with the `vr_aggregator` keyword argument of `JumpProblem`: one of
+    [`VR_FRM`](@ref) (the default), [`VR_Direct`](@ref) and
+    [`VR_DirectFW`](@ref). These use callbacks of the continuous solver to
+    determine when the jumps occur. See
+    [How jumps are simulated](@ref algorithms_overview) for how they work, and
+    [VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for how `VR_Direct`
+    integrates the rates.
   - When using `Coevolve` with a `JumpProblem` coupled to a continuous problem
     such as an `ODEProblem`, the aggregator will handle the jumps in same way
     that it does with `SSAStepper`. However, *ensure that given `t` the bounds
@@ -267,6 +286,30 @@ and the internals will automatically build the `JumpSet`. `save_positions`
 determines whether to save the state of the system just before and/or after
 jumps occur.
 
+Callbacks to run in every solve can be passed to the constructor with the
+`callback` keyword, `JumpProblem(prob, aggregator, jumps...; callback)`, and
+further callbacks can be passed to `solve` or `init`.
+
+!!! warning "Callbacks on the wrapped problem are not supported"
+
+    Do not store callbacks on `prob` itself, for example with
+    `ODEProblem(f, u0, tspan, p; callback)` or `DiscreteProblem(u0, tspan, p; callback)`.
+    The `JumpProblem` constructor raises an `ArgumentError` if `prob` stores a
+    `callback`. Before JumpProcesses 10, OrdinaryDiffEq solvers (including
+    `FunctionMap`) ran such callbacks, while `SSAStepper` and StochasticDiffEq solvers
+    silently ignored them. Pass the callbacks to the `JumpProblem` constructor or to
+    `solve`/`init` instead, and use `remake(prob; callback = nothing)` to remove them
+    from an existing problem.
+
+!!! tip "Use `FullSpecialize` for jumps coupled to an ODE"
+
+    On Julia 1.12 and later, build an ODE/DDE/DAE problem that you wrap in a
+    `JumpProblem` with `SciMLBase.FullSpecialize`, e.g.
+    `ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)`. With the default
+    specialization the solvers erase the types of the jump callbacks and allocate on every
+    time step, which can make jump simulations considerably slower. See
+    [this FAQ entry](@ref faq_fullspecialize).
+
 Note that a `JumpProblem`/`JumpSet` can only have 1 `RegularJump` (since a
 `RegularJump` itself describes multiple processes together). Similarly, it can
 only have one `MassActionJump` (since it also describes multiple processes
@@ -282,7 +325,9 @@ offer different trade-offs. However, all aggregators describe the realization of
 each and every individual jump chronologically. Since they do not skip any
 jumps, they are considered exact methods. Note that none of the aggregators
 discussed in this section can be used with `RegularJumps` which are used for
-time-step based (inexact) τ-leaping methods.
+time-step based (inexact) τ-leaping methods. See
+[How jumps are simulated](@ref algorithms_overview) for how the aggregators are
+coupled to time stepping.
 
 The current aggregators are (note that an italicized name indicates the
 aggregator requires various types of dependency graphs, see the next section):
@@ -335,13 +380,18 @@ method.
 ## Jump Aggregators Requiring Dependency Graphs
 
 Italicized constant rate jump aggregators above require the user to pass a
-dependency graph to `JumpProblem`. `Coevolve`, `DirectCR`, `NRM`, and
-`SortingDirect` require a jump-jump dependency graph, passed through the named
-parameter `dep_graph`. i.e.,
+dependency graph to `JumpProblem`, in a [`JumpDependencies`](@ref) given with the
+`dependencies` keyword. `Coevolve`, `DirectCR`, `NRM`, and `SortingDirect` require
+a jump-jump dependency graph, `dep_graph`, i.e.,
 
 ```julia
-JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)
+dependencies = JumpDependencies(; dep_graph = your_dependency_graph)
+JumpProblem(prob, DirectCR(), jump1, jump2; dependencies)
 ```
+
+Passing the maps as `JumpProblem` keywords, as in
+`JumpProblem(prob, DirectCR(), jump1, jump2; dep_graph = your_dependency_graph)`, is
+deprecated.
 
 For systems with only `MassActionJump`s, or those generated from a
 [Catalyst](https://docs.sciml.ai/Catalyst/stable/) `reaction_network`, this
@@ -349,24 +399,24 @@ graph will be auto-generated. Otherwise, you must construct the dependency graph
 whenever the set of jumps include `ConstantRateJump`s and/or bounded
 `VariableRateJump`s.
 
-Dependency graphs are represented as a `Vector{Vector{Int}}`, with the `i`th
-vector containing the indices of the jumps for which rates must be recalculated
-when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
+A dependency graph is a collection of collections of integer indices, such as a
+`Vector{Vector{Int}}`, with the `i`th entry containing the indices of the jumps for
+which rates must be recalculated when the `i`th jump occurs. Internally, all `MassActionJump`s are ordered before
 `ConstantRateJump`s and bounded `VariableRateJump`s. General `VariableRateJump`s
 are not handled by aggregators, and so not included in the jump ordering for
 dependency graphs. Note that the relative order between `ConstantRateJump`s and
 relative order between bounded `VariableRateJump`s is preserved. In this way, one
 can precalculate the jump order to manually construct dependency graphs.
 
-`RSSA` and `RSSACR` require two different types of dependency graphs, passed
-through the following `JumpProblem` kwargs:
+`RSSA` and `RSSACR` require two different types of dependency graphs, passed as
+the following fields of a `JumpDependencies`:
 
-  - `vartojumps_map` - A `Vector{Vector{Int}}` mapping each variable index, `i`,
-    to a set of jump indices. The jump indices correspond to jumps with rate
-    functions that depend on the value of `u[i]`.
-  - `jumptovars_map` - A `Vector{Vector{Int}}`  mapping each jump index to a set
-    of variable indices. The corresponding variables are those that have their
-    value, `u[i]`, altered when the jump occurs.
+  - `vartojumps_map` - A map, such as a `Vector{Vector{Int}}`, from each variable
+    index, `i`, to a set of jump indices. The jump indices correspond to jumps with
+    rate functions that depend on the value of `u[i]`.
+  - `jumptovars_map` - A map, such as a `Vector{Vector{Int}}`, from each jump index
+    to a set of variable indices. The corresponding variables are those that have
+    their value, `u[i]`, altered when the jump occurs.
 
 For systems generated from a [Catalyst](https://docs.sciml.ai/Catalyst/stable/)
 `reaction_network` these will be auto-generated. Otherwise, you must explicitly
@@ -417,9 +467,16 @@ When running many simulations, it can often be convenient to update the initial
 condition or simulation parameters without having to create and initialize a new
 `JumpProblem`. In such situations `remake` can be used to change the initial
 condition, time span, and the parameter vector. **Note,** the new `JumpProblem`
-will alias internal data structures from the old problem, including core
-components of the SSA aggregators. As such, only the new problem generated by
-`remake` should be used for subsequent simulations.
+shares the old problem's jump state, including the SSA aggregator and jump
+callbacks. Sequential solves are safe: each `init` re-initializes that state,
+including parameter-mapped mass-action working rates, from the problem being
+solved, and `remake` does not overwrite rates in a shared parameter-mapped
+definition. The original and remade problems must not be solved concurrently, or
+used for integrators that are alive at the same time; create independent copies
+with `deepcopy` instead. See the
+[ensembles and problem reuse tutorial](@ref ensembles_problem_reuse).
+`SortingDirect` also retains its learned search order, so a reused problem can
+have different initial sampling state even with the same seed.
 
 As an example, consider the following SIR model:
 
@@ -478,29 +535,37 @@ as will trying to update either `p` or `tspan` while passing a new
 [^1]: V. Lemaire, M. Thieullen and N. Thomas, Exact Simulation of the Jump
     Times of a Class of Piecewise Deterministic Markov Processes, Journal of
     Scientific Computing, 75 (3), 1776-1807 (2018). doi:10.1007/s10915-017-0607-4.
+
 [^2]: D. T. Gillespie, A general method for numerically simulating the stochastic
     time evolution of coupled chemical reactions, Journal of Computational Physics,
     22 (4), 403–434 (1976). doi:10.1016/0021-9991(76)90041-3.
+
 [^3]: A. Slepoy, A.P. Thompson and S.J. Plimpton, A constant-time kinetic Monte
     Carlo algorithm for simulation of large biochemical reaction networks, Journal
     of Chemical Physics, 128 (20), 205101 (2008). doi:10.1063/1.2919546.
+
 [^4]: J. M. McCollum, G. D. Peterson, C. D. Cox, M. L. Simpson and N. F.
     Samatova, The sorting direct method for stochastic simulation of biochemical
     systems with varying reaction execution behavior, Computational Biology and
     Chemistry, 30 (1), 39049 (2006). doi:10.1016/j.compbiolchem.2005.10.007.
+
 [^5]: V. H. Thanh, C. Priami and R. Zunino, Efficient rejection-based simulation
     of biochemical reactions with stochastic noise and delays, Journal of Chemical
     Physics, 141 (13), 134116 (2014). doi:10.1063/1.4896985.
+
 [^6]: V. H. Thanh, R. Zunino and C. Priami, On the rejection-based algorithm for
     simulation and analysis of large-scale reaction networks, Journal of Chemical
     Physics, 142 (24), 244106 (2015). doi:10.1063/1.4922923.
+
 [^7]: V. H. Thanh, R. Zunino, and C. Priami, Efficient constant-time complexity
     algorithm for stochastic simulation of large reaction networks, IEEE/ACM
     Transactions on Computational Biology and Bioinformatics, 14 (3), 657-667
     (2017). doi:10.1109/TCBB.2016.2530066.
+
 [^8]: M. A. Gibson and J. Bruck, Efficient exact stochastic simulation of chemical
     systems with many species and many channels, Journal of Physical Chemistry A,
     104 (9), 1876-1889 (2000). doi:10.1021/jp993732q.
+
 [^9]: M. Farajtabar, Y. Wang, M. Gomez-Rodriguez, S. Li, H. Zha, and L. Song,
     COEVOLVE: a joint point process model for information diffusion and network
     evolution, Journal of Machine Learning Research 18(1), 1305–1353 (2017). doi:

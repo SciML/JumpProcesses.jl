@@ -214,15 +214,21 @@ collect(neighbors(grid, 1)) == [2, 3]
 ```
 """
 struct CartesianGridRej{N, T} <: AbstractCartesianGrid
-    "dimensions (side lengths) of the grid"
+    """
+    dimensions (side lengths) of the grid
+    """
     dims::NTuple{N, Int}
 
-    "number of neighbor for each site"
+    """
+    number of neighbor for each site
+    """
     nums_neighbors::Vector{Int8}
     CI::CartesianIndices{N, T}
     LI::LinearIndices{N, T}
 
-    "offsets, e.g. [-1, 1] for 1D"
+    """
+    offsets, e.g. [-1, 1] for 1D
+    """
     offsets::Vector{CartesianIndex{N}}
 end
 

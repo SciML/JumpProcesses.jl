@@ -54,15 +54,36 @@ sol = solve(jprob, Tsit5())
   - In a system with `VariableRateJump`s all callback, `ConstantRateJump`, and
     `VariableRateJump` `affect!` functions will receive integrators with
     `integrator.u` an `ExtendedJumpArray`.
+
   - As such, `affect!` functions that wish to modify the state via vector
     operations should use `ueja.u.u` to obtain the aliased state object.
+
+  - `:u` and `:jump_u` always refer to the `ExtendedJumpArray` fields. Any other
+    property access (and `propertynames`) is forwarded to the wrapped state
+    `ueja.u`, so e.g. `ueja.x` works when `ueja.u` is an `ArrayPartition`.
 """
 struct ExtendedJumpArray{T3 <: Number, T1, T <: AbstractArray{T3, T1}, T2} <:
        AbstractArray{T3, 1}
-    """The current state."""
+    """
+    The current state.
+    """
     u::T
-    """The current rate (i.e. hazard, intensity, or propensity) values for the `VariableRateJump`s."""
+    """
+    The current rate (i.e. hazard, intensity, or propensity) values for the `VariableRateJump`s.
+    """
     jump_u::T2
+end
+
+@inline function Base.getproperty(A::ExtendedJumpArray, s::Symbol)
+    s === :u && return getfield(A, :u)
+    s === :jump_u && return getfield(A, :jump_u)
+    return getproperty(getfield(A, :u), s)
+end
+
+function Base.propertynames(A::ExtendedJumpArray, private::Bool = false)
+    fnames = fieldnames(typeof(A))
+    unames = propertynames(getfield(A, :u), private)
+    return (fnames..., filter(n -> !(n in fnames), unames)...)
 end
 
 Base.length(A::ExtendedJumpArray) = length(A.u) + length(A.jump_u)
@@ -87,6 +108,23 @@ Base.similar(A::ExtendedJumpArray) = ExtendedJumpArray(similar(A.u), similar(A.j
 function Base.similar(A::ExtendedJumpArray, ::Type{S}) where {S}
     ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
 end
+Base.copy(A::ExtendedJumpArray) = ExtendedJumpArray(copy(A.u), copy(A.jump_u))
+function Base.copyto!(dest::ExtendedJumpArray, src::ExtendedJumpArray)
+    if size(dest.u) == size(src.u) && size(dest.jump_u) == size(src.jump_u)
+        copyto!(dest.u, src.u)
+        copyto!(dest.jump_u, src.jump_u)
+    else
+        @inbounds for i in eachindex(src)
+            dest[i] = src[i]
+        end
+    end
+    return dest
+end
+function Base.fill!(A::ExtendedJumpArray, x)
+    fill!(A.u, x)
+    fill!(A.jump_u, x)
+    return A
+end
 Base.zero(A::ExtendedJumpArray) = fill!(similar(A), 0)
 
 # Required for non-diagonal noise; also handles full-state matrices from LinearSolve
@@ -107,11 +145,14 @@ function _mul_extended_jump_array!(c::ExtendedJumpArray, A::AbstractVecOrMat,
     end
 end
 
-LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector) =
+function LinearAlgebra.mul!(c::ExtendedJumpArray, A::AbstractVecOrMat, u::AbstractVector)
     _mul_extended_jump_array!(c, A, u)
+end
 
-LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
-    u::AbstractVector) = _mul_extended_jump_array!(c, A, u)
+function LinearAlgebra.mul!(c::ExtendedJumpArray, A::LinearAlgebra.AbstractTriangular,
+        u::AbstractVector)
+    _mul_extended_jump_array!(c, A, u)
+end
 
 # Whole-array copies stay ExtendedJumpArrays. A subset getindex asks `similar`
 # for a container of the index shape, which no longer matches this array's axes;
@@ -122,6 +163,14 @@ function Base.similar(A::ExtendedJumpArray, ::Type{S},
         return ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
     end
     return similar(A.u, S, axes)
+end
+
+# The same for a size, as out-of-place SDE solvers ask for when generating noise
+function Base.similar(A::ExtendedJumpArray, ::Type{S}, dims::Tuple{Int}) where {S}
+    if dims == size(A)
+        return ExtendedJumpArray(similar(A.u, S), similar(A.jump_u, S))
+    end
+    return similar(A.u, S, dims)
 end
 
 # plotting

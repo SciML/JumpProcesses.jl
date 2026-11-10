@@ -1,4 +1,4 @@
-using Test, JumpProcesses, SciMLBase
+using Test, JumpProcesses, SciMLBase, OrdinaryDiffEq
 using StableRNGs
 
 # tests for https://github.com/SciML/JumpProcesses.jl/issues/305
@@ -35,17 +35,17 @@ let
     u₀ = [999, 10, 0]
     tspan = (0.0, 250.0)
     dprob = DiscreteProblem(u₀, tspan, p)
-    jprob = JumpProblem(dprob, Direct(), maj, jump, jump2; save_positions, rng)
-    sol = solve(jprob, SSAStepper())
+    jprob = JumpProblem(dprob, Direct(), maj, jump, jump2; save_positions)
+    sol = solve(jprob, SSAStepper(); rng)
 
-    al1 = @allocations solve(jprob, SSAStepper())
+    al1 = @allocations solve(jprob, SSAStepper(); rng)
 
     tspan2 = (0.0, 2500.0)
     dprob2 = DiscreteProblem(u₀, tspan2, p)
-    jprob2 = JumpProblem(dprob2, Direct(), maj, jump, jump2; save_positions, rng)
-    sol2 = solve(jprob2, SSAStepper())
+    jprob2 = JumpProblem(dprob2, Direct(), maj, jump, jump2; save_positions)
+    sol2 = solve(jprob2, SSAStepper(); rng)
 
-    al2 = @allocations solve(jprob2, SSAStepper())
+    al2 = @allocations solve(jprob2, SSAStepper(); rng)
 
     @test al1 == al2
 end
@@ -56,7 +56,7 @@ let
     end
 
     function makeprob(; T = 100.0, alg = Direct(), save_positions = (false, false),
-            graphkwargs = (;), rng)
+            graphkwargs = (;))
         r1(u, p, t) = rate(p[1], u[1], u[2], p[2]) * u[1]
         r2(u, p, t) = rate(p[1], u[2], u[1], p[2]) * u[2]
         r3(u, p, t) = p[3] * u[1]
@@ -86,7 +86,7 @@ let
             ConstantRateJump(r3, aff3!),
             ConstantRateJump(r4, aff4!), ConstantRateJump(r5, aff5!),
             ConstantRateJump(r6, aff6!);
-            save_positions, rng, graphkwargs...)
+            save_positions, graphkwargs...)
         return jprob
     end
 
@@ -96,19 +96,151 @@ let
     dep_graph = [copy(idxs1), copy(idxs2), copy(idxs1), copy(idxs2), copy(idxs), copy(idxs)]
     vartojumps_map = [copy(idxs1), copy(idxs2)]
     jumptovars_map = [[1], [2], [1], [2], [1, 2], [1, 2]]
-    graphkwargs = (; dep_graph, vartojumps_map, jumptovars_map)
+    graphkwargs = (;
+        dependencies = JumpDependencies(; dep_graph, vartojumps_map, jumptovars_map),
+        alias_dependencies = false)
 
     @testset "Allocations for $agg" for agg in JumpProcesses.JUMP_AGGREGATORS
-        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs, rng = StableRNG(1234))
+        jprob1 = makeprob(; alg = agg, T = 10.0, graphkwargs)
         stepper = SSAStepper()
-        sol1 = solve(jprob1, stepper)
-        sol1 = solve(jprob1, stepper)
-        al1 = @allocated solve(jprob1, stepper)
-        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs, rng = StableRNG(1234))
-        sol2 = solve(jprob2, stepper)
-        sol2 = solve(jprob2, stepper)
-        al2 = @allocated solve(jprob2, stepper)
+        sol1 = solve(jprob1, stepper; rng = StableRNG(1234))
+        sol1 = solve(jprob1, stepper; rng = StableRNG(1234))
+        al1 = @allocated solve(jprob1, stepper; rng = StableRNG(1234))
+        jprob2 = makeprob(; alg = agg, T = 100.0, graphkwargs)
+        sol2 = solve(jprob2, stepper; rng = StableRNG(1234))
+        sol2 = solve(jprob2, stepper; rng = StableRNG(1234))
+        al2 = @allocated solve(jprob2, stepper; rng = StableRNG(1234))
         @test al1 == al2
+    end
+end
+
+# VR_Direct rate summation must stay non-allocating for more than 32 jumps
+# Measured through a function barrier: at non-function scope Julia 1.10's
+# `@allocated` counts the boxed Float64 return value (16 bytes).
+function alloc_total_rate(cache, u, p, t)
+    @allocated JumpProcesses.total_variable_rate(cache, u, p, t)
+end
+let
+    for n in (10, 40)
+        f!(du, u, p, t) = (du .= 0; nothing)
+        jumps = [VariableRateJump((u, p, t) -> p[1] * (1 + u[i]) * t,
+                     integ -> (integ.u[i] += 1; nothing)) for i in 1:n]
+        oprob = ODEProblem(f!, zeros(n), (0.0, 1.0), (0.5,))
+        jprob = JumpProblem(oprob, Direct(), jumps...; vr_aggregator = VR_Direct())
+        cache = jprob.jump_callback.continuous_callbacks[1].condition
+        u, p, t = oprob.u0, oprob.p, 0.3
+        @test JumpProcesses.total_variable_rate(cache, u, p, t) ≈ n * 0.5 * 0.3
+        @test cache.cum_rate_sum ≈ (1:n) .* (0.5 * 0.3)
+        alloc_total_rate(cache, u, p, t)
+        @test alloc_total_rate(cache, u, p, t) == 0
+    end
+end
+
+# VR_FRM's extended right-hand side must stay non-allocating for more than 32 jumps, and
+# when the jumps are passed as a Vector with an abstract element type
+function alloc_rhs(f, du, u, p, t)
+    @allocated f(du, u, p, t)
+end
+let
+    for n in (10, 40)
+        f!(du, u, p, t) = (du .= 0; nothing)
+        jumps = [VariableRateJump((u, p, t) -> p[1] * (1 + u[i]) * t,
+                     integ -> (integ.u[i] += 1; nothing)) for i in 1:n]
+        # two rate function types, so the Vector's element type is abstract
+        mixed_jumps = VariableRateJump[isodd(i) ? jumps[i] :
+                                       VariableRateJump(
+                                           (u, p, t) -> 2 * p[1] * (1 + u[i]) * t,
+                                           jumps[i].affect!) for i in 1:n]
+        oprob = ODEProblem(f!, zeros(n), (0.0, 1.0), (0.5,))
+        rates = fill(0.5 * 0.3, n)
+        mixed_rates = [isodd(i) ? 0.5 * 0.3 : 0.5 * 0.6 for i in 1:n]
+        cases = ((JumpSet(jumps...), rates),
+            (JumpSet(; variable_jumps = mixed_jumps), mixed_rates))
+        for (jset, expected_rates) in cases
+            jprob = JumpProblem(oprob, Direct(), jset; vr_aggregator = VR_FRM())
+            f = jprob.prob.f
+            u, p, t = copy(jprob.prob.u0), oprob.p, 0.3
+            du = similar(u)
+            f(du, u, p, t)
+            @test du.u == zeros(n)
+            @test du.jump_u ≈ expected_rates
+            @test alloc_rhs(f, du, u, p, t) == 0
+        end
+    end
+end
+
+# tuple-based constant rate aggregators must not allocate per step for more than 32 jumps
+let
+    n = 40
+    jumps = [ConstantRateJump((u, p, t) -> p[1], integ -> (integ.u[i] += 1; nothing))
+             for i in 1:n]
+    for agg in (Direct(), FRM())
+        nallocs = map((10.0, 100.0)) do T
+            dprob = DiscreteProblem(zeros(Int, n), (0.0, T), (0.5,))
+            jprob = JumpProblem(dprob, agg, jumps...; save_positions = (false, false))
+            solve(jprob, SSAStepper(); rng = StableRNG(1))
+            @allocations solve(jprob, SSAStepper(); rng = StableRNG(1))
+        end
+        @test nallocs[1] == nallocs[2]
+    end
+end
+
+# RDirectJumpAggregation.counter_threshold must be concretely typed (Int) so that
+# `p.counter > p.counter_threshold` does not runtime-dispatch every jump.
+let
+    rateidxs = [1, 2]
+    reactant_stoich = [[0 => 1], [1 => 1]]
+    net_stoich = [[1 => 1], [1 => -1]]
+    maj = MassActionJump(reactant_stoich, net_stoich; param_idxs = rateidxs)
+    dprob = DiscreteProblem([10], (0.0, 1.0), [1.0, 0.1])
+    jprob = JumpProblem(dprob, RDirect(), maj; save_positions = (false, false),
+        counter_threshold = Int32(2))
+    agg = jprob.discrete_jump_aggregation
+    @test fieldtype(typeof(agg), :counter_threshold) === Int
+    @test agg.counter_threshold isa Int
+    @test agg.counter_threshold == 2
+end
+
+# Jumps coupled to an ODE must not allocate per step when the problem is FullSpecialize. With
+# the default specialization, DiffEqBase erases callback types on Julia >= 1.12 and every step
+# allocates; VR_FRM avoids that for any problem, since the function it builds is FullSpecialize.
+function alloc_resolve(integ)
+    @allocations begin
+        reinit!(integ)
+        solve!(integ)
+    end
+end
+let
+    f!(du, u, p, t) = (du .= 0; nothing)
+    vrj() = VariableRateJump((u, p, t) -> p[1], integ -> (integ.u[1] += 1; nothing);
+        save_positions = (false, false))
+    maj = MassActionJump([5.0], [[0 => 1]], [[1 => 1]])
+    full = SciMLBase.FullSpecialize
+    cases = (("VR_FRM", full, () -> (vrj(),), (; vr_aggregator = VR_FRM())),
+        ("VR_FRM, default specialization", SciMLBase.AutoSpecialize, () -> (vrj(),),
+            (; vr_aggregator = VR_FRM())),
+        ("VR_Direct", full, () -> (vrj(),), (; vr_aggregator = VR_Direct())),
+        ("Direct with a mass action jump", full, () -> (maj,), (;)))
+    # Under forced bounds checking (`--check-bounds=yes`, which `Pkg.test` uses on Julia 1.10
+    # and julia-runtest by default) before Julia 1.13, OrdinaryDiffEq's residual broadcast over
+    # VR_FRM's ExtendedJumpArray state allocates a `Ref` on every step. It doesn't with the
+    # default bounds checking, or on Julia >= 1.13.
+    forced_bounds_checks = Base.JLOptions().check_bounds == 1 && VERSION < v"1.13"
+    @testset "$name" for (name, spec, jumps, kw) in cases
+        if forced_bounds_checks && get(kw, :vr_aggregator, nothing) isa VR_FRM
+            @test_skip false
+            continue
+        end
+        nallocs = map((10.0, 100.0)) do T
+            oprob = ODEProblem{true, spec}(f!, [0.0], (0.0, T), [5.0])
+            jprob = JumpProblem(
+                oprob, Direct(), jumps()...; save_positions = (false, false),
+                kw...)
+            integ = init(jprob, Tsit5(); save_everystep = false, rng = StableRNG(1))
+            alloc_resolve(integ)
+            alloc_resolve(integ)
+        end
+        @test nallocs[1] == nallocs[2]
     end
 end
 

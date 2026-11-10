@@ -1,6 +1,8 @@
 using Test, JumpProcesses, DiffEqBase, OrdinaryDiffEq, SciMLBase, LinearAlgebra, LinearSolve
+using OrdinaryDiffEqBDF
 using FastBroadcast
 using ForwardDiff
+using RecursiveArrayTools
 using StableRNGs
 
 rng = StableRNG(123)
@@ -210,9 +212,9 @@ let
     affect!(integrator) = (integrator.u[1] += 1; nothing)
     vrj = VariableRateJump(rate, affect!)
     oprob = ODEProblem(f!, [0.0], (0.0, 1.0))
-    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM(),
+    jprob = JumpProblem(oprob, Direct(), vrj; vr_aggregator = VR_FRM())
+    sol = solve(jprob, Rodas5P(linsolve = QRFactorization());
         rng = StableRNG(789))
-    sol = solve(jprob, Rodas5P(linsolve = QRFactorization()))
     @test sol.retcode == ReturnCode.Success
 end
 
@@ -227,4 +229,159 @@ let
     @test Vector(u[:]) == [1.0, 2.0, 3.0, 4.0]
     @test similar(u) isa ExtendedJumpArray
     @test copy(u) isa ExtendedJumpArray
+end
+
+# Field-forwarding copy / copyto! / fill!: must dispatch on ExtendedJumpArray
+# (not AbstractArray scalar getindex) and match the generic path's values/types.
+@testset "ExtendedJumpArray copy/copyto!/fill!" begin
+    function generic_copy(A::ExtendedJumpArray)
+        B = similar(A)
+        @inbounds for i in eachindex(A)
+            B[i] = A[i]
+        end
+        return B
+    end
+    function generic_copyto!(dest::ExtendedJumpArray, src::ExtendedJumpArray)
+        @inbounds for i in eachindex(src)
+            dest[i] = src[i]
+        end
+        return dest
+    end
+    function generic_fill!(A::ExtendedJumpArray, x)
+        @inbounds for i in eachindex(A)
+            A[i] = x
+        end
+        return A
+    end
+
+    let rng = StableRNG(850)
+        src = ExtendedJumpArray(rand(rng, 5), rand(rng, 2))
+        @test which(copy, (typeof(src),)).module === JumpProcesses
+        @test which(copyto!, (typeof(src), typeof(src))).module === JumpProcesses
+        @test which(fill!, (typeof(src), Float64)).module === JumpProcesses
+
+        c = copy(src)
+        g = generic_copy(src)
+        @test c isa ExtendedJumpArray
+        @test typeof(c) === typeof(g) === typeof(src)
+        @test c == g == src
+        @test c.u == src.u && c.jump_u == src.jump_u
+        @test c.u !== src.u && c.jump_u !== src.jump_u
+
+        dest = ExtendedJumpArray(zeros(5), zeros(2))
+        dest_g = ExtendedJumpArray(zeros(5), zeros(2))
+        @test copyto!(dest, src) === dest
+        @test dest == generic_copyto!(dest_g, src) == src
+
+        # Shape mismatch falls back to scalar indexed copy
+        dest_mismatch = ExtendedJumpArray(zeros(4), zeros(3))
+        @test length(dest_mismatch) == length(src)
+        copyto!(dest_mismatch, src)
+        @test Vector(dest_mismatch) == Vector(src)
+
+        filled = ExtendedJumpArray(rand(rng, 5), rand(rng, 2))
+        filled_g = ExtendedJumpArray(copy(filled.u), copy(filled.jump_u))
+        @test fill!(filled, 3.14) === filled
+        @test filled == generic_fill!(filled_g, 3.14)
+        @test all(==(3.14), filled.u) && all(==(3.14), filled.jump_u)
+
+        z = zero(src)
+        @test z isa ExtendedJumpArray
+        @test all(iszero, z.u) && all(iszero, z.jump_u)
+        @test RecursiveArrayTools.recursivecopy(src) == src
+        @test RecursiveArrayTools.recursivecopy(src) isa ExtendedJumpArray
+    end
+
+    # Matrix-valued u: field copy must preserve shape/type like the generic path
+    let rng = StableRNG(851)
+        src = ExtendedJumpArray(rand(rng, 2, 3), rand(rng, 2))
+        c = copy(src)
+        g = generic_copy(src)
+        @test c isa ExtendedJumpArray
+        @test typeof(c.u) === typeof(src.u) === Matrix{Float64}
+        @test size(c.u) == size(src.u) == (2, 3)
+        @test c == g == src
+        @test c.u == src.u && c.jump_u == src.jump_u
+
+        dest = ExtendedJumpArray(zeros(2, 3), zeros(2))
+        copyto!(dest, src)
+        @test dest == src
+        @test dest.u isa Matrix{Float64} && size(dest.u) == (2, 3)
+
+        fill!(dest, 0.0)
+        @test all(iszero, dest) && all(iszero, dest.u) && all(iszero, dest.jump_u)
+    end
+end
+
+@testset "ArrayPartition VariableRateJump property forwarding" begin
+    eja = ExtendedJumpArray(ArrayPartition([1.0], [2.0]), [0.0])
+    @test eja.u isa ArrayPartition
+    @test eja.jump_u == [0.0]
+    @test eja.x === eja.u.x
+    @test allunique(propertynames(eja))
+    @test :u in propertynames(eja)
+    @test :jump_u in propertynames(eja)
+    @test :x in propertynames(eja)
+
+    for agg in (VR_FRM(), VR_FRM(; vector_callback = true), VR_Direct())
+        jumps = Ref(0)
+        function f!(du, u, p, t)
+            du.x[1][1] = -u.x[1][1]
+            du.x[2][1] = 0.0
+            nothing
+        end
+        function affect!(integrator)
+            jumps[] += 1
+            integrator.u.x[2][1] += 1.0
+            nothing
+        end
+        u0 = ArrayPartition([1.0], [1.0])
+        ode = ODEProblem(f!, u0, (0.0, 1.0))
+        jump = VariableRateJump((u, p, t) -> 10 * u[1], affect!)
+        jump_prob = JumpProblem(ode, Direct(), jump; vr_aggregator = agg)
+        sol = solve(jump_prob, Tsit5(); abstol = 1e-11, reltol = 1e-11, rng = StableRNG(57))
+        @test sol.retcode == ReturnCode.Success
+        @test jumps[] > 0
+        @test isapprox(sol.u[end].x[1][1], exp(-1); rtol = 1e-9)
+        @test sol.u[end].x[2][1] ≈ 1 + jumps[]
+    end
+end
+
+@testset "DAE with VariableRateJump" begin
+    function dae!(out, du, u, p, t)
+        out .= du .+ u
+        nothing
+    end
+    dae(du, u, p, t) = du .+ u
+    rate(u, p, t) = u[1] + 1.0
+    affect!(integrator) = (integrator.u[1] += 1; nothing)
+    jump = VariableRateJump(rate, affect!)
+
+    for (f, iip) in ((dae!, true), (dae, false))
+        prob = DAEProblem{iip, SciMLBase.FullSpecialize}(
+            f, [0.0], [0.0], (0.0, 0.1); differential_vars = [true]
+        )
+        jump_prob = JumpProblem(prob, Direct(), jump; vr_aggregator = VR_FRM())
+        jprob = jump_prob.prob
+        @test length(jprob.du0) == length(jprob.u0) == 2
+        @test jprob.differential_vars == [true, true]
+        @test SciMLBase.specialization(jprob.f) === SciMLBase.FullSpecialize
+
+        u = ExtendedJumpArray([5.0], [3.0])
+        du = ExtendedJumpArray([7.0], [11.0])
+        if iip
+            out0 = zero(jprob.u0)
+            jprob.f(out0, jprob.du0, jprob.u0, jprob.p, 0.0)
+            out = zero(jprob.u0)
+            jprob.f(out, du, u, jprob.p, 0.0)
+
+            sol = solve(jump_prob, DFBDF(); rng = StableRNG(626))
+            @test sol.retcode == ReturnCode.Success
+        else
+            out0 = jprob.f(jprob.du0, jprob.u0, jprob.p, 0.0)
+            out = jprob.f(du, u, jprob.p, 0.0)
+        end
+        @test all(iszero, out0)
+        @test out == [12.0, 5.0]
+    end
 end

@@ -1,9 +1,6 @@
 using JumpProcesses, DiffEqBase
 using Test, LinearAlgebra, Statistics
 using KernelAbstractions, Adapt, CUDA
-using StableRNGs
-rng = StableRNG(12345)
-
 Nsims = 100_000
 
 # SIR model with influx
@@ -72,7 +69,7 @@ let
     # Create JumpProblem
     prob_disc = DiscreteProblem(u0, tspan, p)
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob = JumpProblem(prob_disc, PureLeaping(), rj; rng = StableRNG(12345))
+    jump_prob = JumpProblem(prob_disc, PureLeaping(), rj)
 
     sol = solve(EnsembleProblem(jump_prob), SimpleTauLeaping(),
         EnsembleGPUKernel(CUDABackend()); trajectories = Nsims, dt = 1.0)

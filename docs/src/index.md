@@ -7,9 +7,7 @@ Carlo's methods, thinning method, and Ogata's method. It also enables the
 incorporation of jump processes into hybrid jump-ODE models, including
 piecewise deterministic Markov processes, and into hybrid jump-SDE models,
 including jump diffusions. It is a component package in the
-[SciML](https://sciml.ai/) ecosystem, and one of the core solver libraries
-included in
-[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/).
+[SciML](https://sciml.ai/) ecosystem.
 
 Historically, jump processes have been developed in the context of dynamical
 systems to describe dynamics with discontinuous changes — the jumps — in a system's
@@ -119,25 +117,19 @@ In addition to the tutorials linked above, the documentation contains
 
 ## Installation
 
-There are two ways to install `JumpProcesses.jl`. First, users may install the meta
-`DifferentialEquations.jl` package, which installs and wraps `OrdinaryDiffEq.jl`
-for solving ODEs, `StochasticDiffEq.jl` for solving SDEs, and `JumpProcesses.jl`,
-along with a number of other useful packages for solving models involving ODEs,
-SDEs and/or jump process. This single install will provide the user with all
-the facilities for developing and solving Jump problems.
-
-To install the `DifferentialEquations.jl` package, refer to the following link
-for complete [installation
-details](https://docs.sciml.ai/DiffEqDocs/stable).
-
-If the user wishes to install the `JumpProcesses.jl` library separately, which is a
-lighter dependency than `DifferentialEquations.jl`, then the following code will
-install `JumpProcesses.jl` using the Julia package manager:
+Install `JumpProcesses.jl` with the Julia package manager:
 
 ```julia
 using Pkg
 Pkg.add("JumpProcesses")
 ```
+
+`JumpProcesses.jl` includes `SSAStepper` for pure jump processes. To couple jumps to ODEs
+or SDEs, also install a solver package, for example `OrdinaryDiffEqTsit5` for the `Tsit5`
+ODE solver or `StochasticDiffEqHighOrder` for the `SRIW1` SDE solver. See the
+[OrdinaryDiffEq.jl](https://docs.sciml.ai/OrdinaryDiffEq/stable/) and
+[StochasticDiffEq.jl](https://docs.sciml.ai/DiffEqDocs/stable/solvers/sde_solve/)
+documentation for the available solvers and the packages that provide them.
 
 ## Contributing and Getting Help
 
@@ -146,8 +138,9 @@ Pkg.add("JumpProcesses")
     for guidance on PRs, issues, and other matters relating to contributing to SciML.
 
   - See the [SciML Style Guide](https://github.com/SciML/SciMLStyle) for common coding practices and other style decisions.
+
   - There are a few community forums for getting help and asking questions:
-    
+
       + The #diffeq-bridged and #sciml-bridged channels in the
         [Julia Slack](https://julialang.org/slack/)
       + The #diffeq-bridged and #sciml-bridged channels in the

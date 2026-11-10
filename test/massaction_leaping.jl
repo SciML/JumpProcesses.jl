@@ -1,4 +1,4 @@
-using JumpProcesses, Test, StableRNGs, ForwardDiff
+using JumpProcesses, Test, ForwardDiff
 
 regular_leaping_algs = (SimpleTauLeaping(),)
 
@@ -22,8 +22,8 @@ regular_leaping_algs = (SimpleTauLeaping(),)
     for alg in regular_leaping_algs,
             adaptive in (false,)
         @testset "$(nameof(typeof(alg))), adaptive=$adaptive" begin
-            actual = JumpProblem(prob, PureLeaping(), maj; rng = StableRNG(123))
-            reference = JumpProblem(prob, PureLeaping(), rj; rng = StableRNG(123))
+            actual = JumpProblem(prob, PureLeaping(), maj)
+            reference = JumpProblem(prob, PureLeaping(), rj)
             opts = alg isa SimpleTauLeaping ? (; dt = 0.005, seed = 123) :
                 (; dt = 0.005, seed = 123, adaptive)
             sol = solve(actual, alg; opts...)
@@ -66,8 +66,14 @@ end
     jp = JumpProblem(DiscreteProblem([20.0, 0.0], (0.0, 1.0), [0.1]), PureLeaping(), maj)
     remade = remake(jp; p = [0.3])
     out = zeros(1)
-    massaction_rates!(out, remade.massaction_jump, remade.prob.u0)
+    massaction_rates!(out, remade.massaction_jump, remade.prob.u0; p = remade.prob.p)
     @test out == [6.0]
+    @test massaction_drift!(
+        zeros(2), remade.massaction_jump, remade.prob.u0;
+        p = remade.prob.p
+    ) == [-6.0, 6.0]
+    @test remade.massaction_jump.scaled_rates === nothing
+    @test successful_retcode(solve(remade, SimpleTauLeaping(); dt = 0.01, seed = 123))
     @test remade.regular_jump === nothing
     oprob = ODEProblem((du, u, p, t) -> fill!(du, 0), [20.0, 0.0], (0.0, 1.0), [0.1])
     ojp = JumpProblem(oprob, PureLeaping(), maj)
@@ -108,5 +114,16 @@ end
         @test massaction_stoichiometry_mul!(zeros(2), single, [2.0]) ==
             massaction_stoichiometry_mul!(zeros(2), vector, [2.0])
         @test massaction_drift!(zeros(2), single, u) == massaction_drift!(zeros(2), vector, u)
+    end
+end
+
+@testset "Large integer mass-action populations" begin
+    n = 3_000_000
+    reference = Float64(binomial(big(n), 3))
+    for single in (false, true)
+        maj = single ? MassActionJump(1.0, [1 => 3], [1 => -3]) :
+            MassActionJump([1.0], [[1 => 3]], [[1 => -3]])
+        @test only(massaction_rates!(zeros(1), maj, [n])) ≈ reference
+        @test only(massaction_drift!(zeros(1), maj, [n])) ≈ -3 * reference
     end
 end

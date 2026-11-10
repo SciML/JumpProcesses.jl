@@ -29,11 +29,15 @@ function test_massaction_fixed_tau_kernel(backend)
     @testset "Parameter-dependent mass-action rates with prob_func" begin
         maj = MassActionJump([[1 => 1]], [[1 => -1]]; param_idxs = [1])
         jp = JumpProblem(DiscreteProblem([50.0], (0.0, 1.0), [0.2]), PureLeaping(), maj)
-        varying = EnsembleProblem(jp;
-            prob_func = (prob, ctx) -> remake(prob; p = [0.1 * ctx.sim_id]))
+        varying = EnsembleProblem(
+            jp;
+            prob_func = (prob, ctx) -> remake(prob; p = [0.1 * ctx.sim_id])
+        )
         err = try
-            solve(varying, SimpleTauLeaping(), EnsembleGPUKernel(backend);
-                trajectories = 2, dt = 0.1)
+            solve(
+                varying, SimpleTauLeaping(), EnsembleGPUKernel(backend);
+                trajectories = 2, dt = 0.1
+            )
             nothing
         catch e
             e
@@ -53,21 +57,79 @@ function test_massaction_fixed_tau_kernel(backend)
         tspan = (0.0, 1.0)
         dt = 0.01
         nsteps = Int((tspan[2] - tspan[1]) / dt)
-        jp = JumpProblem(DiscreteProblem([u0], tspan, [0.0]), PureLeaping(), rj)
+        jp = JumpProblem(DiscreteProblem([u0], tspan, (0.0,)), PureLeaping(), rj)
+        @test isbitstype(typeof(jp.prob.p))
         n_per = 2000
         function prob_func(prob, ctx)
             # first n_per trajectories use p=0, the rest use p=1
-            remake(prob; p = [ctx.sim_id <= n_per ? 0.0 : 1.0])
+            remake(prob; p = (ctx.sim_id <= n_per ? 0.0 : 1.0,))
         end
+        @test isbitstype(typeof(prob_func(jp, (; sim_id = n_per + 1)).prob.p))
         sol = solve(
             EnsembleProblem(jp; prob_func), SimpleTauLeaping(),
             EnsembleGPUKernel(backend); trajectories = 2 * n_per, dt
         )
         mean0 = mean(s.u[end][1] for s in sol.u[1:n_per])
         mean1 = mean(s.u[end][1] for s in sol.u[(n_per + 1):end])
-        @test mean0 ≈ u0 atol = 1e-8
+        @test mean0 ≈ u0 atol = 1.0e-8
         # E[u] ≈ u0 * (1 - p*dt)^nsteps with p = 1 → 1000 * 0.99^100 ≈ 366.032
         @test mean1 ≈ u0 * (1 - dt)^nsteps rtol = 0.02
+    end
+    @testset "Custom trajectory spans" begin
+        rj = RegularJump(
+            (out, u, p, t) -> fill!(out, 0),
+            (du, u, p, t, counts, mark) -> fill!(du, 0), 1
+        )
+        jp = JumpProblem(DiscreteProblem([0.0], (0.0, 0.2)), PureLeaping(), rj)
+        varying_dimensions = EnsembleProblem(
+            jp;
+            prob_func = (prob, ctx) -> remake(prob; u0 = zeros(ctx.sim_id))
+        )
+        @test_throws ArgumentError solve(
+            varying_dimensions, SimpleTauLeaping(),
+            EnsembleGPUKernel(backend); trajectories = 2, dt = 0.1
+        )
+        for tspan in ((0.0, 0.1), (0.0, 0.4), (0.1, 0.3))
+            varying = EnsembleProblem(
+                jp;
+                prob_func = (prob, ctx) -> remake(prob; tspan)
+            )
+            @test_throws ArgumentError solve(
+                varying, SimpleTauLeaping(),
+                EnsembleGPUKernel(backend); trajectories = 2, dt = 0.1
+            )
+        end
+    end
+
+    @testset "Custom mass-action data" begin
+        births(rate) = MassActionJump([rate], [Pair{Int, Int}[]], [[1 => 1]])
+        dp = DiscreteProblem([0.0], (0.0, 0.2))
+        jp = JumpProblem(dp, PureLeaping(), births(0.0))
+        alternatives = (
+            births(1000.0),
+            MassActionJump([0.0], [[1 => 1]], [[1 => 1]]),
+            MassActionJump([0.0], [Pair{Int, Int}[]], [[1 => -1]]),
+        )
+        for maj in alternatives
+            varying = EnsembleProblem(
+                jp; prob_func = (prob, ctx) ->
+                ctx.sim_id == 1 ? prob : JumpProblem(dp, PureLeaping(), maj)
+            )
+            @test_throws ArgumentError solve(
+                varying, SimpleTauLeaping(),
+                EnsembleGPUKernel(backend); trajectories = 2, dt = 0.1
+            )
+        end
+        unchanged = EnsembleProblem(
+            jp; prob_func = (prob, ctx) ->
+            remake(prob; u0 = [Float64(ctx.sim_id)])
+        )
+        sol = solve(
+            unchanged, SimpleTauLeaping(), EnsembleGPUKernel(backend);
+            trajectories = 2, dt = 0.1
+        )
+        @test all(successful_retcode, sol.u)
+        @test [s.u[end][1] for s in sol.u] == [1.0, 2.0]
     end
     return nothing
 end

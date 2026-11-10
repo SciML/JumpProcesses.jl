@@ -5,10 +5,10 @@ const MINJUMPRATE = 2.0^exponent(1e-12)
 
 #NOTE state vector u is a matrix. u[i,j] is species i, site j
 #NOTE hopping_constants is a matrix. hopping_constants[i,j] is species i, site j
-mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPGR,
-    VJMAP, JVMAP, SS, U <: PriorityTable,
+mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, J, RX, HOP, DEPS, SS,
+    U <: PriorityTable,
     W <: Function} <:
-               AbstractSSAJumpAggregator{T, S, F1, F2, RNG}
+               AbstractSSAJumpAggregator{T, S, F1, F2}
     next_jump::SpatialJump{J} #some structure to identify the next event: reaction or hop
     prev_jump::SpatialJump{J} #some structure to identify the previous event: reaction or hop
     next_jump_time::T
@@ -19,10 +19,7 @@ mutable struct DirectCRDirectJumpAggregation{T, S, F1, F2, RNG, J, RX, HOP, DEPG
     rates::F1 # legacy, not used
     affects!::F2 # legacy, not used
     save_positions::Tuple{Bool, Bool}
-    rng::RNG
-    dep_gr::DEPGR #dep graph is same for each site
-    vartojumps_map::VJMAP #vartojumps_map is same for each site
-    jumptovars_map::JVMAP #jumptovars_map is same for each site
+    dependencies::DEPS #the maps are the same for each site
     spatial_system::SS
     numspecies::Int #number of species
     rt::U
@@ -31,33 +28,9 @@ end
 
 function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rates::RX,
         hop_rates::HOP, site_rates::Vector{T},
-        sps::Tuple{Bool, Bool}, rng::RNG, spatial_system::SS;
+        sps::Tuple{Bool, Bool}, spatial_system::SS;
         num_specs, minrate = convert(T, MINJUMPRATE),
-        vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing,
-        kwargs...) where {J, T, RX, HOP, RNG, SS}
-
-    # a dependency graph is needed
-    if dep_graph === nothing
-        dg = make_dependency_graph(num_specs, rx_rates.ma_jumps)
-    else
-        dg = dep_graph
-        # make sure each jump depends on itself
-        add_self_dependencies!(dg)
-    end
-
-    # a species-to-reactions graph is needed
-    if vartojumps_map === nothing
-        vtoj_map = var_to_jumps_map(num_specs, rx_rates.ma_jumps)
-    else
-        vtoj_map = vartojumps_map
-    end
-
-    if jumptovars_map === nothing
-        jtov_map = jump_to_vars_map(rx_rates.ma_jumps)
-    else
-        jtov_map = jumptovars_map
-    end
+        dependencies, kwargs...) where {J, T, RX, HOP, SS}
 
     # mapping from jump rate to group id
     minexponent = exponent(minrate)
@@ -69,20 +42,18 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
     # construct an empty initial priority table -- we'll reset this in init
     rt = PriorityTable(ratetogroup, zeros(T, 1), minrate, 2 * minrate)
 
-    DirectCRDirectJumpAggregation{T, Nothing, Nothing, Nothing, RNG, J, RX, HOP,
-        typeof(dg), typeof(vtoj_map),
-        typeof(jtov_map), SS, typeof(rt),
+    DirectCRDirectJumpAggregation{T, Nothing, Nothing, Nothing, J, RX, HOP,
+        typeof(dependencies), SS, typeof(rt),
         typeof(ratetogroup)}(nj, nj, njt, et, rx_rates, hop_rates,
         site_rates, nothing, nothing, sps,
-        rng, dg, vtoj_map,
-        jtov_map, spatial_system, num_specs,
+        dependencies, spatial_system, num_specs,
         rt, ratetogroup)
 end
 
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
-        constant_jumps, ma_jumps, save_positions, rng; hopping_constants,
+        constant_jumps, ma_jumps, save_positions; hopping_constants,
         spatial_system, kwargs...)
     num_species = size(starting_state, 1)
     majumps = ma_jumps
@@ -99,7 +70,7 @@ function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
     site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 
     DirectCRDirectJumpAggregation(next_jump, next_jump_time, end_time, rx_rates, hop_rates,
-        site_rates, save_positions, rng, spatial_system;
+        site_rates, save_positions, spatial_system;
         num_specs = num_species, kwargs...)
 end
 
@@ -113,10 +84,11 @@ end
 
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRDirectJumpAggregation, integrator, params, u, t)
-    p.next_jump_time = t + randexp(p.rng) / p.rt.gsum
+    rng = get_rng(integrator)
+    p.next_jump_time = t + randexp(rng) / p.rt.gsum
     p.next_jump_time >= p.end_time && return nothing
-    site = sample(p.rt, p.site_rates, p.rng)
-    p.next_jump = sample_jump_direct(p, site)
+    site = sample(p.rt, p.site_rates, rng)
+    p.next_jump = sample_jump_direct(p, site, rng)
     nothing
 end
 
@@ -142,6 +114,7 @@ function fill_rates_and_get_times!(
     (; spatial_system, rx_rates, hop_rates, site_rates, rt) = aggregation
     u = integrator.u
 
+    fill_scaled_rates!(rx_rates.maj_rates, rx_rates.ma_jumps, integrator.p)
     reset!(rx_rates)
     reset!(hop_rates)
     site_rates .= zero(typeof(t))

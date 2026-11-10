@@ -1,6 +1,6 @@
 using JumpProcesses, DiffEqBase, SciMLBase
 using Test, LinearAlgebra, Statistics
-using StableRNGs
+using StableRNGs, Random
 rng = StableRNG(12345)
 
 @testset "Successful leaping return codes" begin
@@ -10,19 +10,153 @@ rng = StableRNG(12345)
     regular_jump = RegularJump(rate!, change!, 1)
     massaction_jump = MassActionJump([0.1], [[1 => 1]], [[1 => -1]])
     for alg in (
-            SimpleTauLeaping(), SimpleExplicitTauLeaping(),
-            SimpleImplicitTauLeaping(), SimpleTrapezoidalLeaping(), SimpleAdaptiveTauLeaping(),
-        )
+        SimpleTauLeaping(), SimpleExplicitTauLeaping(),
+        SimpleImplicitTauLeaping(), SimpleTrapezoidalLeaping(), SimpleAdaptiveTauLeaping()
+    )
         @testset "$(nameof(typeof(alg)))" begin
             jump = alg isa SimpleTauLeaping ? regular_jump : massaction_jump
-            jp = JumpProblem(prob, PureLeaping(), jump; rng = StableRNG(12345))
+            jp = JumpProblem(prob, PureLeaping(), jump)
             kwargs = alg isa SimpleTauLeaping ? (; dt = 0.01) : (;)
-            sol = solve(jp, alg; kwargs...)
+            sol = solve(jp, alg; rng = StableRNG(12345), kwargs...)
             @test sol.t[end] == last(prob.tspan)
             @test sol.retcode == ReturnCode.Success
             @test successful_retcode(sol)
         end
     end
+end
+
+@testset "CPU tau-leaping solve RNG ownership" begin
+    prob = DiscreteProblem([0.0], (0.0, 2.0))
+    regular_jump = RegularJump(
+        (out, u, p, t) -> (out[1] = 20.0),
+        (du, u, p, t, counts, mark) -> (du[1] = counts[1]), 1
+    )
+    massaction_jump = MassActionJump([20.0], [Pair{Int, Int}[]], [[1 => 1]])
+    for alg in (
+        SimpleTauLeaping(), SimpleExplicitTauLeaping(),
+        SimpleImplicitTauLeaping(), SimpleTrapezoidalLeaping(),
+        SimpleAdaptiveTauLeaping(),
+        SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping())
+    )
+        @testset "$alg" begin
+            jump = alg isa SimpleTauLeaping ? regular_jump : massaction_jump
+            jp = JumpProblem(prob, PureLeaping(), jump)
+            kwargs = alg isa SimpleTauLeaping ? (; dt = 0.05) : (;)
+            @test SciMLBase.supports_solve_rng(jp, alg)
+
+            # Explicit RNGs are consumed, and override seed without being reseeded.
+            rng = StableRNG(1234)
+            before = copy(rng)
+            sol_rng = solve(jp, alg; rng, seed = 999, saveat = 0.5, kwargs...)
+            sol_rng_replay = solve(jp, alg; rng = before, saveat = 0.5, kwargs...)
+            @test sol_rng.t == sol_rng_replay.t
+            @test sol_rng.u == sol_rng_replay.u
+            next_draw = rand(rng)
+            @test next_draw == rand(before)
+            @test next_draw != rand(StableRNG(1234))
+
+            # A seed creates a fresh Xoshiro on every solve, including problem reuse.
+            sol_seed = solve(jp, alg; seed = 1234, saveat = 0.5, kwargs...)
+            sol_seed_replay = solve(jp, alg; seed = 1234, saveat = 0.5, kwargs...)
+            sol_xoshiro = solve(jp, alg; rng = Xoshiro(1234), saveat = 0.5, kwargs...)
+            sol_changed = solve(jp, alg; seed = 5678, saveat = 0.5, kwargs...)
+            @test sol_seed.t == sol_seed_replay.t == sol_xoshiro.t
+            @test sol_seed.u == sol_seed_replay.u == sol_xoshiro.u
+            @test sol_seed.u != sol_changed.u
+            @test successful_retcode(solve(jp, alg; kwargs...))
+
+            # The support trait lets ensembles forward their trajectory RNGs.
+            ens1 = solve(EnsembleProblem(jp), alg, EnsembleSerial();
+                trajectories = 3, rng = StableRNG(1234), saveat = 0.5, kwargs...)
+            ens2 = solve(EnsembleProblem(jp), alg, EnsembleSerial();
+                trajectories = 3, rng = StableRNG(1234), saveat = 0.5, kwargs...)
+            @test [sol.u for sol in ens1.u] == [sol.u for sol in ens2.u]
+            @test length(unique([sol.u for sol in ens1.u])) > 1
+        end
+    end
+end
+
+@testset "CPU tau-leaping current mass-action parameters" begin
+    reactants = [Pair{Int, Int}[], [1 => 2], [1 => 3]]
+    net = [[1 => 1], [1 => -2], [1 => -3]]
+    original_rates = [5.0, 0.01, 0.001]
+    updated_rates = [10.0, 0.02, 0.002]
+    maj = MassActionJump(reactants, net; param_idxs = [1, 2, 3])
+    # A custom mapper producing already-scaled rates must not be scaled again.
+    prescaled_mapper = (dest, maj, params) -> (dest .= params ./ [1, 2, 6]; nothing)
+    custom_maj = MassActionJump(reactants, net;
+        param_mapper = prescaled_mapper, scale_rates = false)
+    for alg in (
+        SimpleExplicitTauLeaping(), SimpleImplicitTauLeaping(),
+        SimpleTrapezoidalLeaping(), SimpleAdaptiveTauLeaping(),
+        SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping())
+    )
+        @testset "$alg" begin
+            prob = DiscreteProblem([30.0], (0.0, 2.0), copy(original_rates))
+            jp = JumpProblem(prob, PureLeaping(), maj)
+            fixed = JumpProblem(prob, PureLeaping(),
+                MassActionJump(original_rates, reactants, net))
+            baseline = solve(jp, alg; seed = 1234, saveat = 0.5)
+            fixed_sol = solve(fixed, alg; seed = 1234, saveat = 0.5)
+            @test baseline.t == fixed_sol.t
+            @test baseline.u == fixed_sol.u
+
+            updated = remake(jp; p = copy(updated_rates))
+            updated_fixed = JumpProblem(updated.prob, PureLeaping(),
+                MassActionJump(updated_rates, reactants, net))
+            updated_custom = JumpProblem(updated.prob, PureLeaping(), custom_maj)
+            expected = solve(updated_fixed, alg; seed = 1234, saveat = 0.5)
+            remade_sol = solve(updated, alg; seed = 1234, saveat = 0.5)
+            custom_sol = solve(updated_custom, alg; seed = 1234, saveat = 0.5)
+            @test remade_sol.t == expected.t == custom_sol.t
+            @test remade_sol.u == expected.u == custom_sol.u
+            @test remade_sol.u != baseline.u
+            @test solve(jp, alg; seed = 1234, saveat = 0.5).u == baseline.u
+
+            # Parameter mutation before a new solve also refreshes the working rates.
+            jp.prob.p .= updated_rates
+            @test solve(jp, alg; seed = 1234, saveat = 0.5).u == expected.u
+            # Fixed coefficients continue to ignore parameters, even after mutation.
+            @test solve(fixed, alg; seed = 1234, saveat = 0.5).u == baseline.u
+            @test maj.scaled_rates === nothing
+            @test custom_maj.scaled_rates === nothing
+            @test original_rates == [5.0, 0.01, 0.001]
+            @test updated_rates == [10.0, 0.02, 0.002]
+            @test successful_retcode(remade_sol)
+        end
+    end
+end
+
+@testset "Parameterized tau-leaping implicit drift and Jacobian" begin
+    # The nonlinear solver uses finite differences with floating trial states,
+    # including when the population input is integer-valued.
+    maj = MassActionJump([[1 => 1]], [[1 => -1]]; param_idxs = 1)
+    p = [0.4]
+    rates = zeros(1)
+    JumpProcesses.fill_scaled_rates!(rates, maj, p)
+    rate = JumpProcesses.massaction_rate(maj, rates, 1)
+    nu = reshape([-1.0], 1, 1)
+    for (alg, expected) in (
+        (SimpleImplicitTauLeaping(), 100 / 1.2),
+        (SimpleTrapezoidalLeaping(), 100 * 0.9 / 1.1)
+    )
+        predicted, converged = JumpProcesses.solve_implicit(
+            [100], zeros(1), zeros(1), nu, p, 0.0, 0.5, rate, 1, alg)
+        @test converged
+        @test predicted ≈ [expected]
+    end
+
+    # Three reactions and two species produce a rectangular propensity Jacobian.
+    # The drift Jacobian is square and includes the scaled third-order derivative.
+    maj = MassActionJump([[1 => 1], [2 => 1], [1 => 3]],
+        [[1 => -1], [2 => -1], [1 => -3]]; param_idxs = [1, 2, 3])
+    p = [0.4, 0.1, 0.006]
+    rates = zeros(3)
+    JumpProcesses.fill_scaled_rates!(rates, maj, p)
+    rate = JumpProcesses.massaction_rate(maj, rates, 3)
+    nu = [-1.0 0.0 -3.0; 0.0 -1.0 0.0]
+    jac = JumpProcesses.compute_drift_jacobian([10, 20], rate, nu, 3, 2, p, 0.0)
+    @test jac ≈ [-0.4 - 3 * 0.001 * (3 * 10^2 - 6 * 10 + 2) 0.0; 0.0 -0.1]
 end
 
 @test SimpleImplicitTauLeaping().epsilon == 0.05
@@ -56,16 +190,17 @@ end
     affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
     affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
     affect3!(integrator) = (integrator.u[1] += 1; nothing)
-    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!),
+        ConstantRateJump(rate3, affect3!))
 
     u0 = [999.0, 10.0, 0.0]  # S, I, R
     tspan = (0.0, 250.0)
     prob_disc = DiscreteProblem(u0, tspan, p)
-    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng, save_positions = (false, false))
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; save_positions = (false, false))
 
     # Solve with SSAStepper (save only at t_compare times)
     sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare)
+        trajectories = Nsims, saveat = t_compare, rng)
 
     # RegularJump formulation for SimpleTauLeaping
     regular_rate = (out, u, p, t) -> begin
@@ -80,45 +215,47 @@ end
         dc[3] = counts[2]
     end
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj)
 
     # Solve with SimpleTauLeaping (save only at t_compare times)
-    sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, dt = 0.1, saveat = t_compare)
+    sol_simple = solve(
+        EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, dt = 0.1, saveat = t_compare, rng)
 
     # MassActionJump formulation for adaptive tau-leaping algorithms
     reactant_stoich = [[1 => 1, 2 => 1], [2 => 1], Pair{Int, Int}[]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [1 => 1]]
     param_idxs = [1, 2, 3]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs)
-    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj)
 
     # Solve with SimpleExplicitTauLeaping (save only at t_compare times)
-    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare)
+    sol_adaptive = solve(
+        EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare, rng)
 
     # Compute mean I trajectories via direct indexing (I is index 2 in SIR)
     sol_implicit = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleImplicitTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
     sol_trapezoidal = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleTrapezoidalLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
 
     sol_adaptive_implicit = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleAdaptiveTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
     sol_adaptive_trapezoidal = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping()),
         EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
 
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 2)
@@ -152,16 +289,17 @@ end
     affect1!(integrator) = (integrator.u[1] -= 1; integrator.u[2] += 1; nothing)
     affect2!(integrator) = (integrator.u[2] -= 1; integrator.u[3] += 1; nothing)
     affect3!(integrator) = (integrator.u[3] -= 1; integrator.u[4] += 1; nothing)
-    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!), ConstantRateJump(rate3, affect3!))
+    jumps = (ConstantRateJump(rate1, affect1!), ConstantRateJump(rate2, affect2!),
+        ConstantRateJump(rate3, affect3!))
 
     u0 = [999.0, 0.0, 10.0, 0.0]  # S, E, I, R
     tspan = (0.0, 250.0)
     prob_disc = DiscreteProblem(u0, tspan, p)
-    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; rng, save_positions = (false, false))
+    jump_prob = JumpProblem(prob_disc, Direct(), jumps...; save_positions = (false, false))
 
     # Solve with SSAStepper (save only at t_compare times)
     sol_direct = solve(EnsembleProblem(jump_prob), SSAStepper(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare)
+        trajectories = Nsims, saveat = t_compare, rng)
 
     # RegularJump formulation for SimpleTauLeaping
     regular_rate = (out, u, p, t) -> begin
@@ -177,45 +315,47 @@ end
         dc[4] = counts[3]
     end
     rj = RegularJump(regular_rate, regular_c, 3)
-    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj; rng)
+    jump_prob_tau = JumpProblem(prob_disc, PureLeaping(), rj)
 
     # Solve with SimpleTauLeaping (save only at t_compare times)
-    sol_simple = solve(EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, dt = 0.1, saveat = t_compare)
+    sol_simple = solve(
+        EnsembleProblem(jump_prob_tau), SimpleTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, dt = 0.1, saveat = t_compare, rng)
 
     # MassActionJump formulation for adaptive tau-leaping algorithms
     reactant_stoich = [[1 => 1, 3 => 1], [2 => 1], [3 => 1]]
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [3 => -1, 4 => 1]]
     param_idxs = [1, 2, 3]
     maj = MassActionJump(reactant_stoich, net_stoich; param_idxs)
-    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj; rng)
+    jump_prob_maj = JumpProblem(prob_disc, PureLeaping(), maj)
 
     # Solve with SimpleExplicitTauLeaping (save only at t_compare times)
-    sol_adaptive = solve(EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare)
+    sol_adaptive = solve(
+        EnsembleProblem(jump_prob_maj), SimpleExplicitTauLeaping(), EnsembleSerial();
+        trajectories = Nsims, saveat = t_compare, rng)
 
     # Compute mean I trajectories via direct indexing (I is index 3 in SEIR)
     sol_implicit = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleImplicitTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
     sol_trapezoidal = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleTrapezoidalLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
 
     sol_adaptive_implicit = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleAdaptiveTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
     sol_adaptive_trapezoidal = solve(
         EnsembleProblem(jump_prob_maj),
         SimpleAdaptiveTauLeaping(implicit_alg = SimpleTrapezoidalLeaping()),
         EnsembleSerial();
-        trajectories = Nsims, saveat = t_compare
+        trajectories = Nsims, saveat = t_compare, rng
     )
 
     mean_I_direct = compute_mean_at_saves(sol_direct, Nsims, npts, 3)
@@ -238,7 +378,7 @@ end
 # Test zero-rate case for SimpleExplicitTauLeaping
 @testset "Zero Rates Test for SimpleExplicitTauLeaping" begin
     # SIR model: S + I -> 2I, I -> R
-    reactant_stoch = [[1=>1, 2=>1], [2=>1], Pair{Int,Int}[]]
+    reactant_stoch = [[1=>1, 2=>1], [2=>1], Pair{Int, Int}[]]
     net_stoch = [[1=>-1, 2=>1], [2=>-1, 3=>1], []]
     rates = [0.1/1000, 0.05, 0.0]  # beta/N, gamma, dummy rate for empty reaction
     maj = MassActionJump(rates, reactant_stoch, net_stoch)
@@ -247,7 +387,7 @@ end
     prob = DiscreteProblem(u0, tspan)
     jump_prob = JumpProblem(prob, PureLeaping(), maj)
 
-    sol = solve(jump_prob, SimpleExplicitTauLeaping(); dtmin = 0.1, saveat=1.0)
+    sol = solve(jump_prob, SimpleExplicitTauLeaping(); dtmin = 0.1, saveat = 1.0)
 
     # Check that solution completes and covers tspan
     @test sol.t[end] ≈ 250.0 atol=1e-6
@@ -263,13 +403,13 @@ end
     net_stoich = [[1 => -1, 2 => 1], [2 => -1, 3 => 1], [3 => -1, 4 => 1]]
     maj = MassActionJump([0.3 / 1000, 0.2, 0.1], reactant_stoich, net_stoich)
     prob = DiscreteProblem([999.0, 0.0, 10.0, 0.0], (0.0, 20.0))
-    jprob = JumpProblem(prob, PureLeaping(), maj; rng)
+    jprob = JumpProblem(prob, PureLeaping(), maj)
 
     total0 = sum(prob.u0)
     for implicit_alg in (SimpleImplicitTauLeaping(), SimpleTrapezoidalLeaping())
         for eigenvalue_check in (false, true)
             alg = SimpleAdaptiveTauLeaping(; implicit_alg, eigenvalue_check)
-            sol = solve(jprob, alg; seed = 1234)
+            sol = solve(jprob, alg; rng = StableRNG(1234))
             @test sol.t[end] == 20.0
             @test all(u -> all(>=(0), u), sol.u)
             # every reaction moves one individual between compartments
@@ -284,12 +424,12 @@ end
     # which threw a BoundsError for such a model.
     maj = MassActionJump([5.0], [Pair{Int, Int}[]], [[1 => 1]])
     prob = DiscreteProblem([0.0], (0.0, 4.0))
-    jprob = JumpProblem(prob, PureLeaping(), maj; rng)
+    jprob = JumpProblem(prob, PureLeaping(), maj)
 
     @test JumpProcesses.compute_hor([Pair{Int, Int}[], [1 => 2]], 2) == [0, 2]
 
     for alg in (SimpleExplicitTauLeaping(), SimpleImplicitTauLeaping())
-        sol = solve(jprob, alg; seed = 1234, saveat = 2.0)
+        sol = solve(jprob, alg; rng = StableRNG(1234), saveat = 2.0)
         @test sol.t == [0.0, 2.0, 4.0]
         @test issorted([u[1] for u in sol.u])   # A can only accumulate
     end
@@ -297,7 +437,7 @@ end
     # mean of A(t) is the Poisson mean 5t
     Nsims = 4000
     sol = solve(EnsembleProblem(jprob), SimpleExplicitTauLeaping(), EnsembleSerial();
-        trajectories = Nsims, saveat = 4.0)
+        trajectories = Nsims, saveat = 4.0, rng)
     @test isapprox(mean(sol.u[i].u[end][1] for i in 1:Nsims), 20.0, rtol = 0.05)
 end
 
@@ -307,84 +447,86 @@ end
     tspan = (0.0, 10.0)
     p = [0.1, 0.2]
     prob = DiscreteProblem(u0, tspan, p)
-    
+
     # Create MassActionJump
     reactant_stoich = [[1 => 1], [1 => 2]]
     net_stoich = [[1 => -1, 2 => 1], [1 => -2, 3 => 1]]
     rates = [0.1, 0.05]
     maj = MassActionJump(rates, reactant_stoich, net_stoich)
-    
+
     # Test PureLeaping JumpProblem creation
-    jp_pure = JumpProblem(prob, PureLeaping(), JumpSet(maj); rng)
+    jp_pure = JumpProblem(prob, PureLeaping(), JumpSet(maj))
     @test jp_pure.aggregator isa PureLeaping
     @test jp_pure.discrete_jump_aggregation === nothing
     @test jp_pure.massaction_jump !== nothing
     @test length(jp_pure.jump_callback.discrete_callbacks) == 0
-    
+
     # Test with ConstantRateJump
     rate(u, p, t) = p[1] * u[1]
     affect!(integrator) = (integrator.u[1] -= 1; integrator.u[3] += 1)
     crj = ConstantRateJump(rate, affect!)
-    
-    jp_pure_crj = JumpProblem(prob, PureLeaping(), JumpSet(crj); rng)
+
+    jp_pure_crj = JumpProblem(prob, PureLeaping(), JumpSet(crj))
     @test jp_pure_crj.aggregator isa PureLeaping
     @test jp_pure_crj.discrete_jump_aggregation === nothing
     @test length(jp_pure_crj.constant_jumps) == 1
-    
+
     # Test with VariableRateJump
     vrate(u, p, t) = t * p[1] * u[1]
     vaffect!(integrator) = (integrator.u[1] -= 1; integrator.u[3] += 1)
     vrj = VariableRateJump(vrate, vaffect!)
-    
-    jp_pure_vrj = JumpProblem(prob, PureLeaping(), JumpSet(vrj); rng)
+
+    jp_pure_vrj = JumpProblem(prob, PureLeaping(), JumpSet(vrj))
     @test jp_pure_vrj.aggregator isa PureLeaping
     @test jp_pure_vrj.discrete_jump_aggregation === nothing
     @test length(jp_pure_vrj.variable_jumps) == 1
-    
+
     # Test with RegularJump
     function rj_rate(out, u, p, t)
         out[1] = p[1] * u[1]
     end
-    
+
     rj_dc = zeros(3, 1)
     rj_dc[1, 1] = -1
     rj_dc[3, 1] = 1
-    
+
     function rj_c(du, u, p, t, counts, mark)
         mul!(du, rj_dc, counts)
     end
-    
+
     regj = RegularJump(rj_rate, rj_c, 1)
-    
-    jp_pure_regj = JumpProblem(prob, PureLeaping(), JumpSet(regj); rng)
+
+    jp_pure_regj = JumpProblem(prob, PureLeaping(), JumpSet(regj))
     @test jp_pure_regj.aggregator isa PureLeaping
     @test jp_pure_regj.discrete_jump_aggregation === nothing
     @test jp_pure_regj.regular_jump !== nothing
-    
+
     # Test mixed jump types
-    mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = (crj,), 
+    mixed_jumps = JumpSet(; massaction_jumps = maj, constant_jumps = (crj,),
         variable_jumps = (vrj,), regular_jumps = regj)
-    jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps; rng)
+    jp_pure_mixed = JumpProblem(prob, PureLeaping(), mixed_jumps)
     @test jp_pure_mixed.aggregator isa PureLeaping
     @test jp_pure_mixed.discrete_jump_aggregation === nothing
     @test jp_pure_mixed.massaction_jump !== nothing
     @test length(jp_pure_mixed.constant_jumps) == 1
     @test length(jp_pure_mixed.variable_jumps) == 1
     @test jp_pure_mixed.regular_jump !== nothing
-    
+
     # Test spatial system error
     spatial_sys = CartesianGrid((2, 2))
     hopping_consts = [1.0]
-    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
-                                          spatial_system = spatial_sys)
-    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj); rng,
-                                          hopping_constants = hopping_consts)
-    
+    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj);
+        spatial_system = spatial_sys)
+    @test_throws ErrorException JumpProblem(prob, PureLeaping(), JumpSet(maj);
+        hopping_constants = hopping_consts)
+
     # Test MassActionJump with parameter mapping
     maj_params = MassActionJump(reactant_stoich, net_stoich; param_idxs = [1, 2])
-    jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params); rng)
-    scaled_rates = [p[1], p[2]/2]
-    @test jp_params.massaction_jump.scaled_rates == scaled_rates
+    jp_params = JumpProblem(prob, PureLeaping(), JumpSet(maj_params))
+    @test jp_params.massaction_jump.scaled_rates === nothing
+    dest = zeros(2)
+    JumpProcesses.fill_scaled_rates!(dest, jp_params.massaction_jump, p)
+    @test dest == [p[1], p[2] / 2]
 end
 
 # Test that saveat/save_start/save_end control which times are stored in solutions
@@ -398,23 +540,23 @@ end
     prob = DiscreteProblem(u0, tspan)
 
     # SSAStepper with save_positions=(false,false) + saveat: only saveat times stored
-    jp = JumpProblem(prob, Direct(), crj; rng, save_positions = (false, false))
-    sol = solve(jp, SSAStepper(); saveat = 1.0)
+    jp = JumpProblem(prob, Direct(), crj; save_positions = (false, false))
+    sol = solve(jp, SSAStepper(); saveat = 1.0, rng)
     @test sol.t == collect(0.0:1.0:10.0)
 
     # SSAStepper with default save_positions + saveat: jump times stored too
-    jp2 = JumpProblem(prob, Direct(), crj; rng)
-    sol2 = solve(jp2, SSAStepper(); saveat = 1.0)
+    jp2 = JumpProblem(prob, Direct(), crj)
+    sol2 = solve(jp2, SSAStepper(); saveat = 1.0, rng)
     @test length(sol2.t) > length(sol.t)
 
     # --- SimpleTauLeaping save_start/save_end/saveat tests ---
     regular_rate = (out, u, p, t) -> (out[1] = 1.0)
     regular_c = (dc, u, p, t, counts, mark) -> (dc[1] = counts[1])
     rj = RegularJump(regular_rate, regular_c, 1)
-    jp_tau = JumpProblem(prob, PureLeaping(), rj; rng)
+    jp_tau = JumpProblem(prob, PureLeaping(), rj)
 
     # No saveat: stores every dt step (save_start=true, save_end=true by default)
-    sol_tau = solve(jp_tau, SimpleTauLeaping(); dt = 1.0)
+    sol_tau = solve(jp_tau, SimpleTauLeaping(); dt = 1.0, rng)
     @test sol_tau.t == collect(0.0:1.0:10.0)
 
     # saveat as Number: defaults save_start=true, save_end=true
@@ -466,7 +608,7 @@ end
     reactant_stoich = [[1 => 1]]
     net_stoich = [[1 => -1]]
     maj = MassActionJump([0.1], reactant_stoich, net_stoich)
-    jp_explicit = JumpProblem(prob_decay, PureLeaping(), maj; rng)
+    jp_explicit = JumpProblem(prob_decay, PureLeaping(), maj)
 
     # saveat as Number: defaults save_start=true, save_end=true
     sol = solve(jp_explicit, SimpleExplicitTauLeaping(); saveat = 2.0)

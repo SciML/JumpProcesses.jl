@@ -18,9 +18,25 @@ $(TYPEDEF)
 A concrete `VariableRateAggregator` implementing a first-reaction method variant for
 simulating `VariableRateJump`s. `VR_FRM` (Variable Rate First Reaction Method with
 Ordinary Differential Equation) uses a user-selected ODE solver to handle integrating each
-jump's intensity / propensity. A callback is also used for each jump to determine when its
-integrated intensity reaches a level corresponding to a firing time, and to then execute the
-affect associated with the jump at that time.
+jump's intensity / propensity. Continuous callbacks are also used to determine when each
+jump's integrated intensity reaches a level corresponding to a firing time, and to then
+execute the affect associated with the jump at that time.
+
+## Constructor
+
+```julia
+VR_FRM(; vector_callback = nothing)
+```
+
+  - `vector_callback = true`: one `VectorContinuousCallback` handles all the jumps. Jumps
+    whose callback options (`rootfind`, `interp_points`, `save_positions`, `abstol` and
+    `reltol`) differ are handled by one `VectorContinuousCallback` per set of options.
+  - `vector_callback = false`: one `ContinuousCallback` handles each jump. This is faster
+    with up to about three jumps, but with more it is slower and takes longer to compile.
+  - `vector_callback = nothing` (the default): `JumpProblem` chooses `false` if `VR_FRM`
+    handles at most three jumps, and `true` otherwise.
+
+The choice is stored as the type parameter, `VR_FRM{vector_callback}`.
 
 ## Examples
 
@@ -28,21 +44,21 @@ Simulating a birth-death process with `VR_FRM`:
 
 ```julia
 using JumpProcesses, OrdinaryDiffEq
-u0 = [1.0]           # Initial population  
-p = [10.0, 0.5]      # [birth rate, death rate]  
+u0 = [1.0]           # Initial population
+p = [10.0, 0.5]      # [birth rate, death rate]
 tspan = (0.0, 10.0)
 
-# Birth jump: ∅ → X  
+# Birth jump: ∅ → X
 birth_rate(u, p, t) = p[1]
 birth_affect!(integrator) = (integrator.u[1] += 1; nothing)
 birth_jump = VariableRateJump(birth_rate, birth_affect!)
 
-# Death jump: X → ∅  
+# Death jump: X → ∅
 death_rate(u, p, t) = p[2] * u[1]
 death_affect!(integrator) = (integrator.u[1] -= 1; nothing)
 death_jump = VariableRateJump(death_rate, death_affect!)
 
-# Problem setup  
+# Problem setup
 oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)
 jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_FRM())
 sol = solve(jprob, Tsit5())
@@ -53,173 +69,252 @@ sol = solve(jprob, Tsit5())
   - Specify `VR_FRM` in a `JumpProblem` via the `vr_aggregator` keyword argument to select
     its use for handling `VariableRateJump`s.
   - While robust, it may be less performant than `VR_Direct` due to its integration of each
-    individual jump's intensity, and use of one continuous callback per jump to handle
-    detection of jump times and implementation of state changes from that jump.
+    individual jump's intensity, and its detection of each jump's firing time.
+  - It doesn't support immutable state types, such as `SVector`s, since it extends the state
+    with each jump's integrated intensity. Use `VR_Direct` or `VR_DirectFW` with them.
 """
-struct VR_FRM <: VariableRateAggregator end
+struct VR_FRM{V} <: VariableRateAggregator end
 
-function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs;
-        rng = DEFAULT_RNG)
-    new_prob = extend_problem(prob, cvrjs; rng)
-    variable_jump_callback = build_variable_callback(CallbackSet(), 0, cvrjs...; rng)
+VR_FRM(; vector_callback::Union{Nothing, Bool} = nothing) = VR_FRM{vector_callback}()
+
+# per-jump callbacks were faster in benchmarks with up to three jumps
+function configure_jump_problem(prob, ::VR_FRM{nothing}, jumps, cvrjs)
+    vr_aggregator = VR_FRM{length(cvrjs) > 3}()
+    configure_jump_problem(prob, vr_aggregator, jumps, cvrjs)
+end
+
+function configure_jump_problem(prob, vr_aggregator::VR_FRM, jumps, cvrjs)
+    # a Vector of jumps is converted here, once, so that the extended right-hand side
+    # evaluates the rates through the type-stable, unrolled `update_jumps!`
+    vrjs = Tuple(cvrjs)
+    new_prob = extend_problem(prob, vrjs)
+    variable_jump_callback = vr_frm_callbacks(vr_aggregator, length(prob.u0), vrjs)
     return new_prob, variable_jump_callback
 end
 
 # extends prob.u0 to an ExtendedJumpArray with Njumps integrated intensity values,
 # of type prob.tspan
-function extend_u0(prob, Njumps, rng)
+function extend_u0(prob, Njumps)
     ttype = eltype(prob.tspan)
-    u0 = ExtendedJumpArray(prob.u0, [-randexp(rng, ttype) for i in 1:Njumps])
+    u0 = ExtendedJumpArray(prob.u0, zeros(ttype, Njumps))
     return u0
 end
 
-function extend_problem(prob::SciMLBase.AbstractDiscreteProblem, jumps; rng = DEFAULT_RNG)
+# The function that `extend_problem` rebuilds is `FullSpecialize` unless `prob.f` is
+# `NoSpecialize`, which is kept. On Julia >= 1.12, DiffEqBase erases the callback types of
+# problems whose function is `AutoSpecialize`, `AutoDespecialize` or `NoSpecialize` and calls
+# every callback through `invokelatest`, which allocates on every step; VR_FRM's callbacks
+# then make solves much slower. The rebuilt function is a new closure for every problem, so
+# `AutoSpecialize` would save no compilation. Under `AutoDespecialize` and `AutoRespecialize`
+# the integrator would also pass the jump callbacks a parameter container instead of `prob.p`,
+# and `FunctionWrapperSpecialize` can only be set by a problem constructor.
+function extended_specialization(f)
+    spec = SciMLBase.specialization(f)
+    spec === SciMLBase.NoSpecialize && return spec
+    return SciMLBase.FullSpecialize
+end
+
+# extends prob.du0 with the jump intensities at the initial time, the derivatives of the
+# integrated intensities
+function extend_du0(prob, jumps)
+    t0 = first(prob.tspan)
+    jump_du0 = [jump.rate(prob.u0, prob.p, t0) for jump in jumps]
+    return ExtendedJumpArray(prob.du0, jump_du0)
+end
+
+function extend_problem(prob::SciMLBase.AbstractDiscreteProblem, jumps)
     error("General `VariableRateJump`s require a continuous problem, like an ODE/SDE/DDE/DAE problem. To use a `DiscreteProblem` bounded `VariableRateJump`s must be used. See the JumpProcesses docs.")
 end
 
-function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractODEProblem, jumps)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                # the rates go in a new array, not in `u.jump_u`, the state's integrated
+                # intensities
+                du = ExtendedJumpArray(_f(u.u, p, t), similar(u.jump_u))
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = ODEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    u0 = extend_u0(prob, length(jumps))
+    spec = extended_specialization(prob.f)
+    f = ODEFunction{isinplace(prob), spec}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
 
-function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractSDEProblem, jumps)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
                 _f(du.u, u.u, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, p, t)
-                du = ExtendedJumpArray(_f(u.u, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                du = ExtendedJumpArray(_f(u.u, p, t), similar(u.jump_u))
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
-    if prob.noise_rate_prototype === nothing
-        jump_g = function (du, u, p, t)
-            prob.g(du.u, u.u, p, t)
+    if isinplace(prob)
+        if prob.noise_rate_prototype === nothing
+            jump_g = function (du, u, p, t)
+                prob.g(du.u, u.u, p, t)
+            end
+        else
+            jump_g = function (du, u, p, t)
+                prob.g(du, u.u, p, t)
+            end
         end
     else
-        jump_g = function (du, u, p, t)
-            prob.g(du, u.u, p, t)
+        if prob.noise_rate_prototype === nothing
+            # diagonal noise, none for the integrated intensities
+            jump_g = function (u, p, t)
+                ExtendedJumpArray(prob.g(u.u, p, t), zero(u.jump_u))
+            end
+        else
+            jump_g = function (u, p, t)
+                prob.g(u.u, p, t)
+            end
         end
     end
 
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = SDEFunction{isinplace(prob)}(jump_f, jump_g; sys = prob.f.sys,
+    u0 = extend_u0(prob, length(jumps))
+    spec = extended_specialization(prob.f)
+    f = SDEFunction{isinplace(prob), spec}(jump_f, jump_g; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, g = jump_g, u0)
 end
 
-function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractDDEProblem, jumps)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
         jump_f = let _f = _f
             function (du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
                 _f(du.u, u.u, h, p, t)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                update_jumps!(du, u, p, t, length(u.u), jumps)
             end
         end
     else
         jump_f = let _f = _f
             function (u::ExtendedJumpArray, h, p, t)
-                du = ExtendedJumpArray(_f(u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
+                du = ExtendedJumpArray(_f(u.u, h, p, t), similar(u.jump_u))
+                update_jumps!(du, u, p, t, length(u.u), jumps)
                 return du
             end
         end
     end
 
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = DDEFunction{isinplace(prob)}(jump_f; sys = prob.f.sys,
+    u0 = extend_u0(prob, length(jumps))
+    spec = extended_specialization(prob.f)
+    f = DDEFunction{isinplace(prob), spec}(jump_f; sys = prob.f.sys,
         observed = prob.f.observed)
     remake(prob; f, u0)
 end
 
-# Not sure if the DAE one is correct: Should be a residual of sorts
-function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps; rng = DEFAULT_RNG)
+function extend_problem(prob::SciMLBase.AbstractDAEProblem, jumps)
     _f = SciMLBase.unwrapped_f(prob.f)
 
     if isinplace(prob)
         jump_f = let _f = _f
-            function (out, du::ExtendedJumpArray, u::ExtendedJumpArray, h, p, t)
-                _f(out, du.u, u.u, h, p, t)
-                update_jumps!(out, u, p, t, length(u.u), jumps...)
+            function (
+                    out::ExtendedJumpArray, du::ExtendedJumpArray,
+                    u::ExtendedJumpArray, p, t,
+                )
+                _f(out.u, du.u, u.u, p, t)
+                update_jumps!(out, u, p, t, length(u.u), jumps)
+                out.jump_u .= du.jump_u .- out.jump_u
+                return nothing
             end
         end
     else
         jump_f = let _f = _f
-            function (du, u::ExtendedJumpArray, h, p, t)
-                out = ExtendedJumpArray(_f(du.u, u.u, h, p, t), u.jump_u)
-                update_jumps!(du, u, p, t, length(u.u), jumps...)
-                return du
+            function (du::ExtendedJumpArray, u::ExtendedJumpArray, p, t)
+                jump_out = [
+                    du.jump_u[i] - jump.rate(u.u, p, t)
+                        for (i, jump) in enumerate(jumps)
+                ]
+                return ExtendedJumpArray(_f(du.u, u.u, p, t), jump_out)
             end
         end
     end
 
-    u0 = extend_u0(prob, length(jumps), rng)
-    f = DAEFunction{isinplace(prob)}(jump_f, sys = prob.f.sys,
+    u0 = extend_u0(prob, length(jumps))
+    du0 = extend_du0(prob, jumps)
+    differential_vars = if prob.differential_vars === nothing
+        nothing
+    else
+        ExtendedJumpArray(prob.differential_vars, trues(length(jumps)))
+    end
+    spec = extended_specialization(prob.f)
+    f = DAEFunction{isinplace(prob), spec}(jump_f, sys = prob.f.sys,
         observed = prob.f.observed)
-    remake(prob; f, u0)
+    return remake(prob; f, u0, du0, differential_vars)
 end
 
-struct VR_FRMEventCallback{F, RNG}
+# The `VR_FRM` callbacks set `idxs` so that their conditions interpolate only their jumps'
+# components of the extended state, `nu + i` for `jump_u[i]`, where `nu` is the length of
+# the state. These indices are wrong if the state's length changes (for example through
+# `remake`), so the callbacks check it when they are initialized.
+function check_vr_frm_state_length(integrator, nu)
+    if length(integrator.u.u) != nu
+        throw(ArgumentError("The `VR_FRM` callbacks were built for a state of length $nu, but the state has length $(length(integrator.u.u)). Create a new `JumpProblem` to change the length of the state."))
+    end
+    nothing
+end
+
+############################ VR_FRM{false}: one callback per jump ############################
+
+struct VR_FRMEventCallback{F}
     idx::Int
     affect!::F
-    rng::RNG
 end
 
-# condition: (u, t, integrator)
-@inline (c::VR_FRMEventCallback)(u, t, integrator) = u.jump_u[c.idx]
+# condition: (u, t, integrator); with the callback's `idxs`, `u` is the value of `jump_u[idx]`
+@inline (c::VR_FRMEventCallback)(u, t, integrator) = u
 
 # affect: (integrator)
 function (c::VR_FRMEventCallback)(integrator)
     c.affect!(integrator)
-    integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
+    rng = get_rng(integrator)
+    integrator.u.jump_u[c.idx] = -randexp(rng, typeof(integrator.t))
     nothing
 end
 
 # initialize: (cb, u, t, integrator)
 function (c::VR_FRMEventCallback)(cb, u, t, integrator)
-    integrator.u.jump_u[c.idx] = -randexp(c.rng, typeof(integrator.t))
+    check_vr_frm_state_length(integrator, cb.idxs - c.idx)
+    rng = get_rng(integrator)
+    integrator.u.jump_u[c.idx] = -randexp(rng, typeof(integrator.t))
     derivative_discontinuity!(integrator, true)
     nothing
 end
 
-function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
-    cb_functor = VR_FRMEventCallback(idx, jump.affect!, rng)
+function wrap_jump_in_callback(nu, idx, jump)
+    cb_functor = VR_FRMEventCallback(idx, jump.affect!)
     ContinuousCallback(cb_functor, cb_functor;
         initialize = cb_functor,
-        idxs = jump.idxs,
+        idxs = nu + idx,
         rootfind = jump.rootfind,
         interp_points = jump.interp_points,
         save_positions = jump.save_positions,
@@ -227,29 +322,107 @@ function wrap_jump_in_callback(idx, jump; rng = DEFAULT_RNG)
         reltol = jump.reltol)
 end
 
-function build_variable_callback(cb, idx, jump, jumps...; rng = DEFAULT_RNG)
+function build_variable_callback(cb, nu, idx, jump, jumps...)
     idx += 1
-    new_cb = wrap_jump_in_callback(idx, jump; rng)
-    build_variable_callback(CallbackSet(cb, new_cb), idx, jumps...; rng)
+    new_cb = wrap_jump_in_callback(nu, idx, jump)
+    build_variable_callback(CallbackSet(cb, new_cb), nu, idx, jumps...)
 end
 
-function build_variable_callback(cb, idx, jump; rng = DEFAULT_RNG)
+function build_variable_callback(cb, nu, idx, jump)
     idx += 1
-    CallbackSet(cb, wrap_jump_in_callback(idx, jump; rng))
+    CallbackSet(cb, wrap_jump_in_callback(nu, idx, jump))
 end
 
-@inline function update_jumps!(du, u, p, t, idx, jump)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
+function vr_frm_callbacks(::VR_FRM{false}, nu, vrjs)
+    build_variable_callback(CallbackSet(), nu, 0, vrjs...)
 end
 
-@inline function update_jumps!(du, u, p, t, idx, jump, jumps...)
-    idx += 1
-    du[idx] = jump.rate(u.u, p, t)
-    update_jumps!(du, u, p, t, idx, jumps...)
+###################### VR_FRM{true}: one callback per set of jump options ######################
+
+# the options a jump gives its callback; a `VectorContinuousCallback` has one set of them
+function vr_frm_callback_options(jump)
+    (; jump.rootfind, jump.interp_points, jump.save_positions, jump.abstol, jump.reltol)
+end
+
+# condition: (out, u, t, integrator); with the callback's `idxs`, `u` holds the values of its
+# jumps' components of `jump_u`
+struct VR_FRMVectorCondition end
+@inline (::VR_FRMVectorCondition)(out, u, t, integrator) = (out .= u; nothing)
+
+struct VR_FRMVectorCallback{A}
+    jump_idxs::Vector{Int}  # indices in `jump_u` of the callback's jumps
+    affects::A              # Tuple of their `affect!` functions
+    init_all::Bool          # whether `initialize` draws the thresholds of all the jumps
+end
+
+# calls `affects[k](integrator)` through one branch per affect, so each call is static; `k` is
+# always in `1:length(affects)`, so the last affect needs no test
+@generated function vr_frm_affect!(affects::Tuple, k, integrator)
+    quote
+        Base.Cartesian.@nif $(fieldcount(affects)) i -> (i == k) i -> (@inbounds affects[i](integrator)) i -> (@inbounds affects[$(fieldcount(affects))](integrator))
+        return nothing
+    end
+end
+
+# affect: (integrator, events); `events[k]` is nonzero if the `k`th jump of the callback
+# fired. DiffEqBase may pass a longer buffer, so only the callback's entries are read.
+function (c::VR_FRMVectorCallback)(integrator, events)
+    rng = get_rng(integrator)
+    for (k, i) in enumerate(c.jump_idxs)
+        iszero(events[k]) && continue
+        vr_frm_affect!(c.affects, k, integrator)
+        integrator.u.jump_u[i] = -randexp(rng, typeof(integrator.t))
+    end
+    nothing
+end
+
+# initialize: (cb, u, t, integrator); the first callback draws the thresholds of all the
+# jumps, in order, so that they are drawn as by `VR_FRM{false}`
+function (c::VR_FRMVectorCallback)(cb, u, t, integrator)
+    check_vr_frm_state_length(integrator, first(cb.idxs) - first(c.jump_idxs))
+    if c.init_all
+        rng = get_rng(integrator)
+        jump_u = integrator.u.jump_u
+        for i in eachindex(jump_u)
+            jump_u[i] = -randexp(rng, typeof(integrator.t))
+        end
+        derivative_discontinuity!(integrator, true)
+    end
+    nothing
+end
+
+function vr_frm_callbacks(::VR_FRM{true}, nu, vrjs)
+    opts = map(vr_frm_callback_options, vrjs)
+    cbs = map(enumerate(unique(opts))) do (n, jump_opts)
+        jump_idxs = findall(isequal(jump_opts), opts)
+        # a range when the jumps are contiguous, as when they all share their options
+        idxs = if jump_idxs == first(jump_idxs):last(jump_idxs)
+            (nu + first(jump_idxs)):(nu + last(jump_idxs))
+        else
+            nu .+ jump_idxs
+        end
+        affects = Tuple(vrjs[i].affect! for i in jump_idxs)
+        cb_functor = VR_FRMVectorCallback(jump_idxs, affects, n == 1)
+        VectorContinuousCallback(VR_FRMVectorCondition(), cb_functor, length(jump_idxs);
+            initialize = cb_functor, idxs, jump_opts...)
+    end
+    CallbackSet(cbs...)
+end
+
+# Unrolled at compile time: recursive splatting over `jumps...` is only inferred for
+# tuples of up to 32 elements, beyond which every rate evaluation is dynamically dispatched.
+@generated function update_jumps!(du, u, p, t, idx, jumps::Tuple)
+    body = Expr(:block)
+    for i in 1:fieldcount(jumps)
+        push!(body.args, :(du[idx + $i] = jumps[$i].rate(u.u, p, t)))
+    end
+    push!(body.args, :(return nothing))
+    return body
 end
 
 ################################### VR_Direct and VR_DirectFW ####################################
+
+# Algorithm: docs/src/algorithms/vr_direct.md
 
 """
 $(TYPEDEF)
@@ -267,21 +440,21 @@ Simulating a birth-death process with `VR_Direct` (default) and VR_DirectFW:
 
 ```julia
 using JumpProcesses, OrdinaryDiffEq
-u0 = [1.0]           # Initial population  
-p = [10.0, 0.5]      # [birth rate, death rate coefficient]  
+u0 = [1.0]           # Initial population
+p = [10.0, 0.5]      # [birth rate, death rate coefficient]
 tspan = (0.0, 10.0)
 
-# Birth jump: ∅ → X  
+# Birth jump: ∅ → X
 birth_rate(u, p, t) = p[1]
 birth_affect!(integrator) = (integrator.u[1] += 1; nothing)
 birth_jump = VariableRateJump(birth_rate, birth_affect!)
 
-# Death jump: X → ∅  
+# Death jump: X → ∅
 death_rate(u, p, t) = p[2] * u[1]
 death_affect!(integrator) = (integrator.u[1] -= 1; nothing)
 death_jump = VariableRateJump(death_rate, death_affect!)
 
-# Problem setup  
+# Problem setup
 oprob = ODEProblem((du, u, p, t) -> du .= 0, u0, tspan, p)
 jprob = JumpProblem(oprob, birth_jump, death_jump; vr_aggregator = VR_Direct())
 sol = solve(jprob, Tsit5())
@@ -293,6 +466,17 @@ sol = solve(jprob, Tsit5())
 ## Notes
 
   - `VR_Direct` and `VR_DirectFW` are expected to generally be more performant than `VR_FRM`.
+  - The total rate is integrated over each solver step with a piecewise polynomial
+    (Chebyshev) interpolant of it, refined until the integral's estimated error is within
+    the solver's `abstol` and `reltol`. Rates that vary within long solver steps, for
+    example when the ODE part is constant, are resolved without limiting the step size.
+  - The rates are evaluated along the solver's interpolant between steps. In SDE problems
+    that doesn't resolve the noise within a step, so a rate that depends on a component
+    driven by noise needs steps that are short compared with its variation, for example
+    by setting `dtmax`. `VR_FRM` integrates each rate as a component of the state instead,
+    so the solver's error control covers it.
+  - See [VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for how the total rate is
+    integrated, and its accuracy, cost and limitations.
 """
 struct VR_Direct <: VariableRateAggregator end
 """
@@ -302,7 +486,8 @@ Function-wrapper variant of [`VR_Direct`](@ref) for simulations with many
 [`VariableRateJump`](@ref)s.
 
 `VR_DirectFW` uses the same direct-method callback strategy as `VR_Direct`, but stores the
-rate and affect functions in `FunctionWrappers`-based containers.
+rate and affect functions in `FunctionWrappers`-based containers. See
+[VR_Direct and VR_DirectFW](@ref vr_direct_algorithm) for the algorithm.
 
 ## Returns
 
@@ -333,38 +518,86 @@ sol = solve(jprob, Tsit5())
 """
 struct VR_DirectFW <: VariableRateAggregator end
 
-mutable struct VR_DirectEventCache{T, RNG, F1, F2}
+# The condition integrates the total rate over each solver step with a piecewise Chebyshev
+# interpolant of it, fit the first time the condition sees the step. Each panel's interpolant
+# uses the rates at NUM_CHEB_NODES Chebyshev points, and panels are halved, at most
+# MAX_CHEB_DEPTH times, until the estimated error of their integral is within the solver's
+# tolerances. Fitting stops at the panel where the threshold is reached, since the step then
+# ends at the jump; that panel may be halved up to MAX_CHEB_CROSSING_DEPTH times. Root
+# finding then evaluates the interpolant's antiderivative, with no further rate evaluations.
+const NUM_CHEB_NODES = 8
+const MAX_CHEB_DEPTH = 12
+const MAX_CHEB_CROSSING_DEPTH = 40
+
+# The total rate's interpolant over the current step, buffers for fitting it, and the
+# Chebyshev tables for fitting it, computed in the problem's time type so that the fit isn't
+# limited to Float64 accuracy for higher precision types
+struct TotalRateFit{T}
+    panel_starts::Vector{T}
+    panel_ends::Vector{T}
+    # integral of the interpolant from the start of the step to the start of each panel
+    panel_integrals::Vector{T}
+    # and to the end of each panel, as accumulated by the fit
+    panel_end_integrals::Vector{T}
+    # coefficients of the interpolant's antiderivative on each panel, NUM_CHEB_NODES + 1
+    # per panel
+    panel_coefs::Vector{T}
+    rate_samples::Vector{T}
+    rate_coefs::Vector{T}
+    # Chebyshev points of the first kind on [-1, 1]
+    nodes::Vector{T}
+    # maps the rates at `nodes` to the coefficients cₖ of their interpolant
+    # c₀ / 2 + ∑ₖ cₖ Tₖ(x), k = 1:(NUM_CHEB_NODES - 1)
+    transform::Matrix{T}
+    # the interpolant's integral over [-1, 1] is ∑ₖ integral_weights[k + 1] cₖ
+    integral_weights::Vector{T}
+end
+
+function TotalRateFit{T}() where {T}
+    n = NUM_CHEB_NODES
+    nodes = [cospi((2j - 1) / T(2n)) for j in 1:n]
+    transform = [2 * cospi(k * (2j - 1) / T(2n)) / n for k in 0:(n - 1), j in 1:n]
+    integral_weights = [k == 0 ? one(T) : isodd(k) ? zero(T) : 2 / T(1 - k^2)
+                        for k in 0:(n - 1)]
+    TotalRateFit{T}(T[], T[], T[], T[], T[], Vector{T}(undef, n), Vector{T}(undef, n),
+        nodes, transform, integral_weights)
+end
+
+function empty_panels!(fit::TotalRateFit)
+    empty!(fit.panel_starts)
+    empty!(fit.panel_ends)
+    empty!(fit.panel_integrals)
+    empty!(fit.panel_end_integrals)
+    empty!(fit.panel_coefs)
+    nothing
+end
+
+mutable struct VR_DirectEventCache{T, F1, F2}
     prev_time::T
     prev_threshold::T
     current_time::T
     current_threshold::T
     total_rate::T
-    rng::RNG
     rate_funcs::F1
     affect_funcs::F2
     cum_rate_sum::Vector{T}
+    rate_fit::TotalRateFit{T}
 end
 
-function VR_DirectEventCache(
-        jumps::JumpSet, ::VR_Direct, prob, ::Type{T}; rng = DEFAULT_RNG) where {T}
-    initial_threshold = randexp(rng, T)
-    vjumps = jumps.variable_jumps
-
+# `vjumps` are the jumps the cache handles: the variable rate jumps not handled by the SSA
+# aggregator (`Coevolve` takes the bounded ones)
+function VR_DirectEventCache(vjumps, ::VR_Direct, prob, ::Type{T}) where {T}
     # handle vjumps using tuples
     rate_funcs, affect_funcs = get_jump_info_tuples(vjumps)
 
     cum_rate_sum = Vector{T}(undef, length(vjumps))
 
-    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), typeof(affect_funcs)}(zero(T),
-        initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs,
-        affect_funcs, cum_rate_sum)
+    VR_DirectEventCache{T, typeof(rate_funcs), typeof(affect_funcs)}(zero(T),
+        zero(T), zero(T), zero(T), zero(T), rate_funcs,
+        affect_funcs, cum_rate_sum, TotalRateFit{T}())
 end
 
-function VR_DirectEventCache(
-        jumps::JumpSet, ::VR_DirectFW, prob, ::Type{T}; rng = DEFAULT_RNG) where {T}
-    initial_threshold = randexp(rng, T)
-    vjumps = jumps.variable_jumps
-
+function VR_DirectEventCache(vjumps, ::VR_DirectFW, prob, ::Type{T}) where {T}
     t, u = prob.tspan[1], prob.u0
 
     # handle vjumps using tuples
@@ -372,19 +605,21 @@ function VR_DirectEventCache(
 
     cum_rate_sum = Vector{T}(undef, length(vjumps))
 
-    VR_DirectEventCache{T, typeof(rng), typeof(rate_funcs), Any}(zero(T),
-        initial_threshold, zero(T), initial_threshold, zero(T), rng, rate_funcs,
-        affect_funcs, cum_rate_sum)
+    VR_DirectEventCache{T, typeof(rate_funcs), Any}(zero(T),
+        zero(T), zero(T), zero(T), zero(T), rate_funcs,
+        affect_funcs, cum_rate_sum, TotalRateFit{T}())
 end
 
 # Initialization function for VR_DirectEventCache
 function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrator)
-    cache.prev_time = zero(integrator.t)
-    cache.current_time = zero(integrator.t)
-    cache.prev_threshold = randexp(cache.rng, eltype(integrator.t))
+    rng = get_rng(integrator)
+    cache.prev_time = t
+    cache.current_time = t
+    cache.prev_threshold = randexp(rng, eltype(integrator.t))
     cache.current_threshold = cache.prev_threshold
     cache.total_rate = zero(integrator.t)
     cache.cum_rate_sum .= 0
+    empty_panels!(cache.rate_fit)
     nothing
 end
 
@@ -399,13 +634,16 @@ end
     nothing
 end
 
-@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, RNG, F1, F2},
-        ::I) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
+@inline function concretize_vr_direct_affects!(cache::VR_DirectEventCache{T, F1, F2},
+        ::I) where {T, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     nothing
 end
 
+uses_rate_wrappers(cache::VR_DirectEventCache) = holds_rate_wrappers(cache.rate_funcs)
+
 # Wrapper for initialize to match ContinuousCallback signature
 function initialize_vr_direct_wrapper(cb::ContinuousCallback, u, t, integrator)
+    check_parameters(cb.condition, integrator.p)
     concretize_vr_direct_affects!(cb.condition, integrator)
     initialize_vr_direct_cache!(cb.condition, u, t, integrator)
     derivative_discontinuity!(integrator, false)
@@ -425,27 +663,33 @@ function build_variable_integcallback(cache::VR_DirectEventCache, jumps)
     end
 
     return ContinuousCallback(cache, cache; initialize = initialize_vr_direct_wrapper,
-        save_positions, abstol, reltol)
+        save_positions, abstol, reltol, interp_points = 0)
 end
 
-function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs; rng = DEFAULT_RNG)
+function configure_jump_problem(prob, ::VR_Direct, jumps, cvrjs)
     new_prob = prob
-    cache = VR_DirectEventCache(jumps, VR_Direct(), prob, eltype(prob.tspan); rng)
+    cache = VR_DirectEventCache(cvrjs, VR_Direct(), prob, eltype(prob.tspan))
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     return new_prob, variable_jump_callback
 end
 
-function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs; rng = DEFAULT_RNG)
+function configure_jump_problem(prob, ::VR_DirectFW, jumps, cvrjs)
     new_prob = prob
-    cache = VR_DirectEventCache(jumps, VR_DirectFW(), prob, eltype(prob.tspan); rng)
+    cache = VR_DirectEventCache(cvrjs, VR_DirectFW(), prob, eltype(prob.tspan))
     variable_jump_callback = build_variable_integcallback(cache, cvrjs)
     return new_prob, variable_jump_callback
 end
 
-# recursively evaluate the cumulative sum of the rates for type stability
-@inline function cumsum_rates!(cum_rate_sum, u, p, t, rates::Tuple)
-    cur_sum = zero(eltype(cum_rate_sum))
-    cumsum_rates!(cum_rate_sum, u, p, t, 1, cur_sum, rates...)
+# Unrolled at compile time: recursive splatting over `rates...` is only inferred for
+# tuples of up to 32 elements, beyond which every rate evaluation is dynamically dispatched.
+@generated function cumsum_rates!(cum_rate_sum, u, p, t, rates::Tuple)
+    body = Expr(:block, :(cur_sum = zero(eltype(cum_rate_sum))))
+    for i in 1:fieldcount(rates)
+        push!(body.args, :(cur_sum += rates[$i](u, p, t)))
+        push!(body.args, :(@inbounds cum_rate_sum[$i] = cur_sum))
+    end
+    push!(body.args, :(return cur_sum))
+    return body
 end
 
 # loop-based version for Vector rate_funcs (avoids dynamic splatting)
@@ -458,38 +702,171 @@ end
     return cur_sum
 end
 
-@inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate, rates...)
-    new_sum = cur_sum + rate(u, p, t)
-    @inbounds cum_rate_sum[idx] = new_sum
-    idx += 1
-    cumsum_rates!(cum_rate_sum, u, p, t, idx, new_sum, rates...)
-end
-
-@inline function cumsum_rates!(cum_rate_sum, u, p, t, idx, cur_sum, rate)
-    @inbounds cum_rate_sum[idx] = cur_sum + rate(u, p, t)
-end
-
 function total_variable_rate(
-        cache::VR_DirectEventCache{
-            T, RNG, F1, F2}, u, p, t) where {T, RNG, F1, F2}
+        cache::VR_DirectEventCache{T, F1, F2}, u, p, t) where {T, F1, F2}
     (; cum_rate_sum, rate_funcs) = cache
     sum_rate = cumsum_rates!(cum_rate_sum, u, p, t, rate_funcs)
     return sum_rate
 end
 
-# how many quadrature points to use (i.e. determines the degree of the quadrature rule)
-const NUM_GAUSS_QUAD_NODES = 4
+# The state at τ from the solver's interpolant, written into the integrator's first temporary
+# cache. Out-of-place integrators have none, so the interpolant allocates the state.
+function interpolated_state(integrator, tmp_cache, τ)
+    u_τ = first(tmp_cache)
+    integrator(u_τ, τ)
+    return u_τ
+end
+interpolated_state(integrator, ::Nothing, τ) = integrator(τ)
+
+# Interpolates the total rate on [a, b], leaving the coefficients in `rate_fit.rate_coefs`.
+# Returns the interpolant's integral over [a, b], and an estimate of its error from the last
+# two coefficients.
+function fit_total_rate!(cache::VR_DirectEventCache, integrator, a, b)
+    (; rate_samples, rate_coefs, nodes, transform, integral_weights) = cache.rate_fit
+    p = integrator.p
+    tmp_cache = SciMLBase.get_tmp_cache(integrator)
+    tmid = (a + b) / 2
+    halfdt = (b - a) / 2
+    for j in 1:NUM_CHEB_NODES
+        τ = halfdt * nodes[j] + tmid
+        u_τ = interpolated_state(integrator, tmp_cache, τ)
+        rate_samples[j] = total_variable_rate(cache, u_τ, p, τ)
+    end
+    integral = zero(eltype(rate_coefs))
+    for k in 1:NUM_CHEB_NODES
+        c = zero(eltype(rate_coefs))
+        for j in 1:NUM_CHEB_NODES
+            c += transform[k, j] * rate_samples[j]
+        end
+        rate_coefs[k] = c
+        integral += integral_weights[k] * c
+    end
+    err = (b - a) * (abs(rate_coefs[end]) + abs(rate_coefs[end - 1]))
+    return halfdt * integral, err
+end
+
+# Adds the panel [a, b], whose interpolant is in `fit.rate_coefs`, with the coefficients of
+# the interpolant's antiderivative ∑ⱼ Cⱼ Tⱼ(x), Cⱼ = (cⱼ₋₁ - cⱼ₊₁) / 2j, which is zero at
+# x = -1. `integral` and `total` are the integrals from the start of the step to `a` and `b`.
+function push_panel!(fit::TotalRateFit, a, b, integral, total)
+    (; rate_coefs, panel_coefs) = fit
+    push!(fit.panel_starts, a)
+    push!(fit.panel_ends, b)
+    push!(fit.panel_integrals, integral)
+    push!(fit.panel_end_integrals, total)
+    i0 = length(panel_coefs) + 1
+    resize!(panel_coefs, length(panel_coefs) + NUM_CHEB_NODES + 1)
+    C0 = zero(eltype(panel_coefs))
+    for j in 1:NUM_CHEB_NODES
+        cnext = j + 2 <= NUM_CHEB_NODES ? rate_coefs[j + 2] : zero(C0)
+        C = (rate_coefs[j] - cnext) / (2j)
+        panel_coefs[i0 + j] = C
+        C0 += isodd(j) ? C : -C
+    end
+    panel_coefs[i0] = C0
+    nothing
+end
+
+# Bound on the rounding error of evaluating the antiderivative of the interpolant in
+# `fit.rate_coefs` on [a, b]: its coefficients scale with the rates on the panel, so a small
+# integral near the panel's start is a difference of much larger terms
+function antiderivative_rounding(fit::TotalRateFit, a, b)
+    (b - a) * (NUM_CHEB_NODES + 1) * eps(eltype(fit.rate_coefs)) * sum(abs, fit.rate_coefs)
+end
+
+# Fits the total rate on [a, b], halving the interval until the estimated error of each
+# panel's integral is within the tolerance the solver would use if the remaining threshold
+# were a state component. `integral` is the integral from the start of the step to `a`.
+# Returns the integral to the end of the last panel fitted, and whether it passed the
+# threshold there. Fitting stops at that panel, since the step ends at the jump. The jump time
+# is where the remaining threshold minus the integral crosses zero, so that panel must also
+# be accurate relative to the remaining threshold, including the antiderivative's rounding.
+function fit_panels!(cache::VR_DirectEventCache, integrator, a, b, integral, depth,
+        abstol, reltol)
+    I, err = fit_total_rate!(cache, integrator, a, b)
+    remaining = cache.prev_threshold - integral
+    tol = abstol + reltol * abs(remaining)
+    # The panel's end total is stored, and the condition uses it from the panel's end on, so
+    # deciding with it keeps the two consistent under rounding. Stopping only when it is past
+    # the threshold, not equal to it, makes the condition negative after the last panel
+    # rather than zero over the rest of the step.
+    total = integral + I
+    crossed = total > cache.prev_threshold
+    if crossed
+        err = max(err, antiderivative_rounding(cache.rate_fit, a, b))
+    end
+    tmid = (a + b) / 2
+    maxdepth = crossed ? MAX_CHEB_CROSSING_DEPTH : MAX_CHEB_DEPTH
+    if err > tol && depth < maxdepth && a < tmid < b
+        integral, crossed = fit_panels!(
+            cache, integrator, a, tmid, integral, depth + 1, abstol, reltol)
+        crossed && return integral, crossed
+        return fit_panels!(cache, integrator, tmid, b, integral, depth + 1, abstol, reltol)
+    end
+    push_panel!(cache.rate_fit, a, b, integral, total)
+    return total, crossed
+end
+
+# the solver's tolerances can be given per state component
+scalar_tolerance(tol::Number) = tol
+scalar_tolerance(tol) = minimum(tol)
+
+# Fits the total rate over the step just taken, from `cache.prev_time` to `integrator.t`
+function fit_step!(cache::VR_DirectEventCache, integrator)
+    empty_panels!(cache.rate_fit)
+    a, b = cache.prev_time, integrator.t
+    if b > a
+        abstol = scalar_tolerance(integrator.opts.abstol)
+        reltol = scalar_tolerance(integrator.opts.reltol)
+        fit_panels!(cache, integrator, a, b, zero(cache.prev_threshold), 0, abstol, reltol)
+    end
+    nothing
+end
+
+# ∑ⱼ C[offset + j + 1] Tⱼ(x) for j = 0:NUM_CHEB_NODES, by Clenshaw's recurrence
+function chebyshev_sum(C, offset, x)
+    b1 = b2 = zero(x)
+    for j in (NUM_CHEB_NODES + 1):-1:2
+        b1, b2 = C[offset + j] + 2x * b1 - b2, b1
+    end
+    return C[offset + 1] + x * b1 - b2
+end
+
+# the interpolant's integral from the start of the step to `t`. At or past a panel's end it
+# is the total the fit accumulated there, the same number the fit decided whether the
+# threshold was passed with; past the last panel, which ends before the step does if the
+# threshold was passed, it is that panel's total, without extrapolating the interpolant.
+function fitted_rate_integral(fit::TotalRateFit, t)
+    (; panel_starts, panel_ends, panel_integrals, panel_end_integrals, panel_coefs) = fit
+    isempty(panel_ends) && return zero(t)
+    i = min(searchsortedfirst(panel_ends, t), length(panel_ends))
+    a, b = panel_starts[i], panel_ends[i]
+    t >= b && return panel_end_integrals[i]
+    x = (2t - a - b) / (b - a)
+    return panel_integrals[i] +
+           (b - a) / 2 * chebyshev_sum(panel_coefs, (i - 1) * (NUM_CHEB_NODES + 1), x)
+end
 
 # Condition functor defined directly on the cache
 function (cache::VR_DirectEventCache)(u, t, integrator)
-    if integrator.t < cache.current_time
-        error("integrator.t < cache.current_time. $(integrator.t) < $(cache.current_time). This is not supported in the `VR_Direct` handling")
-    end
-
-    if integrator.t != cache.current_time
-        cache.prev_time = cache.current_time
-        cache.prev_threshold = cache.current_threshold
+    # DiffEqBase evaluates the condition only while checking a step, [tprev, t], so the fit
+    # is current when both ends match. A step after another callback's event can end where
+    # the cut step would have, for example at the final time, so the start is checked too.
+    # While the integrator is still at the fit's start, as right after one of VR_Direct's own
+    # jumps, there is nothing to fit.
+    if integrator.t != cache.prev_time &&
+       (integrator.t != cache.current_time || integrator.tprev != cache.prev_time)
+        # The step being checked starts at `integrator.tprev`. That is before the end of the
+        # previous fit if another callback's event cut the previous step short, so the
+        # threshold there comes from that fit, and the rest of it is discarded.
+        tprev = integrator.tprev
+        if tprev < cache.prev_time
+            error("The solver step starts at $tprev, before $(cache.prev_time), where `VR_Direct` last integrated the total rate from. This is not supported.")
+        end
+        cache.prev_threshold -= fitted_rate_integral(cache.rate_fit, tprev)
+        cache.prev_time = tprev
         cache.current_time = integrator.t
+        fit_step!(cache, integrator)
     end
 
     dt = t - cache.prev_time
@@ -497,27 +874,12 @@ function (cache::VR_DirectEventCache)(u, t, integrator)
         return cache.prev_threshold
     end
 
-    p = integrator.p
-    rate_increment = zero(t)
-    gps = _GAUSS_POINTS
-    weights = _GAUSS_WEIGHTS
-    tmid = (t + cache.prev_time) / 2
-    halfdt = dt / 2
-    u_τ = first(SciMLBase.get_tmp_cache(integrator))
-    for (i, τᵢ) in enumerate(gps)
-        τ = halfdt * τᵢ + tmid
-        integrator(u_τ, τ)
-        total_variable_rate_τ = total_variable_rate(cache, u_τ, p, τ)
-        rate_increment += weights[i] * total_variable_rate_τ
-    end
-    rate_increment *= halfdt
-
-    cache.current_threshold = cache.prev_threshold - rate_increment
+    cache.current_threshold = cache.prev_threshold - fitted_rate_integral(cache.rate_fit, t)
     return cache.current_threshold
 end
 
-@generated function execute_affect!(cache::VR_DirectEventCache{T, RNG, F1, F2},
-        integrator::I, idx) where {T, RNG, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
+@generated function execute_affect!(cache::VR_DirectEventCache{T, F1, F2},
+        integrator::I, idx) where {T, F1, F2 <: Tuple, I <: SciMLBase.DEIntegrator}
     quote
         (; affect_funcs) = cache
         Base.Cartesian.@nif $(fieldcount(F2)) i -> (i == idx) i -> (@inbounds affect_funcs[i](integrator)) i -> (@inbounds affect_funcs[fieldcount(F2)](integrator))
@@ -544,7 +906,7 @@ function (cache::VR_DirectEventCache)(integrator)
     end
     cache.total_rate = total_variable_rate_sum
 
-    rng = cache.rng
+    rng = get_rng(integrator)
     r = rand(rng) * total_variable_rate_sum
     @inbounds jump_idx = searchsortedfirst(cache.cum_rate_sum, r)
     execute_affect!(cache, integrator, jump_idx)
@@ -553,5 +915,7 @@ function (cache::VR_DirectEventCache)(integrator)
     cache.current_threshold = randexp(rng)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
+    # the integral up to the jump is used up, and the next step starts at the jump
+    empty_panels!(cache.rate_fit)
     return nothing
 end

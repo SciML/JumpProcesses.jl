@@ -4,7 +4,7 @@
 ###############################################################################
 
 @inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Integer, R, U <: AbstractVector{R}}
+        majump::MassActionJump, maj_rates::AbstractVector{R})::R where {T <: Integer, R}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -15,11 +15,11 @@
         end
     end
 
-    @inbounds return val * majump.scaled_rates[rxidx]
+    @inbounds return val * maj_rates[rxidx]
 end
 
 @inline function evalrxrate(speciesvec::AbstractVector{T}, rxidx,
-        majump::MassActionJump{U})::R where {T <: Real, R, U <: AbstractVector{R}}
+        majump::MassActionJump, maj_rates::AbstractVector{R})::R where {T <: Real, R}
     val = one(T)
     @inbounds for specstoch in majump.reactant_stoch[rxidx]
         specpop = speciesvec[specstoch[1]]
@@ -29,11 +29,11 @@ end
             val *= specpop
         end
         # we need to check the smallest rate law term is positive
-        # i.e. for an order k reaction: x - k + 1 > 0 
+        # i.e. for an order k reaction: x - k + 1 > 0
         (specpop <= 0) && return zero(R)
     end
 
-    @inbounds return val * majump.scaled_rates[rxidx]
+    @inbounds return val * maj_rates[rxidx]
 end
 
 @inline function executerx!(speciesvec::AbstractVector{T}, rxidx::S,
@@ -77,12 +77,12 @@ end
 function scalerates!(unscaled_rates::AbstractMatrix{U},
         stochmat::AbstractVector{V}) where {U, S, T, W <: Pair{S, T},
         V <: AbstractVector{W}}
-    @inbounds for i in size(unscaled_rates, 1)
+    @inbounds for i in axes(unscaled_rates, 1)
         coef = one(T)
         @inbounds for specstoch in stochmat[i]
             coef *= factorial(specstoch[2])
         end
-        unscaled_rates[i, :] /= coef
+        @view(unscaled_rates[i, :]) ./= coef
     end
     nothing
 end
@@ -159,23 +159,36 @@ function add_self_dependencies!(dg; dosort = true)
     end
 end
 
+materialize_leaping_jump(jump::MassActionJump, p, ::Type{T}) where {T} = jump
+function materialize_leaping_jump(jump::MassActionJump{Nothing}, p, ::Type{T}) where {T}
+    constants = Vector{T}(undef, get_num_majumps(jump))
+    fill_scaled_rates!(constants, jump, p)
+    return MassActionJump(
+        constants, jump.reactant_stoch, jump.net_stoch;
+        scale_rates = false, useiszero = false, nocopy = true
+    )
+end
+
 @inline massaction_data(jump::MassActionJump) = (
-    jump.scaled_rates, jump.reactant_stoch, jump.net_stoch)
+    jump.scaled_rates, jump.reactant_stoch, jump.net_stoch,
+)
 @inline massaction_data(jump::MassActionJump{<:Number}) = (
-    (jump.scaled_rates,), (jump.reactant_stoch,), (jump.net_stoch,))
+    (jump.scaled_rates,), (jump.reactant_stoch,), (jump.net_stoch,),
+)
 
 """
-    massaction_rates!(rates, jump::MassActionJump, u)
+    massaction_rates!(rates, jump::MassActionJump, u; p = nothing)
 
 Write each reaction propensity at populations `u` into `rates`. Uses the stored,
 combinatorially scaled rate constants and falling factorial rate laws. A reaction
 with insufficient reactants has zero propensity. `rates` must have one entry per
-reaction and must not alias `u` or the jump's data. Rate constants must already
-be initialized; for parameter-dependent rates, use the mass-action jump stored
-in a `JumpProblem`.
+reaction and must not alias `u` or the jump's data. For parameter-mapped jumps,
+pass the current parameters as `p`; scaled working rates are materialized for
+this call without mutating the jump definition.
 """
-function massaction_rates!(rates, jump::MassActionJump, u)
-    constants, reactants, _ = massaction_data(jump)
+function massaction_rates!(rates, jump::MassActionJump, u; p = nothing)
+    working_jump = materialize_leaping_jump(jump, p, eltype(rates))
+    constants, reactants, _ = massaction_data(working_jump)
     for j in eachindex(constants)
         rates[j] = massaction_propensity(constants, reactants, u, j)
     end
@@ -195,7 +208,7 @@ stays there for that reaction: the propensity remains zero, so further leaps
 cannot pull the population back through this channel.
 """
 @inline function massaction_propensity(constants, reactants, u, j)
-    rate = one(eltype(u))
+    rate = one(eltype(u)) * one(constants[j])
     for (species, order) in reactants[j]
         population = u[species]
         population <= order - 1 && return zero(rate)
@@ -226,18 +239,19 @@ function massaction_stoichiometry_mul!(du, jump::MassActionJump, counts)
 end
 
 """
-    massaction_drift!(du, jump::MassActionJump, u)
+    massaction_drift!(du, jump::MassActionJump, u; p = nothing)
 
 Overwrite `du` with the mass-action drift, the net stoichiometry times the
 propensities at `u`. Evaluates and accumulates each reaction without allocating
 an intermediate propensity vector. Supports automatic differentiation through
 `u` when `du` can store the resulting scalar type. `du` must have one entry per
-species and must not alias `u` or the jump's data. Initialize rate constants as
-for [`massaction_rates!`](@ref).
+species and must not alias `u` or the jump's data. For parameter-mapped jumps, pass the current parameters as `p`,
+as for [`massaction_rates!`](@ref).
 """
-function massaction_drift!(du, jump::MassActionJump, u)
+function massaction_drift!(du, jump::MassActionJump, u; p = nothing)
     fill!(du, zero(eltype(du)))
-    constants, reactants, stoichiometry = massaction_data(jump)
+    working_jump = materialize_leaping_jump(jump, p, eltype(du))
+    constants, reactants, stoichiometry = massaction_data(working_jump)
     for j in eachindex(constants)
         rate = massaction_propensity(constants, reactants, u, j)
         for (species, coefficient) in stoichiometry[j]
@@ -250,10 +264,10 @@ end
 leaping_rates!(out, jump::MassActionJump, u, p, t) = massaction_rates!(out, jump, u)
 leaping_rates!(out, jump::RegularJump, u, p, t) = jump.rate(out, u, p, t)
 function leaping_change!(du, jump::MassActionJump, u, p, t, counts, mark)
-    massaction_stoichiometry_mul!(du, jump, counts)
+    return massaction_stoichiometry_mul!(du, jump, counts)
 end
 function leaping_change!(du, jump::RegularJump, u, p, t, counts, mark)
-    jump.c(du, u, p, t, counts, mark)
+    return jump.c(du, u, p, t, counts, mark)
 end
 leaping_num_jumps(jump::MassActionJump) = get_num_majumps(jump)
 leaping_num_jumps(jump::RegularJump) = jump.numjumps

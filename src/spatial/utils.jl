@@ -6,13 +6,19 @@ A file with helper functions for spatial simulations
 stores info for a spatial jump
 """
 struct SpatialJump{J}
-    "source location"
+    """
+    source location
+    """
     src::J
 
-    "index of jump as a hop or reaction"
+    """
+    index of jump as a hop or reaction
+    """
     jidx::Int
 
-    "destination location, equal to src for within-site reactions"
+    """
+    destination location, equal to src for within-site reactions
+    """
     dst::J
 end
 
@@ -23,18 +29,18 @@ end
 
 ######################## helper routines for all spatial SSAs ########################
 """
-    sample_jump_direct(p, site)
+    sample_jump_direct(p, site, rng)
 
 sample jump at site with direct method
 """
-function sample_jump_direct(p, site)
-    if rand(p.rng) * (total_site_rate(p.rx_rates, p.hop_rates, site)) <
+function sample_jump_direct(p, site, rng)
+    if rand(rng) * (total_site_rate(p.rx_rates, p.hop_rates, site)) <
        total_site_rx_rate(p.rx_rates, site)
-        rx = sample_rx_at_site(p.rx_rates, site, p.rng)
+        rx = sample_rx_at_site(p.rx_rates, site, rng)
         return SpatialJump(site, rx + p.numspecies, site)
     else
         species_to_diffuse,
-        target_site = sample_hop_at_site(p.hop_rates, site, p.rng,
+        target_site = sample_hop_at_site(p.hop_rates, site, rng,
             p.spatial_system)
         return SpatialJump(site, species_to_diffuse, target_site)
     end
@@ -46,16 +52,19 @@ end
 
 function update_rates_after_reaction!(p, integrator, site, reaction_id)
     u = integrator.u
-    update_rx_rates!(p.rx_rates, p.dep_gr[reaction_id], integrator, site)
-    update_hop_rates!(p.hop_rates, p.jumptovars_map[reaction_id], u, site, p.spatial_system)
+    (; dep_graph, jumptovars_map) = p.dependencies
+    update_rx_rates!(p.rx_rates, dependents(dep_graph, reaction_id), integrator, site)
+    update_hop_rates!(
+        p.hop_rates, dependents(jumptovars_map, reaction_id), u, site, p.spatial_system)
 end
 
 function update_rates_after_hop!(p, integrator, source_site, target_site, species)
     u = integrator.u
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, source_site)
+    dep_rxs = dependents(p.dependencies.vartojumps_map, species)
+    update_rx_rates!(p.rx_rates, dep_rxs, integrator, source_site)
     update_hop_rate!(p.hop_rates, species, u, source_site, p.spatial_system)
 
-    update_rx_rates!(p.rx_rates, p.vartojumps_map[species], integrator, target_site)
+    update_rx_rates!(p.rx_rates, dep_rxs, integrator, target_site)
     update_hop_rate!(p.hop_rates, species, u, target_site, p.spatial_system)
 end
 

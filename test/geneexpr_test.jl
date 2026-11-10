@@ -22,19 +22,23 @@ expected_avg = 5.926553750000000e+02
 reltol = 0.01
 
 # average number of proteins in a simulation
-function runSSAs(jump_prob; use_stepper = true)
+function runSSAs(jump_prob; use_stepper = true, rng = nothing)
     Psamp = zeros(Int, Nsims)
     for i in 1:Nsims
-        sol = use_stepper ? solve(jump_prob, SSAStepper()) : solve(jump_prob)
+        sol = if use_stepper
+            solve(jump_prob, SSAStepper(); rng)
+        else
+            solve(jump_prob; rng)
+        end
         Psamp[i] = sol[3, end]
     end
     mean(Psamp)
 end
 
-function runSSAs_ode(vrjprob)
+function runSSAs_ode(vrjprob; rng = nothing)
     Psamp = zeros(Float64, Nsims)
     tsave = vrjprob.prob.tspan[2]
-    integrator = init(vrjprob, Tsit5(); saveat = tsave)
+    integrator = init(vrjprob, Tsit5(); saveat = tsave, rng)
     solve!(integrator)
     Psamp[1] = integrator.sol[3, end]
     for i in 2:Nsims
@@ -93,9 +97,9 @@ if doplot
     plothand = plot(reuse = false)
     for alg in SSAalgs
         local jump_prob = JumpProblem(prob, alg, majumps,
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
-        local sol = solve(jump_prob, SSAStepper())
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
+        local sol = solve(jump_prob, SSAStepper(); rng)
         plot!(plothand, sol.t, sol[3, :], seriestype = :steppost)
     end
     display(plothand)
@@ -105,9 +109,9 @@ end
 if dotestmean
     for (i, alg) in enumerate(SSAalgs)
         local jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
-        means = runSSAs(jump_prob)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
+        means = runSSAs(jump_prob; rng)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method: ", typeof(alg), " is = ", means,
             ", rel err = ", relerr)
@@ -117,9 +121,9 @@ if dotestmean
     # test default solver dispatch (use_stepper=false) with one algorithm
     let alg = Direct()
         jump_prob = JumpProblem(prob, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
-        means = runSSAs(jump_prob; use_stepper = false)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
+        means = runSSAs(jump_prob; use_stepper = false, rng)
         @test abs(means - expected_avg) < reltol * expected_avg
     end
 
@@ -127,9 +131,9 @@ if dotestmean
     # past rejection bound issues with floating point)
     for alg in (Direct(), RSSA())
         jump_probf = JumpProblem(probf, alg, majumps, save_positions = (false, false),
-            vartojumps_map = spec_to_dep_jumps,
-            jumptovars_map = jump_to_dep_specs, rng = rng)
-        means = runSSAs(jump_probf)
+            dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+                jumptovars_map = jump_to_dep_specs))
+        means = runSSAs(jump_probf; rng)
         relerr = abs(means - expected_avg) / expected_avg
         doprintmeans && println("Mean from method (Float64 u0): ", typeof(alg),
             " is = ", means, ", rel err = ", relerr)
@@ -139,11 +143,12 @@ end
 
 # no-aggregator tests
 jump_prob = JumpProblem(prob, majumps; save_positions = (false, false),
-    vartojumps_map = spec_to_dep_jumps, jumptovars_map = jump_to_dep_specs, rng)
-@test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
+    dependencies = JumpDependencies(; vartojumps_map = spec_to_dep_jumps,
+        jumptovars_map = jump_to_dep_specs))
+@test abs(runSSAs(jump_prob; rng) - expected_avg) < reltol * expected_avg
 
-jump_prob = JumpProblem(prob, majumps, save_positions = (false, false), rng = rng)
-@test abs(runSSAs(jump_prob) - expected_avg) < reltol * expected_avg
+jump_prob = JumpProblem(prob, majumps, save_positions = (false, false))
+@test abs(runSSAs(jump_prob; rng) - expected_avg) < reltol * expected_avg
 
 # crj/vrj accuracy test
 #     k1, DNA --> mRNA + DNA
@@ -187,20 +192,22 @@ let
         VariableRateJump(r6, a6!, save_positions = (false, false)))
 
     prob = DiscreteProblem(u0, (0.0, tf), rates)
-    crjprob = JumpProblem(prob, crjs; save_positions = (false, false), rng)
-    @test abs(runSSAs(crjprob) - expected_avg) < reltol * expected_avg
+    crjprob = JumpProblem(prob, crjs; save_positions = (false, false))
+    @test abs(runSSAs(crjprob; rng) - expected_avg) < reltol * expected_avg
 
     # vrjs are very slow so test on a shorter time span and compare to the crjs
     prob = DiscreteProblem(u0, (0.0, tf / 5), rates)
-    crjprob = JumpProblem(prob, crjs; save_positions = (false, false), rng)
-    crjmean = runSSAs(crjprob)
+    crjprob = JumpProblem(prob, crjs; save_positions = (false, false))
+    crjmean = runSSAs(crjprob; rng)
     f(du, u, p, t) = (du .= 0; nothing)
-    oprob = ODEProblem(f, u0f, (0.0, tf / 5), rates)
+    # FullSpecialize: on Julia >= 1.12 the default erases callback types, which allocates on
+    # every step and makes these 24000 solves much slower
+    oprob = ODEProblem{true, SciMLBase.FullSpecialize}(f, u0f, (0.0, tf / 5), rates)
 
     for vr_agg in (VR_FRM(), VR_Direct(), VR_DirectFW())
         vrjprob = JumpProblem(
-            oprob, vrjs; vr_aggregator = vr_agg, save_positions = (false, false), rng)
-        vrjmean = runSSAs_ode(vrjprob)
+            oprob, vrjs; vr_aggregator = vr_agg, save_positions = (false, false))
+        vrjmean = runSSAs_ode(vrjprob; rng)
         @test abs(vrjmean - crjmean) < reltol * crjmean
     end
 end

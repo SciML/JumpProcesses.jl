@@ -7,12 +7,10 @@ reactant_stoch = [[1 => 3]]
 net_stoch = [[1 => -3, 2 => 1]]
 
 # Custom mapper mimicking MTKBase's JumpSysMajParamMapper.
-# The initial rates callable always pre-scales (simulating symbolic expressions that
-# already contain the combinatoric factor, e.g. k/3! for 3X → Y).
-# The update callable also pre-scales, then conditionally applies scalerates! based on
-# scale_rates — matching MTKBase's behavior. This is what makes the test an actual
-# regression test: with the old default of scale_rates=true, the second scalerates!
-# would double-scale.
+# The 1-arg callable pre-scales rates (simulating symbolic expressions that already
+# contain the combinatoric factor, e.g. k/3! for 3X → Y).
+# The 3-arg in-place callable also pre-scales, then conditionally applies standard
+# stoichiometric scaling based on maj.rescale_rates_on_update.
 struct PreScaledMapper
     param_idxs::Vector{Int}
     reactant_stoch::Vector{Vector{Pair{Int, Int}}}
@@ -22,12 +20,12 @@ function (m::PreScaledMapper)(params)
     JumpProcesses.scalerates!(rates, m.reactant_stoch)
     rates
 end
-function (m::PreScaledMapper)(maj::MassActionJump, newparams; scale_rates, kwargs...)
-    for i in 1:JumpProcesses.get_num_majumps(maj)
-        maj.scaled_rates[i] = newparams[m.param_idxs[i]]
+function (m::PreScaledMapper)(dest::AbstractVector, maj::MassActionJump, params)
+    @inbounds for i in eachindex(dest)
+        dest[i] = params[m.param_idxs[i]]
     end
-    JumpProcesses.scalerates!(maj.scaled_rates, m.reactant_stoch)
-    scale_rates && JumpProcesses.scalerates!(maj.scaled_rates, maj.reactant_stoch)
+    JumpProcesses.scalerates!(dest, m.reactant_stoch)
+    maj.rescale_rates_on_update && JumpProcesses.scalerates!(dest, maj.reactant_stoch)
     nothing
 end
 JumpProcesses.to_collection(m::PreScaledMapper) = m
@@ -53,19 +51,25 @@ end
     @test maj.rescale_rates_on_update == true
 end
 
-# Test 2: update_parameters! respects stored rescale_rates_on_update
-@testset "update_parameters! respects rescale_rates_on_update" begin
+# Test 2: fill_scaled_rates! respects rescale_rates_on_update
+@testset "fill_scaled_rates! respects rescale_rates_on_update" begin
     # With param_idxs and scale_rates = true (default) — built-in mapper path
     p = [6.0]
     maj = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
-    dprob = DiscreteProblem([100, 0], (0.0, 1.0), p)
-    jprob = JumpProblem(dprob, Direct(), maj)
-    @test jprob.massaction_jump.rescale_rates_on_update == true
-    @test jprob.massaction_jump.scaled_rates[1] ≈ 1.0  # 6.0 / 3!
+    @test maj.rescale_rates_on_update == true
 
-    # update_parameters! should scale (rescale_rates_on_update = true from struct)
-    JumpProcesses.update_parameters!(jprob.massaction_jump, [12.0])
-    @test jprob.massaction_jump.scaled_rates[1] ≈ 2.0  # 12.0 / 3!
+    dest = zeros(1)
+    JumpProcesses.fill_scaled_rates!(dest, maj, p)
+    @test dest[1] ≈ 1.0  # 6.0 / 3!
+
+    # fill_scaled_rates! with new params
+    JumpProcesses.fill_scaled_rates!(dest, maj, [12.0])
+    @test dest[1] ≈ 2.0  # 12.0 / 3!
+
+    # Non-parameterized MAJ: fill_scaled_rates! copies stored rates
+    maj_explicit = MassActionJump([6.0], reactant_stoch, net_stoch)
+    JumpProcesses.fill_scaled_rates!(dest, maj_explicit, p)
+    @test dest[1] ≈ 1.0  # copies maj.scaled_rates which is 6.0/3! = 1.0
 end
 
 # Test 3: Custom pre-scaled mapper with scale_rates = false — the bug reproducer
@@ -76,27 +80,34 @@ end
 
     maj = MassActionJump(reactant_stoch, net_stoch; param_mapper = mapper, scale_rates = false)
     dprob = DiscreteProblem([100, 0], (0.0, 100.0), p)
-    jprob = JumpProblem(dprob, Direct(), maj; scale_rates = false)
+    jprob = JumpProblem(dprob, Direct(), maj)
 
     expected_scaled = k / factorial(3)  # 1.0
-    @test jprob.massaction_jump.scaled_rates[1] ≈ expected_scaled
+
+    # parameterized MAJ stores nothing for scaled_rates
+    @test jprob.massaction_jump.scaled_rates === nothing
     @test jprob.massaction_jump.rescale_rates_on_update == false
 
-    # Test reset_aggregated_jumps! does NOT double-scale
+    # rates are materialized after init triggers initialize!
     integ = init(jprob, SSAStepper())
+    @test jprob.discrete_jump_aggregation.maj_rates[1] ≈ expected_scaled
+
+    # Test reset_aggregated_jumps! does NOT double-scale
     integ.p[1] = 18.0
     reset_aggregated_jumps!(integ)
     new_expected = 18.0 / factorial(3)  # 3.0, NOT 3.0/6 = 0.5
-    @test jprob.massaction_jump.scaled_rates[1] ≈ new_expected
+    @test jprob.discrete_jump_aggregation.maj_rates[1] ≈ new_expected
 
-    # Test remake does NOT double-scale
+    # Test remake + init materializes rates correctly
     jprob2 = remake(jprob; p = [24.0])
-    remake_expected = 24.0 / factorial(3)  # 4.0, NOT 4.0/6 ≈ 0.667
-    @test jprob2.massaction_jump.scaled_rates[1] ≈ remake_expected
+    init(jprob2, SSAStepper())
+    remake_expected = 24.0 / factorial(3)  # 4.0
+    @test jprob2.discrete_jump_aggregation.maj_rates[1] ≈ remake_expected
 
     # Test remake round-trip
     jprob3 = remake(jprob2; p = [k])
-    @test jprob3.massaction_jump.scaled_rates[1] ≈ expected_scaled
+    init(jprob3, SSAStepper())
+    @test jprob3.discrete_jump_aggregation.maj_rates[1] ≈ expected_scaled
 end
 
 # Test 4: Callback parameter changes with built-in mapper (rescale_rates_on_update = true)
@@ -113,12 +124,11 @@ end
     end
     cb = DiscreteCallback(condit, affect!)
     sol = solve(jprob, SSAStepper(); tstops = [1000.0], callback = cb)
-    @test jprob.massaction_jump.scaled_rates[1] ≈ 4.0  # 24.0 / 3!
+    @test jprob.discrete_jump_aggregation.maj_rates[1] ≈ 4.0  # 24.0 / 3!
 end
 
 # Test 5: rescale_rates_on_update propagated through JumpSet merge and JumpProblem varargs
-# Use explicit-rate MAJs since the JumpSet vector merge path doesn't support
-# parameterized (Nothing-rated) MAJs.
+# Uses explicit-rate MAJs to test rescale_rates_on_update propagation and mismatch errors.
 @testset "rescale_rates_on_update propagated through merge paths" begin
     reactant_stoch2 = [[2 => 3]]
     net_stoch2 = [[2 => -3, 1 => 1]]
@@ -149,7 +159,7 @@ end
     # Two MAJs with matching rescale_rates_on_update = false via JumpProblem varargs
     maj_f1 = MassActionJump([1.0], reactant_stoch, net_stoch; scale_rates = false)
     maj_f2 = MassActionJump([2.0], reactant_stoch2, net_stoch2; scale_rates = false)
-    jprob_f = JumpProblem(dprob, Direct(), maj_f1, maj_f2; scale_rates = false)
+    jprob_f = JumpProblem(dprob, Direct(), maj_f1, maj_f2)
     @test jprob_f.massaction_jump.rescale_rates_on_update == false
 
     # Two MAJs with matching rescale_rates_on_update = true via JumpProblem varargs
@@ -160,4 +170,45 @@ end
 
     # Mismatched rescale_rates_on_update via JumpProblem varargs — should error
     @test_throws ErrorException JumpProblem(dprob, Direct(), maj_true, maj_false)
+end
+
+# Test 6: Custom mapper-backed MAJ merge raises error; built-in mapper merge works
+@testset "MAJ merge behavior" begin
+    # Built-in MassActionJumpParamMapper merges should succeed
+    maj_p1 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    maj_p2 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    merged = JumpSet(; massaction_jumps = [maj_p1, maj_p2])
+    @test JumpProcesses.get_num_majumps(merged.massaction_jump) == 2
+
+    dprob = DiscreteProblem([100, 0], (0.0, 1.0), [1.0])
+    maj_p3 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    maj_p4 = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    jprob = JumpProblem(dprob, Direct(), maj_p3, maj_p4)
+    @test JumpProcesses.get_num_majumps(jprob.massaction_jump) == 2
+
+    # Custom mapper merge should error
+    mapper1 = PreScaledMapper([1], reactant_stoch)
+    mapper2 = PreScaledMapper([1], reactant_stoch)
+    maj_c1 = MassActionJump(reactant_stoch, net_stoch; param_mapper = mapper1, scale_rates = false)
+    maj_c2 = MassActionJump(reactant_stoch, net_stoch; param_mapper = mapper2, scale_rates = false)
+    @test_throws ErrorException JumpSet(; massaction_jumps = [maj_c1, maj_c2])
+    @test_throws ErrorException JumpProblem(dprob, Direct(), maj_c1, maj_c2)
+end
+
+# Test 7: Immutability and aliasing
+@testset "Immutability and aliasing after remake" begin
+    p = [6.0]
+    maj = MassActionJump(reactant_stoch, net_stoch; param_idxs = [1])
+    dprob = DiscreteProblem([100, 0], (0.0, 100.0), p)
+    jprob = JumpProblem(dprob, Direct(), maj)
+    init(jprob, SSAStepper())
+    rates_before = copy(jprob.discrete_jump_aggregation.maj_rates)
+
+    # remake with new p, then init — original MAJ is not mutated
+    jprob2 = remake(jprob; p = [12.0])
+    @test jprob.massaction_jump === jprob2.massaction_jump  # shared MAJ
+    @test jprob.massaction_jump.scaled_rates === nothing  # still nothing
+    init(jprob2, SSAStepper())
+    # aggregation is shared, so maj_rates reflects latest init
+    @test jprob2.discrete_jump_aggregation.maj_rates[1] ≈ 2.0  # 12.0 / 3!
 end

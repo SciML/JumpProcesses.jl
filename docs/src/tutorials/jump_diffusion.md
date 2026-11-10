@@ -1,7 +1,7 @@
 # [Piecewise Deterministic Markov Processes and Jump Diffusion Equations](@id jump_diffusion_tutorial)
 
 !!! note
-    
+
     This tutorial assumes you have read the [Ordinary Differential Equations tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/) in [`DifferentialEquations.jl`](https://docs.sciml.ai/DiffEqDocs/stable).
 
 Jump Diffusion equations are stochastic differential equations (SDEs) with discontinuous
@@ -31,15 +31,15 @@ not already installed
 ```julia
 using Pkg
 Pkg.add("JumpProcesses")
-Pkg.add("OrdinaryDiffEq")
-Pkg.add("StochasticDiffEq")
+Pkg.add("OrdinaryDiffEqTsit5")
+Pkg.add("StochasticDiffEqHighOrder")
 Pkg.add("Plots")
 ```
 
 We then load these packages, and set some plotting defaults, as
 
 ```@example tut3
-using JumpProcesses, StochasticDiffEq, OrdinaryDiffEq, Plots
+using JumpProcesses, StochasticDiffEqHighOrder, OrdinaryDiffEqTsit5, Plots
 default(; lw = 2)
 ```
 
@@ -74,6 +74,13 @@ Notice that, even though our equation is scalar, we define it using the in-place
 array form. Variable rate jump equations will require this form. Note that for
 this tutorial, we solve a one-dimensional problem, but the same syntax applies
 for solving a system of differential equations with multiple jumps.
+
+!!! tip
+
+    On Julia 1.12 and later, jump simulations coupled to an ODE run faster when
+    the problem is built with `SciMLBase.FullSpecialize`, e.g.
+    `ODEProblem{true, SciMLBase.FullSpecialize}(f, [0.2], (0.0, 10.0))`; see
+    [this FAQ entry](@ref faq_fullspecialize).
 
 Now we define our `rate` equation for our jump. Since it's just the constant
 value 2, we do:

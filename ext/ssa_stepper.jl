@@ -13,19 +13,33 @@ Rate constants are stored in the same floating point type as the problem's
 `tspan` so that rate and time arithmetic in the kernel share one type.
 """
 struct GPUMassActionJump{R, S, C, O}
-    """Rate constants, already scaled by the mass action combinatoric prefactors."""
+    """
+    Rate constants, already scaled by the mass action combinatoric prefactors.
+    """
     scaled_rates::R
-    """Flattened reactant species indices."""
+    """
+    Flattened reactant species indices.
+    """
     rs_species::S
-    """Flattened reactant stoichiometric coefficients."""
+    """
+    Flattened reactant stoichiometric coefficients.
+    """
     rs_coeffs::C
-    """CSR offsets into the reactant arrays, of length `numjumps + 1`."""
+    """
+    CSR offsets into the reactant arrays, of length `numjumps + 1`.
+    """
     rs_offsets::O
-    """Flattened net stoichiometry species indices."""
+    """
+    Flattened net stoichiometry species indices.
+    """
     ns_species::S
-    """Flattened net stoichiometric coefficients."""
+    """
+    Flattened net stoichiometric coefficients.
+    """
     ns_coeffs::C
-    """CSR offsets into the net stoichiometry arrays, of length `numjumps + 1`."""
+    """
+    CSR offsets into the net stoichiometry arrays, of length `numjumps + 1`.
+    """
     ns_offsets::O
 end
 
@@ -54,12 +68,17 @@ function flatten_stoich(stoch, ::Type{IT}) where {IT <: Integer}
     species, coeffs, offsets
 end
 
-function GPUMassActionJump(maj::JumpProcesses.MassActionJump, backend,
+function GPUMassActionJump(maj::JumpProcesses.MassActionJump, params, backend,
         ::Type{TT}) where {TT <: AbstractFloat}
     rs_species, rs_coeffs, rs_offsets = flatten_stoich(maj.reactant_stoch, Int32)
     ns_species, ns_coeffs, ns_offsets = flatten_stoich(maj.net_stoch, Int32)
 
-    GPUMassActionJump(adapt(backend, convert(Vector{TT}, maj.scaled_rates)),
+    # The host definition can be parameter-mapped, with scaled_rates === nothing.
+    # Materialize fresh numeric working rates before adapting them to the device.
+    rates = Vector{TT}(undef, JumpProcesses.get_num_majumps(maj))
+    JumpProcesses.fill_scaled_rates!(rates, maj, params)
+
+    GPUMassActionJump(adapt(backend, rates),
         adapt(backend, rs_species),
         adapt(backend, rs_coeffs),
         adapt(backend, rs_offsets),
@@ -263,10 +282,19 @@ grid points, as if the problem had been built with
 `save_positions = (false, false)`; the aggregator chosen in the `JumpProblem` is
 also ignored, since the kernel always runs the Direct method.
 
-Randomness comes from the backend's own device RNG rather than the `rng` stored
-in the `JumpProblem`. `seed` is applied to the ambient generator, so it makes a
-run reproducible on backends that draw from it, such as `CPU()`; seeding a GPU
-backend is done through that backend's own `seed!`.
+For multiple trajectories, randomness comes from the backend's own RNG. `seed`
+is supported with `CPU()` and seeds Julia's task-local generator. CPU-kernel replay
+with the same seed requires the same thread count, workload (including trajectory
+count), CPU backend settings, and Julia and package versions. Identical trajectories
+across thread counts are not guaranteed. These conditions apply to CPU kernel
+execution; CPU ensemble algorithms that explicitly assign RNGs to trajectories
+have their own RNG behavior.
+
+Device backends must be seeded through their own API before calling `solve`
+(for example, `CUDA.seed!`). Passing a host `rng` or `rng_func`, or `seed` with a
+device backend, raises `ArgumentError`. With `trajectories = 1`, execution delegates
+to `EnsembleSerial()` on the CPU and accepts its usual `rng`, `seed`, and ensemble
+`rng_func` keywords.
 
 The reaction data is uploaded to the device once and shared by every thread, so
 all trajectories solve the same problem and a `prob_func` is not supported.
@@ -276,6 +304,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         ensemblealg::EnsembleGPUKernel;
         trajectories,
         seed = nothing,
+        rng = nothing,
         saveat = nothing,
         save_start = true,
         save_end = true,
@@ -283,16 +312,20 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
         kwargs...)
     if trajectories == 1
         return SciMLBase.__solve(ensembleprob, alg, EnsembleSerial(); trajectories = 1,
-            seed, saveat, save_start, save_end, callback, kwargs...)
+            seed, rng, saveat, save_start, save_end, callback, kwargs...)
     end
 
     callback === nothing ||
         error("EnsembleGPUKernel with SSAStepper does not support callbacks, since they \
                would have to run inside the GPU kernel.")
-
-    seed !== nothing && Random.seed!(seed)
+    JumpProcesses.ssa_save_uprev(alg) &&
+        throw(ArgumentError("EnsembleGPUKernel with SSAStepper does not support \
+            `SSAStepper(; save_uprev = true)` with multiple trajectories, since kernels \
+            never expose an integrator to evaluate. Use `SSAStepper()`."))
 
     ensemblealg.backend === nothing ? backend = CPU() : backend = ensemblealg.backend
+    reject_kernel_alias_kwargs(ensembleprob.prob, kwargs)
+    seed_kernel_backend!(backend, seed, rng, kwargs)
 
     jump_prob = ensembleprob.prob
     jump_prob isa JumpProblem ||
@@ -340,7 +373,7 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
     # lives in registers rather than being uploaded once per thread.
     u0 = SVector{state_dim, ET}(prob.u0)
     saveat_gpu = adapt(backend, save_times)
-    maj_gpu = GPUMassActionJump(maj, backend, TT)
+    maj_gpu = GPUMassActionJump(maj, prob.p, backend, TT)
 
     us = allocate(backend, ET, (trajectories, state_dim, nsave))
 

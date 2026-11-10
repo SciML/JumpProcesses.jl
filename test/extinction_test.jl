@@ -21,9 +21,8 @@ algs = (JumpProcesses.JUMP_AGGREGATORS..., JumpProcesses.NullAggregator())
 
 for n in 1:Nsims
     for ssa in algs
-        local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
-            rng = rng)
-        local sol = solve(jprob, SSAStepper())
+        local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false))
+        local sol = solve(jprob, SSAStepper(); rng)
         @test sol[1, end] == 0
         @test sol.t[end] < Inf
     end
@@ -33,9 +32,8 @@ u0 = SA[10]
 dprob = DiscreteProblem(u0, (0.0, 100.0), rates)
 
 for ssa in algs
-    local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false),
-        rng = rng)
-    local sol = solve(jprob, SSAStepper(), saveat = 100.0)
+    local jprob = JumpProblem(dprob, ssa, majump, save_positions = (false, false))
+    local sol = solve(jprob, SSAStepper(); saveat = 100.0, rng)
     @test sol[1, end] == 0
     @test sol.t[end] < Inf
 end
@@ -57,8 +55,8 @@ end
 et = ExtinctionTest()
 cb = DiscreteCallback(et, et, save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
-jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false), rng = rng)
-sol = solve(jprob, SSAStepper(), callback = cb, save_end = false)
+jprob = JumpProblem(dprob, Direct(), majump; save_positions = (false, false))
+sol = solve(jprob, SSAStepper(); callback = cb, save_end = false, rng)
 @test sol.t[end] < 1000.0
 
 # test terminate
@@ -73,8 +71,8 @@ end
 cb = DiscreteCallback(extinction_condition2, extinction_affect!2,
     save_positions = (false, false))
 dprob = DiscreteProblem(u0, (0.0, 1000.0), rates)
-jprob = JumpProblem(dprob, majump; save_positions = (false, false), rng)
-sol = solve(jprob; callback = cb, save_end = false)
+jprob = JumpProblem(dprob, majump; save_positions = (false, false))
+sol = solve(jprob; callback = cb, save_end = false, rng)
 @test sol[1, end] == 1
 @test sol.retcode == ReturnCode.Terminated
 @test sol.t[end] < 1000.0

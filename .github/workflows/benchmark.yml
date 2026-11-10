@@ -6,7 +6,6 @@ on:
     paths-ignore: ['docs/**']
 
 permissions:
-  pull-requests: write
   contents: read
 
 jobs:
@@ -25,5 +24,16 @@ jobs:
         with:
           julia-version: ${{ matrix.version }}
           script: "benchmark/benchmarks.jl"
-          extra-pkgs: "StableRNGs"
+          extra-pkgs: "StableRNGs,OrdinaryDiffEqTsit5,StochasticDiffEqHighOrder"
           job-summary: true
+          # Time with Julia's default bounds checking, as users run it (@inbounds respected),
+          # never with the tests' --check-bounds=yes
+          exeflags: "--check-bounds=auto"
+      # This workflow can't comment on pull requests from forks, which get a read-only token.
+      # Benchmark Comment renders the comment from the results files the action wrote.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-results-${{ matrix.version }}
+          path: results/*.json
+          if-no-files-found: error
+          retention-days: 1

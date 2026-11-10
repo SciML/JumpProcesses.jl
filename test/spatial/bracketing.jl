@@ -19,6 +19,8 @@ netstoch = [[1 => -1]]
 majump = MassActionJump(majump_rates, reactstoch,
     netstoch)
 rx_rates = JP.LowHigh(JP.RxRates(n, majump))
+JP.fill_scaled_rates!(rx_rates.low.maj_rates, majump, nothing)
+JP.fill_scaled_rates!(rx_rates.high.maj_rates, majump, nothing)
 
 # set up hop rates
 hop_constants = [1.0]

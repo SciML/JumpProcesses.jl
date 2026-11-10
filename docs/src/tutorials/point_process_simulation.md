@@ -140,8 +140,8 @@ By breaking the problem formulation and solver selection into specifying a
 and generating a realization via `solve`, JumpProcesses' has the flexibility to
 specify and simulate a broad variety of problem types. The base problem allow us
 to combine TPPs with other types of dynamics such as ODEs or SDEs, by replacing
-`DiscreteProblem` with `ODEProblem` or `SDEProblem` from
-[DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/). For
+`DiscreteProblem` with `ODEProblem` or `SDEProblem` (see the
+[SciML differential equations documentation](https://docs.sciml.ai/DiffEqDocs/stable/)). For
 instance, we can declare a conditional intensity function that follows an ODE
 using `ODEProblem`. The `JumpProblem` allows us to combine multiple TPPs
 together as we will see in the next section. The simulation algorithm (i.e.
@@ -239,7 +239,8 @@ selected simulation algorithm, our processes and
 the dependency graph.
 
 ```@example tpp-tutorial
-jprob = JumpProblem(dprob, Coevolve(), poisson_process, seasonal_process; dep_graph)
+dependencies = JumpDependencies(; dep_graph)
+jprob = JumpProblem(dprob, Coevolve(), poisson_process, seasonal_process; dependencies)
 sol = solve(jprob, SSAStepper())
 plot(sol, labels = ["N_1(t)" "N_2(t)"], xlabel = "t", legend = :topleft)
 ```

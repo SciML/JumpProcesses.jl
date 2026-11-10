@@ -4,7 +4,7 @@ using DiffEqBase
 
 # Explicit imports from standard libraries
 using LinearAlgebra: LinearAlgebra, mul!
-using Random: Random, randexp, seed!
+using Random: Random, randexp
 
 # Explicit imports from external packages
 using DocStringExtensions: DocStringExtensions, FIELDS, TYPEDEF
@@ -22,23 +22,19 @@ using Base.FastMath: add_fast
 import Base: size, getindex, setindex!, length, similar, show, merge!, merge
 
 # Import functions we extend from packages
-import DiffEqCallbacks: gauss_points, gauss_weights
-# Cache gauss quadrature data at module load to avoid type instability from
-# non-const gauss_points/gauss_weights globals in DiffEqCallbacks.
-const _GAUSS_POINTS = gauss_points[4]
-const _GAUSS_WEIGHTS = gauss_weights[4]
 import DiffEqBase: DiscreteCallback, init, solve, solve!, initialize!
 import SciMLBase: plot_indices
 import DataStructures: update!
 import Graphs: neighbors, outdegree
 import RecursiveArrayTools: recursivecopy!
+using RecursiveArrayTools: RecursiveArrayTools, copyat_or_push!, recursivecopy
 import SymbolicIndexingInterface as SII
 
 # Import additional types and functions from DiffEqBase and SciMLBase
 using DiffEqBase: DiffEqBase, DAEFunction, DDEFunction, isinplace
 using SimpleNonlinearSolve: SimpleNonlinearSolve, SimpleNewtonRaphson
 using ADTypes: ADTypes, AutoFiniteDiff
-using SciMLBase: SciMLBase, DEIntegrator, NonlinearProblem
+using SciMLBase: SciMLBase, DEIntegrator, NonlinearProblem, get_rng
 
 # The SciML common interface that JumpProcesses reexports (see the second `export`
 # block below), so that `using JumpProcesses` on its own is enough to build the problem
@@ -60,8 +56,6 @@ abstract type AbstractAggregatorAlgorithm end
 abstract type AbstractJumpAggregator end
 abstract type AbstractSSAIntegrator{Alg, IIP, U, T} <:
               DEIntegrator{Alg, IIP, U, T} end
-
-const DEFAULT_RNG = Random.default_rng()
 
 # thresholds for auto-alg below which the listed alg is used
 # see select_aggregator for details
@@ -165,6 +159,9 @@ struct PureLeaping <: AbstractAggregatorAlgorithm end
 export PureLeaping
 
 # core problem and timestepping
+include("jump_dependencies.jl")
+export JumpDependencies
+
 include("problem.jl")
 export JumpProblem, SplitCoupledJumpProblem
 
@@ -187,7 +184,7 @@ export SSAStepper
 # leaping: 
 include("simple_regular_solve.jl")
 export SimpleTauLeaping, SimpleExplicitTauLeaping, SimpleImplicitTauLeaping,
-    SimpleTrapezoidalLeaping, SimpleAdaptiveTauLeaping, EnsembleGPUKernel
+       SimpleTrapezoidalLeaping, SimpleAdaptiveTauLeaping, EnsembleGPUKernel
 
 # spatial:
 include("spatial/spatial_massaction_jump.jl")
@@ -216,13 +213,16 @@ include("coupling.jl")
     affect! = integrator -> (integrator.u[1] += 1)
     jump = ConstantRateJump(rate, affect!)
     prob = DiscreteProblem([10.0], (0.0, 1.0))
-    jump_prob = JumpProblem(prob, Direct(), jump;
-        rng = Random.MersenneTwister(12345), save_positions = (false, false))
+    jump_prob = JumpProblem(prob, Direct(), jump; save_positions = (false, false))
 
     @compile_workload begin
         integrator = init(jump_prob, SSAStepper())
         step!(integrator)
         solve(jump_prob, SSAStepper())
+
+        seeded_integrator = init(jump_prob, SSAStepper(); seed = 12345)
+        step!(seeded_integrator)
+        solve(jump_prob, SSAStepper(); seed = 12345)
     end
 end
 

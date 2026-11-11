@@ -1,16 +1,26 @@
 # Breaking updates and feature summaries across releases
 
-## Unreleased
+## 10.2.0
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for
     concurrent solves and for integrators that are alive at the same time. It copies only
     the jump aggregator's working data and rebuilds the jump callbacks around it, sharing
     everything else, including the wrapped problem, the jumps and the stored callbacks, so it
     is much cheaper than `deepcopy`, especially for problems built with ModelingToolkit or
     Catalyst. StochasticDiffEq's copies of the jump state (`alias_jumps = false`, the
-    default off thread 1) now use it. The docs no longer recommend `deepcopy`, which
-    copies `p`, `u0` and the stored callbacks too, but with `FunctionWrapper`-based
-    aggregators can call the original problem's rate and affect functions and needs the
-    original kept alive.
+    default off thread 1) now use it, so these copies share `p`, the stored callbacks and a
+    noise process passed to the `SDEProblem` with the original problem, where they used to
+    be deep copies. Ensembles are unaffected, since they copy the problem for each task
+    first. To solve one problem from several threads, give each thread its own
+    `isolated_copy`, with its own `p` (through `remake`) if callbacks modify it, and pass
+    `alias_noise = false` to `solve` if the `SDEProblem` has a noise process:
+    StochasticDiffEq otherwise writes each solve's noise path back into it, as it does for
+    any `SDEProblem`. The docs no longer recommend `deepcopy`, which copies `p`, `u0` and
+    the stored callbacks too, but with `FunctionWrapper`-based aggregators can call the
+    original problem's rate and affect functions and needs the original kept alive.
+  - `SpatialMassActionJump`s with site-dependent rates (a matrix) and `scale_rates = true`,
+    the default, now divide the rates of every reaction by the factorials of its reactant
+    stoichiometry. Only the last reaction was scaled, so the others with a stoichiometric
+    coefficient above one fired too often, for example `2A → ∅` twice as often.
   - `VR_Direct` and `VR_DirectFW` no longer also simulate the bounded `VariableRateJump`s
     that `Coevolve` handles. In problems with both bounded and general `VariableRateJump`s,
     those bounded jumps fired twice as often.

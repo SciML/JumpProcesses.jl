@@ -90,8 +90,9 @@ not take one while another thread is solving `jprob`.
   - State captured by rate, affect or callback functions. Pass callbacks with such state to
     `init` or `solve` instead of storing them in the problem.
   - A noise process passed to an `SDEProblem` with `noise`. StochasticDiffEq copies each
-    solve's noise back into `prob.noise`, so copies that share it must not be solved
-    concurrently. Give a copy its own with
+    solve's noise back into `prob.noise` unless `solve` is given `alias_noise = false`, so
+    without that keyword, copies that share it must not be solved concurrently. A copy can
+    also be given its own with
     `remake(isolated_copy(jprob); prob = remake(jprob.prob; noise = new_noise))`.
 
 `deepcopy(jprob)` also copies `p`, `u0`, the stored callbacks and the wrapped problem, at a

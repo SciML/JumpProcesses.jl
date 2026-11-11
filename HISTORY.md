@@ -1,6 +1,16 @@
 # Breaking updates and feature summaries across releases
 
 ## Unreleased
+  - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for
+    concurrent solves and for integrators that are alive at the same time. It copies only
+    the jump aggregator's working data and rebuilds the jump callbacks around it, sharing
+    everything else, including the wrapped problem, the jumps and the stored callbacks, so it
+    is much cheaper than `deepcopy`, especially for problems built with ModelingToolkit or
+    Catalyst. StochasticDiffEq's copies of the jump state (`alias_jumps = false`, the
+    default off thread 1) now use it. The docs no longer recommend `deepcopy`, which
+    copies `p`, `u0` and the stored callbacks too, but with `FunctionWrapper`-based
+    aggregators can call the original problem's rate and affect functions and needs the
+    original kept alive.
   - `VR_Direct` and `VR_DirectFW` no longer also simulate the bounded `VariableRateJump`s
     that `Coevolve` handles. In problems with both bounded and general `VariableRateJump`s,
     those bounded jumps fired twice as often.

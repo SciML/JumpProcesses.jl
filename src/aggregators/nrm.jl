@@ -33,6 +33,11 @@ function NRMJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         dependencies, pq)
 end
 
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:NRMJumpAggregation})
+    (:ma_jumps, :rates, :affects!, :save_positions, :dependencies)
+end
+
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::NRM, u, p, t, end_time, constant_jumps,

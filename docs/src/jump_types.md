@@ -473,7 +473,7 @@ including parameter-mapped mass-action working rates, from the problem being
 solved, and `remake` does not overwrite rates in a shared parameter-mapped
 definition. The original and remade problems must not be solved concurrently, or
 used for integrators that are alive at the same time; create independent copies
-with `deepcopy` instead. See the
+with [`isolated_copy`](@ref) instead. See the
 [ensembles and problem reuse tutorial](@ref ensembles_problem_reuse).
 `SortingDirect` also retains its learned search order, so a reused problem can
 have different initial sampling state even with the same seed.

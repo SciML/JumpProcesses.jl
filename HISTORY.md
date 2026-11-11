@@ -1,5 +1,12 @@
 # Breaking updates and feature summaries across releases
 
+## 10.2
+
+  - `SimpleTauLeaping` consumes native `MassActionJump` rates and stoichiometry
+    on CPU and in KernelAbstractions kernels, with solver-owned working rates.
+  - Public `massaction_rates!`, `massaction_stoichiometry_mul!`, and
+    `massaction_drift!` operations support downstream leaping solvers.
+
 ## Unreleased
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for
     concurrent solves and for integrators that are alive at the same time. It copies only

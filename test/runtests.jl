@@ -27,6 +27,7 @@ end
         @time @safetestset "SSA Aggregator Smoke Tests" begin include("ssa_aggregator_smoke.jl") end
         @time @safetestset "SortingDirect retained search order" begin include("sortingdirect_reuse.jl") end
         @time @safetestset "Tau Leaping Tests" begin include("regular_jumps.jl") end
+        @time @safetestset "Mass-action leaping interface" begin include("massaction_leaping.jl") end
         @time @safetestset "Simple SSA Callback Test" begin include("ssa_callback_test.jl") end
         @time @safetestset "SIR Discrete Callback Test" begin include("sir_model.jl") end
         @time @safetestset "Callback Merging Tests" begin include("callbacks.jl") end
@@ -70,6 +71,10 @@ end
         @time @safetestset "Spatial A + B <--> C" begin include("spatial/ABC.jl") end
         @time @safetestset "Spatially Varying Reaction Rates" begin include("spatial/spatial_majump.jl") end
         @time @safetestset "Pure diffusion" begin include("spatial/diffusion.jl") end
+        @time @safetestset "Fixed-step mass-action kernel on CPU" begin
+            include("massaction_fixed_tau_kernel.jl")
+            test_massaction_fixed_tau_kernel(CPU())
+        end
         @time @safetestset "SSA kernel on the CPU backend" begin include("kernelabstractions_ssa.jl") end
         @time @safetestset "Explicit tau-leaping kernel on the CPU backend" begin include("kernelabstractions_explicit_tau.jl") end
     end
@@ -82,6 +87,11 @@ end
 
     if GROUP == "CUDA"
         activate_gpu_env()
+        @time @safetestset "GPU fixed-step mass-action kernel" begin
+            using CUDA
+            include("massaction_fixed_tau_kernel.jl")
+            test_massaction_fixed_tau_kernel(CUDABackend())
+        end
         @time @safetestset "GPU Tau Leaping test" begin include("gpu/regular_jumps.jl") end
         @time @safetestset "GPU SSA test" begin include("gpu/ssa.jl") end
         @time @safetestset "GPU Explicit Tau Leaping test" begin include("gpu/explicit_tau.jl") end

@@ -75,10 +75,53 @@ function SciMLBase.__solve(ensembleprob::SciMLBase.AbstractEnsembleProblem,
 
     # Validate that this is a PureLeaping JumpProblem
     JumpProcesses.validate_pure_leaping_inputs(jump_prob, alg) ||
-        error("SimpleTauLeaping can only be used with PureLeaping JumpProblems with only non-RegularJumps.")
-    prob = jump_prob.prob
+        error("SimpleTauLeaping requires a PureLeaping JumpProblem with a MassActionJump or a RegularJump.")
 
-    probs = [remake(jump_prob) for _ in 1:trajectories]
+    # Mass-action rate constants are uploaded once from the template jump. A
+    # RegularJump rate closure still receives each trajectory's `p`, but a
+    # parameter-mapped MassActionJump cannot refresh those rates per trajectory.
+    if jump_prob.regular_jump === nothing &&
+            JumpProcesses.using_params(jump_prob.massaction_jump) &&
+            ensembleprob.prob_func !== SciMLBase.DEFAULT_PROB_FUNC
+        error("EnsembleGPUKernel with SimpleTauLeaping does not support MassActionJump \
+               rate constants that depend on parameters (`param_idxs` / `param_mapper`) \
+               together with a custom `prob_func`. Those rates are taken once from the \
+               template problem and ignore per-trajectory `p`. Use a RegularJump whose \
+               rate reads `p`, or a CPU ensemble algorithm such as EnsembleSerial.")
+    end
+
+    template_tspan = jump_prob.prob.tspan
+    template_state_dim = length(jump_prob.prob.u0)
+    template_massaction = jump_prob.regular_jump === nothing ?
+        deepcopy(JumpProcesses.massaction_data(jump_prob.massaction_jump)) : nothing
+    probs = map(1:trajectories) do i
+        ctx = SciMLBase.EnsembleContext(i, 1, 0, nothing, nothing, nothing)
+        _prob = ensembleprob.safetycopy ? deepcopy(jump_prob) : jump_prob
+        trajectory = ensembleprob.prob_func(_prob, ctx)
+        length(trajectory.prob.u0) == template_state_dim || throw(
+            ArgumentError(
+                "EnsembleGPUKernel with SimpleTauLeaping requires prob_func to preserve the template state dimension."
+            )
+        )
+        trajectory.prob.tspan == template_tspan || throw(
+            ArgumentError(
+                "EnsembleGPUKernel with SimpleTauLeaping requires prob_func to preserve the template tspan."
+            )
+        )
+        JumpProcesses.validate_pure_leaping_inputs(trajectory, alg) ||
+            throw(ArgumentError("prob_func must return a PureLeaping JumpProblem with a MassActionJump or a RegularJump."))
+        (trajectory.regular_jump === nothing) == (template_massaction !== nothing) ||
+            throw(ArgumentError("prob_func must preserve the template jump representation."))
+        if template_massaction !== nothing
+            isequal(JumpProcesses.massaction_data(trajectory.massaction_jump), template_massaction) ||
+                throw(
+                ArgumentError(
+                    "EnsembleGPUKernel with SimpleTauLeaping requires prob_func to preserve MassActionJump rate constants and stoichiometry."
+                )
+            )
+        end
+        trajectory
+    end
 
     # Run vectorized solve
     ts,
@@ -129,6 +172,29 @@ struct JumpData{R, C}
     numjumps::Int
 end
 
+Adapt.@adapt_structure JumpData
+
+gpu_num_jumps(jump::JumpData) = jump.numjumps
+leaping_rates!(out, jump::JumpData, u, p, t) = jump.rate(out, u, p, t)
+leaping_change!(du, jump::JumpData, u, p, t, counts) = jump.c(du, u, p, t, counts, nothing)
+
+function leaping_rates!(out, jump::GPUMassActionJump, u, p, t)
+    for j in eachindex(out)
+        out[j] = gpu_evalrxrate(u, j, jump, eltype(out))
+    end
+    return nothing
+end
+
+function leaping_change!(du, jump::GPUMassActionJump, u, p, t, counts)
+    fill!(du, zero(eltype(du)))
+    for j in eachindex(counts)
+        for k in jump.ns_offsets[j]:(jump.ns_offsets[j + 1] - 1)
+            du[jump.ns_species[k]] += jump.ns_coeffs[k] * counts[j]
+        end
+    end
+    return nothing
+end
+
 # SimpleTauLeaping kernel
 @kernel function simple_tau_leaping_kernel(
         @Const(probs_data), _us, _ts, dt, @Const(rj_data),
@@ -150,9 +216,7 @@ end
     tspan = prob_data.tspan
 
     # Extract jump data
-    rate = rj_data.rate
-    num_jumps = rj_data.numjumps
-    c = rj_data.c
+    num_jumps = gpu_num_jumps(rj_data)
 
     # Initialize current_u from u0
     @inbounds for k in 1:length(u0)
@@ -177,7 +241,7 @@ end
         tprev = tspan[1] + (j-2) * dt
 
         # Compute rates and scale by dt
-        rate(rate_cache, current_u, p, tprev)
+        leaping_rates!(rate_cache, rj_data, current_u, p, tprev)
         rate_cache .*= dt
 
         # Poisson sampling
@@ -186,7 +250,7 @@ end
         end
 
         # Apply changes
-        c(local_dc, current_u, p, tprev, counts, nothing)
+        leaping_change!(local_dc, rj_data, current_u, p, tprev, counts)
         current_u .+= local_dc
 
         # Store results
@@ -202,7 +266,11 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
         backend, trajectories, dt, kwargs...)
     # Extract common jump data
     rj = prob.regular_jump
-    rj_data = JumpData(rj.rate, rj.c, rj.numjumps)
+    rj_data = if rj === nothing
+        GPUMassActionJump(prob.massaction_jump, prob.prob.p, backend, float(eltype(prob.prob.tspan)))
+    else
+        JumpData(rj.rate, rj.c, rj.numjumps)
+    end
 
     # Extract trajectory-specific data without static typing
     probs_data = [TrajectoryData(SA{eltype(p.prob.u0)}[p.prob.u0...], p.prob.p, p.prob.tspan)
@@ -218,7 +286,7 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
     dt = Float64(dt)
     n_steps = Int((tspan[2] - tspan[1]) / dt) + 1
     n_trajectories = length(probs)
-    num_jumps = rj_data.numjumps
+    num_jumps = gpu_num_jumps(rj_data)
 
     # Validate dimensions
     @assert state_dim > 0 "Dimension of state must be positive"
@@ -230,7 +298,7 @@ function vectorized_solve(probs, prob::JumpProblem, alg::SimpleTauLeaping;
 
     # Pre-allocate thread-local buffers
     current_u_buf = allocate(backend, eltype(prob.prob.u0), (state_dim, n_trajectories))
-    rate_cache_buf = allocate(backend, eltype(prob.prob.u0), (num_jumps, n_trajectories))
+    rate_cache_buf = allocate(backend, float(eltype(prob.prob.u0)), (num_jumps, n_trajectories))
     counts_buf = allocate(backend, eltype(prob.prob.u0), (num_jumps, n_trajectories))
     local_dc_buf = allocate(backend, eltype(prob.prob.u0), (state_dim, n_trajectories))
 

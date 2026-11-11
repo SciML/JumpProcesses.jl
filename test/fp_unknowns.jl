@@ -61,11 +61,38 @@ end
         @test typed_randexp(rng, t) isa typeof(t)
     end
     @test typed_randexp(rng, ForwardDiff.Dual(1.0, 1.0)) isa ForwardDiff.Dual
+end
 
-    # CCNRM's time table holds times of the problem's type
-    maj = MassActionJump([10.0f0, 1.0f0], [Pair{Int, Int}[], [1 => 1]], [
-        [1 => 1], [1 => -1]])
-    dprob = DiscreteProblem([0], (0.0f0, 10.0f0))
-    sol = solve(JumpProblem(dprob, CCNRM(), maj), SSAStepper(); rng)
-    @test eltype(sol.t) == Float32
+# Float32 and BigFloat times and rates (issue #674): DirectCR, RSSACR, CCNRM and
+# DirectCRDirect failed to build or run with them before.
+#    10, ∅ --> X
+#    1, X --> ∅
+# X(10) is close to Poisson(10) distributed when X(0) = 0.
+@testset "Solves with $T times" for T in (Float32, BigFloat)
+    Nsims = (T == Float32) ? 1000 : 250
+    tol = 5 * sqrt(10 / Nsims)
+    maj = MassActionJump(T[10, 1], [Pair{Int, Int}[], [1 => 1]], [[1 => 1], [1 => -1]])
+    dprob = DiscreteProblem([0], (zero(T), T(10)))
+    # RDirect can't build problems with BigFloat rates yet
+    aggs = (T == BigFloat) ? filter(!=(RDirect()), JumpProcesses.JUMP_AGGREGATORS) :
+           JumpProcesses.JUMP_AGGREGATORS
+    for agg in aggs
+        jprob = JumpProblem(dprob, agg, maj; save_positions = (false, false))
+        sol = solve(jprob, SSAStepper(); rng)
+        @test eltype(sol.t) == T
+        Xmean = sum(solve(jprob, SSAStepper(); rng)[1, end] for _ in 1:Nsims) / Nsims
+        @test abs(Xmean - 10) < tol
+    end
+
+    # the same reactions at each of two sites, with hopping between them
+    u0 = zeros(Int, 1, 2)
+    for agg in (NSM(), DirectCRDirect())
+        jprob = JumpProblem(DiscreteProblem(u0, (zero(T), T(10))), agg, maj;
+            hopping_constants = fill(one(T), size(u0)), spatial_system = CartesianGrid((2,)),
+            save_positions = (false, false))
+        sol = solve(jprob, SSAStepper(); rng)
+        @test eltype(sol.t) == T
+        Xmean = sum(sum(solve(jprob, SSAStepper(); rng).u[end]) for _ in 1:Nsims) / Nsims
+        @test abs(Xmean - 20) < 2 * tol
+    end
 end

@@ -296,10 +296,10 @@ end
 
 # A fresh aggregator's buffers are allocated with `undef`, so for `BigFloat` and `BigInt` they
 # hold unassigned entries until the first `init`; these problems are copied unsolved.
-# (`DirectCR`, `RSSACR` and `RDirect` can't build problems with `BigFloat` times yet.)
+# (`RDirect` can't build problems with `BigFloat` times yet.)
 @testset "Copies of unsolved problems with BigFloat times: $(nameof(typeof(aggregator))), \
-           massaction = $massaction" for aggregator in (Direct(), DirectFW(),
-        SortingDirect(), RSSA(), FRM(), FRMFW(), NRM(), Coevolve(), CCNRM()),
+           massaction = $massaction" for aggregator in (Direct(), DirectFW(), DirectCR(),
+        SortingDirect(), RSSA(), RSSACR(), FRM(), FRMFW(), NRM(), Coevolve(), CCNRM()),
     massaction in (true, false)
 
     jprob = ab_jprob(aggregator; massaction, T = BigFloat)

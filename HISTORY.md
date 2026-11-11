@@ -7,6 +7,9 @@
     problems with `Float32` times (it failed with a `MethodError`), and `BigFloat` times
     are drawn at `BigFloat` precision. `Float64` results are unchanged; seeded results can
     change for `Float32` and `BigFloat` problems.
+  - `DirectCR`, `RSSACR` and the spatial `DirectCRDirect` can now build problems with
+    `Float32` or `BigFloat` rates and times (they failed with a `MethodError`). `RDirect`
+    still can't build problems with `BigFloat` rates.
 
 ## 10.2.0
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for

@@ -128,6 +128,10 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
         maxpriority)
     numgroups = priortogid(maxpriority)
     numgroups -= one(typeof(numgroups))
+    # `priortogid` maps priorities at or below `eps` to group 1, so when minpriority
+    # itself is below `eps` (e.g. Float32, where 2^-40 < eps(Float32)) this can give
+    # fewer than the three base groups {0}, (0,minpriority), [minpriority,2*minpriority).
+    numgroups = max(numgroups, 3)
     pidtype = typeof(numgroups)
     ptype = eltype(priorities)
     groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()

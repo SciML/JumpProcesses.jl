@@ -118,7 +118,7 @@ end
     nomorejumps!(p, p.sum_rate) && return nothing
 
     rng = get_rng(integrator)
-    p.next_jump_time = t + randexp(rng) / p.sum_rate
+    p.next_jump_time = t + typed_randexp(rng, t) / p.sum_rate
 
     if p.next_jump_time < p.end_time
         p.next_jump = sample(p.rt, p.cur_rates, rng)

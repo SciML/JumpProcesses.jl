@@ -125,7 +125,7 @@ function update_dependent_rates!(p::CCNRMJumpAggregation, dep_rxs, executed_jump
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(ptt, rx, oldtime, t + randexp(rng) / cur_rates[rx])
+                update!(ptt, rx, oldtime, t + typed_randexp(rng, t) / cur_rates[rx])
             else
                 update!(ptt, rx, oldtime, floatmax(typeof(t)))
             end
@@ -143,7 +143,7 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t, rng)
     maj_rates = p.maj_rates
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps, maj_rates)
-        pttdata[i] = t + randexp(rng) / cur_rates[i]
+        pttdata[i] = t + typed_randexp(rng, t) / cur_rates[i]
     end
 
     # Initialize next-reaction times for the constant rates
@@ -151,7 +151,7 @@ function initialize_rates_and_times!(p::CCNRMJumpAggregation, u, params, t, rng)
     idx = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
         cur_rates[idx] = rate(u, params, t)
-        pttdata[idx] = t + randexp(rng) / cur_rates[idx]
+        pttdata[idx] = t + typed_randexp(rng, t) / cur_rates[idx]
         idx += 1
     end
 

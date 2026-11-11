@@ -1,5 +1,13 @@
 # Breaking updates and feature summaries across releases
 
+## Unreleased
+  - Jump times are now drawn in the numeric type of the time, without its units (the type
+    of `one(t)`), in every SSA aggregator and in `VR_FRM`, `VR_Direct` and `VR_DirectFW`.
+    `Float32` times are no longer computed in `Float64`, which also lets `CCNRM` solve
+    problems with `Float32` times (it failed with a `MethodError`), and `BigFloat` times
+    are drawn at `BigFloat` precision. `Float64` results are unchanged; seeded results can
+    change for `Float32` and `BigFloat` problems.
+
 ## 10.2.0
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for
     concurrent solves and for integrators that are alive at the same time. It copies only

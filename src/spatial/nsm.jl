@@ -117,7 +117,8 @@ function fill_rates_and_get_times!(aggregation::NSMJumpAggregation, integrator, 
     @inbounds for site in 1:num_nodes
         update_rx_rates!(rx_rates, rxs, integrator, site)
         update_hop_rates!(hop_rates, species, u, site, spatial_system)
-        pqdata[site] = t + randexp(rng) / (total_site_rate(rx_rates, hop_rates, site))
+        pqdata[site] = t +
+                       typed_randexp(rng, t) / (total_site_rate(rx_rates, hop_rates, site))
     end
 
     aggregation.pq = MutableBinaryMinHeap(pqdata)
@@ -155,7 +156,7 @@ update the time of site in the priority queue
 function update_site_time!(p::NSMJumpAggregation, site, t, rng)
     site_rate = (total_site_rate(p.rx_rates, p.hop_rates, site))
     if site_rate > zero(typeof(site_rate))
-        update!(p.pq, site, t + randexp(rng) / site_rate)
+        update!(p.pq, site, t + typed_randexp(rng, t) / site_rate)
     else
         update!(p.pq, site, typemax(t))
     end

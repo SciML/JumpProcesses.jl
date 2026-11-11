@@ -97,7 +97,7 @@ function generate_jumps!(p::SortingDirectJumpAggregation, integrator, u, params,
     nomorejumps!(p, p.sum_rate) && return nothing
 
     rng = get_rng(integrator)
-    p.next_jump_time = t + randexp(rng) / p.sum_rate
+    p.next_jump_time = t + typed_randexp(rng, t) / p.sum_rate
 
     # search for next jump
     if p.next_jump_time < p.end_time

@@ -104,7 +104,7 @@ function update_dependent_rates!(p::NRMJumpAggregation, dep_rxs, executed_jump, 
             end
         else
             if cur_rates[rx] > zero(eltype(cur_rates))
-                update!(p.pq, rx, t + randexp(rng) / cur_rates[rx])
+                update!(p.pq, rx, t + typed_randexp(rng, t) / cur_rates[rx])
             else
                 update!(p.pq, rx, typemax(t))
             end
@@ -123,7 +123,7 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t, rng)
     maj_rates = p.maj_rates
     @inbounds for i in 1:get_num_majumps(majumps)
         cur_rates[i] = evalrxrate(u, i, majumps, maj_rates)
-        pqdata[i] = t + randexp(rng) / cur_rates[i]
+        pqdata[i] = t + typed_randexp(rng, t) / cur_rates[i]
     end
 
     # constant rates
@@ -131,7 +131,7 @@ function fill_rates_and_get_times!(p::NRMJumpAggregation, u, params, t, rng)
     idx = get_num_majumps(majumps) + 1
     @inbounds for rate in rates
         cur_rates[idx] = rate(u, params, t)
-        pqdata[idx] = t + randexp(rng) / cur_rates[idx]
+        pqdata[idx] = t + typed_randexp(rng, t) / cur_rates[idx]
         idx += 1
     end
 

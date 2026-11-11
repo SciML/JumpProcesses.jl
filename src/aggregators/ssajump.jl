@@ -24,6 +24,14 @@ function DiscreteCallback(c::AbstractSSAJumpAggregator)
     DiscreteCallback(c, c, initialize = c, save_positions = c.save_positions)
 end
 
+# An exponential random variate in the numeric type of the time `t` without its units
+# (`one(t)`), so that `t + typed_randexp(rng, t) / rate` keeps the type of `t`. Floating
+# point types are drawn in that type; other numbers, such as dual numbers, convert a `Float64`
+# draw.
+@inline typed_randexp(rng, t) = _typed_randexp(rng, typeof(one(t)))
+@inline _typed_randexp(rng, ::Type{T}) where {T <: AbstractFloat} = randexp(rng, T)
+@inline _typed_randexp(rng, ::Type{T}) where {T} = convert(T, randexp(rng))
+
 ########### The following routines are templates for all SSAs ###########
 ########### Generally they should not need to be overloaded.  ###########
 

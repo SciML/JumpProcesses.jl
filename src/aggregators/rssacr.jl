@@ -140,7 +140,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     jidx = sample(rt, cur_rate_high, rng)
     # sampling finds no jump only if the sums exceed the sum of the rate bounds
     iszero(jidx) && ((sum_rate, jidx) = resum_and_sample!(p, rng))
-    rerl += randexp(rng)
+    rerl += typed_randexp(rng, t)
     nrejected = 0
     while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
         params, t, p.maj_rates)
@@ -154,7 +154,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
         # sample candidate reaction
         jidx = sample(rt, cur_rate_high, rng)
         iszero(jidx) && ((sum_rate, jidx) = resum_and_sample!(p, rng))
-        rerl += randexp(rng)
+        rerl += typed_randexp(rng, t)
     end
     p.next_jump = jidx
 

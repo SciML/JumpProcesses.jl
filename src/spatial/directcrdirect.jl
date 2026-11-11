@@ -91,7 +91,7 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRDirectJumpAggregation, integrator, params, u, t)
     rng = get_rng(integrator)
-    p.next_jump_time = t + randexp(rng) / p.rt.gsum
+    p.next_jump_time = t + typed_randexp(rng, t) / p.rt.gsum
     p.next_jump_time >= p.end_time && return nothing
     site = sample(p.rt, p.site_rates, rng)
     p.next_jump = sample_jump_direct(p, site, rng)

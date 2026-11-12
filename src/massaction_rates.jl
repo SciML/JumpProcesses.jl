@@ -160,6 +160,11 @@ function add_self_dependencies!(dg; dosort = true)
 end
 
 materialize_leaping_jump(jump::MassActionJump, p, ::Type{T}) where {T} = jump
+function materialize_leaping_jump(
+        jump::MassActionJump{Nothing, <:AbstractArray{<:Pair}}, p, ::Type{T}
+    ) where {T}
+    return materialize_leaping_jump(check_majump_type(jump), p, T)
+end
 function materialize_leaping_jump(jump::MassActionJump{Nothing}, p, ::Type{T}) where {T}
     constants = Vector{T}(undef, get_num_majumps(jump))
     fill_scaled_rates!(constants, jump, p)
@@ -174,6 +179,9 @@ end
 )
 @inline massaction_data(jump::MassActionJump{<:Number}) = (
     (jump.scaled_rates,), (jump.reactant_stoch,), (jump.net_stoch,),
+)
+@inline massaction_data(jump::MassActionJump{Nothing, <:AbstractArray{<:Pair}}) = (
+    jump.scaled_rates, (jump.reactant_stoch,), (jump.net_stoch,),
 )
 
 """
@@ -190,16 +198,17 @@ function massaction_rates!(rates, jump::MassActionJump, u; p = nothing)
     working_jump = materialize_leaping_jump(jump, p, eltype(rates))
     constants, reactants, _ = massaction_data(working_jump)
     for j in eachindex(constants)
-        rates[j] = massaction_propensity(constants, reactants, u, j)
+        rates[j] = massaction_propensity(constants, reactants, u, j, eltype(rates))
     end
     return rates
 end
 
 """
-    massaction_propensity(constants, reactants, u, j)
+    massaction_propensity(constants, reactants, u, j, T)
 
 Propensity of reaction `j` at populations `u`, using combinatorially scaled
-`constants` and falling-factorial rate laws from `reactants`.
+`constants` and falling-factorial rate laws from `reactants`. Products promote
+the population and constant types with the destination scalar type `T`.
 
 If any reactant population is strictly below the reaction order for that
 species, the propensity is zero rather than negative. Under tau-leaping this
@@ -207,8 +216,8 @@ means an overshoot that drives a population below zero (or below the order)
 stays there for that reaction: the propensity remains zero, so further leaps
 cannot pull the population back through this channel.
 """
-@inline function massaction_propensity(constants, reactants, u, j)
-    rate = one(eltype(u)) * one(constants[j])
+@inline function massaction_propensity(constants, reactants, u, j, ::Type{T}) where {T}
+    rate = one(T) * one(eltype(u)) * one(constants[j])
     for (species, order) in reactants[j]
         population = u[species]
         population <= order - 1 && return zero(rate)
@@ -231,8 +240,9 @@ function massaction_stoichiometry_mul!(du, jump::MassActionJump, counts)
     fill!(du, zero(eltype(du)))
     _, _, stoichiometry = massaction_data(jump)
     for j in eachindex(stoichiometry)
+        count = one(eltype(du)) * counts[j]
         for (species, coefficient) in stoichiometry[j]
-            du[species] += coefficient * counts[j]
+            du[species] += coefficient * count
         end
     end
     return du
@@ -253,7 +263,7 @@ function massaction_drift!(du, jump::MassActionJump, u; p = nothing)
     working_jump = materialize_leaping_jump(jump, p, eltype(du))
     constants, reactants, stoichiometry = massaction_data(working_jump)
     for j in eachindex(constants)
-        rate = massaction_propensity(constants, reactants, u, j)
+        rate = massaction_propensity(constants, reactants, u, j, eltype(du))
         for (species, coefficient) in stoichiometry[j]
             du[species] += coefficient * rate
         end

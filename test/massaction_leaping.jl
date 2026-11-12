@@ -119,11 +119,57 @@ end
 
 @testset "Large integer mass-action populations" begin
     n = 3_000_000
-    reference = Float64(binomial(big(n), 3))
-    for single in (false, true)
-        maj = single ? MassActionJump(1.0, [1 => 3], [1 => -3]) :
-            MassActionJump([1.0], [[1 => 3]], [[1 => -3]])
+    for single in (false, true), (rate, scale_rates) in ((1.0, true), (6, true), (1, false))
+        reference = Float64(big(n) * (n - 1) * (n - 2)) * (scale_rates ? rate / 6 : rate)
+        maj = single ? MassActionJump(rate, [1 => 3], [1 => -3]; scale_rates) :
+            MassActionJump([rate], [[1 => 3]], [[1 => -3]]; scale_rates)
         @test only(massaction_rates!(zeros(1), maj, [n])) ≈ reference
         @test only(massaction_drift!(zeros(1), maj, [n])) ≈ -3 * reference
+    end
+end
+
+@testset "Integer reaction counts with floating-point output" begin
+    maj = MassActionJump([1], [[1 => 1]], [[1 => -3]]; scale_rates = false)
+    count = typemax(Int)
+    @test massaction_stoichiometry_mul!(zeros(1), maj, [count]) == [-3 * Float64(count)]
+end
+
+@testset "Single-reaction parameter-mapped operations" begin
+    for (reactants, net, u, expected_rate, expected_drift) in (
+                ([1 => 1], [1 => -1, 2 => 1], [20, 0], 6.0, [-6.0, 6.0]),
+                ([1 => 3], [1 => -3, 2 => 1], [5, 0], 3.0, [-9.0, 3.0]),
+                (Pair{Int, Int}[], [1 => 1], [0], 0.3, [0.3]),
+            ), scale_rates in (true, false)
+        maj = MassActionJump(reactants, net; param_idxs = 1, scale_rates)
+        vector = MassActionJump([reactants], [net]; param_idxs = [1], scale_rates)
+        rate = scale_rates || length(reactants) == 0 ? expected_rate :
+            expected_rate * factorial(only(reactants).second)
+        drift = scale_rates || length(reactants) == 0 ? expected_drift :
+            expected_drift * factorial(only(reactants).second)
+        @test massaction_rates!(zeros(1), maj, u; p = [0.3]) ≈ [rate]
+        @test massaction_drift!(zeros(length(u)), maj, u; p = [0.3]) ≈ drift
+        @test massaction_stoichiometry_mul!(zeros(length(u)), maj, [2.0]) ==
+            massaction_stoichiometry_mul!(zeros(length(u)), vector, [2.0])
+        @test massaction_rates!(zeros(1), maj, u; p = [0.6]) ≈ [2rate]
+        @test maj.scaled_rates === nothing
+    end
+end
+
+@testset "Integer rate constants in fixed-step leaping" begin
+    for scale_rates in (true, false)
+        rate = scale_rates ? 6 : 1
+        integer_jump = MassActionJump([rate], [[1 => 3]], [[1 => -3]]; scale_rates)
+        float_jump = MassActionJump([Float64(rate)], [[1 => 3]], [[1 => -3]]; scale_rates)
+        prob = DiscreteProblem([3_000_000], (0.0, 1.0e-18))
+        actual = solve(
+            JumpProblem(prob, PureLeaping(), integer_jump), SimpleTauLeaping();
+            dt = 1.0e-18, seed = 123
+        )
+        expected = solve(
+            JumpProblem(prob, PureLeaping(), float_jump), SimpleTauLeaping();
+            dt = 1.0e-18, seed = 123
+        )
+        @test successful_retcode(actual)
+        @test actual.u == expected.u
     end
 end

@@ -117,7 +117,7 @@ end
 
 # Rates at the ends of the numeric range for the rejection (priority) tables, which hung
 @testset "Rejection tables with extreme $T rates" for T in (Float32, Float64)
-    # a minrate below floatmin(T), given as a Float64
+    # a minrate below eps(T), given as a Float64 (zero once converted to Float32)
     maj = MassActionJump(T[10, 1], [Pair{Int, Int}[], [1 => 1]], [[1 => 1], [1 => -1]])
     for agg in (DirectCR(), RSSACR())
         jprob = JumpProblem(DiscreteProblem([0], (zero(T), T(10))), agg, maj;
@@ -142,4 +142,23 @@ end
         hopping_constants = zeros(T, 1, 1), spatial_system = CartesianGrid((1,)),
         save_positions = (false, false))
     @test solve(jprob, SSAStepper(); rng).u[end][1] > 0
+end
+
+# The rejection tables' minimum rate is at least eps(T): rates at or below it share the first
+# group, and a smaller one only adds empty groups (about 10^9 for floatmin(BigFloat)). Only the
+# stored value is checked, since a solve with ~10^9 groups would exhaust memory.
+@testset "Minimum rate of rejection tables, $T" for T in (Float32, Float64, BigFloat)
+    maj = MassActionJump(T[10, 1], [Pair{Int, Int}[], [1 => 1]], [[1 => 1], [1 => -1]])
+    # (keywords, expected minimum rate); the default, 2^-40, is below eps(Float32) only
+    cases = (((;), max(T(2)^-40, eps(T))), ((; minrate = floatmin(T)), eps(T)))
+    for (kw, minpriority) in cases
+        for agg in (DirectCR(), RSSACR())
+            jprob = JumpProblem(DiscreteProblem([0], (zero(T), T(10))), agg, maj; kw...)
+            @test jprob.discrete_jump_aggregation.rt.minpriority == minpriority
+        end
+        jprob = JumpProblem(DiscreteProblem(zeros(Int, 1, 2), (zero(T), T(10))),
+            DirectCRDirect(), maj; hopping_constants = ones(T, 1, 2),
+            spatial_system = CartesianGrid((2,)), kw...)
+        @test jprob.discrete_jump_aggregation.rt.minpriority == minpriority
+    end
 end

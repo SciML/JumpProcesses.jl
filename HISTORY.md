@@ -15,9 +15,11 @@
     rounded to zero, so its reaction never fired. Seeded results can change for spatial
     problems with `Float32` times.
   - `DirectCR`, `RSSACR` and `DirectCRDirect` no longer hang on a rate of at least
-    `2^exponent(floatmax(T))` for rates of type `T` (e.g. `2.0^1023`), or on a `minrate`
-    keyword below `floatmin(T)` (e.g. `1e-50` with `Float32` rates, now raised to
-    `floatmin(T)`).
+    `2^exponent(floatmax(T))` for rates of type `T` (e.g. `2.0^1023`), or on a tiny
+    `minrate` keyword (e.g. `1e-50` with `Float32` rates, or `floatmin(BigFloat)`). `minrate`
+    is now raised to at least `eps(T)`, since rates at or below `eps(T)` already share the
+    tables' first group; for `Float32` rates this raises the default from `2^-40` to
+    `eps(Float32)`.
 
 ## 10.2.0
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for

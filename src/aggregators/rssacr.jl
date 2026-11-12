@@ -52,9 +52,10 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     ulow = similar(u)
     uhigh = similar(u)
 
-    # mapping from jump rate to group id, in the rates' type; a minrate below its smallest
-    # normal number (e.g. 1e-50 with Float32 rates, which converts to zero) is raised to it
-    minrate = max(convert(F, minrate), floatmin(F))
+    # mapping from jump rate to group id, in the rates' type. Rates at or below eps(F) all go
+    # in the table's first group, so a smaller minrate only adds empty groups, one per power
+    # of two (about 10^9 for floatmin(BigFloat)): it is raised to eps(F)
+    minrate = max(convert(F, minrate), eps(F))
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate

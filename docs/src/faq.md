@@ -133,6 +133,33 @@ and physics literature. In the JumpProcesses terminology, we call such methods
 "aggregations". See [Jump Aggregators for Exact Simulation](@ref) for a list of
 the available SSA aggregators.
 
+## Can a `ConstantRateJump` depend on a component that a `VariableRateJump` changes?
+
+Only if the `JumpProblem` is told which components each `VariableRateJump` changes.
+The aggregator handling `MassActionJump`s and `ConstantRateJump`s recomputes rates
+only when one of its own jumps occurs, so by default it doesn't see a change made
+by a general `VariableRateJump`. Give `vrjtovars_map` (the components each
+`VariableRateJump` changes) or `vrj_dep_graph` (the jumps whose rates each
+`VariableRateJump` affects) in a [`JumpDependencies`](@ref), and the aggregator
+updates those rates after each `VariableRateJump` occurs:
+
+```julia
+using JumpProcesses, OrdinaryDiffEq, SciMLBase
+f!(du, u, p, t) = (du .= 0; nothing)
+birth = VariableRateJump((u, p, t) -> 5 * (1 + sin(2t)),
+    integ -> (integ.u[1] += 1; nothing))
+death = MassActionJump([0.5], [[1 => 1]], [[1 => -1]])  # its rate reads u[1]
+oprob = ODEProblem{true, SciMLBase.FullSpecialize}(f!, [0.0], (0.0, 10.0))
+dependencies = JumpDependencies(; vrjtovars_map = [[1]])  # the birth changes u[1]
+jprob = JumpProblem(oprob, Direct(), death, birth; dependencies)
+```
+
+`vrjtovars_map` numbers the `VariableRateJump`s in the order given to the
+`JumpProblem`. `Direct`, `DirectFW`, `FRM` and `FRMFW` need nothing more;
+`SortingDirect`, `RDirect`, `NRM`, `CCNRM`, `DirectCR` and `Coevolve` also need
+`vartojumps_map` unless every jump is a `MassActionJump` (or take `vrj_dep_graph`
+instead); `RSSA` and `RSSACR` need `vrjtovars_map`. See [`JumpDependencies`](@ref).
+
 ## How should jumps be ordered in dependency graphs?
 
 Internally, JumpProcesses SSAs (aggregators) order all `MassActionJump`s first,

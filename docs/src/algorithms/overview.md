@@ -76,7 +76,9 @@ An aggregator schedules each jump as a stop of the integrator:
 
 Since the rates are evaluated only at jumps, they must be constant between jumps.
 A `ConstantRateJump`'s rate must not depend on time, on components that evolve
-continuously, or on components that `VariableRateJump`s change; see the
+continuously, or on components that `VariableRateJump`s change, unless the
+`JumpProblem` is given those components in a [`JumpDependencies`](@ref), which makes
+the aggregator update the affected rates after each `VariableRateJump`; see the
 [jump diffusion tutorial](@ref jump_diffusion_tutorial). For the same reason, a
 callback that changes `u` or `p` must call [`reset_aggregated_jumps!`](@ref), so
 that the aggregator recomputes its rates and next jump.

@@ -116,15 +116,17 @@ end
         @test same_solution(jprob1, jprob2)
     end
     # with a constant rate jump the aggregators that need a map raise their errors
-    msg = "To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a " *
-          "dependency graph must be supplied."
+    msg = "The NRM algorithm needs a dependency graph for `ConstantRateJump`s: give " *
+          "`dep_graph` in the `JumpDependencies`."
     @test_throws ErrorException(msg) JumpProblem(prob, NRM(), maj, crj)
-    msg = "To use Coevolve a dependency graph between jumps must be supplied."
+    msg = "The Coevolve algorithm needs a dependency graph for `ConstantRateJump`s: give " *
+          "`dep_graph` in the `JumpDependencies`."
     @test_throws ErrorException(msg) JumpProblem(prob, Coevolve(), maj, crj)
-    msg = "To use the RSSA algorithm a map from variables to dependent jumps must be supplied."
+    msg = "The RSSA algorithm needs a map from variables to dependent jumps for " *
+          "`ConstantRateJump`s: give `vartojumps_map` in the `JumpDependencies`."
     @test_throws ErrorException(msg) JumpProblem(prob, RSSA(), maj, crj)
-    msg = "To use the RSSACR algorithm a map from jumps to dependent variables must be " *
-          "supplied."
+    msg = "The RSSACR algorithm needs a map from jumps to dependent variables for " *
+          "`ConstantRateJump`s: give `jumptovars_map` in the `JumpDependencies`."
     deps = JumpDependencies(; vartojumps_map = vartojumps_map())
     @test_throws ErrorException(msg) JumpProblem(prob, RSSACR(), maj, crj;
         dependencies = deps)
@@ -196,6 +198,9 @@ end
     # the bounded VariableRateJump has an entry, so four entries are too few
     @test_throws ArgumentError JumpProblem(prob, Coevolve(), maj, crj, vrj;
         dependencies = JumpDependencies(; dep_graph = dep_graph()))
+    msg = "The Coevolve algorithm needs a dependency graph for `ConstantRateJump`s or " *
+          "bounded `VariableRateJump`s: give `dep_graph` in the `JumpDependencies`."
+    @test_throws ErrorException(msg) JumpProblem(prob, Coevolve(), maj, crj, vrj)
 end
 
 @testset "Spatial aggregators" begin

@@ -159,7 +159,7 @@ end
 chunks = Iterators.partition(1:n, cld(n, Threads.nthreads()))
 tasks = map(chunks) do idxs
     Threads.@spawn begin
-        local_prob = deepcopy(jprob)
+        local_prob = isolated_copy(jprob)  # deepcopy(jprob) before JumpProcesses 10.2
         [solve(local_prob, SSAStepper()) for _ in idxs]
     end
 end
@@ -170,7 +170,8 @@ An `EnsembleProblem` already provides this isolation: `EnsembleThreads` with
 `safetycopy = false` copies the problem once per spawned task, and
 `safetycopy = true` copies it before every trajectory. Problems created with
 `remake` share the original's jump state, so they are not independent copies;
-use `deepcopy` instead. The same applies to integrators from `init` that are
+use [`isolated_copy`](@ref) (JumpProcesses 10.2 and later) or `deepcopy` instead. The
+same applies to integrators from `init` that are
 alive at the same time. See the
 [ensembles and problem reuse tutorial](@ref ensembles_problem_reuse) for details.
 

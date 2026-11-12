@@ -119,6 +119,12 @@ function (p::CoevolveJumpAggregation{
     nothing
 end
 
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:CoevolveJumpAggregation})
+    (:ma_jumps, :rates, :affects!, :save_positions, :dependencies, :lrates,
+        :urates, :rateintervals, :haslratevec)
+end
+
 # creating the JumpAggregation structure (tuple-based variable jumps)
 function aggregate(aggregator::Coevolve, u, p, t, end_time, constant_jumps,
         ma_jumps, save_positions; dependencies, variable_jumps = nothing, kwargs...)

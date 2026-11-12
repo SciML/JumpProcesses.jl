@@ -24,6 +24,8 @@ struct RxRates{F, M}
     """
     maj_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:RxRates}) = (:ma_jumps,)
 
 """
     RxRates(num_sites::Int, ma_jumps::M) where {M}

@@ -71,6 +71,12 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
         rt, ratetogroup, zero(sum_rate))
 end
 
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:RSSACRJumpAggregation})
+    (:ma_jumps, :rates, :affects!, :brackets, :save_positions, :dependencies,
+        :bracket_data, :ratetogroup)
+end
+
 ############################# Required Functions ##############################
 
 # creating the JumpAggregation structure (function wrapper-based constant jumps)

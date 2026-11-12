@@ -198,6 +198,10 @@ export NSM
 include("spatial/directcrdirect.jl")
 export DirectCRDirect
 
+# after every type that holds jump state
+include("isolated_copy.jl")
+export isolated_copy
+
 # coupling
 include("coupled_array.jl")
 include("coupling.jl")

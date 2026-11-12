@@ -67,10 +67,10 @@ end
 # DirectCRDirect failed to build or run with them before.
 #    10, ∅ --> X
 #    1, X --> ∅
-# X(10) is close to Poisson(10) distributed when X(0) = 0.
+# X(10) is close to Poisson(10) distributed when X(0) = 0, so its sample mean is tested to
+# within 4 standard deviations, sqrt(10 / Nsims).
 @testset "Solves with $T times" for T in (Float32, BigFloat)
-    Nsims = (T == Float32) ? 1000 : 250
-    tol = 5 * sqrt(10 / Nsims)
+    Nsims = (T == Float32) ? 4000 : 1000
     maj = MassActionJump(T[10, 1], [Pair{Int, Int}[], [1 => 1]], [[1 => 1], [1 => -1]])
     dprob = DiscreteProblem([0], (zero(T), T(10)))
     # RDirect can't build problems with BigFloat rates yet
@@ -81,10 +81,11 @@ end
         sol = solve(jprob, SSAStepper(); rng)
         @test eltype(sol.t) == T
         Xmean = sum(solve(jprob, SSAStepper(); rng)[1, end] for _ in 1:Nsims) / Nsims
-        @test abs(Xmean - 10) < tol
+        @test abs(Xmean - 10) < 4 * sqrt(10 / Nsims)
     end
 
-    # the same reactions at each of two sites, with hopping between them
+    # the same reactions at each of two sites, with hopping between them: the total is close
+    # to Poisson(20) distributed
     u0 = zeros(Int, 1, 2)
     for agg in (NSM(), DirectCRDirect())
         jprob = JumpProblem(DiscreteProblem(u0, (zero(T), T(10))), agg, maj;
@@ -93,6 +94,6 @@ end
         sol = solve(jprob, SSAStepper(); rng)
         @test eltype(sol.t) == T
         Xmean = sum(sum(solve(jprob, SSAStepper(); rng).u[end]) for _ in 1:Nsims) / Nsims
-        @test abs(Xmean - 20) < 2 * tol
+        @test abs(Xmean - 20) < 4 * sqrt(20 / Nsims)
     end
 end

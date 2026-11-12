@@ -128,6 +128,10 @@ function PriorityTable(priortogid::Function, priorities::AbstractVector, minprio
         maxpriority)
     numgroups = priortogid(maxpriority)
     numgroups -= one(typeof(numgroups))
+    # `priortogid` maps priorities at or below `eps` to group 1, so when minpriority
+    # itself is below `eps` (e.g. Float32, where 2^-40 < eps(Float32)) this can give
+    # fewer than the three base groups {0}, (0,minpriority), [minpriority,2*minpriority).
+    numgroups = max(numgroups, 3)
     pidtype = typeof(numgroups)
     ptype = eltype(priorities)
     groups = Vector{PriorityGroup{ptype, Vector{pidtype}}}()
@@ -174,6 +178,12 @@ end
     pt.gsum
 end
 
+# The rejection bound of the group of priorities below `maxpriority`. For the group of the
+# largest finite priorities, `maxpriority` overflows to Inf, against which `sample` would
+# never accept, so the bound is capped at `floatmax`. The table's `maxpriority` is not capped:
+# it reaches Inf, so the table stops growing.
+@inline rejection_bound(maxpriority) = min(maxpriority, floatmax(typeof(maxpriority)))
+
 """
 Adds extra groups to the table to accommodate a new maxpriority.
 """
@@ -183,7 +193,7 @@ function padtable!(pt::PriorityTable, pid, priority)
 
     while priority >= maxpriority
         maxpriority *= 2
-        push!(groups, PriorityGroup{pidtype}(maxpriority))
+        push!(groups, PriorityGroup{pidtype}(rejection_bound(maxpriority)))
         push!(gsums, zero(eltype(gsums)))
     end
     pt.maxpriority = maxpriority

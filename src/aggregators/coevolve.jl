@@ -229,7 +229,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     # it was longer than the rateinterval when it was proposed
     if lrate == typemax(t)
         urate = get_urate(p, uidx, u, params, t)
-        s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+        s = urate == zero(t) ? typemax(t) : typed_randexp(rng, t) / urate
     elseif lrate < urate
         # when the lower and upper bound are the same, then v < 1 = lrate / urate = urate / urate
         v = rand(rng) * urate
@@ -238,7 +238,7 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
             rate = get_rate(p, lidx, u, params, t)
             if v > rate
                 urate = get_urate(p, uidx, u, params, t)
-                s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+                s = urate == zero(t) ? typemax(t) : typed_randexp(rng, t) / urate
             end
         end
     end
@@ -305,7 +305,7 @@ function next_time(p::CoevolveJumpAggregation, u, params, t, i, rng)
             return next_candidate_time!(p, u, params, t, s, lidx), urate
         end
     end
-    s = urate == zero(t) ? typemax(t) : randexp(rng) / urate
+    s = urate == zero(t) ? typemax(t) : typed_randexp(rng, t) / urate
     return next_candidate_time!(p, u, params, t, s, lidx), urate
 end
 

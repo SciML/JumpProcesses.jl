@@ -32,11 +32,14 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
         num_specs, minrate = convert(T, MINJUMPRATE),
         dependencies, kwargs...) where {J, T, RX, HOP, SS}
 
-    # mapping from jump rate to group id
+    # mapping from jump rate to group id, in the rates' type. Rates at or below eps(T) all go
+    # in the table's first group, so a smaller minrate only adds empty groups, one per power
+    # of two (about 10^9 for floatmin(BigFloat)): it is raised to eps(T)
+    minrate = max(convert(T, minrate), eps(T))
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate
-    minrate = 2.0^minexponent
+    minrate = T(2)^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
@@ -71,7 +74,7 @@ function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
 
     next_jump = SpatialJump{Int}(typemax(Int), typemax(Int), typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
-    rx_rates = RxRates(num_sites(spatial_system), majumps)
+    rx_rates = RxRates(num_sites(spatial_system), majumps, typeof(end_time))
     hop_rates = HopRates(hopping_constants, spatial_system)
     site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 
@@ -91,7 +94,7 @@ end
 # calculate the next jump / jump time
 function generate_jumps!(p::DirectCRDirectJumpAggregation, integrator, params, u, t)
     rng = get_rng(integrator)
-    p.next_jump_time = t + randexp(rng) / p.rt.gsum
+    p.next_jump_time = t + typed_randexp(rng, t) / p.rt.gsum
     p.next_jump_time >= p.end_time && return nothing
     site = sample(p.rt, p.site_rates, rng)
     p.next_jump = sample_jump_direct(p, site, rng)

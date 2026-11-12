@@ -111,7 +111,7 @@ function generate_jumps!(p::RDirectJumpAggregation, integrator, u, params, t)
 
     p.counter = counter
     p.next_jump = rx
-    p.next_jump_time = t + randexp(rng) / sum_rate
+    p.next_jump_time = t + typed_randexp(rng, t) / sum_rate
     nothing
 end
 

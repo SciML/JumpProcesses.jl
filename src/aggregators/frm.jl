@@ -94,7 +94,7 @@ function next_ma_jump(p::FRMJumpAggregation, u, params, t, rng)
     maj_rates = p.maj_rates
     @inbounds for i in 1:get_num_majumps(majumps)
         p.cur_rates[i] = evalrxrate(u, i, majumps, maj_rates)
-        dt = randexp(rng) / p.cur_rates[i]
+        dt = typed_randexp(rng, t) / p.cur_rates[i]
         if dt < ttnj
             ttnj = dt
             nextrx = i
@@ -112,7 +112,7 @@ function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1, F2}, u, params,
         idx = get_num_majumps(p.ma_jumps) + 1
         fill_cur_rates(u, params, t, p.cur_rates, idx, p.rates)
         @inbounds for i in idx:length(p.cur_rates)
-            dt = randexp(rng) / p.cur_rates[i]
+            dt = typed_randexp(rng, t) / p.cur_rates[i]
             if dt < ttnj
                 ttnj = dt
                 nextrx = i
@@ -131,7 +131,7 @@ function next_constant_rate_jump(p::FRMJumpAggregation{T, S, F1}, u, params,
         idx = get_num_majumps(p.ma_jumps) + 1
         @inbounds for i in 1:length(p.rates)
             p.cur_rates[idx] = p.rates[i](u, params, t)
-            dt = randexp(rng) / p.cur_rates[idx]
+            dt = typed_randexp(rng, t) / p.cur_rates[idx]
             if dt < ttnj
                 ttnj = dt
                 nextrx = idx

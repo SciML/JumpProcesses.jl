@@ -28,15 +28,15 @@ end
 shared_fields(::Type{<:RxRates}) = (:ma_jumps,)
 
 """
-    RxRates(num_sites::Int, ma_jumps::M) where {M}
+    RxRates(num_sites::Int, ma_jumps::M, ::Type{F} = Float64) where {M, F}
 
-initializes RxRates with zero rates
+initializes RxRates with zero rates of type `F`
 """
-function RxRates(num_sites::Int, ma_jumps::M) where {M}
+function RxRates(num_sites::Int, ma_jumps::M, ::Type{F} = Float64) where {M, F}
     numrxjumps = get_num_majumps(ma_jumps)
-    rates = zeros(Float64, numrxjumps, num_sites)
-    maj_rates = Vector{Float64}(undef, numrxjumps)
-    RxRates{Float64, M}(rates, vec(sum(rates, dims = 1)), ma_jumps, maj_rates)
+    rates = zeros(F, numrxjumps, num_sites)
+    maj_rates = Vector{F}(undef, numrxjumps)
+    RxRates{F, M}(rates, vec(sum(rates, dims = 1)), ma_jumps, maj_rates)
 end
 
 num_rxs(rx_rates::RxRates) = get_num_majumps(rx_rates.ma_jumps)

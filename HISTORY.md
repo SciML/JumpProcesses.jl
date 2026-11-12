@@ -1,5 +1,26 @@
 # Breaking updates and feature summaries across releases
 
+## Unreleased
+  - Jump times are now drawn in the numeric type of the time, without its units (the type
+    of `one(t)`), in every SSA aggregator and in `VR_FRM`, `VR_Direct` and `VR_DirectFW`.
+    `Float32` times are no longer computed in `Float64`, which also lets `CCNRM` solve
+    problems with `Float32` times (it failed with a `MethodError`), and `BigFloat` times
+    are drawn at `BigFloat` precision. `Float64` results are unchanged; seeded results can
+    change for `Float32` and `BigFloat` problems.
+  - `DirectCR`, `RSSACR` and the spatial `DirectCRDirect` can now build problems with
+    `Float32` or `BigFloat` rates and times (they failed with a `MethodError`). `RDirect`
+    still can't build problems with `BigFloat` rates.
+  - `NSM` and `DirectCRDirect` now compute reaction rates in the type of the time, as the
+    other aggregators do, instead of `Float64`: a `BigFloat` rate below `floatmin(Float64)`
+    rounded to zero, so its reaction never fired. Seeded results can change for spatial
+    problems with `Float32` times.
+  - `DirectCR`, `RSSACR` and `DirectCRDirect` no longer hang on a rate of at least
+    `2^exponent(floatmax(T))` for rates of type `T` (e.g. `2.0^1023`), or on a tiny
+    `minrate` keyword (e.g. `1e-50` with `Float32` rates, or `floatmin(BigFloat)`). `minrate`
+    is now raised to at least `eps(T)`, since rates at or below `eps(T)` already share the
+    tables' first group; for `Float32` rates this raises the default from `2^-40` to
+    `eps(Float32)`.
+
 ## 10.2.0
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for
     concurrent solves and for integrators that are alive at the same time. It copies only

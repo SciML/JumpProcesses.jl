@@ -105,7 +105,7 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
     end
 
     @inbounds sum_rate = cur_rates[end]
-    sum_rate, randexp(rng) / sum_rate
+    sum_rate, typed_randexp(rng, t) / sum_rate
 end
 
 # Unrolled at compile time: recursive splatting over `rates...` is only inferred for
@@ -147,5 +147,5 @@ function time_to_next_jump(p::DirectJumpAggregation{T, S, F1}, u, params,
     end
 
     @inbounds sum_rate = cur_rates[end]
-    sum_rate, randexp(rng) / sum_rate
+    sum_rate, typed_randexp(rng, t) / sum_rate
 end

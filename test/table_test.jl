@@ -135,10 +135,34 @@ crpt = DJ.PriorityTable(crtog, zeros(Float32, 1), crmin, 2 * crmin)
 @test DJ.numgroups(crpt) == 3
 @test typeof(crpt.maxpriority) == Float32
 @test crpt.maxpriority > 0
-DJ.insert!(crpt, 1, 10.0f0)
+DJ.update!(crpt, 1, 0.0f0, 10.0f0)
 @test DJ.groupsum(crpt) == 10.0f0
 DJ.insert!(crpt, 2, 0.0f0)
 @test DJ.sample(crpt, Float32[10.0f0, 0.0f0], rng32) == 1
+DJ.resum!(crpt, Float32[10.0f0, 0.0f0])
+@test DJ.groupsum(crpt) == 10.0f0
+
+# the largest finite priorities: their group's upper bound, 2^(emax + 1), overflows to Inf,
+# so its rejection bound is capped at floatmax, while the table's maxpriority reaches Inf so
+# that it stops growing
+for T in (Float32, Float64)
+    local minp = T(2)^exponent(T(1e-12))
+    local tog = priority -> DJ.priortogid(priority, exponent(minp))
+    local priors = T[1, 0]
+    local pt = DJ.PriorityTable(tog, priors, minp, 2 * minp)
+    priors[1] = T(2)^exponent(floatmax(T))
+    DJ.update!(pt, 1, one(T), priors[1])
+    @test pt.maxpriority == T(Inf)
+    @test pt.groups[end].maxpriority == floatmax(T)
+    @test DJ.sample(pt, priors, rng32) == 1
+    @test DJ.sample(pt.groups[end], priors, rng32) == 1
+
+    # a table built with that priority (the constructor's groups end below it)
+    pt = DJ.PriorityTable(tog, priors, minp, priors[1])
+    @test pt.maxpriority == T(Inf)
+    @test pt.groups[end].maxpriority == floatmax(T)
+    @test DJ.sample(pt, priors, rng32) == 1
+end
 
 # PriorityTimeTable with Float32 times
 times32 = Float32[2.0, 8.0, 13.0, 15.0, 74.0]

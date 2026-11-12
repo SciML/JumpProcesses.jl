@@ -42,7 +42,9 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maxrate = convert(T, Inf),
         kwargs...) where {T, S, F1, F2}
 
-    # mapping from jump rate to group id
+    # mapping from jump rate to group id, in the rates' type; a minrate below its smallest
+    # normal number (e.g. 1e-50 with Float32 rates, which converts to zero) is raised to it
+    minrate = max(convert(T, minrate), floatmin(T))
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate

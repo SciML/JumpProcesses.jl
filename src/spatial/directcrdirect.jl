@@ -32,7 +32,9 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
         num_specs, minrate = convert(T, MINJUMPRATE),
         dependencies, kwargs...) where {J, T, RX, HOP, SS}
 
-    # mapping from jump rate to group id
+    # mapping from jump rate to group id, in the rates' type; a minrate below its smallest
+    # normal number (e.g. 1e-50 with Float32 rates, which converts to zero) is raised to it
+    minrate = max(convert(T, minrate), floatmin(T))
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate
@@ -71,7 +73,7 @@ function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,
 
     next_jump = SpatialJump{Int}(typemax(Int), typemax(Int), typemax(Int)) #a placeholder
     next_jump_time = typemax(typeof(end_time))
-    rx_rates = RxRates(num_sites(spatial_system), majumps)
+    rx_rates = RxRates(num_sites(spatial_system), majumps, typeof(end_time))
     hop_rates = HopRates(hopping_constants, spatial_system)
     site_rates = zeros(typeof(end_time), num_sites(spatial_system))
 

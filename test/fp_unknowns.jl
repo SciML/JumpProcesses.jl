@@ -97,3 +97,49 @@ end
         @test abs(Xmean - 20) < 4 * sqrt(20 / Nsims)
     end
 end
+
+# Spatial reaction rates are in the time's type: a BigFloat rate below floatmin(Float64)
+# rounded to zero, so the reaction never fired.
+@testset "Spatial BigFloat rates below floatmin(Float64)" begin
+    maj = MassActionJump([big"1e-400"], [[1 => 1]], [[1 => -1]])
+    tspan = (big(0.0), big"1e401")
+    sol = solve(JumpProblem(DiscreteProblem([1], tspan), Direct(), maj), SSAStepper();
+        rng = StableRNG(1))
+    for agg in (NSM(), DirectCRDirect())
+        jprob = JumpProblem(DiscreteProblem(reshape([1], 1, 1), tspan), agg, maj;
+            hopping_constants = zeros(BigFloat, 1, 1), spatial_system = CartesianGrid((1,)))
+        ssol = solve(jprob, SSAStepper(); rng = StableRNG(1))
+        @test ssol.u[end][1] == 0
+        # the first draw gives the same jump time as Direct's
+        @test ssol.t[2] == sol.t[2]
+    end
+end
+
+# Rates at the ends of the numeric range for the rejection (priority) tables, which hung
+@testset "Rejection tables with extreme $T rates" for T in (Float32, Float64)
+    # a minrate below floatmin(T), given as a Float64
+    maj = MassActionJump(T[10, 1], [Pair{Int, Int}[], [1 => 1]], [[1 => 1], [1 => -1]])
+    for agg in (DirectCR(), RSSACR())
+        jprob = JumpProblem(DiscreteProblem([0], (zero(T), T(10))), agg, maj;
+            minrate = 1e-50)
+        @test solve(jprob, SSAStepper(); rng).u[end][1] > 0
+    end
+    jprob = JumpProblem(DiscreteProblem(zeros(Int, 1, 2), (zero(T), T(10))),
+        DirectCRDirect(), maj; hopping_constants = ones(T, 1, 2),
+        spatial_system = CartesianGrid((2,)), minrate = 1e-50)
+    @test sum(solve(jprob, SSAStepper(); rng).u[end]) > 0
+
+    # the largest finite power of two as a rate, until 10 jumps are expected
+    rate = T(2)^exponent(floatmax(T))
+    maj = MassActionJump([rate], [Pair{Int, Int}[]], [[1 => 1]])
+    tspan = (zero(T), 10 / rate)
+    for agg in (DirectCR(), RSSACR())
+        jprob = JumpProblem(DiscreteProblem([0], tspan), agg, maj;
+            save_positions = (false, false))
+        @test solve(jprob, SSAStepper(); rng).u[end][1] > 0
+    end
+    jprob = JumpProblem(DiscreteProblem(zeros(Int, 1, 1), tspan), DirectCRDirect(), maj;
+        hopping_constants = zeros(T, 1, 1), spatial_system = CartesianGrid((1,)),
+        save_positions = (false, false))
+    @test solve(jprob, SSAStepper(); rng).u[end][1] > 0
+end

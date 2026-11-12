@@ -10,6 +10,14 @@
   - `DirectCR`, `RSSACR` and the spatial `DirectCRDirect` can now build problems with
     `Float32` or `BigFloat` rates and times (they failed with a `MethodError`). `RDirect`
     still can't build problems with `BigFloat` rates.
+  - `NSM` and `DirectCRDirect` now compute reaction rates in the type of the time, as the
+    other aggregators do, instead of `Float64`: a `BigFloat` rate below `floatmin(Float64)`
+    rounded to zero, so its reaction never fired. Seeded results can change for spatial
+    problems with `Float32` times.
+  - `DirectCR`, `RSSACR` and `DirectCRDirect` no longer hang on a rate of at least
+    `2^exponent(floatmax(T))` for rates of type `T` (e.g. `2.0^1023`), or on a `minrate`
+    keyword below `floatmin(T)` (e.g. `1e-50` with `Float32` rates, now raised to
+    `floatmin(T)`).
 
 ## 10.2.0
   - New `isolated_copy(jprob)` returns a `JumpProblem` with its own jump state, for

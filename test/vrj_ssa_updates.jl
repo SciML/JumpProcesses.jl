@@ -264,9 +264,12 @@ end
 # it enables must still be found. Here X, made by the VariableRateJump, becomes Y at once (at
 # rate 1e8), and a slow independent reaction C → ∅ is the next SSA jump: in a later bin of the
 # first window (rate 1), or after the first window, so that the table's window is rebuilt to
-# start at its time (rate 0.05). A fast F → ∅ sets a short bin width at the start.
+# start at its time (rate 0.05). A fast F → ∅ sets a short bin width at the start. Narrow
+# bins and few of them (`binwidthconst = 2, numbinsconst = 5`) also make the update rebuild
+# the window to start at the VariableRateJump's time, from bins that are then all empty.
 @testset "CCNRM finds a jump that a VariableRateJump moves before its search position" begin
-    for crate in (1.0, 0.05), vr_aggregator in (VR_FRM(), VR_Direct())
+    bins = ((;), (; binwidthconst = 2, numbinsconst = 5))
+    for crate in (1.0, 0.05), vr_aggregator in (VR_FRM(), VR_Direct()), kw in bins
         maj = MassActionJump([1e8, crate, 100.0], [[1 => 1], [3 => 1], [4 => 1]],
             [[1 => -1, 2 => 1], [3 => -1], [4 => -1]])
         vrj = VariableRateJump((u, p, t) -> 2.0, birth!; save_positions = (false, false))
@@ -274,7 +277,7 @@ end
             (0.0, 2.0))
         jprob = JumpProblem(oprob, CCNRM(), maj, vrj; vr_aggregator,
             dependencies = JumpDependencies(; vrjtovars_map = [[1]]),
-            save_positions = (false, false))
+            save_positions = (false, false), kw...)
         sols = [solve(jprob, Tsit5(); rng = StableRNG(i), save_everystep = false)
                 for i in 1:100]
         @test all(sol -> SciMLBase.successful_retcode(sol), sols)

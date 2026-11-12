@@ -258,3 +258,109 @@ end
         rng = StableRNG(3), save_everystep = false)
     @test poisson_with_exact_mean([s.u[end][1] for s in esol.u])
 end
+
+# CCNRM keeps its jump times in bins and searches from the bin where its last search stopped.
+# A VariableRateJump occurs before the next SSA jump, possibly in an earlier bin, so the jump
+# it enables must still be found. Here X, made by the VariableRateJump, becomes Y at once (at
+# rate 1e8), and a slow independent reaction C → ∅ is the next SSA jump: in a later bin of the
+# first window (rate 1), or after the first window, so that the table's window is rebuilt to
+# start at its time (rate 0.05). A fast F → ∅ sets a short bin width at the start.
+@testset "CCNRM finds a jump that a VariableRateJump moves before its search position" begin
+    for crate in (1.0, 0.05), vr_aggregator in (VR_FRM(), VR_Direct())
+        maj = MassActionJump([1e8, crate, 100.0], [[1 => 1], [3 => 1], [4 => 1]],
+            [[1 => -1, 2 => 1], [3 => -1], [4 => -1]])
+        vrj = VariableRateJump((u, p, t) -> 2.0, birth!; save_positions = (false, false))
+        oprob = ODEProblem{true, SciMLBase.FullSpecialize}(zero_drift!, [0.0, 0.0, 1.0, 1.0],
+            (0.0, 2.0))
+        jprob = JumpProblem(oprob, CCNRM(), maj, vrj; vr_aggregator,
+            dependencies = JumpDependencies(; vrjtovars_map = [[1]]),
+            save_positions = (false, false))
+        sols = [solve(jprob, Tsit5(); rng = StableRNG(i), save_everystep = false)
+                for i in 1:100]
+        @test all(sol -> SciMLBase.successful_retcode(sol), sols)
+        # every X made has become a Y
+        @test all(sol -> sol.u[end][1] == 0, sols)
+        @test sum(sol -> sol.u[end][2], sols) > 0
+    end
+end
+
+# After a VariableRateJump's affect stops the solve, the update must not schedule the SSA jump
+# it enables (X → Y at rate 1e6), which would restart the solve.
+@testset "No update after a VariableRateJump stops the solve" begin
+    stop!(integ) = (integ.u[1] += 1; terminate!(integ); nothing)
+    stop_custom!(integ) = (integ.u[1] += 1; terminate!(integ, ReturnCode.Success); nothing)
+    maj = MassActionJump([1e6], [[1 => 1]], [[1 => -1, 2 => 1]])
+    deps = JumpDependencies(; vrjtovars_map = [[1]])
+    oprob = ODEProblem{true, SciMLBase.FullSpecialize}(zero_drift!, [0.0, 0.0], (0.0, 10.0))
+    sprob = SDEProblem{true, SciMLBase.FullSpecialize}(zero_drift!,
+        (du, u, p, t) -> (fill!(du, 0); nothing), [0.0, 0.0], (0.0, 10.0))
+    cases = ((oprob, Tsit5(), stop!, ReturnCode.Terminated, (;)),
+        (oprob, Tsit5(), stop_custom!, ReturnCode.Success, (;)),
+        (sprob, EM(), stop!, ReturnCode.Terminated, (; dt = 0.01)))
+    for (prob, alg, affect!, retcode, kw) in cases, vr_aggregator in VR_AGGREGATORS
+        vrj = VariableRateJump((u, p, t) -> 5.0, affect!)
+        jprob = JumpProblem(prob, Direct(), maj, vrj; vr_aggregator, dependencies = deps)
+        sol = solve(jprob, alg; rng = StableRNG(1), kw...)
+        @test sol.retcode == retcode
+        # the solve stopped right after the VariableRateJump: X was made and not converted
+        @test sol.u[end][1:2] == [1.0, 0.0]
+        @test sol.t[end] < 10.0
+    end
+end
+
+# `isolated_copy` shares the update lists, which are read-only, and copies the working state.
+@testset "isolated_copy keeps the updates" begin
+    for vr_aggregator in VR_AGGREGATORS, agg in (Direct(), NRM())
+        jprob = birth_death(agg, vr_aggregator)
+        jcopy = isolated_copy(jprob)
+        sol1 = solve(jprob, Tsit5(); rng = StableRNG(5), save_everystep = false)
+        sol2 = solve(jcopy, Tsit5(); rng = StableRNG(5), save_everystep = false)
+        @test sol1.u[end] == sol2.u[end]
+        if !(vr_aggregator isa VR_FRM)
+            cache = jprob.jump_callback.continuous_callbacks[1].condition
+            cache2 = jcopy.jump_callback.continuous_callbacks[1].condition
+            @test cache2 !== cache
+            @test cache2.updates === cache.updates
+            @test cache2.cum_rate_sum !== cache.cum_rate_sum
+        end
+    end
+    @test poisson_with_exact_mean(final_A(isolated_copy(birth_death(NRM(), VR_Direct())),
+        Tsit5(), 400; seed = 2000))
+end
+
+# An update that leaves the next jump time unchanged keeps its stop instead of adding another:
+# with NRM, a VariableRateJump that changes the rate of a jump other than the next one.
+@testset "An unchanged next jump time adds no stop" begin
+    # 1: X → ∅ (rate 1e-6 X, far in the future), 2: Z → ∅ (rate 1, the next jump)
+    maj = MassActionJump([1e-6, 1.0], [[1 => 1], [2 => 1]], [[1 => -1], [2 => -1]])
+    vrj = VariableRateJump((u, p, t) -> 1.0, birth!)
+    oprob = ODEProblem{true, SciMLBase.FullSpecialize}(zero_drift!, [1.0, 1.0], (0.0, 1e3))
+    jprob = JumpProblem(oprob, NRM(), maj, vrj; vr_aggregator = VR_Direct(),
+        dependencies = JumpDependencies(; vrjtovars_map = [[1]]))
+    integ = init(jprob, Tsit5(); rng = StableRNG(1))
+    agg = jprob.discrete_jump_aggregation
+    ntstops = length(integ.opts.tstops)
+    next_time = agg.next_jump_time
+    for _ in 1:100
+        JumpProcesses.update_after_external_change!(agg, integ, [1])
+    end
+    @test agg.next_jump == 2 && agg.next_jump_time == next_time
+    @test length(integ.opts.tstops) == ntstops
+end
+
+# The aggregators that recompute every rate only store whether each VariableRateJump changes
+# a rate; the others store the lists.
+@testset "What the VR callbacks store" begin
+    deps = JumpDependencies(; vrj_dep_graph = [[1], Int[]])
+    vrjs = (VariableRateJump(birth_rate, birth!), VariableRateJump(birth_rate, birth!))
+    oprob = ODEProblem{true, SciMLBase.FullSpecialize}(zero_drift!, [0.0], (0.0, T))
+    for agg in (Direct(), DirectFW(), FRM(), FRMFW())
+        jprob = JumpProblem(oprob, agg, decay, vrjs...; vr_aggregator = VR_Direct(),
+            dependencies = deps)
+        @test jprob.jump_callback.continuous_callbacks[1].condition.updates.lists ==
+              [true, false]
+    end
+    jprob = JumpProblem(oprob, NRM(), decay, vrjs...; vr_aggregator = VR_Direct(),
+        dependencies = deps)
+    @test jprob.jump_callback.continuous_callbacks[1].condition.updates.lists == [[1], Int[]]
+end

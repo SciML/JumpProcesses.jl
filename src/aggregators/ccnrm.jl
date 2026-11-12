@@ -77,8 +77,19 @@ function execute_jumps!(p::CCNRMJumpAggregation, integrator, u, params, t, affec
     nothing
 end
 
-# an outside change executed no jump (0): every listed jump keeps or rescales its time
+# An outside change executed no jump (0): every listed jump keeps or rescales its time. It
+# happens at a time `t` before the next jump, so a listed jump's new time can fall before the
+# bin where `getfirst`'s search stopped (the bins in between were empty), or before the
+# table's window when it was rebuilt to start at the next jump's time. So the search first
+# moves back to the bin of `t`, or the window is rebuilt to start at `t` (the times stay).
 function update_external_rates!(p::CCNRMJumpAggregation, deps, u, params, t, integrator)
+    ptt = p.ptt
+    if t < ptt.timegrouper.mintime
+        rebuild!(ptt, t, 1 / sum(p.cur_rates))
+    elseif t < ptt.maxtime
+        bin = ptt.timegrouper(t)
+        ptt.minbin = (ptt.minbin == 0) ? bin : min(ptt.minbin, bin)
+    end
     update_dependent_rates!(p, deps, 0, u, params, t, get_rng(integrator))
 end
 

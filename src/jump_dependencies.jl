@@ -284,10 +284,11 @@ end
 # The lists the VR aggregator's callbacks hand to the SSA aggregator after a
 # `VariableRateJump` occurs, indexed by its position `k` among the jumps the VR aggregator
 # handles (`cvrj_idxs` holds their positions among all `VariableRateJump`s): the jumps whose
-# rates to recompute, or for RSSA and RSSACR the changed variables that some jump reads.
-# Returns `nothing` when no `VariableRateJump` map was given (no updates, as before), and
-# `VRJUpdates(nothing)` when the aggregator recomputes every rate and the dependents aren't
-# known. `deps` holds the maps as given, `agg_deps` the aggregator's normalized maps.
+# rates to recompute, or for RSSA and RSSACR the changed variables that some jump reads. For
+# the aggregators that recompute every rate, whether each jump changes a rate instead
+# (`VRJUpdates(nothing)` when that isn't known). Returns `nothing` when no `VariableRateJump`
+# map was given (no updates, as before). `deps` holds the maps as given, `agg_deps` the
+# aggregator's normalized maps.
 function vrj_updates(aggregator, deps::JumpDependencies, agg_deps::JumpDependencies, maj,
         num_vars, num_jumps, cvrj_idxs)
     (deps.vrjtovars_map === nothing && deps.vrj_dep_graph === nothing) && return nothing
@@ -303,10 +304,19 @@ function vrj_updates(aggregator, deps::JumpDependencies, agg_deps::JumpDependenc
                  for k in cvrj_idxs]
         return VRJUpdates(lists)
     end
-    num_majumps = get_num_majumps(maj)
-    can_generate = num_majumps > 0 && num_jumps == num_majumps
-    lists = vrj_jump_lists(deps, maj, num_vars, can_generate, cvrj_idxs)
-    if lists === nothing && needs_depgraph(aggregator)
+    # without `vrj_dep_graph`, the lists are derived from `vartojumps_map`, given or generated
+    v2j = nothing
+    if deps.vrj_dep_graph === nothing
+        num_majumps = get_num_majumps(maj)
+        can_generate = num_majumps > 0 && num_jumps == num_majumps
+        v2j = deps.vartojumps_map
+        (v2j === nothing && can_generate) && (v2j = generated_vartojumps_map(num_vars, maj))
+    end
+    # the aggregators that recompute every rate only need to know whether each jump changes
+    # a rate, which takes far less memory than the lists
+    needs_depgraph(aggregator) || return VRJUpdates(vrj_changes_rates(deps, v2j, cvrj_idxs))
+    lists = vrj_jump_lists(deps, v2j, cvrj_idxs)
+    if lists === nothing
         error(missing_map_message(aggregator,
             "the jumps that depend on each `VariableRateJump`",
             "to update them after it occurs",
@@ -315,17 +325,24 @@ function vrj_updates(aggregator, deps::JumpDependencies, agg_deps::JumpDependenc
     VRJUpdates(lists)
 end
 
+# Whether each handled `VariableRateJump` changes the rate of some jump, from `vrj_dep_graph`
+# or from `vrjtovars_map` and `v2j`; `nothing` when neither way is possible.
+function vrj_changes_rates(deps, v2j, cvrj_idxs)
+    if deps.vrj_dep_graph !== nothing
+        return [!isempty(dependents(deps.vrj_dep_graph, k)) for k in cvrj_idxs]
+    end
+    v2j === nothing && return nothing
+    return [any(v -> !isempty(dependents(v2j, v)), dependents(deps.vrjtovars_map, k))
+            for k in cvrj_idxs]
+end
+
 # Each handled `VariableRateJump`'s dependent jumps, from `vrj_dep_graph` or derived from
-# `vrjtovars_map` and `vartojumps_map`; `nothing` when neither way is possible.
-function vrj_jump_lists(deps, maj, num_vars, can_generate, cvrj_idxs)
+# `vrjtovars_map` and `v2j`; `nothing` when neither way is possible.
+function vrj_jump_lists(deps, v2j, cvrj_idxs)
     if deps.vrj_dep_graph !== nothing
         return [normal_vrj_entry(dependents(deps.vrj_dep_graph, k)) for k in cvrj_idxs]
     end
-    v2j = deps.vartojumps_map
-    if v2j === nothing
-        can_generate || return nothing
-        v2j = generated_vartojumps_map(num_vars, maj)
-    end
+    v2j === nothing && return nothing
     map(cvrj_idxs) do k
         list = Int[]
         for v in dependents(deps.vrjtovars_map, k)

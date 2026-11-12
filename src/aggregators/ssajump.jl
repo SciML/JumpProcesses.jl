@@ -325,14 +325,20 @@ isn't known, for the aggregators that recompute every rate when they choose (`Di
 
 Choosing again from the current time is exact, since the jumps are memoryless. A next jump at
 the current time needs no `tstop`: it fires in the same pass, since discrete callbacks run after
-continuous ones, while a `tstop` at the current time makes SDE solvers stop.
+continuous ones, while a `tstop` at the current time makes SDE solvers stop. A next jump time
+that didn't change keeps the `tstop` registered when it was chosen. After an affect stopped the
+solve, nothing is updated: a new `tstop` would restart it.
 """
 @noinline function update_after_external_change!(p::AbstractSSAJumpAggregator, integrator,
         deps)
+    solve_stopped(integrator) && return nothing
     u, params, t = integrator.u, integrator.p, integrator.t
+    prev_time = p.next_jump_time
     update_external_rates!(p, deps, u, params, t, integrator)
     generate_jumps!(p, integrator, u, params, t)
-    (p.next_jump_time > t) && register_next_jump_time!(integrator, p, t)
+    if p.next_jump_time > t && p.next_jump_time != prev_time
+        register_next_jump_time!(integrator, p, t)
+    end
     nothing
 end
 

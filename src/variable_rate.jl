@@ -290,21 +290,28 @@ end
 # What a VR aggregator's callbacks do after one of its jumps occurs: nothing (no
 # `VariableRateJump` maps given), or update the SSA aggregator with `lists[k]` after its `k`th
 # jump: the SSA jumps whose rates to recompute, or for RSSA and RSSACR the changed variables.
-# `lists === nothing` when they aren't known, for the aggregators that recompute every rate.
+# The aggregators that recompute every rate (Direct, DirectFW, FRM, FRMFW) only need to know
+# whether the `k`th jump changes a rate: then `lists` is a `Vector{Bool}`, or `nothing` when
+# that isn't known.
 struct VRJUpdates{L}
     lists::L
 end
 
 @inline vrj_occurred!(::Nothing, integrator, k) = nothing
 @inline function vrj_occurred!(updates::VRJUpdates, integrator, k)
-    deps = vrj_dependents(updates.lists, k)
     # a jump that changes nothing the SSA jumps read needs no update
-    (deps !== nothing && isempty(deps)) && return nothing
+    changes_rates(updates.lists, k) || return nothing
     p = find_ssa_aggregator(integrator.opts.callback.discrete_callbacks)
-    p === nothing || update_after_external_change!(p, integrator, deps)
+    p === nothing ||
+        update_after_external_change!(p, integrator, vrj_dependents(updates.lists, k))
     nothing
 end
+changes_rates(::Nothing, k) = true
+Base.@propagate_inbounds changes_rates(flags::AbstractVector{Bool}, k) = flags[k]
+Base.@propagate_inbounds changes_rates(lists, k) = !isempty(dependents(lists, k))
+# the list the SSA aggregator gets: `nothing` for those that recompute every rate
 vrj_dependents(::Nothing, k) = nothing
+vrj_dependents(::AbstractVector{Bool}, k) = nothing
 Base.@propagate_inbounds vrj_dependents(lists, k) = dependents(lists, k)
 
 # The SSA aggregator among the integrator's discrete callbacks. Over a `Tuple` its position
@@ -635,7 +642,7 @@ mutable struct VR_DirectEventCache{T, F1, F2, U}
     updates::U    # how the SSA jumps are updated after a jump (`VRJUpdates`)
 end
 # the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
-shared_fields(::Type{<:VR_DirectEventCache}) = (:rate_funcs, :affect_funcs)
+shared_fields(::Type{<:VR_DirectEventCache}) = (:rate_funcs, :affect_funcs, :updates)
 
 # `vjumps` are the jumps the cache handles: the variable rate jumps not handled by the SSA
 # aggregator (`Coevolve` takes the bounded ones)

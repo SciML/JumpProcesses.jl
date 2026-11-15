@@ -12,7 +12,8 @@ of every solve. They never copy it. This makes repeated solves fast, but it mean
 **one `JumpProblem` supports one active solve or integrator at a time**:
 
   - Repeated serial solves of one problem are safe and fast.
-  - Concurrent solves, from threads or tasks, need independent copies of the problem.
+  - Concurrent solves, from threads or tasks, need independent copies of the problem,
+    made with [`isolated_copy`](@ref).
   - Problems created with `remake` share the original's jump state.
   - `EnsembleProblem`s create the copies they need for you.
 
@@ -81,8 +82,8 @@ end
 ```
 
 However, the original and remade problems must not be solved concurrently, and must
-not be used for integrators that are alive at the same time. Use `deepcopy` when you
-need an independent problem.
+not be used for integrators that are alive at the same time. Use
+[`isolated_copy`](@ref) when you need an independent problem.
 
 ## Ensembles
 
@@ -168,14 +169,17 @@ between all threads.
 ## Manual threading
 
 When launching tasks yourself, give each task its own copy of the problem, made once
-per task and reused for all of that task's solves:
+per task and reused for all of that task's solves. [`isolated_copy`](@ref) copies only
+the problem's jump state and shares everything else, including the problem it wraps,
+which makes it much cheaper than `deepcopy`, especially for problems built with
+ModelingToolkit or Catalyst:
 
 ```@example reuse
 nsims = 1000
 chunks = Iterators.partition(1:nsims, cld(nsims, Threads.nthreads()))
 tasks = map(chunks) do chunk
     Threads.@spawn begin
-        local_prob = deepcopy(jprob)  # one independent copy per task
+        local_prob = isolated_copy(jprob)  # one independent copy per task
         [solve(local_prob, SSAStepper()).u[end][1] for _ in chunk]
     end
 end
@@ -189,12 +193,22 @@ independent problems:
 
 ```@example reuse
 Random.seed!(3) # hide
-integrator1 = init(deepcopy(jprob), SSAStepper())
-integrator2 = init(deepcopy(jprob), SSAStepper())
+integrator1 = init(isolated_copy(jprob), SSAStepper())
+integrator2 = init(isolated_copy(jprob), SSAStepper())
 step!(integrator1)
 step!(integrator2)
 integrator1.t, integrator2.t
 ```
+
+This is the pattern for agent-based models with one integrator per agent: keep one
+problem as a template that is never solved itself, and give each agent
+`init(remake(isolated_copy(template); u0, p), alg)`. A copy may also be taken from a
+problem whose integrator is alive, between its steps, for example when an agent divides.
+
+A copy shares `p`, `u0` and the callbacks stored in the problem with the original. Give
+it its own parameters with `remake(isolated_copy(jprob); p = new_p)`, and pass callbacks
+that keep state to `init` or `solve` rather than to `JumpProblem`. `deepcopy` copies
+these too, at a much higher cost; see [`JumpProblem`](@ref) for its limitations.
 
 ## Distributed ensembles
 
@@ -252,6 +266,8 @@ using StochasticDiffEqHighOrder
 sol = solve(sde_jprob, SRIW1(); alias = SciMLBase.SDEAliasSpecifier(alias_jumps = false))
 ```
 
+The copy is an [`isolated_copy`](@ref) of the problem.
+
 The guidance above still applies: do not rely on these copies to make shared problems
 safe for concurrent use.
 
@@ -265,8 +281,8 @@ a copy of a problem that has never been solved:
 
 ```@example reuse
 sd_jprob = JumpProblem(dprob, SortingDirect(), maj; save_positions = (false, false))
-fresh = deepcopy(sd_jprob)  # never solved
-replay(seed) = solve(deepcopy(fresh), SSAStepper(); seed).u
+fresh = isolated_copy(sd_jprob)  # never solved
+replay(seed) = solve(isolated_copy(fresh), SSAStepper(); seed).u
 replay(42) == replay(42)
 ```
 
@@ -286,6 +302,6 @@ serial and threaded runs generally give different trajectories.
 | `prob_func` returning a shared problem       | Avoid                                            | n/a                               | No                      |
 | Stateful callbacks in ensembles              | Pass to `JumpProblem`, reset in `initialize`     | Copied with the problem           | Yes                     |
 | Stateful callbacks passed to `solve`         | Avoid with threads                               | Shared                            | No                      |
-| Manual threads or tasks                      | `deepcopy` once per task                         | One per task                      | Yes                     |
-| Simultaneously alive integrators             | `deepcopy` each problem                          | One per integrator                | Yes                     |
+| Manual threads or tasks                      | `isolated_copy` once per task                    | One per task                      | Yes                     |
+| Simultaneously alive integrators             | `isolated_copy` for each integrator              | One per integrator                | Yes                     |
 | `EnsembleDistributed`, `pmap_batch_size > 1` | `safetycopy = true` or `pmap_batch_size = 1`     | One per trajectory, or per worker | Yes with these settings |

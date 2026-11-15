@@ -552,6 +552,8 @@ struct TotalRateFit{T}
     # the interpolant's integral over [-1, 1] is ∑ₖ integral_weights[k + 1] cₖ
     integral_weights::Vector{T}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:TotalRateFit}) = (:nodes, :transform, :integral_weights)
 
 function TotalRateFit{T}() where {T}
     n = NUM_CHEB_NODES
@@ -583,6 +585,8 @@ mutable struct VR_DirectEventCache{T, F1, F2}
     cum_rate_sum::Vector{T}
     rate_fit::TotalRateFit{T}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:VR_DirectEventCache}) = (:rate_funcs, :affect_funcs)
 
 # `vjumps` are the jumps the cache handles: the variable rate jumps not handled by the SSA
 # aggregator (`Coevolve` takes the bounded ones)

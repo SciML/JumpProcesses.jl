@@ -114,7 +114,7 @@ end
 # itself no longer calls these. The seed argument is accepted but no longer used to
 # reseed aggregator RNGs (RNG state is now managed by the integrator).
 function resetted_jump_problem(_jump_prob, seed = nothing)
-    deepcopy(_jump_prob)
+    isolated_copy(_jump_prob)
 end
 
 function reset_jump_problem!(jump_prob, seed = nothing)

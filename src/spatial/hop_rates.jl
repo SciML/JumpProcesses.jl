@@ -138,6 +138,8 @@ struct HopRatesGraphDs{F} <: AbstractHopRates
     """
     sum_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:HopRatesGraphDs}) = (:hopping_constants,)
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDs)
     num_specs, num_sites = size(hop_rates.rates)
@@ -184,6 +186,8 @@ struct HopRatesGraphDsi{F} <: AbstractHopRates
     """
     sum_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:HopRatesGraphDsi}) = (:hopping_constants,)
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsi)
     num_specs, num_sites = size(hop_rates.rates)
@@ -230,6 +234,8 @@ struct HopRatesGraphDsij{F} <: AbstractHopRates
     """
     sum_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:HopRatesGraphDsij}) = (:hop_const_cumulative_sums,)
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsij)
     num_specs, num_sites = size(hop_rates.rates)
@@ -281,6 +287,8 @@ struct HopRatesGridDsij{F} <: AbstractHopRates
     """
     sum_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+shared_fields(::Type{<:HopRatesGridDsij}) = (:hop_const_cumulative_sums,)
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsij)
     num_specs, num_sites = size(hop_rates.rates)
@@ -345,6 +353,10 @@ struct HopRatesGraphDsLij{F} <: AbstractHopRates
     """
     sum_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:HopRatesGraphDsLij})
+    (:species_hop_constants, :hop_const_cumulative_sums)
+end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsLij)
     num_specs,
@@ -401,6 +413,10 @@ struct HopRatesGridDsLij{F} <: AbstractHopRates
     sum_rates[i] is the total hopping rate out of site i
     """
     sum_rates::Vector{F}
+end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:HopRatesGridDsLij})
+    (:species_hop_constants, :hop_const_cumulative_sums)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsLij)
@@ -464,6 +480,10 @@ struct HopRatesGraphDsiLij{F} <: AbstractHopRates
     """
     sum_rates::Vector{F}
 end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:HopRatesGraphDsiLij})
+    (:species_hop_constants, :hop_const_cumulative_sums)
+end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGraphDsiLij)
     num_specs, num_sites = size(hop_rates.species_hop_constants)
@@ -514,6 +534,10 @@ struct HopRatesGridDsiLij{F} <: AbstractHopRates
     sum_rates[i] is the total hopping rate out of site i
     """
     sum_rates::Vector{F}
+end
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:HopRatesGridDsiLij})
+    (:species_hop_constants, :hop_const_cumulative_sums)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", hop_rates::HopRatesGridDsiLij)

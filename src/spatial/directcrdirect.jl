@@ -50,6 +50,12 @@ function DirectCRDirectJumpAggregation(nj::SpatialJump{J}, njt::T, et::T, rx_rat
         rt, ratetogroup)
 end
 
+# the fields that `isolated_copy` shares; it copies the others (see `shared_fields`)
+function shared_fields(::Type{<:DirectCRDirectJumpAggregation})
+    (:rates, :affects!, :save_positions, :dependencies, :spatial_system,
+        :numspecies, :ratetogroup)
+end
+
 ############################# Required Functions ##############################
 # creating the JumpAggregation structure (function wrapper-based constant jumps)
 function aggregate(aggregator::DirectCRDirect, starting_state, p, t, end_time,

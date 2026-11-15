@@ -32,6 +32,27 @@ end
 # initialize!
 # execute_jumps!
 # generate_jumps!
+# shared_fields
+
+"""
+    shared_fields(::Type{T})
+
+Names of the fields of `T` that hold definitions, which solvers never modify: the rates,
+affects and dependency maps of an aggregator, for example. [`isolated_copy`](@ref) shares
+these fields with the copy and copies every other field (see `copy_working` in
+`isolated_copy.jl`).
+
+Every aggregator, and every type that a solve modifies inside one (rate tables, priority
+queues and tables), must define a method next to its definition. A field missing from the
+list is copied, or makes `isolated_copy` throw if its type can't be copied, so it is never
+shared by mistake.
+"""
+function shared_fields(::Type{T}) where {T}
+    throw(ArgumentError("`isolated_copy` can't copy an object of type $T: define \
+        `JumpProcesses.shared_fields(::Type{<:$(nameof(T))})` listing its fields that \
+        solvers never modify, or list the field that holds it as shared in the type \
+        that contains it."))
+end
 
 @inline function makewrapper(::Type{T}, aff) where {T}
     # rewrap existing wrappers

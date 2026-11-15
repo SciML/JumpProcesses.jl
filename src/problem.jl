@@ -108,7 +108,16 @@ examples and commonly asked questions.
 
       - Repeated serial solves of one problem are safe, and avoid copying.
       - Concurrent solves from multiple threads or tasks, and integrators that are alive at
-        the same time, each need an independent copy, such as `deepcopy(jprob)`.
+        the same time, each need an independent copy. [`isolated_copy`](@ref) gives a copy
+        with its own jump state that shares everything else, including `p`, `u0` and the
+        stored callbacks.
+      - `deepcopy(jprob)` also copies the wrapped problem, `p`, `u0` and the stored
+        callbacks, at a much higher cost. For jumps whose functions are stored in
+        `FunctionWrapper`s (the `ConstantRateJump`s of every aggregator except `Direct` and
+        `FRM`, the bounded `VariableRateJump`s of `Coevolve`, and the `VariableRateJump`s of
+        `VR_DirectFW`), the copy may call the original's rate and affect functions, so it
+        does not isolate state that they capture, and the original problem must stay
+        referenced for as long as the copy is used.
       - `remake(jprob; ...)` shares the original's jump state, so remade problems are not
         independent for concurrent use.
       - `EnsembleProblem` supplies isolation. `EnsembleSerial` reuses the problem
@@ -227,8 +236,8 @@ The new problem shares the original's jump aggregator and jump callbacks rather 
 copying them. Solvers owned by JumpProcesses re-initialize this state from the problem being
 solved at every `init`, so the original and remade problems can be solved one after
 another. They must not be solved concurrently, or used for integrators that are alive at
-the same time; use `deepcopy` to obtain an independent problem. `SortingDirect`'s learned
-search order is also shared.
+the same time; use [`isolated_copy`](@ref) to obtain an independent problem.
+`SortingDirect`'s learned search order is also shared.
 """
 function DiffEqBase.remake(jprob::JumpProblem; u0 = missing, p = missing,
         interpret_symbolicmap = true, use_defaults = false, kwargs...)

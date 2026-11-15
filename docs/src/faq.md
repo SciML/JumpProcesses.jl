@@ -57,7 +57,7 @@ to combine `remake` with `EnsembleProblem`s safely.
 Not directly. Solvers owned by JumpProcesses reuse a `JumpProblem`'s jump
 aggregator and callbacks rather than copying them, so one problem supports one
 active solve or integrator at a time. For concurrent solves, give each task its
-own `deepcopy` of the problem, made once per task and reused for that task's
+own [`isolated_copy`](@ref) of the problem, made once per task and reused for that task's
 solves, or use an `EnsembleProblem`, which makes these copies for you. Problems
 created with `remake` share the original's jump state and are not independent.
 See [Jump state ownership and problem reuse](@ref jump_state_ownership) and the

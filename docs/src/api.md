@@ -15,6 +15,7 @@ SSAStepper
 SplitCoupledJumpProblem
 reset_aggregated_jumps!
 remake(::JumpProblem)
+isolated_copy
 ```
 
 ## Jump Types
@@ -136,7 +137,8 @@ Consequently:
   - Repeated serial solves of one problem are safe and avoid any copying.
   - One `JumpProblem` supports one active solve or integrator at a time.
     Concurrent solves from threads or tasks, and integrators that are alive at the
-    same time, each need an independent copy, such as `deepcopy(jprob)`.
+    same time, each need an independent copy, such as
+    [`isolated_copy(jprob)`](@ref isolated_copy), which copies only the jump state.
   - [`remake`](@ref remake(::JumpProblem)) shares the original's jump state, so
     remade problems are not independent for concurrent use.
   - `EnsembleProblem` supplies isolation. `EnsembleSerial` reuses the problem
@@ -332,7 +334,8 @@ around the problem's own jump callbacks, which `init` re-initializes. `__jump_in
 raises the removed-`alias_jump` error and forwards `alias` unchanged to the
 underlying solver. JumpProcesses still defines the transitional
 `resetted_jump_problem` and `reset_jump_problem!` helpers for released
-StochasticDiffEq versions, but no longer calls them itself.
+StochasticDiffEq versions, but no longer calls them itself; `resetted_jump_problem`
+returns an [`isolated_copy`](@ref).
 
 For **tau-leaping**, JumpProcesses defines a custom `DiffEqBase.solve` that
 bypasses the standard `__solve`/`__init` pathway. It calls `resolve_rng`

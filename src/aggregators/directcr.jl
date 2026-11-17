@@ -42,11 +42,14 @@ function DirectCRJumpAggregation(nj::Int, njt::T, et::T, crs::Vector{T}, sr::T,
         maxrate = convert(T, Inf),
         kwargs...) where {T, S, F1, F2}
 
-    # mapping from jump rate to group id
+    # mapping from jump rate to group id, in the rates' type. Rates at or below eps(T) all go
+    # in the table's first group, so a smaller minrate only adds empty groups, one per power
+    # of two (about 10^9 for floatmin(BigFloat)): it is raised to eps(T)
+    minrate = max(convert(T, minrate), eps(T))
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate
-    minrate = 2.0^minexponent
+    minrate = T(2)^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
@@ -118,7 +121,7 @@ end
     nomorejumps!(p, p.sum_rate) && return nothing
 
     rng = get_rng(integrator)
-    p.next_jump_time = t + randexp(rng) / p.sum_rate
+    p.next_jump_time = t + typed_randexp(rng, t) / p.sum_rate
 
     if p.next_jump_time < p.end_time
         p.next_jump = sample(p.rt, p.cur_rates, rng)

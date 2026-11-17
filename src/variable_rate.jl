@@ -297,7 +297,7 @@ end
 function (c::VR_FRMEventCallback)(integrator)
     c.affect!(integrator)
     rng = get_rng(integrator)
-    integrator.u.jump_u[c.idx] = -randexp(rng, typeof(integrator.t))
+    integrator.u.jump_u[c.idx] = -typed_randexp(rng, integrator.t)
     nothing
 end
 
@@ -305,7 +305,7 @@ end
 function (c::VR_FRMEventCallback)(cb, u, t, integrator)
     check_vr_frm_state_length(integrator, cb.idxs - c.idx)
     rng = get_rng(integrator)
-    integrator.u.jump_u[c.idx] = -randexp(rng, typeof(integrator.t))
+    integrator.u.jump_u[c.idx] = -typed_randexp(rng, integrator.t)
     derivative_discontinuity!(integrator, true)
     nothing
 end
@@ -371,7 +371,7 @@ function (c::VR_FRMVectorCallback)(integrator, events)
     for (k, i) in enumerate(c.jump_idxs)
         iszero(events[k]) && continue
         vr_frm_affect!(c.affects, k, integrator)
-        integrator.u.jump_u[i] = -randexp(rng, typeof(integrator.t))
+        integrator.u.jump_u[i] = -typed_randexp(rng, integrator.t)
     end
     nothing
 end
@@ -384,7 +384,7 @@ function (c::VR_FRMVectorCallback)(cb, u, t, integrator)
         rng = get_rng(integrator)
         jump_u = integrator.u.jump_u
         for i in eachindex(jump_u)
-            jump_u[i] = -randexp(rng, typeof(integrator.t))
+            jump_u[i] = -typed_randexp(rng, integrator.t)
         end
         derivative_discontinuity!(integrator, true)
     end
@@ -619,7 +619,7 @@ function initialize_vr_direct_cache!(cache::VR_DirectEventCache, u, t, integrato
     rng = get_rng(integrator)
     cache.prev_time = t
     cache.current_time = t
-    cache.prev_threshold = randexp(rng, eltype(integrator.t))
+    cache.prev_threshold = typed_randexp(rng, integrator.t)
     cache.current_threshold = cache.prev_threshold
     cache.total_rate = zero(integrator.t)
     cache.cum_rate_sum .= 0
@@ -916,7 +916,7 @@ function (cache::VR_DirectEventCache)(integrator)
     execute_affect!(cache, integrator, jump_idx)
 
     cache.prev_time = t
-    cache.current_threshold = randexp(rng)
+    cache.current_threshold = typed_randexp(rng, t)
     cache.prev_threshold = cache.current_threshold
     cache.current_time = t
     # the integral up to the jump is used up, and the next step starts at the jump

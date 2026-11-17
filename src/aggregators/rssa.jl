@@ -114,7 +114,7 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     jidx = linear_search(cur_rate_high, r)
     # the search finds no jump only if the sum exceeds the sum of the rate bounds
     iszero(jidx) && ((sum_rate, jidx) = resum_and_search!(p, rng))
-    rerl += randexp(rng)
+    rerl += typed_randexp(rng, t)
     nrejected = 0
     @inbounds while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high,
         cur_rate_low, rng, u, jidx, params, t, p.maj_rates)
@@ -129,7 +129,7 @@ function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
         r = rand(rng) * sum_rate
         jidx = linear_search(cur_rate_high, r)
         iszero(jidx) && ((sum_rate, jidx) = resum_and_search!(p, rng))
-        rerl += randexp(rng)
+        rerl += typed_randexp(rng, t)
     end
     p.next_jump = jidx
 

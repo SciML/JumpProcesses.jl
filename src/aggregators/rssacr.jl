@@ -52,11 +52,14 @@ function RSSACRJumpAggregation(nj::Int, njt::F, et::F, crs::Vector{F}, sum_rate:
     ulow = similar(u)
     uhigh = similar(u)
 
-    # mapping from jump rate to group id
+    # mapping from jump rate to group id, in the rates' type. Rates at or below eps(F) all go
+    # in the table's first group, so a smaller minrate only adds empty groups, one per power
+    # of two (about 10^9 for floatmin(BigFloat)): it is raised to eps(F)
+    minrate = max(convert(F, minrate), eps(F))
     minexponent = exponent(minrate)
 
     # use the largest power of two that is <= the passed in minrate
-    minrate = 2.0^minexponent
+    minrate = F(2)^minexponent
     ratetogroup = rate -> priortogid(rate, minexponent)
 
     # construct an empty initial priority table -- we'll reset this in init
@@ -140,7 +143,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
     jidx = sample(rt, cur_rate_high, rng)
     # sampling finds no jump only if the sums exceed the sum of the rate bounds
     iszero(jidx) && ((sum_rate, jidx) = resum_and_sample!(p, rng))
-    rerl += randexp(rng)
+    rerl += typed_randexp(rng, t)
     nrejected = 0
     while rejectrx(ma_jumps, num_majumps, rates, cur_rate_high, cur_rate_low, rng, u, jidx,
         params, t, p.maj_rates)
@@ -154,7 +157,7 @@ function generate_jumps!(p::RSSACRJumpAggregation, integrator, u, params, t)
         # sample candidate reaction
         jidx = sample(rt, cur_rate_high, rng)
         iszero(jidx) && ((sum_rate, jidx) = resum_and_sample!(p, rng))
-        rerl += randexp(rng)
+        rerl += typed_randexp(rng, t)
     end
     p.next_jump = jidx
 

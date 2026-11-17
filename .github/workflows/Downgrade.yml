@@ -10,10 +10,56 @@ on:
       - master
     paths-ignore:
       - 'docs/**'
+# The steps of SciML/.github's downgrade.yml@v1 (as of 41f457c) for this repository's settings,
+# run here to turn off coverage, for which the shared workflow has no input yet
+# (SciML/.github#148). Once that input is released, go back to
+#   uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
+#   with: {group: All, coverage: false}
 jobs:
   downgrade:
-    name: "Downgrade"
-    uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
-    with:
-      group: All
-    secrets: "inherit"
+    name: "Downgrade Tests - All"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "lts"
+
+      # Standard libraries are always at their in-tree versions, so they must not be pinned
+      # to a minimum. (The shared workflow also skips deps listed in `[sources]`; there are
+      # none here.)
+      - name: "Skip the standard libraries when downgrading"
+        run: |
+          stdlibs="$(julia --startup-file=no -e '
+            using Pkg
+            ns = String[]
+            for v in values(Pkg.Types.stdlibs())
+                push!(ns, v isa AbstractString ? v : first(v))
+            end
+            println(join(sort(unique(ns)), ","))
+          ')"
+          echo "Julia stdlibs: $stdlibs"
+          echo "EFFECTIVE_SKIP=$stdlibs" >> "$GITHUB_ENV"
+
+      - uses: julia-actions/julia-downgrade-compat@v2
+        with:
+          skip: "${{ env.EFFECTIVE_SKIP }}"
+          projects: "."
+          mode: "deps"
+          no_promote: "Mooncake"
+
+      - uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: "@."
+
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          project: "@."
+          allow_reresolve: false
+          # 'auto' asks for the latest compatible versions on Dependabot/CompatHelper PRs,
+          # which the downgraded manifest can't satisfy
+          force_latest_compatible_version: false
+          coverage: false
+        env:
+          GROUP: "All"

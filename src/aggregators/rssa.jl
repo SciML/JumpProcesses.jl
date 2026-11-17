@@ -92,6 +92,11 @@ function execute_jumps!(p::RSSAJumpAggregation, integrator, u, params, t, affect
     nothing
 end
 
+# an outside change: `deps` are the changed variables, whose brackets may need updating
+function update_external_rates!(p::RSSAJumpAggregation, deps, u, params, t, integrator)
+    update_rates!(p, deps, u, params, t)
+end
+
 # calculate the next jump / jump time
 function generate_jumps!(p::RSSAJumpAggregation, integrator, u, params, t)
     # recompute the sum of the rate bounds if rounding may have made it inaccurate

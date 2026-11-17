@@ -515,8 +515,10 @@ these rates only change when `u[1]` or `u[2]` is changed, and `u[1]` and `u[2]`
 only change when one of the jumps occur, this setup is valid. However, a rate of
 `t*p[1]*u[1]*u[2]` would not be valid because the rate would change in between
 jumps, as would `p[2]*u[1]*u[4]` when `u[4]` is the solution to a continuous
-problem such as an ODE/SDE, or can be changed by a general `VariableRateJump`.
-Thus, one must be careful to follow this rule when choosing rates.
+problem such as an ODE/SDE, or can be changed by a general `VariableRateJump`
+(unless the `JumpProblem` is told which components the `VariableRateJump`s change;
+see [`JumpDependencies`](@ref)). Thus, one must be careful to follow this rule when
+choosing rates.
 
 In summary, if a particular jump process has a rate function that depends
 explicitly or implicitly on a continuously changing quantity, you need to use a

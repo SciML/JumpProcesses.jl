@@ -1,6 +1,7 @@
 """
     JumpDependencies(; vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing, alias = false)
+        dep_graph = nothing, vrjtovars_map = nothing, vrj_dep_graph = nothing,
+        alias = false)
 
 How the jumps handled by an aggregator depend on each other and on the system's variables,
 passed to a [`JumpProblem`](@ref) with its `dependencies` keyword. Aggregators that update only
@@ -15,12 +16,39 @@ example a `Vector{Vector{Int}}`. A map not given is `nothing`.
     occurs.
   - `vartojumps_map`: entry `i` lists the jumps whose rates depend on the variable `u[i]`.
   - `jumptovars_map`: entry `i` lists the variables whose values jump `i` changes.
+  - `vrjtovars_map`: entry `k` lists the variables whose values the `k`th `VariableRateJump`
+    changes.
+  - `vrj_dep_graph`: entry `k` lists the jumps whose rates must be recalculated when the
+    `k`th `VariableRateJump` occurs.
 
 Jumps are numbered in the order aggregators use: `MassActionJump`s first, then
 `ConstantRateJump`s, then bounded `VariableRateJump`s when the aggregator handles them (as
 `Coevolve` does), each in the order given to the `JumpProblem`. General `VariableRateJump`s
-are not numbered. For the spatial aggregators the maps describe one site: the variables are
-the species, and the jumps the reactions of the spatial `MassActionJump`.
+are not numbered among them. For the spatial aggregators the maps describe one site: the
+variables are the species, and the jumps the reactions of the spatial `MassActionJump`. In
+`vrjtovars_map` and `vrj_dep_graph`, `VariableRateJump`s are numbered in the order given to
+the `JumpProblem`; the entries of bounded ones that the aggregator handles are ignored.
+
+## `VariableRateJump`s
+
+Without `vrjtovars_map` and `vrj_dep_graph`, the aggregator is not told when a general
+`VariableRateJump` occurs, so the rate of a jump it handles must not depend on a variable
+that a general `VariableRateJump` changes. Giving either map lifts that rule: after each
+`VariableRateJump` occurs, the aggregator recomputes the rates that depend on the change.
+What each aggregator needs:
+
+  - `Direct`, `DirectFW`, `FRM` and `FRMFW` recompute every rate after a
+    `VariableRateJump` occurs, except those that `vrj_dep_graph` shows affect no rate.
+  - `SortingDirect`, `RDirect`, `NRM`, `CCNRM`, `DirectCR` and `Coevolve` need
+    `vrj_dep_graph`, or `vrjtovars_map` and `vartojumps_map` (generated when every jump is a
+    `MassActionJump`).
+  - `RSSA` and `RSSACR` need `vrjtovars_map`.
+
+Listing every jump in each entry of `vrj_dep_graph` gives exact updates without working out
+the dependencies, at a cost in proportion to the number of jumps each time a
+`VariableRateJump` occurs.
+
+## Checks and normal form
 
 A `JumpProblem` checks the lengths and indices of the maps against the problem (except for
 spatial problems), and puts each map its aggregator uses into one form: every entry sorted,
@@ -42,25 +70,32 @@ not changed again. To keep it unchanged, for example to build several problems f
 The `JumpProblem` keywords `vartojumps_map`, `jumptovars_map` and `dep_graph` are deprecated.
 Maps given that way are not checked, and JumpProcesses may modify them.
 """
-struct JumpDependencies{V, J, D}
+struct JumpDependencies{V, J, D, VV, VD}
     vartojumps_map::V
     jumptovars_map::J
     dep_graph::D
+    vrjtovars_map::VV
+    vrj_dep_graph::VD
 end
 
 function JumpDependencies(; vartojumps_map = nothing, jumptovars_map = nothing,
-        dep_graph = nothing, alias = false)
+        dep_graph = nothing, vrjtovars_map = nothing, vrj_dep_graph = nothing,
+        alias = false)
     if !alias
         vartojumps_map = copy_map(vartojumps_map)
         jumptovars_map = copy_map(jumptovars_map)
         dep_graph = copy_map(dep_graph)
+        vrjtovars_map = copy_map(vrjtovars_map)
+        vrj_dep_graph = copy_map(vrj_dep_graph)
     end
-    JumpDependencies(vartojumps_map, jumptovars_map, dep_graph)
+    JumpDependencies(vartojumps_map, jumptovars_map, dep_graph, vrjtovars_map,
+        vrj_dep_graph)
 end
 
 function Base.copy(deps::JumpDependencies)
     JumpDependencies(copy_map(deps.vartojumps_map), copy_map(deps.jumptovars_map),
-        copy_map(deps.dep_graph))
+        copy_map(deps.dep_graph), copy_map(deps.vrjtovars_map),
+        copy_map(deps.vrj_dep_graph))
 end
 
 copy_map(::Nothing) = nothing
@@ -81,7 +116,8 @@ function merge_dependencies(dependencies, vartojumps_map, jumptovars_map, dep_gr
     deps = dependencies === nothing ? JumpDependencies(; alias = true) : dependencies
     JumpDependencies(merge_map(deps.vartojumps_map, vartojumps_map, :vartojumps_map),
         merge_map(deps.jumptovars_map, jumptovars_map, :jumptovars_map),
-        merge_map(deps.dep_graph, dep_graph, :dep_graph))
+        merge_map(deps.dep_graph, dep_graph, :dep_graph), deps.vrjtovars_map,
+        deps.vrj_dep_graph)
 end
 
 merge_map(::Nothing, ::Nothing, name) = nothing
@@ -98,13 +134,18 @@ function dependency_kwargs(deps::JumpDependencies)
 end
 
 # Checks the maps of a `JumpDependencies` built by the user against a problem with
-# `num_vars` variables and `num_jumps` jumps handled by its aggregator.
-function check_dependencies(deps::JumpDependencies, num_vars, num_jumps)
+# `num_vars` variables, `num_jumps` jumps handled by its aggregator and `num_vrjs`
+# `VariableRateJump`s.
+function check_dependencies(deps::JumpDependencies, num_vars, num_jumps, num_vrjs)
     check_map(deps.dep_graph, :dep_graph, "jump", num_jumps, "jump", num_jumps)
     check_map(deps.vartojumps_map, :vartojumps_map, "variable", num_vars, "jump",
         num_jumps)
     check_map(deps.jumptovars_map, :jumptovars_map, "jump", num_jumps, "variable",
         num_vars)
+    check_map(deps.vrjtovars_map, :vrjtovars_map, "VariableRateJump", num_vrjs,
+        "variable", num_vars)
+    check_map(deps.vrj_dep_graph, :vrj_dep_graph, "VariableRateJump", num_vrjs, "jump",
+        num_jumps)
     nothing
 end
 
@@ -141,16 +182,18 @@ uses_species_maps(aggregator) = needs_vartojumps_map(aggregator) || is_spatial(a
 # allows it for that map and its entries are `Vector{Int}`s, and rebuilt if not. A missing
 # map is generated from the mass action jumps `maj` when every jump is one (always for the
 # spatial aggregators), and is an error otherwise. The problem has `num_vars` variables
-# and `num_jumps` jumps handled by the aggregator. Maps the aggregator doesn't use are
-# left out (`nothing`), so that every map of the result is in normal form.
+# and `num_jumps` jumps handled by the aggregator, and `other_jumps` names its other kinds
+# of jumps (for the errors). Maps the aggregator doesn't use are left out (`nothing`), so
+# that every map of the result is in normal form.
 function normalize_dependencies(aggregator, deps::JumpDependencies, modifiable, maj,
-        num_vars, num_jumps)
+        num_vars, num_jumps, other_jumps = "`ConstantRateJump`s")
     vartojumps_map = jumptovars_map = dep_graph = nothing
     num_majumps = get_num_majumps(maj)
     can_generate = is_spatial(aggregator) || (num_majumps > 0 && num_jumps == num_majumps)
     if uses_dep_graph(aggregator)
         if deps.dep_graph === nothing
-            can_generate || error(missing_dep_graph_message(aggregator))
+            can_generate || error(missing_map_message(aggregator, "a dependency graph",
+                "for $other_jumps", "`dep_graph`"))
             dep_graph = normalize_map(generated_dep_graph(num_vars, maj), true, true)
         else
             dep_graph = normalize_map(deps.dep_graph, true, modifiable.dep_graph)
@@ -158,8 +201,9 @@ function normalize_dependencies(aggregator, deps::JumpDependencies, modifiable, 
     end
     if uses_species_maps(aggregator)
         if deps.vartojumps_map === nothing
-            can_generate || error(missing_species_map_message(aggregator, "variables",
-                "jumps"))
+            can_generate || error(missing_map_message(aggregator,
+                "a map from variables to dependent jumps", "for $other_jumps",
+                "`vartojumps_map`"))
             vartojumps_map = normalize_map(generated_vartojumps_map(num_vars, maj), false,
                 true)
         else
@@ -167,15 +211,16 @@ function normalize_dependencies(aggregator, deps::JumpDependencies, modifiable, 
                 modifiable.vartojumps_map)
         end
         if deps.jumptovars_map === nothing
-            can_generate || error(missing_species_map_message(aggregator, "jumps",
-                "variables"))
+            can_generate || error(missing_map_message(aggregator,
+                "a map from jumps to dependent variables", "for $other_jumps",
+                "`jumptovars_map`"))
             jumptovars_map = normalize_map(generated_jumptovars_map(maj), false, true)
         else
             jumptovars_map = normalize_map(deps.jumptovars_map, false,
                 modifiable.jumptovars_map)
         end
     end
-    JumpDependencies(vartojumps_map, jumptovars_map, dep_graph)
+    JumpDependencies(vartojumps_map, jumptovars_map, dep_graph, nothing, nothing)
 end
 
 generated_dep_graph(num_vars, ::Nothing) = Vector{Int}[]
@@ -185,32 +230,12 @@ generated_vartojumps_map(num_vars, maj) = var_to_jumps_map(num_vars, maj)
 generated_jumptovars_map(::Nothing) = Vector{Int}[]
 generated_jumptovars_map(maj) = jump_to_vars_map(maj)
 
-function missing_dep_graph_message(::NRM)
-    "To use ConstantRateJumps with the Next Reaction Method (NRM) algorithm a dependency \
-    graph must be supplied."
-end
-function missing_dep_graph_message(::CCNRM)
-    "To use ConstantRateJumps with the constant-complexity Next Reaction Method (CCNRM) \
-    algorithm a dependency graph must be supplied."
-end
-function missing_dep_graph_message(::DirectCR)
-    "To use ConstantRateJumps with the DirectCR algorithm a dependency graph must be \
-    supplied."
-end
-function missing_dep_graph_message(::SortingDirect)
-    "To use ConstantRateJumps with the SortingDirect algorithm a dependency graph must be \
-    supplied."
-end
-function missing_dep_graph_message(::RDirect)
-    "To use ConstantRateJumps with the Rejection Direct (RDirect) algorithm a dependency \
-    graph must be supplied."
-end
-function missing_dep_graph_message(::Coevolve)
-    "To use Coevolve a dependency graph between jumps must be supplied."
-end
-function missing_species_map_message(aggregator, from, to)
-    "To use the $(nameof(typeof(aggregator))) algorithm a map from $from to dependent $to \
-    must be supplied."
+# The error message for a map the aggregator needs that wasn't given and can't be
+# generated: `map` describes it, `purpose` says what it is needed for, and `fields` names
+# the fields of a `JumpDependencies` that give it.
+function missing_map_message(aggregator, map, purpose, fields)
+    "The $(nameof(typeof(aggregator))) algorithm needs $map $purpose: give $fields in the \
+    `JumpDependencies`."
 end
 
 # the map in normal form; entry `i` of a map with `addself` must list `i`
@@ -255,3 +280,76 @@ function normalize_entry!(entry, self)
     (self > 0 && !(self in entry)) && push!(entry, self)
     unique!(sort!(entry))
 end
+
+# The lists the VR aggregator's callbacks hand to the SSA aggregator after a
+# `VariableRateJump` occurs, indexed by its position `k` among the jumps the VR aggregator
+# handles (`cvrj_idxs` holds their positions among all `VariableRateJump`s): the jumps whose
+# rates to recompute, or for RSSA and RSSACR the changed variables that some jump reads. For
+# the aggregators that recompute every rate, whether each jump changes a rate instead
+# (`VRJUpdates(nothing)` when that isn't known). Returns `nothing` when no `VariableRateJump`
+# map was given (no updates, as before). `deps` holds the maps as given, `agg_deps` the
+# aggregator's normalized maps.
+function vrj_updates(aggregator, deps::JumpDependencies, agg_deps::JumpDependencies, maj,
+        num_vars, num_jumps, cvrj_idxs)
+    (deps.vrjtovars_map === nothing && deps.vrj_dep_graph === nothing) && return nothing
+    isempty(cvrj_idxs) && return nothing
+    if uses_species_maps(aggregator)
+        deps.vrjtovars_map === nothing &&
+            error(missing_map_message(aggregator,
+                "the variables each `VariableRateJump` changes",
+                "to update its jumps after one occurs", "`vrjtovars_map`"))
+        v2j = agg_deps.vartojumps_map
+        lists = [filter!(v -> !isempty(dependents(v2j, v)),
+                     normal_vrj_entry(dependents(deps.vrjtovars_map, k)))
+                 for k in cvrj_idxs]
+        return VRJUpdates(lists)
+    end
+    # without `vrj_dep_graph`, the lists are derived from `vartojumps_map`, given or generated
+    v2j = nothing
+    if deps.vrj_dep_graph === nothing
+        num_majumps = get_num_majumps(maj)
+        can_generate = num_majumps > 0 && num_jumps == num_majumps
+        v2j = deps.vartojumps_map
+        (v2j === nothing && can_generate) && (v2j = generated_vartojumps_map(num_vars, maj))
+    end
+    # the aggregators that recompute every rate only need to know whether each jump changes
+    # a rate, which takes far less memory than the lists
+    needs_depgraph(aggregator) || return VRJUpdates(vrj_changes_rates(deps, v2j, cvrj_idxs))
+    lists = vrj_jump_lists(deps, v2j, cvrj_idxs)
+    if lists === nothing
+        error(missing_map_message(aggregator,
+            "the jumps that depend on each `VariableRateJump`",
+            "to update them after it occurs",
+            "`vrj_dep_graph`, or `vrjtovars_map` and `vartojumps_map`,"))
+    end
+    VRJUpdates(lists)
+end
+
+# Whether each handled `VariableRateJump` changes the rate of some jump, from `vrj_dep_graph`
+# or from `vrjtovars_map` and `v2j`; `nothing` when neither way is possible.
+function vrj_changes_rates(deps, v2j, cvrj_idxs)
+    if deps.vrj_dep_graph !== nothing
+        return [!isempty(dependents(deps.vrj_dep_graph, k)) for k in cvrj_idxs]
+    end
+    v2j === nothing && return nothing
+    return [any(v -> !isempty(dependents(v2j, v)), dependents(deps.vrjtovars_map, k))
+            for k in cvrj_idxs]
+end
+
+# Each handled `VariableRateJump`'s dependent jumps, from `vrj_dep_graph` or derived from
+# `vrjtovars_map` and `v2j`; `nothing` when neither way is possible.
+function vrj_jump_lists(deps, v2j, cvrj_idxs)
+    if deps.vrj_dep_graph !== nothing
+        return [normal_vrj_entry(dependents(deps.vrj_dep_graph, k)) for k in cvrj_idxs]
+    end
+    v2j === nothing && return nothing
+    map(cvrj_idxs) do k
+        list = Int[]
+        for v in dependents(deps.vrjtovars_map, k)
+            append!(list, dependents(v2j, v))
+        end
+        unique!(sort!(list))
+    end
+end
+
+normal_vrj_entry(entry) = unique!(sort!(Vector{Int}(entry)))

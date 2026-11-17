@@ -402,14 +402,17 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     crjs = jumps.constant_jumps
 
     # separate bounded variable rate jumps *if* the aggregator can use them
+    # (`cvrj_idxs`: the positions among all variable rate jumps of the remaining ones)
     if use_vrj_bounds && supports_variablerates(aggregator) && (num_bndvrjs(jumps) > 0)
         bvrjs = filter(isbounded, jumps.variable_jumps)
         cvrjs = filter(!isbounded, jumps.variable_jumps)
+        cvrj_idxs = findall(!isbounded, jumps.variable_jumps)
         kwargs = merge((; variable_jumps = bvrjs), kwargs)
         ndiscjumps += length(bvrjs)
     else
         bvrjs = nothing
         cvrjs = jumps.variable_jumps
+        cvrj_idxs = eachindex(jumps.variable_jumps)
     end
 
     t, end_time, u = prob.tspan[1], prob.tspan[2], prob.u0
@@ -418,10 +421,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     # (maps given as keywords stay unchecked, as before `JumpDependencies` existed), put the
     # maps the aggregator uses into normal form, generating missing ones, and give the
     # aggregator a `JumpDependencies` holding them. Maps given as keywords may be modified,
-    # as before, and those in `dependencies` when the problem owns it.
+    # as before, and those in `dependencies` when the problem owns it. With variable rate
+    # jump maps, also prepare the lists the VR aggregator uses to update the SSA jumps.
+    vr_updates = nothing
     if (ndiscjumps > 0) || is_spatial(aggregator)
         if dependencies !== nothing && spatial_system === nothing
-            check_dependencies(dependencies, num_variables(u), ndiscjumps)
+            check_dependencies(dependencies, num_variables(u), ndiscjumps,
+                length(jumps.variable_jumps))
         end
         modifiable = (; vartojumps_map = alias_dependencies || vartojumps_map !== nothing,
             jumptovars_map = alias_dependencies || jumptovars_map !== nothing,
@@ -430,8 +436,13 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
             deps = normalize_dependencies(aggregator, deps, modifiable, maj, size(u, 1),
                 get_num_majumps(maj))
         else
+            other_jumps = bvrjs === nothing ? "`ConstantRateJump`s" :
+                          "`ConstantRateJump`s or bounded `VariableRateJump`s"
+            given = deps
             deps = normalize_dependencies(aggregator, deps, modifiable, maj,
-                num_variables(u), ndiscjumps)
+                num_variables(u), ndiscjumps, other_jumps)
+            vr_updates = vrj_updates(aggregator, given, deps, maj, num_variables(u),
+                ndiscjumps, cvrj_idxs)
         end
         kwargs = merge((; kwargs...), (; dependencies = deps))
     end
@@ -450,7 +461,7 @@ function JumpProblem(prob, aggregator::AbstractAggregatorAlgorithm, jumps::JumpS
     if length(cvrjs) > 0
         # Handle variable rate jumps based on vr_aggregator
         new_prob, variable_jump_callback = configure_jump_problem(prob, vr_aggregator,
-            jumps, cvrjs)
+            jumps, cvrjs, vr_updates)
     else
         new_prob = prob
         variable_jump_callback = CallbackSet()

@@ -484,8 +484,8 @@ function rebuild!(ptt::PriorityTimeTable{T, F}, mintime, timestep) where {T, F}
         time > ptt.maxtime && continue
         insert!(ptt, id, time)
     end
-    ptt.minbin = findfirst(g -> g.numpids > (0), groups)
-    ptt.minbin === nothing && (ptt.minbin = 0)
+    # 0 when the window holds no time (`minbin` is an integer field)
+    ptt.minbin = something(findfirst(g -> g.numpids > (0), groups), 0)
     ptt.steps = 0
 
     return nothing

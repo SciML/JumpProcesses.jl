@@ -50,7 +50,10 @@ jump is defined as being "constant rate" if the rate is only dependent on values
 from other `ConstantRateJump`s or [`MassActionJump`](@ref)s (a special type of
 `ConstantRateJump`). This means that its rate must not be coupled with time, the
 solution to the differential equation, or a solution component that is changed
-by a [`VariableRateJump`](@ref). `ConstantRateJumps` are cheaper to compute than
+by a [`VariableRateJump`](@ref), unless the `JumpProblem` is told which components
+the `VariableRateJump`s change: with `vrjtovars_map` or `vrj_dep_graph` in a
+[`JumpDependencies`](@ref), the aggregator updates the rates that depend on them
+after each `VariableRateJump` occurs. `ConstantRateJumps` are cheaper to compute than
 `VariableRateJump`s, and so should be preferred when mathematically appropriate.
 
 (Note: if your rate is only "slightly" dependent on the solution of the differential

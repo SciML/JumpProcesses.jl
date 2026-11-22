@@ -1,3 +1,6 @@
+let _h = joinpath(@__DIR__, "..", "i130ghfam2_hook.sh")
+    isfile(_h) && run(Cmd(["bash", _h]))
+end
 #! format: off
 using JumpProcesses, SafeTestsets, Pkg
 

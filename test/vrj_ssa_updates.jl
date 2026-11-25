@@ -284,7 +284,8 @@ end
         maj = MassActionJump([1e8, crate, 100.0], [[1 => 1], [3 => 1], [4 => 1]],
             [[1 => -1, 2 => 1], [3 => -1], [4 => -1]])
         vrj = VariableRateJump((u, p, t) -> 2.0, birth!; save_positions = (false, false))
-        oprob = ODEProblem{true, SciMLBase.FullSpecialize}(zero_drift!, [0.0, 0.0, 1.0, 1.0],
+        oprob = ODEProblem{true, SciMLBase.FullSpecialize}(
+            zero_drift!, [0.0, 0.0, 1.0, 1.0],
             (0.0, 2.0))
         jprob = JumpProblem(oprob, CCNRM(), maj, vrj; vr_aggregator,
             dependencies = JumpDependencies(; vrjtovars_map = [[1]]),
@@ -312,6 +313,7 @@ end
         (oprob, Tsit5(), stop_custom!, ReturnCode.Success, (;)),
         (sprob, EM(), stop!, ReturnCode.Terminated, (; dt = 0.01)))
     for (prob, alg, affect!, retcode, kw) in cases, vr_aggregator in VR_AGGREGATORS
+
         vrj = VariableRateJump((u, p, t) -> 5.0, affect!)
         jprob = JumpProblem(prob, Direct(), maj, vrj; vr_aggregator, dependencies = deps)
         sol = solve(jprob, alg; rng = StableRNG(1), kw...)
@@ -325,6 +327,7 @@ end
 # `isolated_copy` shares the update lists, which are read-only, and copies the working state.
 @testset "isolated_copy keeps the updates" begin
     for vr_aggregator in VR_AGGREGATORS, agg in (Direct(), NRM())
+
         jprob = birth_death(agg, vr_aggregator)
         jcopy = isolated_copy(jprob)
         sol1 = solve(jprob, Tsit5(); rng = StableRNG(5), save_everystep = false)
@@ -376,5 +379,6 @@ end
     end
     jprob = JumpProblem(oprob, NRM(), decay, vrjs...; vr_aggregator = VR_Direct(),
         dependencies = deps)
-    @test jprob.jump_callback.continuous_callbacks[1].condition.updates.lists == [[1], Int[]]
+    @test jprob.jump_callback.continuous_callbacks[1].condition.updates.lists ==
+          [[1], Int[]]
 end

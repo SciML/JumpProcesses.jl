@@ -287,7 +287,7 @@ end
 # rates to recompute, or for RSSA and RSSACR the changed variables that some jump reads. For
 # the aggregators that recompute every rate, whether each jump changes a rate instead
 # (`VRJUpdates(nothing)` when that isn't known). Returns `nothing` when no `VariableRateJump`
-# map was given (no updates, as before). `deps` holds the maps as given, `agg_deps` the
+# map was given (no updates). `deps` holds the maps as given, `agg_deps` the
 # aggregator's normalized maps.
 function vrj_updates(aggregator, deps::JumpDependencies, agg_deps::JumpDependencies, maj,
         num_vars, num_jumps, cvrj_idxs)

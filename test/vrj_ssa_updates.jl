@@ -55,6 +55,17 @@ end
     end
 end
 
+# VR_FRM's single vector callback, which it uses by default with more than three
+# VariableRateJumps, updates the SSA jumps from its own affect
+@testset "SSA jumps are updated by VR_FRM's vector callback" begin
+    vr_aggregator = VR_FRM(; vector_callback = true)
+    for agg in (Direct(), NRM(), RSSA(), Coevolve(), DirectCR())
+        jprob = birth_death(agg, vr_aggregator)
+        @test jprob.jump_callback.continuous_callbacks[1] isa VectorContinuousCallback
+        @test poisson_with_exact_mean(final_A(jprob, Tsit5(), 600))
+    end
+end
+
 @testset "Without VariableRateJump maps the SSA jumps aren't updated, as before" begin
     for agg in (Direct(), NRM(), RSSA())
         deps = JumpDependencies(; dep_graph = [[1]])

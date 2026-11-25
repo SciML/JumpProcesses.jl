@@ -304,7 +304,7 @@ end
     oprob = ODEProblem{true, SciMLBase.FullSpecialize}(f!, [0.0, 0.0], (0.0, T))
     for vr_aggregator in (VR_FRM(), VR_Direct(), VR_DirectFW())
         jprob = JumpProblem(oprob, Coevolve(), bounded, unbounded; vr_aggregator,
-            dep_graph = [[1]])
+            dependencies = JumpDependencies(; dep_graph = [[1]]))
         if !(vr_aggregator isa VR_FRM)
             cache = jprob.jump_callback.continuous_callbacks[1].condition
             @test length(cache.rate_funcs) == 1

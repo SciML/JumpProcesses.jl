@@ -197,6 +197,12 @@ function execute_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t,
     nothing
 end
 
+# an outside change executed no jump (0): the listed jumps with constant rates rescale their
+# times, and those with bounds draw new candidates
+function update_external_rates!(p::CoevolveJumpAggregation, deps, u, params, t, integrator)
+    update_dependent_rates!(p, deps, u, params, t, get_rng(integrator), 0)
+end
+
 # calculate the next jump / jump time
 function generate_jumps!(p::CoevolveJumpAggregation, integrator, u, params, t)
     p.next_jump_time, p.next_jump = top_with_handle(p.pq)
@@ -259,10 +265,12 @@ function accept_next_jump!(p::CoevolveJumpAggregation, integrator, u, params, t)
     return false
 end
 
-function update_dependent_rates!(p::CoevolveJumpAggregation, deps, u, params, t, rng)
+# `executed_jump` is the jump that just executed, or 0 after an outside change
+function update_dependent_rates!(p::CoevolveJumpAggregation, deps, u, params, t, rng,
+        executed_jump = p.next_jump)
     (; cur_rates, pq) = p
     for (ix, i) in enumerate(deps)
-        ti, urate_i = next_time(p, u, params, t, i, rng)
+        ti, urate_i = next_time(p, u, params, t, i, rng, executed_jump)
         update!(pq, i, ti)
         @inbounds cur_rates[i] = urate_i
     end
@@ -289,8 +297,12 @@ end
     @inbounds return p.rates[lidx](u, params, t)
 end
 
-function next_time(p::CoevolveJumpAggregation, u, params, t, i, rng)
-    (; next_jump, cur_rates, ma_jumps, rates, pq, urates) = p
+# The executed jump draws a new time. The other jumps with constant rates rescale theirs:
+# after an outside change no jump executed (`executed_jump == 0`), and redrawing only the next
+# jump's time would depend on its being the smallest, which biases the times.
+function next_time(p::CoevolveJumpAggregation, u, params, t, i, rng,
+        executed_jump = p.next_jump)
+    (; cur_rates, ma_jumps, rates, pq, urates) = p
     num_majumps = get_num_majumps(ma_jumps)
     num_cjumps = length(urates) - length(rates)
     uidx = i - num_majumps
@@ -298,7 +310,7 @@ function next_time(p::CoevolveJumpAggregation, u, params, t, i, rng)
     urate = uidx > 0 ? get_urate(p, uidx, u, params, t) : get_ma_urate(p, i, u, params, t)
     # we can only re-use the rng in the case of constant rates because the rng
     # used to compute the next candidate time has not been accepted or rejected
-    if i != next_jump && lidx <= 0
+    if i != executed_jump && lidx <= 0
         last_urate = cur_rates[i]
         if last_urate > zero(t)
             s = urate == zero(t) ? typemax(t) : last_urate / urate * (pq[i] - t)
